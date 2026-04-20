@@ -6,6 +6,8 @@ struct FloatingCommandButton: View {
     @State private var isDragging: Bool = false
     @Environment(\.colorScheme) var colorScheme
     
+    var onTap: () -> Void // Callback for command palette
+    
     // Padding from screen edges
     private let padding: CGFloat = 35
     private let buttonSize: CGFloat = 64
@@ -27,20 +29,13 @@ struct FloatingCommandButton: View {
                     
                     Image(systemName: "sparkles")
                         .font(.system(size: 24, weight: .semibold))
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [.indigo, .purple, .pink],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .shadow(color: .purple.opacity(0.5), radius: 5, x: 0, y: 0)
                 }
                 .frame(width: buttonSize, height: buttonSize)
                 .scaleEffect(isDragging ? 1.15 : 1.0)
                 .position(position == .zero ? initialPosition(in: size) : position)
                 .onTapGesture {
                     triggerHapticFeedback(.medium)
+                    onTap()
                 }
                 .highPriorityGesture(
                     DragGesture(coordinateSpace: .named("floatingLayer"))
@@ -72,7 +67,7 @@ struct FloatingCommandButton: View {
                     position = initialPosition(in: size)
                 }
             }
-            .onChange(of: geometry.size) { newSize in
+            .onChange(of: geometry.size) { oldSize, newSize in
                 withAnimation(.spring()) {
                     snapToNearestPoint(in: newSize)
                 }
@@ -133,6 +128,6 @@ struct FloatingCommandButton: View {
 #Preview {
     ZStack {
         Color.black.ignoresSafeArea()
-        FloatingCommandButton()
+        FloatingCommandButton(onTap: {})
     }
 }
