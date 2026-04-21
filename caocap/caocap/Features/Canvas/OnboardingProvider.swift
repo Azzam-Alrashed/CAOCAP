@@ -50,8 +50,8 @@ public struct OnboardingProvider {
             SpatialNode(
                 id: node5Id,
                 position: CGPoint(x: 1000, y: 800),
-                title: "Summon the Omnibox",
-                subtitle: "Press Cmd+K to create new nodes and interact with the AI.",
+                title: "Summon the Command Palette",
+                subtitle: "Tap the command button to create new nodes and interact with the AI.",
                 icon: "command",
                 theme: .green,
                 nextNodeId: node6Id

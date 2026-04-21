@@ -27,7 +27,7 @@ struct FloatingCommandButton: View {
                         )
                         .shadow(color: Color.black.opacity(isDragging ? 0.3 : 0.2), radius: isDragging ? 15 : 10, x: 0, y: isDragging ? 8 : 5)
                     
-                    Image(systemName: "sparkles")
+                    Image(systemName: "command")
                         .font(.system(size: 24, weight: .semibold))
                 }
                 .frame(width: buttonSize, height: buttonSize)

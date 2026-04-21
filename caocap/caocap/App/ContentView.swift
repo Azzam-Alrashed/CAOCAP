@@ -3,39 +3,19 @@ import SwiftUI
 struct ContentView: View {
     @StateObject var commandPalette = CommandPaletteViewModel()
     @StateObject var coCaptain = CoCaptainViewModel()
-    @State private var projectStore = ProjectStore()
-    @State private var isBlankCanvasActive = false
-    @State private var blankProjectStore = ProjectStore() // Temporary empty store for now
+    @State private var projectStore = ProjectStore(fileName: "onboarding_v1.json")
+    @State private var isHomeActive = false
+    @State private var homeProjectStore = ProjectStore(fileName: "home_v1.json", initialNodes: HomeProvider.homeNodes)
     
     var body: some View {
         ZStack {
-            if isBlankCanvasActive {
-                // The "New Completely New Canvas" (Blank for now)
-                InfiniteCanvasView(store: blankProjectStore)
-                    .overlay(alignment: .topLeading) {
-                        Button(action: {
-                            withAnimation(.spring()) {
-                                isBlankCanvasActive = false
-                            }
-                        }) {
-                            HStack {
-                                Image(systemName: "arrow.left")
-                                Text("Back to Onboarding")
-                            }
-                            .font(.system(size: 14, weight: .bold))
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 10)
-                            .background(.ultraThinMaterial)
-                            .clipShape(Capsule())
-                            .overlay(Capsule().stroke(.white.opacity(0.2), lineWidth: 1))
-                        }
-                        .padding(.top, 60)
-                        .padding(.leading, 20)
-                    }
+            if isHomeActive {
+                // The Home Canvas (Main Navigation Hub)
+                InfiniteCanvasView(store: homeProjectStore)
             } else {
                 InfiniteCanvasView(store: projectStore, onLaunchProject: {
                     withAnimation(.spring()) {
-                        isBlankCanvasActive = true
+                        isHomeActive = true
                     }
                 })
             }
@@ -58,8 +38,6 @@ struct ContentView: View {
         }
         .onAppear {
             setupCommandHandlers()
-            // Ensure blank project is actually blank for this demo
-            blankProjectStore.nodes = []
         }
     }
     

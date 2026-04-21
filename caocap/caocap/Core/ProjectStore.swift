@@ -28,6 +28,8 @@ public class ProjectStore {
     
     /// Returns the local file URL where project data is stored.
     /// This property also ensures the parent directory exists.
+    private let fileName: String
+    
     private var fileURL: URL {
         let paths = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
         let appSupport = paths[0].appendingPathComponent("com.ficruty.caocap", isDirectory: true)
@@ -35,21 +37,26 @@ public class ProjectStore {
         // Create the directory if it doesn't exist (e.g., on first run)
         try? FileManager.default.createDirectory(at: appSupport, withIntermediateDirectories: true)
         
-        return appSupport.appendingPathComponent("project_v1.json")
+        return appSupport.appendingPathComponent(self.fileName)
     }
     
-    public init() {
-        load()
+    public init(fileName: String = "project_v1.json", initialNodes: [SpatialNode]? = nil) {
+        self.fileName = fileName
+        load(initialNodes: initialNodes)
     }
     
-    /// Loads the project data from disk. If no file is found, initializes with default manifesto nodes.
-    public func load() {
+    /// Loads the project data from disk. If no file is found, initializes with default nodes.
+    public func load(initialNodes: [SpatialNode]? = nil) {
         let url = fileURL
         
         if !FileManager.default.fileExists(atPath: url.path) {
-            logger.info("No saved project found. Initializing with defaults.")
-            self.nodes = OnboardingProvider.manifestoNodes
-            save()
+            logger.info("No saved project found for \(self.fileName). Initializing with defaults.")
+            self.nodes = initialNodes ?? OnboardingProvider.manifestoNodes
+            
+            // Only perform an initial save for permanent project files.
+            if !self.fileName.contains("onboarding") {
+                save()
+            }
             return
         }
         
