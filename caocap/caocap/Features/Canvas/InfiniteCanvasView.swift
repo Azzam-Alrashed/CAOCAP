@@ -5,6 +5,11 @@ struct InfiniteCanvasView: View {
     @State private var viewport = ViewportState()
     @State private var nodes: [SpatialNode] = OnboardingProvider.manifestoNodes
     
+    // Selection and Dragging State
+    @State private var selectedNode: SpatialNode?
+    @State private var nodeDragOffsets: [UUID: CGSize] = [:]
+    @State private var isDraggingNode = false
+    
     var body: some View {
         GeometryReader { geometry in
             let center = CGPoint(x: geometry.size.width / 2, y: geometry.size.height / 2)
@@ -16,10 +21,30 @@ struct InfiniteCanvasView: View {
                 // The Content Layer
                 ZStack {
                     ForEach(nodes) { node in
+                        let currentOffset = nodeDragOffsets[node.id] ?? .zero
+                        
                         NodeView(node: node)
                             .position(
-                                x: center.x + node.position.x,
-                                y: center.y + node.position.y
+                                x: center.x + node.position.x + currentOffset.width,
+                                y: center.y + node.position.y + currentOffset.height
+                            )
+                            .onTapGesture {
+                                selectedNode = node
+                            }
+                            .highPriorityGesture(
+                                DragGesture(minimumDistance: 5)
+                                    .onChanged { value in
+                                        isDraggingNode = true
+                                        nodeDragOffsets[node.id] = value.translation
+                                    }
+                                    .onEnded { value in
+                                        if let index = nodes.firstIndex(where: { $0.id == node.id }) {
+                                            nodes[index].position.x += value.translation.width
+                                            nodes[index].position.y += value.translation.height
+                                        }
+                                        nodeDragOffsets[node.id] = nil
+                                        isDraggingNode = false
+                                    }
                             )
                     }
                 }
@@ -29,8 +54,16 @@ struct InfiniteCanvasView: View {
             .contentShape(Rectangle())
             .simultaneousGesture(
                 DragGesture()
-                    .onChanged { viewport.handleDragChanged($0) }
-                    .onEnded { _ in viewport.handleDragEnded() }
+                    .onChanged { value in
+                        if !isDraggingNode {
+                            viewport.handleDragChanged(value)
+                        }
+                    }
+                    .onEnded { _ in 
+                        if !isDraggingNode {
+                            viewport.handleDragEnded()
+                        }
+                    }
             )
             .simultaneousGesture(
                 MagnificationGesture()
@@ -40,6 +73,9 @@ struct InfiniteCanvasView: View {
         }
         .background(backgroundColor)
         .edgesIgnoringSafeArea(.all)
+        .sheet(item: $selectedNode) { node in
+            NodeDetailView(node: node)
+        }
     }
     
     private var backgroundColor: Color {
