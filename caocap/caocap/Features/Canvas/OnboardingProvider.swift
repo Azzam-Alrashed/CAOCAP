@@ -3,46 +3,64 @@ import CoreGraphics
 
 public struct OnboardingProvider {
     public static var manifestoNodes: [SpatialNode] {
-        [
+        let node1Id = UUID()
+        let node2Id = UUID()
+        let node3Id = UUID()
+        let node4Id = UUID()
+        let node5Id = UUID()
+        let node6Id = UUID()
+        
+        return [
             SpatialNode(
+                id: node1Id,
                 position: .zero,
                 title: "Hello, world!",
-                subtitle: "You've entered a spatial IDE where code lives in 2D space.",
+                subtitle: "Welcome to CAOCAP. Follow the arrow to begin your journey.",
                 icon: "hand.wave.fill",
-                theme: .purple
+                theme: .purple,
+                nextNodeId: node2Id
             ),
             SpatialNode(
-                position: CGPoint(x: 450, y: 150),
-                title: "The Spatial Medium",
-                subtitle: "Pan and zoom to explore the architecture of your software.",
+                id: node2Id,
+                position: CGPoint(x: 500, y: 100),
+                title: "Navigation",
+                subtitle: "Pan with one finger and zoom with two to move around this space.",
                 icon: "map.fill",
-                theme: .blue
+                theme: .blue,
+                nextNodeId: node3Id
             ),
             SpatialNode(
-                position: CGPoint(x: -400, y: 350),
-                title: "Agentic Flow",
-                subtitle: "AI agents don't just write code; they inhabit this workspace with you.",
-                icon: "sparkles",
-                theme: .pink
-            ),
-            SpatialNode(
-                position: CGPoint(x: 100, y: -450),
+                id: node3Id,
+                position: CGPoint(x: 1000, y: -200),
                 title: "Direct Manipulation",
-                subtitle: "Grab an idea, move it, scale it, and see how it connects.",
+                subtitle: "Try dragging me! You can organize nodes anywhere on the canvas.",
                 icon: "hand.point.up.left.fill",
-                theme: .orange
+                theme: .orange,
+                nextNodeId: node4Id
             ),
             SpatialNode(
-                position: CGPoint(x: -600, y: -100),
-                title: "Start Building",
-                subtitle: "Press Cmd+K to summon the Omnibox and create your first node.",
+                id: node4Id,
+                position: CGPoint(x: 1500, y: 300),
+                title: "Agentic Flow",
+                subtitle: "Each node represents an intent, a snippet of code, or an app module.",
+                icon: "sparkles",
+                theme: .pink,
+                nextNodeId: node5Id
+            ),
+            SpatialNode(
+                id: node5Id,
+                position: CGPoint(x: 1000, y: 800),
+                title: "Summon the Omnibox",
+                subtitle: "Press Cmd+K to create new nodes and interact with the AI.",
                 icon: "command",
-                theme: .green
+                theme: .green,
+                nextNodeId: node6Id
             ),
             SpatialNode(
-                position: CGPoint(x: 0, y: 600),
+                id: node6Id,
+                position: CGPoint(x: 0, y: 1000),
                 title: "Launch Project",
-                subtitle: "Click here to enter your new blank workspace.",
+                subtitle: "Click me to enter your new blank workspace and start building.",
                 icon: "rocket.fill",
                 theme: .purple
             )

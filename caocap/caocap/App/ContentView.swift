@@ -4,18 +4,18 @@ struct ContentView: View {
     @StateObject var commandPalette = CommandPaletteViewModel()
     @StateObject var coCaptain = CoCaptainViewModel()
     @State private var projectStore = ProjectStore()
-    @State private var onboarding = OnboardingManager()
+    @State private var isBlankCanvasActive = false
     @State private var blankProjectStore = ProjectStore() // Temporary empty store for now
     
     var body: some View {
         ZStack {
-            if onboarding.isBlankCanvasActive {
+            if isBlankCanvasActive {
                 // The "New Completely New Canvas" (Blank for now)
                 InfiniteCanvasView(store: blankProjectStore)
                     .overlay(alignment: .topLeading) {
                         Button(action: {
                             withAnimation(.spring()) {
-                                onboarding.isBlankCanvasActive = false
+                                isBlankCanvasActive = false
                             }
                         }) {
                             HStack {
@@ -33,7 +33,11 @@ struct ContentView: View {
                         .padding(.leading, 20)
                     }
             } else {
-                InfiniteCanvasView(store: projectStore, onboarding: onboarding)
+                InfiniteCanvasView(store: projectStore, onLaunchProject: {
+                    withAnimation(.spring()) {
+                        isBlankCanvasActive = true
+                    }
+                })
             }
             
             FloatingCommandButton(onTap: {
