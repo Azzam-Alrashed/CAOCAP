@@ -51,9 +51,9 @@ struct InfiniteCanvasView: View {
                         let isDraggingThisNode = nodeDragOffsets[node.id] != nil
                         
                         NodeView(node: node, isDragging: isDraggingThisNode)
-                            .position(
-                                x: center.x + node.position.x + currentOffset.width,
-                                y: center.y + node.position.y + currentOffset.height
+                            .offset(
+                                x: node.position.x + currentOffset.width,
+                                y: node.position.y + currentOffset.height
                             )
                             .onTapGesture {
                                 if node.title == "Launch Project" {
@@ -74,7 +74,14 @@ struct InfiniteCanvasView: View {
                                         withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
                                             let finalX = node.position.x + value.translation.width
                                             let finalY = node.position.y + value.translation.height
-                                            store.updateNodePosition(id: node.id, position: CGPoint(x: finalX, y: finalY))
+                                            
+                                            // Update the store so the node stays in place during the session.
+                                            // Only persist to disk for active projects.
+                                            store.updateNodePosition(
+                                                id: node.id,
+                                                position: CGPoint(x: finalX, y: finalY),
+                                                persist: onLaunchProject == nil
+                                            )
                                             
                                             nodeDragOffsets[node.id] = nil
                                             isDraggingNode = false
@@ -83,9 +90,9 @@ struct InfiniteCanvasView: View {
                             )
                     }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .scaleEffect(viewport.scale)
                 .offset(viewport.offset)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .contentShape(Rectangle()) // Ensure the entire area is gesture-sensitive.
@@ -100,10 +107,13 @@ struct InfiniteCanvasView: View {
                     .onEnded { _ in 
                         if !isDraggingNode {
                             viewport.handleDragEnded()
-                            // Only persist the canvas offset for active projects.
-                            if onLaunchProject == nil {
-                                store.updateViewport(offset: viewport.offset, scale: viewport.scale)
-                            }
+                            // Update the store's viewport so it stays in place during the session.
+                            // Only persist to disk for active projects.
+                            store.updateViewport(
+                                offset: viewport.offset,
+                                scale: viewport.scale,
+                                persist: onLaunchProject == nil
+                            )
                         }
                     }
             )
@@ -114,10 +124,13 @@ struct InfiniteCanvasView: View {
                     }
                     .onEnded { _ in 
                         viewport.handleMagnificationEnded()
-                        // Only persist the zoom level for active projects.
-                        if onLaunchProject == nil {
-                            store.updateViewport(offset: viewport.offset, scale: viewport.scale)
-                        }
+                        // Update the store's zoom level so it stays in place during the session.
+                        // Only persist to disk for active projects.
+                        store.updateViewport(
+                            offset: viewport.offset,
+                            scale: viewport.scale,
+                            persist: onLaunchProject == nil
+                        )
                     }
             )
         }
@@ -150,7 +163,7 @@ struct ConnectionLayer: View {
                     let nextNodeOffset = dragOffsets[nextNode.id] ?? .zero
                     
                     // Manually calculate screen-space coordinates to avoid clipping.
-                    // We scale from the 'center' point to match SwiftUI's .scaleEffect behavior.
+                    // Positions are offsets from the 'center' point.
                     let start = CGPoint(
                         x: center.x + (node.position.x + nodeOffset.width) * viewport.scale + viewport.offset.width,
                         y: center.y + (node.position.y + nodeOffset.height) * viewport.scale + viewport.offset.height
