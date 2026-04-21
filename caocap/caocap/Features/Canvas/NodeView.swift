@@ -66,17 +66,7 @@ struct NodeView: View {
     }
     
     private var themeColor: Color {
-        if let colorName = node.color {
-            switch colorName.lowercased() {
-            case "blue": return .blue
-            case "purple": return .purple
-            case "orange": return .orange
-            case "green": return .green
-            case "pink": return .pink
-            default: return .blue
-            }
-        }
-        return .blue
+        node.theme.color
     }
 }
 
@@ -88,7 +78,7 @@ struct NodeView: View {
             title: "Hello, world!",
             subtitle: "Welcome to the future of agentic programming.",
             icon: "sparkles",
-            color: "purple"
+            theme: .purple
         ))
     }
 }
