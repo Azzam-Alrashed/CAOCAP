@@ -6,14 +6,18 @@ struct InfiniteCanvasView: View {
     /// Tracks the current panning and zooming state of the canvas.
     @State private var viewport: ViewportState
     
+    /// Real-time scale feedback for external overlays.
+    @Binding var currentScale: CGFloat
+    
     /// The central store managing node data and persistence.
     var store: ProjectStore
     
     /// Callback triggered when the 'Launch Project' node is tapped.
     var onLaunchProject: (() -> Void)? = nil
     
-    init(store: ProjectStore, onLaunchProject: (() -> Void)? = nil) {
+    init(store: ProjectStore, currentScale: Binding<CGFloat>, onLaunchProject: (() -> Void)? = nil) {
         self.store = store
+        self._currentScale = currentScale
         self.onLaunchProject = onLaunchProject
         
         // Onboarding always starts fresh; active projects load saved state.
@@ -56,7 +60,7 @@ struct InfiniteCanvasView: View {
                                 y: node.position.y + currentOffset.height
                             )
                             .onTapGesture {
-                                if node.title == "Launch Project" {
+                                if node.title == "Go to the Home workspace" {
                                     onLaunchProject?()
                                 } else {
                                     selectedNode = node
@@ -121,9 +125,11 @@ struct InfiniteCanvasView: View {
                 MagnificationGesture()
                     .onChanged { 
                         viewport.handleMagnificationChanged($0)
+                        currentScale = viewport.scale
                     }
                     .onEnded { _ in 
                         viewport.handleMagnificationEnded()
+                        currentScale = viewport.scale
                         // Update the store's zoom level so it stays in place during the session.
                         // Only persist to disk for active projects.
                         store.updateViewport(
@@ -138,6 +144,9 @@ struct InfiniteCanvasView: View {
         .edgesIgnoringSafeArea(.all)
         .sheet(item: $selectedNode) { node in
             NodeDetailView(node: node)
+        }
+        .onAppear {
+            currentScale = viewport.scale
         }
     }
     
@@ -250,5 +259,5 @@ struct DottedBackground: View {
 }
 
 #Preview {
-    InfiniteCanvasView(store: ProjectStore())
+    InfiniteCanvasView(store: ProjectStore(), currentScale: .constant(1.0))
 }

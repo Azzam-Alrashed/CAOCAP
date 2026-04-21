@@ -5,6 +5,9 @@ import OSLog
 @Observable
 @MainActor
 public class ProjectStore {
+    /// The display name of the project.
+    public var projectName: String = "Untitled Project"
+    
     /// The collection of nodes currently visible on the canvas.
     public var nodes: [SpatialNode] = []
     
@@ -14,6 +17,9 @@ public class ProjectStore {
     /// The saved scale/zoom level of the infinite canvas.
     public var viewportScale: CGFloat = 1.0
     
+    /// Tracks if a save operation is currently pending or in progress.
+    public var isSaving: Bool = false
+    
     private let logger = Logger(subsystem: "com.ficruty.caocap", category: "Persistence")
     
     /// A reference to the pending save task used for debouncing disk writes.
@@ -21,6 +27,7 @@ public class ProjectStore {
     
     /// The internal structure used for JSON serialization of the project state.
     private struct ProjectData: Codable {
+        let projectName: String?
         let nodes: [SpatialNode]
         let viewportOffset: CGSize
         let viewportScale: CGFloat
@@ -40,8 +47,9 @@ public class ProjectStore {
         return appSupport.appendingPathComponent(self.fileName)
     }
     
-    public init(fileName: String = "project_v1.json", initialNodes: [SpatialNode]? = nil) {
+    public init(fileName: String = "project_v1.json", projectName: String = "Untitled Project", initialNodes: [SpatialNode]? = nil) {
         self.fileName = fileName
+        self.projectName = projectName
         load(initialNodes: initialNodes)
     }
     
@@ -65,6 +73,7 @@ public class ProjectStore {
             let decoded = try JSONDecoder().decode(ProjectData.self, from: data)
             
             // Update the live state with the decoded data
+            self.projectName = decoded.projectName ?? self.projectName
             self.nodes = decoded.nodes
             self.viewportOffset = decoded.viewportOffset
             self.viewportScale = decoded.viewportScale
@@ -72,8 +81,8 @@ public class ProjectStore {
             logger.info("Successfully loaded project from disk.")
         } catch {
             logger.error("Failed to load project: \(error.localizedDescription)")
-            // Fallback to onboarding content if data is corrupted
-            self.nodes = OnboardingProvider.manifestoNodes
+            // Fallback to initial nodes if data is corrupted or missing
+            self.nodes = initialNodes ?? OnboardingProvider.manifestoNodes
         }
     }
     
@@ -84,6 +93,7 @@ public class ProjectStore {
         
         do {
             let projectData = ProjectData(
+                projectName: projectName,
                 nodes: nodes,
                 viewportOffset: viewportOffset,
                 viewportScale: viewportScale
@@ -107,18 +117,26 @@ public class ProjectStore {
         } catch {
             logger.error("Failed to save project: \(error.localizedDescription)")
         }
+        
+        // Reset isSaving only if no other task is pending
+        if saveTask == nil {
+            isSaving = false
+        }
     }
     
     /// Schedules a save operation to run after a short delay (500ms).
     /// If another save is requested before the delay expires, the previous request is cancelled.
     public func requestSave() {
         saveTask?.cancel()
+        isSaving = true
         
         saveTask = Task {
             try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
             
             if !Task.isCancelled {
                 save()
+                saveTask = nil
+                isSaving = false
             }
         }
     }

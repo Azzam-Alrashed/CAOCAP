@@ -3,23 +3,28 @@ import SwiftUI
 struct ContentView: View {
     @StateObject var commandPalette = CommandPaletteViewModel()
     @StateObject var coCaptain = CoCaptainViewModel()
-    @State private var projectStore = ProjectStore(fileName: "onboarding_v1.json")
+    @State private var projectStore = ProjectStore(fileName: "onboarding_v1.json", projectName: "Onboarding")
     @State private var isHomeActive = false
-    @State private var homeProjectStore = ProjectStore(fileName: "home_v1.json", initialNodes: HomeProvider.homeNodes)
+    @State private var homeProjectStore = ProjectStore(fileName: "home_v1.json", projectName: "Home", initialNodes: HomeProvider.homeNodes)
     @State private var showingPurchaseSheet = false
+    @State private var currentScale: CGFloat = 1.0
     
     var body: some View {
         ZStack {
             if isHomeActive {
                 // The Home Canvas (Main Navigation Hub)
-                InfiniteCanvasView(store: homeProjectStore)
+                InfiniteCanvasView(store: homeProjectStore, currentScale: $currentScale)
             } else {
-                InfiniteCanvasView(store: projectStore, onLaunchProject: {
+                InfiniteCanvasView(store: projectStore, currentScale: $currentScale, onLaunchProject: {
                     withAnimation(.spring()) {
                         isHomeActive = true
+                        currentScale = 1.0 // Reset scale for new project
                     }
                 })
             }
+            
+            // HUD Overlay
+            CanvasHUDView(store: isHomeActive ? homeProjectStore : projectStore, viewportScale: currentScale)
             
             FloatingCommandButton(onTap: {
                 commandPalette.setPresented(true)
@@ -45,6 +50,8 @@ struct ContentView: View {
         }
         .onAppear {
             setupCommandHandlers()
+            // Sync initial scale
+            currentScale = (isHomeActive ? homeProjectStore : projectStore).viewportScale
         }
     }
     

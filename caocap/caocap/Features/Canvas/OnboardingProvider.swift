@@ -59,8 +59,8 @@ public struct OnboardingProvider {
             SpatialNode(
                 id: node6Id,
                 position: CGPoint(x: 0, y: 1000),
-                title: "Launch Project",
-                subtitle: "Click me to enter your new blank workspace and start building.",
+                title: "Go to the Home workspace",
+                subtitle: "Click me to enter the Home workspace and start building.",
                 icon: "rocket.fill",
                 theme: .purple
             )
