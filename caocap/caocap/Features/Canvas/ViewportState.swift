@@ -38,14 +38,33 @@ public class ViewportState {
         lastOffset = offset
     }
     
-    /// Updates the current scale based on a magnification multiplier.
-    public func handleMagnificationChanged(_ value: CGFloat) {
-        let newScale = lastScale * value
-        scale = min(max(newScale, minScale), maxScale)
+    /// Updates the current scale and offset based on a magnification gesture at a specific location.
+    public func handleMagnificationChanged(_ magnification: CGFloat, at location: CGPoint, in viewSize: CGSize) {
+        let newScale = min(max(lastScale * magnification, minScale), maxScale)
+        
+        // Calculate the center of the view (our coordinate origin)
+        let centerX = viewSize.width / 2
+        let centerY = viewSize.height / 2
+        
+        // 1. Find where the pinch location is in 'unscaled' canvas coordinates (relative to origin)
+        // (Location - Center - LastOffset) / LastScale
+        let pointX = (location.x - centerX - lastOffset.width) / lastScale
+        let pointY = (location.y - centerY - lastOffset.height) / lastScale
+        
+        // 2. Update the scale
+        self.scale = newScale
+        
+        // 3. Calculate the new offset so that the same point remains under the fingers
+        // NewOffset = Location - Center - (Point * NewScale)
+        self.offset = CGSize(
+            width: location.x - centerX - (pointX * newScale),
+            height: location.y - centerY - (pointY * newScale)
+        )
     }
     
-    /// Commits the current scale as the starting point for the next zoom.
+    /// Commits the current scale and offset as the starting point for the next zoom.
     public func handleMagnificationEnded() {
         lastScale = scale
+        lastOffset = offset
     }
 }

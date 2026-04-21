@@ -122,15 +122,19 @@ struct InfiniteCanvasView: View {
                     }
             )
             .simultaneousGesture(
-                MagnificationGesture()
-                    .onChanged { 
-                        viewport.handleMagnificationChanged($0)
+                MagnifyGesture()
+                    .onChanged { value in
+                        let location = CGPoint(
+                            x: value.startAnchor.x * geometry.size.width,
+                            y: value.startAnchor.y * geometry.size.height
+                        )
+                        viewport.handleMagnificationChanged(value.magnification, at: location, in: geometry.size)
                         currentScale = viewport.scale
                     }
                     .onEnded { _ in 
                         viewport.handleMagnificationEnded()
                         currentScale = viewport.scale
-                        // Update the store's zoom level so it stays in place during the session.
+                        // Update the store's viewport so it stays in place during the session.
                         // Only persist to disk for active projects.
                         store.updateViewport(
                             offset: viewport.offset,
