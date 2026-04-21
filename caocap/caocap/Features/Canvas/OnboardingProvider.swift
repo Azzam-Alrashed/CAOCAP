@@ -38,6 +38,13 @@ public struct OnboardingProvider {
                 subtitle: "Press Cmd+K to summon the Omnibox and create your first node.",
                 icon: "command",
                 theme: .green
+            ),
+            SpatialNode(
+                position: CGPoint(x: 0, y: 600),
+                title: "Launch Project",
+                subtitle: "Click here to enter your new blank workspace.",
+                icon: "rocket.fill",
+                theme: .purple
             )
         ]
     }

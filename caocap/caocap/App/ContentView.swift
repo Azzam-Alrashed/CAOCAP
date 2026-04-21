@@ -4,10 +4,37 @@ struct ContentView: View {
     @StateObject var commandPalette = CommandPaletteViewModel()
     @StateObject var coCaptain = CoCaptainViewModel()
     @State private var projectStore = ProjectStore()
+    @State private var onboarding = OnboardingManager()
+    @State private var blankProjectStore = ProjectStore() // Temporary empty store for now
     
     var body: some View {
         ZStack {
-            InfiniteCanvasView(store: projectStore)
+            if onboarding.isBlankCanvasActive {
+                // The "New Completely New Canvas" (Blank for now)
+                InfiniteCanvasView(store: blankProjectStore)
+                    .overlay(alignment: .topLeading) {
+                        Button(action: {
+                            withAnimation(.spring()) {
+                                onboarding.isBlankCanvasActive = false
+                            }
+                        }) {
+                            HStack {
+                                Image(systemName: "arrow.left")
+                                Text("Back to Onboarding")
+                            }
+                            .font(.system(size: 14, weight: .bold))
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                            .background(.ultraThinMaterial)
+                            .clipShape(Capsule())
+                            .overlay(Capsule().stroke(.white.opacity(0.2), lineWidth: 1))
+                        }
+                        .padding(.top, 60)
+                        .padding(.leading, 20)
+                    }
+            } else {
+                InfiniteCanvasView(store: projectStore, onboarding: onboarding)
+            }
             
             FloatingCommandButton(onTap: {
                 commandPalette.setPresented(true)
@@ -27,6 +54,8 @@ struct ContentView: View {
         }
         .onAppear {
             setupCommandHandlers()
+            // Ensure blank project is actually blank for this demo
+            blankProjectStore.nodes = []
         }
     }
     

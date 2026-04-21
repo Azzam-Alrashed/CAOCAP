@@ -9,8 +9,12 @@ struct InfiniteCanvasView: View {
     /// The central store managing node data and persistence.
     var store: ProjectStore
     
-    init(store: ProjectStore) {
+    /// Managed the onboarding lifecycle.
+    var onboarding: OnboardingManager? = nil
+    
+    init(store: ProjectStore, onboarding: OnboardingManager? = nil) {
         self.store = store
+        self.onboarding = onboarding
         // Initialize viewport from the store's persisted state.
         self._viewport = State(initialValue: ViewportState(
             offset: store.viewportOffset,
@@ -44,7 +48,12 @@ struct InfiniteCanvasView: View {
                                 y: center.y + node.position.y + currentOffset.height
                             )
                             .onTapGesture {
-                                selectedNode = node
+                                if onboarding?.currentStep == .transition && node.title == "Launch Project" {
+                                    onboarding?.launchProject()
+                                } else {
+                                    selectedNode = node
+                                    onboarding?.advance(from: .clicking)
+                                }
                             }
                             .highPriorityGesture(
                                 DragGesture(minimumDistance: 5)
@@ -52,6 +61,7 @@ struct InfiniteCanvasView: View {
                                         // Block canvas panning while a node is being moved.
                                         isDraggingNode = true
                                         nodeDragOffsets[node.id] = value.translation
+                                        onboarding?.advance(from: .dragging)
                                     }
                                     .onEnded { value in
                                         // Finalize the node position with a smooth spring animation.
@@ -77,6 +87,7 @@ struct InfiniteCanvasView: View {
                         // Only pan the background if no node is currently being dragged.
                         if !isDraggingNode {
                             viewport.handleDragChanged(value)
+                            onboarding?.advance(from: .panning)
                         }
                     }
                     .onEnded { _ in 
@@ -103,6 +114,11 @@ struct InfiniteCanvasView: View {
         .edgesIgnoringSafeArea(.all)
         .sheet(item: $selectedNode) { node in
             NodeDetailView(node: node)
+        }
+        .overlay {
+            if let onboarding = onboarding {
+                OnboardingOverlay(step: onboarding.currentStep)
+            }
         }
     }
     
