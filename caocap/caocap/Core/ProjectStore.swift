@@ -116,18 +116,30 @@ public class ProjectStore {
         }
     }
     
-    /// Updates a specific node's position and triggers a debounced save.
-    public func updateNodePosition(id: UUID, position: CGPoint) {
+    /// Updates a specific node's position.
+    /// - Parameters:
+    ///   - id: The UUID of the node to update.
+    ///   - position: The new position.
+    ///   - persist: If true, triggers a debounced save to disk.
+    public func updateNodePosition(id: UUID, position: CGPoint, persist: Bool = true) {
         if let index = nodes.firstIndex(where: { $0.id == id }) {
             nodes[index].position = position
-            requestSave()
+            if persist {
+                requestSave()
+            }
         }
     }
     
-    /// Updates the viewport state and triggers a debounced save.
-    public func updateViewport(offset: CGSize, scale: CGFloat) {
+    /// Updates the viewport state.
+    /// - Parameters:
+    ///   - offset: The new offset.
+    ///   - scale: The new scale.
+    ///   - persist: If true, triggers a debounced save to disk.
+    public func updateViewport(offset: CGSize, scale: CGFloat, persist: Bool = true) {
         self.viewportOffset = offset
         self.viewportScale = scale
-        requestSave()
+        if persist {
+            requestSave()
+        }
     }
 }
