@@ -34,7 +34,8 @@ public struct HomeProvider {
                 title: "New Project",
                 subtitle: "Start a fresh spatial journey.",
                 icon: "plus.circle.fill",
-                theme: .green
+                theme: .green,
+                action: .createNewProject
             ),
             SpatialNode(
                 id: UUID(),

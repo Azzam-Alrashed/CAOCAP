@@ -81,6 +81,8 @@ public class ProjectStore {
                         migratedNodes[i].action = .retryOnboarding
                     } else if migratedNodes[i].title == "Go to the Home workspace" {
                         migratedNodes[i].action = .navigateHome
+                    } else if migratedNodes[i].title == "New Project" {
+                        migratedNodes[i].action = .createNewProject
                     }
                 }
             }
