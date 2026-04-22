@@ -13,24 +13,19 @@ struct ContentView: View {
             case .home:
                 // The Home Canvas (Main Navigation Hub)
                 InfiniteCanvasView(store: router.homeStore, currentScale: $currentScale, onNodeAction: { action in
-                    if action == .retryOnboarding {
-                        withAnimation(.spring()) {
-                            router.navigate(to: .onboarding)
-                            currentScale = 1.0
-                        }
-                    }
+                    handleNodeAction(action)
                 })
                 .id("home_canvas")
             case .onboarding:
                 InfiniteCanvasView(store: router.onboardingStore, currentScale: $currentScale, onNodeAction: { action in
-                    if action == .navigateHome {
-                        withAnimation(.spring()) {
-                            router.navigate(to: .home)
-                            currentScale = 1.0
-                        }
-                    }
+                    handleNodeAction(action)
                 })
                 .id("onboarding_canvas")
+            case .project(let fileName):
+                InfiniteCanvasView(store: router.activeStore, currentScale: $currentScale, onNodeAction: { action in
+                    handleNodeAction(action)
+                })
+                .id("project_canvas_\(fileName)")
             }
             
             // HUD Overlay
@@ -66,11 +61,31 @@ struct ContentView: View {
         }
     }
     
+    private func handleNodeAction(_ action: NodeAction) {
+        switch action {
+        case .navigateHome:
+            withAnimation(.spring()) {
+                router.navigate(to: .home)
+                currentScale = 1.0
+            }
+        case .retryOnboarding:
+            withAnimation(.spring()) {
+                router.navigate(to: .onboarding)
+                currentScale = 1.0
+            }
+        case .createNewProject:
+            router.createNewProject()
+        }
+    }
+    
     private func setupCommandHandlers() {
         commandPalette.onExecute = { command in
             switch command {
             case .summonCoCaptain:
+                coCaptain.store = router.activeStore
                 coCaptain.setPresented(true)
+            case .newProject:
+                router.createNewProject()
             case .proSubscription:
                 showingPurchaseSheet = true
             default:

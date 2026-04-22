@@ -10,7 +10,7 @@ struct CoCaptainView: View {
                 // Chat History
                 ScrollView {
                     VStack(alignment: .leading, spacing: 12) {
-                        ForEach(viewModel.messages, id: \.self) { message in
+                        ForEach(viewModel.messages) { message in
                             ChatBubble(message: message)
                         }
                     }
@@ -28,7 +28,7 @@ struct CoCaptainView: View {
                     
                     Button(action: {
                         if !text.isEmpty {
-                            viewModel.messages.append(text)
+                            viewModel.sendMessage(text)
                             text = ""
                         }
                     }) {
@@ -59,21 +59,24 @@ struct CoCaptainView: View {
 }
 
 struct ChatBubble: View {
-    let message: String
+    let message: ChatMessage
     
     var body: some View {
-        Text(message)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .background(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(Color.blue.opacity(0.1))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(Color.blue.opacity(0.2), lineWidth: 1)
-            )
-            .font(.system(size: 16))
+        HStack {
+            if message.isUser { Spacer() }
+            
+            Text(message.text)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(message.isUser ? Color.blue : Color.primary.opacity(0.1))
+                )
+                .foregroundColor(message.isUser ? .white : .primary)
+                .font(.system(size: 16))
+            
+            if !message.isUser { Spacer() }
+        }
     }
 }
 
