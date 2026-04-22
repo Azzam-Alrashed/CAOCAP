@@ -63,6 +63,9 @@ public class ProjectStore {
             self.nodes = initialNodes ?? OnboardingProvider.manifestoNodes
             self.viewportScale = initialViewportScale
             
+            // Ensure Live Preview is compiled immediately for new projects
+            compileLivePreview()
+            
             // Only perform an initial save for permanent project files.
             if !self.fileName.contains("onboarding") {
                 save()
@@ -101,6 +104,9 @@ public class ProjectStore {
             // Fallback to initial nodes if data is corrupted or missing
             self.nodes = initialNodes ?? OnboardingProvider.manifestoNodes
         }
+        
+        // Ensure the Live Preview is synced with the code nodes on startup
+        compileLivePreview()
     }
     
     public func save() {
@@ -157,10 +163,52 @@ public class ProjectStore {
             try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
             
             if !Task.isCancelled {
+                compileLivePreview()
                 save()
                 saveTask = nil
                 isSaving = false
             }
+        }
+    }
+    
+    /// Combines HTML, CSS, and JS node contents and updates the Live Preview node.
+    private func compileLivePreview() {
+        guard let webViewIndex = nodes.firstIndex(where: { $0.type == .webView }),
+              let htmlNode = nodes.first(where: { $0.title.lowercased() == "html" }) else {
+            return
+        }
+        
+        var compiledHTML = htmlNode.textContent ?? ""
+        
+        // Inject CSS
+        if let cssNode = nodes.first(where: { $0.title.lowercased() == "css" }),
+           let cssContent = cssNode.textContent, !cssContent.isEmpty {
+            let styleTag = "\n<style>\n\(cssContent)\n</style>\n"
+            if let headRange = compiledHTML.range(of: "</head>", options: .caseInsensitive) {
+                compiledHTML.insert(contentsOf: styleTag, at: headRange.lowerBound)
+            } else if let htmlRange = compiledHTML.range(of: "<html>", options: .caseInsensitive) {
+                compiledHTML.insert(contentsOf: "<head>\n\(styleTag)\n</head>\n", at: htmlRange.upperBound)
+            } else {
+                compiledHTML = styleTag + compiledHTML
+            }
+        }
+        
+        // Inject JS
+        if let jsNode = nodes.first(where: { $0.title.lowercased() == "javascript" }),
+           let jsContent = jsNode.textContent, !jsContent.isEmpty {
+            let scriptTag = "\n<script>\n\(jsContent)\n</script>\n"
+            if let bodyRange = compiledHTML.range(of: "</body>", options: .caseInsensitive) {
+                compiledHTML.insert(contentsOf: scriptTag, at: bodyRange.lowerBound)
+            } else if let htmlRange = compiledHTML.range(of: "</html>", options: .caseInsensitive) {
+                compiledHTML.insert(contentsOf: scriptTag, at: htmlRange.lowerBound)
+            } else {
+                compiledHTML += scriptTag
+            }
+        }
+        
+        // Update the WebView node if the content changed
+        if nodes[webViewIndex].htmlContent != compiledHTML {
+            nodes[webViewIndex].htmlContent = compiledHTML
         }
     }
     

@@ -89,35 +89,7 @@ public class AppRouter {
                 title: "Live Preview",
                 subtitle: "Your mini-game will render here.",
                 icon: "play.circle.fill",
-                theme: .blue,
-                htmlContent: """
-                <!DOCTYPE html>
-                <html>
-                <head>
-                <style>
-                    body {
-                        background-color: #0d0d0d;
-                        color: #ffffff;
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                        height: 100vh;
-                        margin: 0;
-                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-                    }
-                    h1 {
-                        font-size: 3rem;
-                        background: linear-gradient(90deg, #00C9FF 0%, #92FE9D 100%);
-                        -webkit-background-clip: text;
-                        -webkit-text-fill-color: transparent;
-                    }
-                </style>
-                </head>
-                <body>
-                    <h1>Hello World!</h1>
-                </body>
-                </html>
-                """
+                theme: .blue
             ),
             SpatialNode(
                 id: srsId,
@@ -138,7 +110,7 @@ public class AppRouter {
                 icon: "chevron.left.slash.chevron.right",
                 theme: .orange,
                 connectedNodeIds: [srsId, webViewId],
-                textContent: "<!DOCTYPE html>\n<html>\n<head>\n    <title>My App</title>\n</head>\n<body>\n    <div id=\"app\">\n        <h1>Hello Ficruty!</h1>\n    </div>\n</body>\n</html>"
+                textContent: "<!DOCTYPE html>\n<html>\n<head>\n    <title>My App</title>\n</head>\n<body>\n    <h1>Hello World!</h1>\n</body>\n</html>"
             ),
             SpatialNode(
                 id: cssId,
@@ -149,7 +121,7 @@ public class AppRouter {
                 icon: "paintpalette.fill",
                 theme: .blue,
                 connectedNodeIds: [htmlId],
-                textContent: "body {\n    background-color: #f0f0f0;\n    font-family: sans-serif;\n}\n\n#app {\n    padding: 20px;\n    text-align: center;\n}"
+                textContent: "body {\n    background-color: #0d0d0d;\n    color: #ffffff;\n    display: flex;\n    justify-content: center;\n    align-items: center;\n    height: 100vh;\n    margin: 0;\n    font-family: -apple-system, BlinkMacSystemFont, sans-serif;\n    overflow: hidden;\n}\n\nh1 {\n    font-size: 3rem;\n    background: linear-gradient(90deg, #00C9FF 0%, #92FE9D 100%);\n    -webkit-background-clip: text;\n    -webkit-text-fill-color: transparent;\n    cursor: pointer;\n    transition: transform 0.1s ease-out, filter 0.3s ease;\n}\n\nh1:hover {\n    filter: drop-shadow(0 0 10px rgba(0, 201, 255, 0.5));\n}"
             ),
             SpatialNode(
                 id: jsId,
@@ -160,7 +132,7 @@ public class AppRouter {
                 icon: "script",
                 theme: .green,
                 connectedNodeIds: [htmlId],
-                textContent: "document.addEventListener('DOMContentLoaded', () => {\n    console.log('App Loaded!');\n});"
+                textContent: "document.addEventListener('DOMContentLoaded', () => {\n    const text = document.querySelector('h1');\n    \n    // Parallax mouse effect\n    document.addEventListener('mousemove', (e) => {\n        const x = (window.innerWidth / 2 - e.pageX) / 25;\n        const y = (window.innerHeight / 2 - e.pageY) / 25;\n        text.style.transform = `translate(${x}px, ${y}px)`;\n    });\n    \n    // Click interaction\n    text.addEventListener('click', () => {\n        text.style.transform = 'scale(1.2)';\n        setTimeout(() => {\n            text.style.transform = 'scale(1)';\n        }, 150);\n    });\n});"
             )
         ]
         
