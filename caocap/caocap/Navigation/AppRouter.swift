@@ -74,7 +74,89 @@ public class AppRouter {
     public func createNewProject() {
         let id = UUID().uuidString.prefix(8)
         let fileName = "project_\(id).json"
-        let newStore = ProjectStore(fileName: fileName, projectName: "New Project \(id)", initialNodes: [])
+        
+        let webViewId = UUID()
+        let srsId = UUID()
+        let htmlId = UUID()
+        let cssId = UUID()
+        let jsId = UUID()
+        
+        let initialNodes = [
+            SpatialNode(
+                id: webViewId,
+                type: .webView,
+                position: .zero,
+                title: "Live Preview",
+                subtitle: "Your mini-game will render here.",
+                icon: "play.circle.fill",
+                theme: .blue,
+                htmlContent: """
+                <!DOCTYPE html>
+                <html>
+                <head>
+                <style>
+                    body {
+                        background-color: #0d0d0d;
+                        color: #ffffff;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        height: 100vh;
+                        margin: 0;
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+                    }
+                    h1 {
+                        font-size: 3rem;
+                        background: linear-gradient(90deg, #00C9FF 0%, #92FE9D 100%);
+                        -webkit-background-clip: text;
+                        -webkit-text-fill-color: transparent;
+                    }
+                </style>
+                </head>
+                <body>
+                    <h1>Hello World!</h1>
+                </body>
+                </html>
+                """
+            ),
+            SpatialNode(
+                id: srsId,
+                position: CGPoint(x: -450, y: -250),
+                title: "Software Requirements (SRS)",
+                subtitle: "Define the core logic and rules here.",
+                icon: "doc.text.fill",
+                theme: .purple
+            ),
+            SpatialNode(
+                id: htmlId,
+                position: CGPoint(x: -450, y: 0),
+                title: "HTML",
+                subtitle: "Document structure.",
+                icon: "chevron.left.slash.chevron.right",
+                theme: .orange,
+                connectedNodeIds: [srsId, webViewId]
+            ),
+            SpatialNode(
+                id: cssId,
+                position: CGPoint(x: -550, y: 200),
+                title: "CSS",
+                subtitle: "Styling and layout.",
+                icon: "paintpalette.fill",
+                theme: .blue,
+                connectedNodeIds: [htmlId]
+            ),
+            SpatialNode(
+                id: jsId,
+                position: CGPoint(x: -350, y: 200),
+                title: "JavaScript",
+                subtitle: "Interactivity and logic.",
+                icon: "script",
+                theme: .green,
+                connectedNodeIds: [htmlId]
+            )
+        ]
+        
+        let newStore = ProjectStore(fileName: fileName, projectName: "New Project \(id)", initialNodes: initialNodes)
         projects[fileName] = newStore
         
         navigate(to: .project(fileName), animated: true)

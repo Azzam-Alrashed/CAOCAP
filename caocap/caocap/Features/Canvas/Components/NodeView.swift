@@ -6,34 +6,43 @@ struct NodeView: View {
     @State private var isHovering = false
     
     var body: some View {
-        HStack(alignment: .top, spacing: 16) {
-            // Icon / Symbol
-            if let icon = node.icon {
-                ZStack {
-                    Circle()
-                        .fill(themeColor.opacity(0.15))
-                        .frame(width: 40, height: 40)
-                    
-                    Image(systemName: icon)
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(themeColor)
+        VStack(spacing: 0) {
+            HStack(alignment: .top, spacing: 16) {
+                // Icon / Symbol
+                if let icon = node.icon {
+                    ZStack {
+                        Circle()
+                            .fill(themeColor.opacity(0.15))
+                            .frame(width: 40, height: 40)
+                        
+                        Image(systemName: icon)
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundColor(themeColor)
+                    }
                 }
-            }
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(node.title)
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
-                    .foregroundColor(.primary)
                 
-                if let subtitle = node.subtitle {
-                    Text(subtitle)
-                        .font(.system(size: 14, weight: .medium, design: .default))
-                        .foregroundColor(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .lineLimit(3)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(node.title)
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundColor(.primary)
+                    
+                    if let subtitle = node.subtitle {
+                        Text(subtitle)
+                            .font(.system(size: 14, weight: .medium, design: .default))
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .lineLimit(3)
+                    }
                 }
+                .frame(maxWidth: 240, alignment: .leading)
             }
-            .frame(maxWidth: 240, alignment: .leading)
+            .padding(.bottom, node.type == .webView ? 16 : 0)
+            
+            if node.type == .webView, let html = node.htmlContent {
+                HTMLWebView(htmlContent: html)
+                    .frame(width: 360, height: 640)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            }
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 20)

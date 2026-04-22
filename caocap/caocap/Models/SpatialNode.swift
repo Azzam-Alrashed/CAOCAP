@@ -7,24 +7,35 @@ public enum NodeAction: String, Codable, Equatable {
     case createNewProject
 }
 
+public enum NodeType: String, Codable, Equatable {
+    case standard
+    case webView
+}
+
 public struct SpatialNode: Identifiable, Codable, Equatable {
     public let id: UUID
+    public var type: NodeType
     public var position: CGPoint
     public var title: String
     public var subtitle: String?
     public var icon: String?
     public var theme: NodeTheme
     public var nextNodeId: UUID?
+    public var connectedNodeIds: [UUID]?
     public var action: NodeAction?
+    public var htmlContent: String?
     
-    public init(id: UUID = UUID(), position: CGPoint, title: String, subtitle: String? = nil, icon: String? = nil, theme: NodeTheme = .blue, nextNodeId: UUID? = nil, action: NodeAction? = nil) {
+    public init(id: UUID = UUID(), type: NodeType = .standard, position: CGPoint, title: String, subtitle: String? = nil, icon: String? = nil, theme: NodeTheme = .blue, nextNodeId: UUID? = nil, connectedNodeIds: [UUID]? = nil, action: NodeAction? = nil, htmlContent: String? = nil) {
         self.id = id
+        self.type = type
         self.position = position
         self.title = title
         self.subtitle = subtitle
         self.icon = icon
         self.theme = theme
         self.nextNodeId = nextNodeId
+        self.connectedNodeIds = connectedNodeIds
         self.action = action
+        self.htmlContent = htmlContent
     }
 }

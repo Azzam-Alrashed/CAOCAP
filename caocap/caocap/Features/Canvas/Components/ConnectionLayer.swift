@@ -10,25 +10,30 @@ struct ConnectionLayer: View {
     var body: some View {
         Canvas { context, size in
             for node in nodes {
-                if let nextId = node.nextNodeId,
-                   let nextNode = nodes.first(where: { $0.id == nextId }) {
-                    
-                    let nodeOffset = dragOffsets[node.id] ?? .zero
-                    let nextNodeOffset = dragOffsets[nextNode.id] ?? .zero
-                    
-                    // Manually calculate screen-space coordinates to avoid clipping.
-                    // Positions are offsets from the 'center' point.
-                    let start = CGPoint(
-                        x: center.x + (node.position.x + nodeOffset.width) * viewport.scale + viewport.offset.width,
-                        y: center.y + (node.position.y + nodeOffset.height) * viewport.scale + viewport.offset.height
-                    )
-                    
-                    let end = CGPoint(
-                        x: center.x + (nextNode.position.x + nextNodeOffset.width) * viewport.scale + viewport.offset.width,
-                        y: center.y + (nextNode.position.y + nextNodeOffset.height) * viewport.scale + viewport.offset.height
-                    )
-                    
-                    drawArrow(context: context, from: start, to: end, themeColor: node.theme.color, scale: viewport.scale)
+                var targets: [UUID] = []
+                if let next = node.nextNodeId { targets.append(next) }
+                if let connected = node.connectedNodeIds { targets.append(contentsOf: connected) }
+                
+                for targetId in targets {
+                    if let nextNode = nodes.first(where: { $0.id == targetId }) {
+                        
+                        let nodeOffset = dragOffsets[node.id] ?? .zero
+                        let nextNodeOffset = dragOffsets[nextNode.id] ?? .zero
+                        
+                        // Manually calculate screen-space coordinates to avoid clipping.
+                        // Positions are offsets from the 'center' point.
+                        let start = CGPoint(
+                            x: center.x + (node.position.x + nodeOffset.width) * viewport.scale + viewport.offset.width,
+                            y: center.y + (node.position.y + nodeOffset.height) * viewport.scale + viewport.offset.height
+                        )
+                        
+                        let end = CGPoint(
+                            x: center.x + (nextNode.position.x + nextNodeOffset.width) * viewport.scale + viewport.offset.width,
+                            y: center.y + (nextNode.position.y + nextNodeOffset.height) * viewport.scale + viewport.offset.height
+                        )
+                        
+                        drawArrow(context: context, from: start, to: end, themeColor: node.theme.color, scale: viewport.scale)
+                    }
                 }
             }
         }

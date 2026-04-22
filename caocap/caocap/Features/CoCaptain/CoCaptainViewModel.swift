@@ -22,8 +22,8 @@ public class CoCaptainViewModel {
     // MARK: - Constants
     private enum Constants {
         static let thinkingDelay: UInt64 = 1_000_000_000 // 1 second
-        static let layoutSpacing: CGFloat = 200
-        static let verticalOffset: CGFloat = 150
+        static let layoutSpacing: CGFloat = 450
+        static let verticalOffset: CGFloat = 450
     }
     
     public func sendMessage(_ text: String) {
