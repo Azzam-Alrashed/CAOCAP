@@ -72,9 +72,22 @@ public class ProjectStore {
             let data = try Data(contentsOf: url)
             let decoded = try JSONDecoder().decode(ProjectData.self, from: data)
             
+            var migratedNodes = decoded.nodes
+            
+            // Migrate old nodes that lack the action property
+            for i in 0..<migratedNodes.count {
+                if migratedNodes[i].action == nil {
+                    if migratedNodes[i].title == "Retry Onboarding" {
+                        migratedNodes[i].action = .retryOnboarding
+                    } else if migratedNodes[i].title == "Go to the Home workspace" {
+                        migratedNodes[i].action = .navigateHome
+                    }
+                }
+            }
+            
             // Update the live state with the decoded data
             self.projectName = decoded.projectName ?? self.projectName
-            self.nodes = decoded.nodes
+            self.nodes = migratedNodes
             self.viewportOffset = decoded.viewportOffset
             self.viewportScale = decoded.viewportScale
             
@@ -86,36 +99,42 @@ public class ProjectStore {
         }
     }
     
-    /// Performs an atomic save of the current project state to disk.
     public func save() {
         let url = fileURL
-        let tempURL = url.appendingPathExtension("tmp")
+        let tempURL = url.appendingPathExtension("\(UUID().uuidString).tmp")
         
-        do {
-            let projectData = ProjectData(
-                projectName: projectName,
-                nodes: nodes,
-                viewportOffset: viewportOffset,
-                viewportScale: viewportScale
-            )
-            
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = .prettyPrinted
-            let data = try encoder.encode(projectData)
-            
-            // 1. Write to a temporary file first
-            try data.write(to: tempURL, options: .atomic)
-            
-            // 2. Perform an atomic swap to prevent data corruption during write
-            if FileManager.default.fileExists(atPath: url.path) {
-                _ = try FileManager.default.replaceItemAt(url, withItemAt: tempURL)
-            } else {
-                try FileManager.default.moveItem(at: tempURL, to: url)
+        let projectData = ProjectData(
+            projectName: projectName,
+            nodes: nodes,
+            viewportOffset: viewportOffset,
+            viewportScale: viewportScale
+        )
+        
+        let log = logger
+        
+        Task.detached(priority: .background) {
+            do {
+                let encoder = JSONEncoder()
+                encoder.outputFormatting = .prettyPrinted
+                let data = try encoder.encode(projectData)
+                
+                // 1. Write to a temporary file first
+                try data.write(to: tempURL, options: .atomic)
+                
+                // 2. Perform an atomic swap to prevent data corruption during write
+                if FileManager.default.fileExists(atPath: url.path) {
+                    _ = try FileManager.default.replaceItemAt(url, withItemAt: tempURL)
+                } else {
+                    try FileManager.default.moveItem(at: tempURL, to: url)
+                }
+                
+                log.info("Successfully saved project to disk.")
+            } catch {
+                log.error("Failed to save project: \(error.localizedDescription)")
             }
             
-            logger.info("Successfully saved project to disk.")
-        } catch {
-            logger.error("Failed to save project: \(error.localizedDescription)")
+            // Clean up the temp file if the atomic swap failed or it wasn't consumed
+            try? FileManager.default.removeItem(at: tempURL)
         }
         
         // Reset isSaving only if no other task is pending

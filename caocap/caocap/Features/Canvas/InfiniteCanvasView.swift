@@ -13,9 +13,9 @@ struct InfiniteCanvasView: View {
     var store: ProjectStore
     
     /// Callback triggered when a specialized action node is tapped.
-    var onNodeAction: ((String) -> Void)? = nil
+    var onNodeAction: ((NodeAction) -> Void)? = nil
     
-    init(store: ProjectStore, currentScale: Binding<CGFloat>, onNodeAction: ((String) -> Void)? = nil) {
+    init(store: ProjectStore, currentScale: Binding<CGFloat>, onNodeAction: ((NodeAction) -> Void)? = nil) {
         self.store = store
         self._currentScale = currentScale
         self.onNodeAction = onNodeAction
@@ -60,8 +60,8 @@ struct InfiniteCanvasView: View {
                                 y: node.position.y + currentOffset.height
                             )
                             .onTapGesture {
-                                if node.title == "Go to the Home workspace" || node.title == "Retry Onboarding" {
-                                    onNodeAction?(node.title)
+                                if let action = node.action {
+                                    onNodeAction?(action)
                                 } else {
                                     selectedNode = node
                                 }
