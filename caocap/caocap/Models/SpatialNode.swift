@@ -10,6 +10,8 @@ public enum NodeAction: String, Codable, Equatable {
 public enum NodeType: String, Codable, Equatable {
     case standard
     case webView
+    case srs
+    case code
 }
 
 public struct SpatialNode: Identifiable, Codable, Equatable {
@@ -24,8 +26,9 @@ public struct SpatialNode: Identifiable, Codable, Equatable {
     public var connectedNodeIds: [UUID]?
     public var action: NodeAction?
     public var htmlContent: String?
+    public var textContent: String?
     
-    public init(id: UUID = UUID(), type: NodeType = .standard, position: CGPoint, title: String, subtitle: String? = nil, icon: String? = nil, theme: NodeTheme = .blue, nextNodeId: UUID? = nil, connectedNodeIds: [UUID]? = nil, action: NodeAction? = nil, htmlContent: String? = nil) {
+    public init(id: UUID = UUID(), type: NodeType = .standard, position: CGPoint, title: String, subtitle: String? = nil, icon: String? = nil, theme: NodeTheme = .blue, nextNodeId: UUID? = nil, connectedNodeIds: [UUID]? = nil, action: NodeAction? = nil, htmlContent: String? = nil, textContent: String? = nil) {
         self.id = id
         self.type = type
         self.position = position
@@ -37,5 +40,6 @@ public struct SpatialNode: Identifiable, Codable, Equatable {
         self.connectedNodeIds = connectedNodeIds
         self.action = action
         self.htmlContent = htmlContent
+        self.textContent = textContent
     }
 }

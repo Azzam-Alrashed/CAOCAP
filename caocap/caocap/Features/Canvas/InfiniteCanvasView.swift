@@ -147,7 +147,7 @@ struct InfiniteCanvasView: View {
         .background(backgroundColor)
         .edgesIgnoringSafeArea(.all)
         .sheet(item: $selectedNode) { node in
-            NodeDetailView(node: node)
+            NodeDetailView(node: node, store: store)
         }
         .onAppear {
             currentScale = viewport.scale

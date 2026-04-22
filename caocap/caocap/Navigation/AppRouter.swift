@@ -121,38 +121,46 @@ public class AppRouter {
             ),
             SpatialNode(
                 id: srsId,
+                type: .srs,
                 position: CGPoint(x: -275, y: -200),
                 title: "Software Requirements (SRS)",
                 subtitle: "Define the core logic and rules here.",
                 icon: "doc.text.fill",
-                theme: .purple
+                theme: .purple,
+                textContent: "1. The user should be able to...\n2. The system must...\n"
             ),
             SpatialNode(
                 id: htmlId,
+                type: .code,
                 position: CGPoint(x: -275, y: 0),
                 title: "HTML",
                 subtitle: "Document structure.",
                 icon: "chevron.left.slash.chevron.right",
                 theme: .orange,
-                connectedNodeIds: [srsId, webViewId]
+                connectedNodeIds: [srsId, webViewId],
+                textContent: "<!DOCTYPE html>\n<html>\n<head>\n    <title>My App</title>\n</head>\n<body>\n    <div id=\"app\">\n        <h1>Hello Ficruty!</h1>\n    </div>\n</body>\n</html>"
             ),
             SpatialNode(
                 id: cssId,
+                type: .code,
                 position: CGPoint(x: -475, y: 200),
                 title: "CSS",
                 subtitle: "Styling and layout.",
                 icon: "paintpalette.fill",
                 theme: .blue,
-                connectedNodeIds: [htmlId]
+                connectedNodeIds: [htmlId],
+                textContent: "body {\n    background-color: #f0f0f0;\n    font-family: sans-serif;\n}\n\n#app {\n    padding: 20px;\n    text-align: center;\n}"
             ),
             SpatialNode(
                 id: jsId,
+                type: .code,
                 position: CGPoint(x: -75, y: 200),
                 title: "JavaScript",
                 subtitle: "Interactivity and logic.",
                 icon: "script",
                 theme: .green,
-                connectedNodeIds: [htmlId]
+                connectedNodeIds: [htmlId],
+                textContent: "document.addEventListener('DOMContentLoaded', () => {\n    console.log('App Loaded!');\n});"
             )
         ]
         

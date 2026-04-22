@@ -178,6 +178,20 @@ public class ProjectStore {
         }
     }
     
+    /// Updates a specific node's text content.
+    /// - Parameters:
+    ///   - id: The UUID of the node to update.
+    ///   - text: The new text content.
+    ///   - persist: If true, triggers a debounced save to disk.
+    public func updateNodeTextContent(id: UUID, text: String, persist: Bool = true) {
+        if let index = nodes.firstIndex(where: { $0.id == id }) {
+            nodes[index].textContent = text
+            if persist {
+                requestSave()
+            }
+        }
+    }
+    
     /// Updates the viewport state.
     /// - Parameters:
     ///   - offset: The new offset.

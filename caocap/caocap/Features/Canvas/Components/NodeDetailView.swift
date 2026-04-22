@@ -2,6 +2,7 @@ import SwiftUI
 
 struct NodeDetailView: View {
     let node: SpatialNode
+    let store: ProjectStore
     @Environment(\.dismiss) var dismiss
     
     var body: some View {
@@ -29,6 +30,10 @@ struct NodeDetailView: View {
                     }
                 }
             }
+        } else if node.type == .code {
+            CodeEditorView(node: node, store: store)
+        } else if node.type == .srs {
+            SRSEditorView(node: node, store: store)
         } else {
             NavigationView {
                 ZStack {
@@ -135,5 +140,5 @@ struct DetailTag: View {
         subtitle: "Define the core purpose of your app",
         icon: "lightbulb.fill",
         theme: .purple
-    ))
+    ), store: ProjectStore(fileName: "preview.json", projectName: "Preview"))
 }
