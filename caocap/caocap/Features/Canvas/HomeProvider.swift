@@ -42,7 +42,8 @@ public struct HomeProvider {
                 title: "Retry Onboarding",
                 subtitle: "Revisit the guided tour and app manifesto.",
                 icon: "graduationcap.fill",
-                theme: .blue
+                theme: .blue,
+                action: .retryOnboarding
             )
         ]
     }

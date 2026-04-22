@@ -13,7 +13,7 @@ struct ContentView: View {
             case .home:
                 // The Home Canvas (Main Navigation Hub)
                 InfiniteCanvasView(store: router.homeStore, currentScale: $currentScale, onNodeAction: { action in
-                    if action == "Retry Onboarding" {
+                    if action == .retryOnboarding {
                         withAnimation(.spring()) {
                             router.navigate(to: .onboarding)
                             currentScale = 1.0
@@ -23,7 +23,7 @@ struct ContentView: View {
                 .id("home_canvas")
             case .onboarding:
                 InfiniteCanvasView(store: router.onboardingStore, currentScale: $currentScale, onNodeAction: { action in
-                    if action == "Go to the Home workspace" {
+                    if action == .navigateHome {
                         withAnimation(.spring()) {
                             router.navigate(to: .home)
                             currentScale = 1.0

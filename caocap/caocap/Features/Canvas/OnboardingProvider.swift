@@ -62,7 +62,8 @@ public struct OnboardingProvider {
                 title: "Go to the Home workspace",
                 subtitle: "Click me to enter the Home workspace and start building.",
                 icon: "rocket.fill",
-                theme: .purple
+                theme: .purple,
+                action: .navigateHome
             )
         ]
     }
