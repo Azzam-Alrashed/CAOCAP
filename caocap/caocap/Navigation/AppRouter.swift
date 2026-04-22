@@ -13,6 +13,7 @@ public enum WorkspaceState: Equatable {
 public class AppRouter {
     public var currentWorkspace: WorkspaceState
     public var projects: [String: ProjectStore] = [:]
+    private var navigationStack: [WorkspaceState] = []
     
     public let onboardingStore = ProjectStore(fileName: "onboarding_v2.json", projectName: "Onboarding")
     public let homeStore = ProjectStore(fileName: "home_v2.json", projectName: "Home", initialNodes: HomeProvider.homeNodes)
@@ -35,13 +36,39 @@ public class AppRouter {
         self.currentWorkspace = hasCompletedOnboarding ? .home : .onboarding
     }
     
-    public func navigate(to workspace: WorkspaceState) {
-        currentWorkspace = workspace
-        
-        // Update UserDefaults if we navigate to home from onboarding
-        if workspace == .home {
-            UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+    public func navigate(to workspace: WorkspaceState, addToStack: Bool = true, animated: Bool = true) {
+        let updateState = {
+            if addToStack && self.currentWorkspace != workspace {
+                self.navigationStack.append(self.currentWorkspace)
+                // Prevent infinite stack growth
+                if self.navigationStack.count > 50 {
+                    self.navigationStack.removeFirst()
+                }
+            }
+            self.currentWorkspace = workspace
+            
+            // Update UserDefaults if we navigate to home from onboarding
+            if workspace == .home {
+                UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+            }
         }
+        
+        if animated {
+            withAnimation(.spring()) {
+                updateState()
+            }
+        } else {
+            updateState()
+        }
+    }
+    
+    public func goBack() {
+        guard let previous = navigationStack.popLast() else { return }
+        navigate(to: previous, addToStack: false, animated: true)
+    }
+    
+    public func goHome() {
+        navigate(to: .home, animated: true)
     }
     
     public func createNewProject() {
@@ -50,8 +77,6 @@ public class AppRouter {
         let newStore = ProjectStore(fileName: fileName, projectName: "New Project \(id)", initialNodes: [])
         projects[fileName] = newStore
         
-        withAnimation(.spring()) {
-            navigate(to: .project(fileName))
-        }
+        navigate(to: .project(fileName), animated: true)
     }
 }

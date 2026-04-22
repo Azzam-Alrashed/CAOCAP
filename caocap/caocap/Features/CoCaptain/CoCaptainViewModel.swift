@@ -19,15 +19,25 @@ public class CoCaptainViewModel {
         }
     }
     
+    // MARK: - Constants
+    private enum Constants {
+        static let thinkingDelay: UInt64 = 1_000_000_000 // 1 second
+        static let layoutSpacing: CGFloat = 200
+        static let verticalOffset: CGFloat = 150
+    }
+    
     public func sendMessage(_ text: String) {
         let userMessage = ChatMessage(text: text, isUser: true)
         messages.append(userMessage)
         
         // Process Intent
         Task {
-            try? await Task.sleep(nanoseconds: 1_000_000_000) // 1s "thinking"
+            try? await Task.sleep(nanoseconds: Constants.thinkingDelay)
             
-            if text.lowercased().contains("game") || text.lowercased().contains("prototype") {
+            let normalizedText = text.lowercased()
+            let isPrototypingIntent = normalizedText.contains("game") || normalizedText.contains("prototype")
+            
+            if isPrototypingIntent {
                 generatePrototype(for: text)
                 let aiMessage = ChatMessage(text: "I've laid out the foundation for your mini-game on the canvas! I've added nodes for Logic, Physics, and Assets.", isUser: false)
                 messages.append(aiMessage)
@@ -41,25 +51,29 @@ public class CoCaptainViewModel {
     private func generatePrototype(for intent: String) {
         guard let store = store else { return }
         
-        let center = CGPoint(x: -store.viewportOffset.width / store.viewportScale, y: -store.viewportOffset.height / store.viewportScale)
+        // Calculate the center of the current viewport to spawn nodes
+        let center = CGPoint(
+            x: -store.viewportOffset.width / store.viewportScale,
+            y: -store.viewportOffset.height / store.viewportScale
+        )
         
         let nodes = [
             SpatialNode(
-                position: CGPoint(x: center.x, y: center.y - 150),
+                position: CGPoint(x: center.x, y: center.y - Constants.verticalOffset),
                 title: "Game Engine",
                 subtitle: "Core loop and state management.",
                 icon: "cpu",
                 theme: .purple
             ),
             SpatialNode(
-                position: CGPoint(x: center.x - 200, y: center.y + 100),
+                position: CGPoint(x: center.x - Constants.layoutSpacing, y: center.y + Constants.verticalOffset),
                 title: "Physics",
                 subtitle: "Collision and movement logic.",
                 icon: "bolt.fill",
                 theme: .orange
             ),
             SpatialNode(
-                position: CGPoint(x: center.x + 200, y: center.y + 100),
+                position: CGPoint(x: center.x + Constants.layoutSpacing, y: center.y + Constants.verticalOffset),
                 title: "Assets",
                 subtitle: "Sprites, sounds, and levels.",
                 icon: "photo.on.rectangle.angled",
@@ -67,7 +81,7 @@ public class CoCaptainViewModel {
             )
         ]
         
-        withAnimation(.spring()) {
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
             store.nodes.append(contentsOf: nodes)
             store.requestSave()
         }
