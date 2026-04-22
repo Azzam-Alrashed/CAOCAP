@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import OSLog
+import SwiftUI
 
 @Observable
 @MainActor
@@ -212,6 +213,12 @@ public class ProjectStore {
         }
     }
     
+    /// A reference to the system UndoManager, injected by the view layer.
+    public var undoManager: UndoManager? = nil
+    
+    /// Incremented whenever the undo stack changes to force UI updates.
+    public var undoStackChanged: Int = 0
+    
     /// Updates a specific node's position.
     /// - Parameters:
     ///   - id: The UUID of the node to update.
@@ -219,6 +226,14 @@ public class ProjectStore {
     ///   - persist: If true, triggers a debounced save to disk.
     public func updateNodePosition(id: UUID, position: CGPoint, persist: Bool = true) {
         if let index = nodes.firstIndex(where: { $0.id == id }) {
+            let oldPosition = nodes[index].position
+            
+            // Register Undo
+            undoManager?.registerUndo(withTarget: self) { target in
+                target.updateNodePosition(id: id, position: oldPosition, persist: persist)
+            }
+            undoStackChanged += 1
+            
             nodes[index].position = position
             if persist {
                 requestSave()
@@ -233,6 +248,14 @@ public class ProjectStore {
     ///   - persist: If true, triggers a debounced save to disk.
     public func updateNodeTextContent(id: UUID, text: String, persist: Bool = true) {
         if let index = nodes.firstIndex(where: { $0.id == id }) {
+            let oldText = nodes[index].textContent ?? ""
+            
+            // Register Undo
+            undoManager?.registerUndo(withTarget: self) { target in
+                target.updateNodeTextContent(id: id, text: oldText, persist: persist)
+            }
+            undoStackChanged += 1
+            
             nodes[index].textContent = text
             if persist {
                 requestSave()
@@ -251,5 +274,33 @@ public class ProjectStore {
         if persist {
             requestSave()
         }
+    }
+    
+    /// Resets the viewport to the center (0,0) at 100% zoom.
+    public func resetViewport() {
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+            self.viewportOffset = .zero
+            self.viewportScale = 1.0
+        }
+        requestSave()
+    }
+    
+    /// Adds a new code node to the project at the current viewport center.
+    public func addNode() {
+        let newNode = SpatialNode(
+            id: UUID(),
+            type: .code,
+            position: CGPoint(x: -viewportOffset.width / viewportScale, y: -viewportOffset.height / viewportScale),
+            title: "New Logic",
+            subtitle: "Write your intent here.",
+            icon: "plus.square.fill",
+            theme: .blue,
+            textContent: "// Start coding here..."
+        )
+        
+        withAnimation(.spring()) {
+            nodes.append(newNode)
+        }
+        requestSave()
     }
 }

@@ -6,6 +6,8 @@ struct ContentView: View {
     @State private var router = AppRouter()
     @State private var showingPurchaseSheet = false
     @State private var currentScale: CGFloat = 1.0
+    @Environment(\.undoManager) var undoManager
+    @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
         ZStack {
@@ -31,9 +33,25 @@ struct ContentView: View {
             // HUD Overlay
             CanvasHUDView(store: router.activeStore, viewportScale: currentScale)
             
-            FloatingCommandButton(onTap: {
-                commandPalette.setPresented(true)
-            })
+            FloatingCommandButton(
+                onTap: {
+                    commandPalette.setPresented(true)
+                },
+                onUndo: {
+                    undoManager?.undo()
+                    router.activeStore.undoStackChanged += 1
+                },
+                onSummonCoCaptain: {
+                    coCaptain.store = router.activeStore
+                    coCaptain.setPresented(true)
+                },
+                onRedo: {
+                    undoManager?.redo()
+                    router.activeStore.undoStackChanged += 1
+                },
+                canUndo: (router.activeStore.undoStackChanged >= 0) && (undoManager?.canUndo ?? false),
+                canRedo: (router.activeStore.undoStackChanged >= 0) && (undoManager?.canRedo ?? false)
+            )
             
             CommandPaletteView(viewModel: commandPalette)
         }
@@ -58,6 +76,15 @@ struct ContentView: View {
             
             // Sync initial scale
             currentScale = router.activeStore.viewportScale
+            
+            // Inject UndoManager into the active store
+            router.activeStore.undoManager = undoManager
+            router.homeStore.undoManager = undoManager
+            router.onboardingStore.undoManager = undoManager
+        }
+        .onChange(of: router.currentWorkspace) {
+            // Update the undo manager reference when switching projects
+            router.activeStore.undoManager = undoManager
         }
     }
     
