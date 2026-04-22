@@ -64,15 +64,11 @@ struct ContentView: View {
     private func handleNodeAction(_ action: NodeAction) {
         switch action {
         case .navigateHome:
-            withAnimation(.spring()) {
-                router.navigate(to: .home)
-                currentScale = 1.0
-            }
+            router.navigate(to: .home, animated: true)
+            currentScale = 1.0
         case .retryOnboarding:
-            withAnimation(.spring()) {
-                router.navigate(to: .onboarding)
-                currentScale = 1.0
-            }
+            router.navigate(to: .onboarding, animated: true)
+            currentScale = 1.0
         case .createNewProject:
             router.createNewProject()
         }
@@ -86,6 +82,10 @@ struct ContentView: View {
                 coCaptain.setPresented(true)
             case .newProject:
                 router.createNewProject()
+            case .goHome:
+                router.goHome()
+            case .goBack:
+                router.goBack()
             case .proSubscription:
                 showingPurchaseSheet = true
             default:
