@@ -229,8 +229,12 @@ public class ProjectStore {
             let oldPosition = nodes[index].position
             
             // Register Undo
+            // UndoManager always calls back on the main thread;
+            // assumeIsolated bridges the nonisolated closure to @MainActor.
             undoManager?.registerUndo(withTarget: self) { target in
-                target.updateNodePosition(id: id, position: oldPosition, persist: persist)
+                MainActor.assumeIsolated {
+                    target.updateNodePosition(id: id, position: oldPosition, persist: persist)
+                }
             }
             undoStackChanged += 1
             
@@ -251,8 +255,12 @@ public class ProjectStore {
             let oldText = nodes[index].textContent ?? ""
             
             // Register Undo
+            // UndoManager always calls back on the main thread;
+            // assumeIsolated bridges the nonisolated closure to @MainActor.
             undoManager?.registerUndo(withTarget: self) { target in
-                target.updateNodeTextContent(id: id, text: oldText, persist: persist)
+                MainActor.assumeIsolated {
+                    target.updateNodeTextContent(id: id, text: oldText, persist: persist)
+                }
             }
             undoStackChanged += 1
             

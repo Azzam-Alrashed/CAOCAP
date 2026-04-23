@@ -7,11 +7,36 @@
 
 import SwiftUI
 
+// MARK: - App Delegate
+
+/// Thin delegate whose only responsibility is forwarding launch
+/// events to `AppConfiguration`. Never add SDK calls directly here.
+final class AppDelegate: NSObject, UIApplicationDelegate {
+
+    /// Owned here so it is guaranteed to exist before `didFinishLaunchingWithOptions` fires.
+    let authManager = AuthenticationManager()
+
+    func application(
+        _ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
+    ) -> Bool {
+        AppConfiguration.shared.configure(authManager: authManager)
+        return true
+    }
+}
+
+// MARK: - App Entry Point
+
 @main
 struct caocapApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var delegate
+
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environment(delegate.authManager)
         }
     }
 }
+
+
