@@ -4,9 +4,11 @@ import StoreKit
 struct PurchaseView: View {
     @Environment(\.dismiss) var dismiss
     @State private var manager = SubscriptionManager.shared
-    @State private var selectedProductID: String = "com.caocap.pro.yearly"
+    @State private var selectedProductID: String = "CAOCAP_Pro_Yearly"
     @State private var isPurchasing = false
     @State private var appearAnimation = false
+    @State private var purchaseError: String?
+    @State private var showSuccess = false
     
     // Mock features based on CAOCAP Pro
     let features = [
@@ -91,24 +93,32 @@ struct PurchaseView: View {
                     
                     // MARK: - Plans
                     VStack(spacing: 16) {
-                        PlanCard(
-                            id: "com.caocap.pro.monthly",
-                            title: "Monthly",
-                            price: "$9.99",
-                            subtitle: "Billed monthly",
-                            isSelected: selectedProductID == "com.caocap.pro.monthly",
-                            action: { withAnimation(.spring()) { selectedProductID = "com.caocap.pro.monthly" } }
-                        )
-                        
-                        PlanCard(
-                            id: "com.caocap.pro.yearly",
-                            title: "Yearly",
-                            price: "$79.99",
-                            subtitle: "Billed annually • Save 33%",
-                            isSelected: selectedProductID == "com.caocap.pro.yearly",
-                            isBestValue: true,
-                            action: { withAnimation(.spring()) { selectedProductID = "com.caocap.pro.yearly" } }
-                        )
+                        if manager.isLoading && manager.products.isEmpty {
+                            ProgressView()
+                                .tint(.white)
+                                .padding()
+                        } else {
+                            PlanCard(
+                                id: "CAOCAP_Pro_Monthly",
+                                title: "Monthly",
+                                price: productPrice(for: "CAOCAP_Pro_Monthly"),
+                                subtitle: "Billed monthly",
+                                isSelected: selectedProductID == "CAOCAP_Pro_Monthly",
+                                isLoading: manager.isLoading,
+                                action: { withAnimation(.spring()) { selectedProductID = "CAOCAP_Pro_Monthly" } }
+                            )
+                            
+                            PlanCard(
+                                id: "CAOCAP_Pro_Yearly",
+                                title: "Yearly",
+                                price: productPrice(for: "CAOCAP_Pro_Yearly"),
+                                subtitle: "Billed annually • Save 33%",
+                                isSelected: selectedProductID == "CAOCAP_Pro_Yearly",
+                                isBestValue: true,
+                                isLoading: manager.isLoading,
+                                action: { withAnimation(.spring()) { selectedProductID = "CAOCAP_Pro_Yearly" } }
+                            )
+                        }
                     }
                     .padding(.horizontal, 50)
                     .opacity(appearAnimation ? 1 : 0)
@@ -135,9 +145,9 @@ struct PurchaseView: View {
                                         .tint(.white)
                                 } else {
                                     HStack {
-                                        Text("Unlock Everything")
+                                        Text(manager.isSubscribed ? "Manage Subscription" : "Unlock Everything")
                                             .font(.system(size: 20, weight: .bold))
-                                        Image(systemName: "arrow.right")
+                                        Image(systemName: manager.isSubscribed ? "gearshape.fill" : "arrow.right")
                                             .font(.system(size: 18, weight: .bold))
                                     }
                                     .foregroundStyle(.white)
@@ -146,6 +156,7 @@ struct PurchaseView: View {
                         }
                         .padding(.horizontal, 50)
                         .scaleEffect(isPurchasing ? 0.95 : 1.0)
+                        .disabled(isPurchasing || (manager.isLoading && !manager.isSubscribed))
                         .animation(.spring(), value: isPurchasing)
                         
                         // Footer Links
@@ -167,6 +178,20 @@ struct PurchaseView: View {
                 }
             }
             .padding(.horizontal, 20)
+            
+            // Success Overlay
+            if showSuccess {
+                Color.black.opacity(0.8).ignoresSafeArea()
+                VStack(spacing: 20) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 80))
+                        .foregroundStyle(.green)
+                    Text("Welcome to Pro!")
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundStyle(.white)
+                }
+                .transition(.scale.combined(with: .opacity))
+            }
             
             // Close Button
             VStack {
@@ -196,32 +221,65 @@ struct PurchaseView: View {
         .task {
             await manager.fetchProducts()
         }
+        .alert("Purchase Failed", isPresented: Binding(get: { purchaseError != nil }, set: { if !$0 { purchaseError = nil } })) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            if let error = purchaseError {
+                Text(error)
+            }
+        }
         .preferredColorScheme(.dark)
     }
     
+    private func productPrice(for id: String) -> String {
+        manager.products.first(where: { $0.id == id })?.displayPrice ?? (id.contains("monthly") ? "$9.99" : "$79.99")
+    }
+    
     private func purchaseAction() {
-        // UI Feedback
+        if manager.isSubscribed {
+            // Redirect to App Store Manage Subscriptions
+            if let url = URL(string: "https://apps.apple.com/account/subscriptions") {
+                UIApplication.shared.open(url)
+            }
+            return
+        }
+        
         let generator = UIImpactFeedbackGenerator(style: .medium)
         generator.impactOccurred()
         
         guard let product = manager.products.first(where: { $0.id == selectedProductID }) else {
-            isPurchasing = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                isPurchasing = false
-                dismiss()
-            }
+            purchaseError = "Product not found. Please try again later."
             return
         }
         
         isPurchasing = true
         Task {
             do {
-                _ = try await manager.purchase(product)
+                let transaction = try await manager.purchase(product)
                 isPurchasing = false
-                dismiss()
+                
+                if transaction != nil {
+                    // Success!
+                    UINotificationFeedbackGenerator().notificationOccurred(.success)
+                    withAnimation { showSuccess = true }
+                    try? await Task.sleep(nanoseconds: 1_500_000_000)
+                    dismiss()
+                } else {
+                    // Transaction was nil (cancelled or pending)
+                    // We stay silent here as per plan
+                }
             } catch {
-                print("Purchase failed: \(error)")
                 isPurchasing = false
+                
+                // Ignore cancellation errors from throwing
+                let errorString = error.localizedDescription.lowercased()
+                if errorString.contains("cancel") || errorString.contains("usercancelled") {
+                    print("Purchase cancelled by user.")
+                    return
+                }
+                
+                print("Purchase failed: \(error)")
+                purchaseError = error.localizedDescription
             }
         }
     }

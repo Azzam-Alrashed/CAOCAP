@@ -9,10 +9,15 @@ public class SubscriptionManager {
     
     public private(set) var products: [Product] = []
     public private(set) var purchasedProductIDs = Set<String>()
+    public private(set) var isLoading = false
+    
+    public var isSubscribed: Bool {
+        !purchasedProductIDs.isEmpty
+    }
     
     private let productIDs = [
-        "com.caocap.pro.monthly",
-        "com.caocap.pro.yearly"
+        "CAOCAP_Pro_Monthly",
+        "CAOCAP_Pro_Yearly"
     ]
     
     private final class TaskCanceller {
@@ -34,9 +39,12 @@ public class SubscriptionManager {
     }
     
     public func fetchProducts() async {
+        guard products.isEmpty else { return }
+        isLoading = true
+        defer { isLoading = false }
+        
         do {
             products = try await Product.products(for: productIDs)
-            // Sort by price or duration if needed
         } catch {
             print("Failed to fetch products: \(error)")
         }

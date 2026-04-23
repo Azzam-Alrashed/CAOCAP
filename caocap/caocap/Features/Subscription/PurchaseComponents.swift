@@ -38,6 +38,7 @@ struct PlanCard: View {
     let subtitle: String
     var isSelected: Bool
     var isBestValue: Bool = false
+    var isLoading: Bool = false
     let action: () -> Void
     
     var body: some View {
@@ -69,9 +70,15 @@ struct PlanCard: View {
                 
                 Spacer()
                 
-                Text(price)
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
+                if isLoading {
+                    ProgressView()
+                        .tint(.white.opacity(0.5))
+                        .scaleEffect(0.8)
+                } else {
+                    Text(price)
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                }
                 
                 ZStack {
                     Circle()
@@ -104,6 +111,7 @@ struct PlanCard: View {
             .scaleEffect(isSelected ? 1.02 : 1.0)
         }
         .buttonStyle(.plain)
+        .disabled(isLoading)
     }
 }
 
