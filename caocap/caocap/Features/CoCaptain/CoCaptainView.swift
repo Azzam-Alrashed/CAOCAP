@@ -95,7 +95,7 @@ struct ChatBubble: View {
                     Group {
                         if message.isUser {
                             MessageBubbleShape(isUser: true)
-                                .fill(LinearGradient(colors: [.blue, .purple], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                .fill(LinearGradient(colors: [Color(hex: "007AFF"), Color(hex: "0051FF")], startPoint: .topLeading, endPoint: .bottomTrailing))
                         } else {
                             MessageBubbleShape(isUser: false)
                                 .fill(Color.primary.opacity(0.08))
