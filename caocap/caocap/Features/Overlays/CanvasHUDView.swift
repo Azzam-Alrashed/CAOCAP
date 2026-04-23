@@ -8,6 +8,8 @@ struct CanvasHUDView: View {
     @Environment(AuthenticationManager.self) private var authManager
     @Environment(\.colorScheme) var colorScheme
 
+    @State private var livePulse = false
+    @State private var anonPulse = false
     var body: some View {
         VStack {
             HStack(spacing: 0) {
@@ -59,10 +61,17 @@ struct CanvasHUDView: View {
                                 .font(.system(size: 10, weight: .black))
                                 .foregroundStyle(.orange)
                         } else {
-                            Circle()
-                                .fill(Color.green)
-                                .frame(width: 6, height: 6)
-                                .shadow(color: .green.opacity(0.5), radius: 3)
+                            ZStack {
+                                Circle()
+                                    .fill(Color.green.opacity(0.35))
+                                    .frame(width: 12, height: 12)
+                                    .scaleEffect(livePulse ? 1.8 : 1.0)
+                                    .opacity(livePulse ? 0 : 1)
+                                Circle()
+                                    .fill(Color.green)
+                                    .frame(width: 6, height: 6)
+                            }
+                            .shadow(color: .green.opacity(0.6), radius: 4)
                             Text("LIVE")
                                 .font(.system(size: 10, weight: .black))
                                 .foregroundStyle(.green)
@@ -74,18 +83,29 @@ struct CanvasHUDView: View {
                 .padding(.vertical, 12)
                 .allowsHitTesting(false)
 
-                // Profile Button (interactive)
+                // Profile Indicator (interactive for anonymous)
                 if authManager.isAnonymous {
                     Button(action: { onSignInTapped?() }) {
-                        Image(systemName: "person.crop.circle.badge.exclamationmark")
-                            .font(.system(size: 18))
-                            .foregroundStyle(.white.opacity(0.6))
-                            .padding(.trailing, 16)
-                            .padding(.leading, 8)
+                        ZStack {
+                            // Outer pulse ring
+                            Circle()
+                                .stroke(Color.orange.opacity(0.4), lineWidth: 1.5)
+                                .frame(width: 22, height: 22)
+                                .scaleEffect(anonPulse ? 1.5 : 1.0)
+                                .opacity(anonPulse ? 0 : 0.8)
+                            // Inner dot
+                            Circle()
+                                .fill(Color.orange)
+                                .frame(width: 8, height: 8)
+                                .shadow(color: .orange.opacity(0.6), radius: 4)
+                        }
+                        .frame(width: 28, height: 28)
+                        .padding(.trailing, 16)
+                        .padding(.leading, 4)
                     }
                 } else {
-                    Image(systemName: "person.crop.circle.fill")
-                        .font(.system(size: 18))
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 16))
                         .foregroundStyle(
                             LinearGradient(
                                 colors: [Color(hex: "5E5CE6"), Color(hex: "BF5AF2")],
@@ -94,7 +114,7 @@ struct CanvasHUDView: View {
                             )
                         )
                         .padding(.trailing, 16)
-                        .padding(.leading, 8)
+                        .padding(.leading, 4)
                         .allowsHitTesting(false)
                 }
             }
@@ -111,6 +131,16 @@ struct CanvasHUDView: View {
             Spacer()
         }
         .padding(.top, 60)
+        .onAppear {
+            // Pulse LIVE dot every 2 seconds
+            withAnimation(.easeOut(duration: 1.2).repeatForever(autoreverses: false)) {
+                livePulse = true
+            }
+            // Pulse anonymous dot every 1.8 seconds
+            withAnimation(.easeOut(duration: 1.0).repeatForever(autoreverses: false).delay(0.3)) {
+                anonPulse = true
+            }
+        }
     }
 }
 

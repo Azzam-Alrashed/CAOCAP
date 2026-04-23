@@ -73,7 +73,7 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showingSignIn) {
             SignInView()
-                .presentationDetents([.medium, .large])
+                .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
                 .presentationBackground {
                     Color.black.opacity(0.95)
