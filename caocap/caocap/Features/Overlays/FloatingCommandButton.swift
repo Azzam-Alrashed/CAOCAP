@@ -2,9 +2,14 @@ import SwiftUI
 
 struct FloatingCommandButton: View {
     @State private var position: CGPoint = .zero
-    @State private var startPosition: CGPoint = .zero // Track where the drag started
+    @State private var startPosition: CGPoint = .zero 
     @State private var isDragging: Bool = false
-    @State private var isExpanded: Bool = false // Toggle for quick actions
+    @State private var isExpanded: Bool = false 
+    @State private var activeAction: CommandAction? = nil
+    
+    enum CommandAction {
+        case undo, summon, redo
+    }
     
     @Environment(\.colorScheme) var colorScheme
     
@@ -60,46 +65,63 @@ struct FloatingCommandButton: View {
                 .frame(width: buttonSize, height: buttonSize)
                 .scaleEffect(isDragging ? 1.15 : (isExpanded ? 0.9 : 1.0))
                 .position(currentPos)
-                .onTapGesture {
-                    if isExpanded {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            isExpanded = false
+                .simultaneousGesture(
+                    LongPressGesture(minimumDuration: 0.25)
+                        .onEnded { _ in
+                            if !isDragging {
+                                triggerHapticFeedback(.heavy)
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                                    isExpanded = true
+                                }
+                            }
                         }
-                    } else {
-                        triggerHapticFeedback(.medium)
-                        onTap()
-                    }
-                }
-                .onLongPressGesture(minimumDuration: 0.4) {
-                    triggerHapticFeedback(.heavy)
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
-                        isExpanded.toggle()
-                    }
-                }
-                .gesture(
-                    DragGesture(minimumDistance: 10, coordinateSpace: .named("floatingLayer"))
+                )
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 0, coordinateSpace: .named("floatingLayer"))
                         .onChanged { value in
                             if isExpanded {
-                                withAnimation(.spring()) { isExpanded = false }
-                            }
-                            
-                            if !isDragging {
-                                startPosition = currentPos
-                                withAnimation(.interactiveSpring()) {
-                                    isDragging = true
+                                // Selection Mode
+                                updateActiveAction(at: value.location, center: currentPos, size: size)
+                            } else {
+                                // Movement Mode (with threshold)
+                                let dragThreshold: CGFloat = 10
+                                let dragDistance = sqrt(pow(value.translation.width, 2) + pow(value.translation.height, 2))
+                                
+                                if dragDistance > dragThreshold {
+                                    if !isDragging {
+                                        startPosition = currentPos
+                                        withAnimation(.interactiveSpring()) {
+                                            isDragging = true
+                                        }
+                                        triggerHapticFeedback(.light)
+                                    }
+                                    
+                                    position = CGPoint(
+                                        x: startPosition.x + value.translation.width,
+                                        y: startPosition.y + value.translation.height
+                                    )
                                 }
-                                triggerHapticFeedback(.light)
                             }
-                            
-                            position = CGPoint(
-                                x: startPosition.x + value.translation.width,
-                                y: startPosition.y + value.translation.height
-                            )
                         }
-                        .onEnded { _ in
-                            withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
-                                isDragging = false
-                                snapToNearestPoint(in: size)
+                        .onEnded { value in
+                            if isExpanded {
+                                if let action = activeAction {
+                                    executeAction(action)
+                                }
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                    isExpanded = false
+                                    activeAction = nil
+                                }
+                            } else if isDragging {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                                    isDragging = false
+                                    snapToNearestPoint(in: size)
+                                }
+                            } else {
+                                // This is a tap!
+                                // Long press takes 0.25s, so a fast tap should trigger here
+                                triggerHapticFeedback(.medium)
+                                onTap()
                             }
                         }
                 )
@@ -126,8 +148,15 @@ struct FloatingCommandButton: View {
         let angle: CGFloat = 45 
         
         ZStack {
-            // 1. Center: CoCaptain (Primary size)
-            QuickActionBubble(icon: "sparkles", color: .blue, isExpanded: isExpanded, size: 48, delay: 0.05) {
+            // 1. Center: CoCaptain
+            QuickActionBubble(
+                icon: "sparkles", 
+                color: .blue, 
+                isExpanded: isExpanded, 
+                isHighlighted: activeAction == .summon,
+                size: 48, 
+                delay: 0.05
+            ) {
                 triggerHapticFeedback(.medium)
                 withAnimation(.spring()) { isExpanded = false }
                 onSummonCoCaptain()
@@ -135,8 +164,16 @@ struct FloatingCommandButton: View {
             .offset(x: isExpanded ? direction.x * distance : 0, 
                     y: isExpanded ? direction.y * distance : 0)
             
-            // 2. Left: Undo (Smaller size)
-            QuickActionBubble(icon: "arrow.uturn.backward", color: .secondary, isExpanded: isExpanded, isEnabled: canUndo, size: 40, delay: 0.0) {
+            // 2. Left: Undo
+            QuickActionBubble(
+                icon: "arrow.uturn.backward", 
+                color: .secondary, 
+                isExpanded: isExpanded, 
+                isEnabled: canUndo, 
+                isHighlighted: activeAction == .undo,
+                size: 40, 
+                delay: 0.0
+            ) {
                 triggerHapticFeedback(.medium)
                 withAnimation(.spring()) { isExpanded = false }
                 onUndo()
@@ -144,8 +181,16 @@ struct FloatingCommandButton: View {
             .offset(x: isExpanded ? direction.rotated(by: -angle).x * distance : 0, 
                     y: isExpanded ? direction.rotated(by: -angle).y * distance : 0)
             
-            // 3. Right: Redo (Smaller size)
-            QuickActionBubble(icon: "arrow.uturn.forward", color: .secondary, isExpanded: isExpanded, isEnabled: canRedo, size: 40, delay: 0.1) {
+            // 3. Right: Redo
+            QuickActionBubble(
+                icon: "arrow.uturn.forward", 
+                color: .secondary, 
+                isExpanded: isExpanded, 
+                isEnabled: canRedo, 
+                isHighlighted: activeAction == .redo,
+                size: 40, 
+                delay: 0.1
+            ) {
                 triggerHapticFeedback(.medium)
                 withAnimation(.spring()) { isExpanded = false }
                 onRedo()
@@ -154,6 +199,55 @@ struct FloatingCommandButton: View {
                     y: isExpanded ? direction.rotated(by: angle).y * distance : 0)
         }
         .position(pos)
+    }
+    
+    private func updateActiveAction(at location: CGPoint, center: CGPoint, size: CGSize) {
+        let direction = sproutDirection(for: center, in: size)
+        let distance: CGFloat = 75
+        let angle: CGFloat = 45
+        let threshold: CGFloat = 40 // Selection "hit zone" radius
+        
+        let undoPos = CGPoint(
+            x: center.x + direction.rotated(by: -angle).x * distance,
+            y: center.y + direction.rotated(by: -angle).y * distance
+        )
+        let summonPos = CGPoint(
+            x: center.x + direction.x * distance,
+            y: center.y + direction.y * distance
+        )
+        let redoPos = CGPoint(
+            x: center.x + direction.rotated(by: angle).x * distance,
+            y: center.y + direction.rotated(by: angle).y * distance
+        )
+        
+        let dUndo = sqrt(pow(location.x - undoPos.x, 2) + pow(location.y - undoPos.y, 2))
+        let dSummon = sqrt(pow(location.x - summonPos.x, 2) + pow(location.y - summonPos.y, 2))
+        let dRedo = sqrt(pow(location.x - redoPos.x, 2) + pow(location.y - redoPos.y, 2))
+        
+        let previousAction = activeAction
+        
+        if dUndo < threshold && canUndo {
+            activeAction = .undo
+        } else if dSummon < threshold {
+            activeAction = .summon
+        } else if dRedo < threshold && canRedo {
+            activeAction = .redo
+        } else {
+            activeAction = nil
+        }
+        
+        if activeAction != previousAction && activeAction != nil {
+            triggerHapticFeedback(.light)
+        }
+    }
+    
+    private func executeAction(_ action: CommandAction) {
+        triggerHapticFeedback(.medium)
+        switch action {
+        case .undo: onUndo()
+        case .summon: onSummonCoCaptain()
+        case .redo: onRedo()
+        }
     }
     
     private func sproutDirection(for pos: CGPoint, in size: CGSize) -> CGPoint {
@@ -210,34 +304,34 @@ struct QuickActionBubble: View {
     let color: Color
     let isExpanded: Bool
     var isEnabled: Bool = true
+    var isHighlighted: Bool = false
     var size: CGFloat = 48
     let delay: Double
     let action: () -> Void
     
     var body: some View {
-        Button(action: {
-            if isEnabled {
-                action()
-            }
-        }) {
-            ZStack {
-                Circle()
-                    .fill(.ultraThinMaterial)
-                    .overlay(Circle().stroke(color.opacity(isEnabled ? 0.3 : 0.1), lineWidth: 1))
-                    .shadow(color: color.opacity(isEnabled ? 0.2 : 0), radius: 8)
-                
-                Image(systemName: icon)
-                    .font(.system(size: size * 0.375, weight: .bold)) // Scale icon proportionally
-                    .foregroundColor(color)
-                    .opacity(isEnabled ? 1.0 : 0.3)
-            }
-            .frame(width: size, height: size)
-            .scaleEffect(isExpanded ? 1 : 0.01)
-            .opacity(isExpanded ? (isEnabled ? 1 : 0.5) : 0)
+        ZStack {
+            Circle()
+                .fill(.ultraThinMaterial)
+                .overlay(Circle().stroke(isHighlighted ? color : color.opacity(isEnabled ? 0.3 : 0.1), lineWidth: isHighlighted ? 2 : 1))
+                .shadow(color: color.opacity(isHighlighted ? 0.5 : (isEnabled ? 0.2 : 0)), radius: isHighlighted ? 12 : 8)
+            
+            Image(systemName: icon)
+                .font(.system(size: size * 0.375, weight: .bold)) 
+                .foregroundColor(color)
+                .opacity(isEnabled ? 1.0 : 0.3)
         }
-        .disabled(!isEnabled)
+        .frame(width: size, height: size)
+        .scaleEffect(isExpanded ? (isHighlighted ? 1.25 : 1.0) : 0.01)
+        .opacity(isExpanded ? (isEnabled ? 1 : 0.5) : 0)
+        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isHighlighted)
         .animation(.spring(response: 0.4, dampingFraction: 0.6).delay(isExpanded ? delay : 0), value: isExpanded)
         .animation(.spring(), value: isEnabled)
+        .onTapGesture {
+            if isEnabled && isExpanded {
+                action()
+            }
+        }
     }
 }
 
