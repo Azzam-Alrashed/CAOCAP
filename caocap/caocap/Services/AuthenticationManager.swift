@@ -158,18 +158,22 @@ final class AuthenticationManager {
             // The UID stays the same — all data is preserved.
             do {
                 let result = try await currentUser.link(with: credential)
-                logger.info("\(provider) linked to anonymous account. UID: \(result.user.uid)")
-                // Listener will fire and update authState automatically.
+                logger.info("Successfully linked \(provider) to anonymous account. UID: \(result.user.uid)")
+                
+                // FORCE UI UPDATE: Firebase listener might not fire immediately on link
+                handle(user: result.user)
             } catch let error as NSError where error.code == AuthErrorCode.credentialAlreadyInUse.rawValue {
                 // The credential belongs to a different account — sign in to that account instead.
-                logger.warning("\(provider) credential already in use. Signing into existing account.")
+                logger.warning("\(provider) credential already in use. Switching to existing account.")
                 let result = try await Auth.auth().signIn(with: credential)
                 logger.info("Signed into existing \(provider) account. UID: \(result.user.uid)")
+                handle(user: result.user)
             }
         } else {
             // Fresh sign-in (no anonymous session).
             let result = try await Auth.auth().signIn(with: credential)
             logger.info("\(provider) sign-in succeeded. UID: \(result.user.uid)")
+            handle(user: result.user)
         }
     }
 
