@@ -21,7 +21,7 @@ struct FeatureRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(feature.title)
                     .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 Text(feature.subtitle)
                     .font(.system(size: 15))
                     .foregroundStyle(.secondary)
@@ -36,6 +36,7 @@ struct PlanCard: View {
     let title: String
     let price: String
     let subtitle: String
+    var trialPeriod: String? = nil
     var isSelected: Bool
     var isBestValue: Bool = false
     var isLoading: Bool = false
@@ -48,7 +49,7 @@ struct PlanCard: View {
                     HStack {
                         Text(title)
                             .font(.system(size: 20, weight: .bold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.primary)
                         
                         if isBestValue {
                             Text("SAVE 33%")
@@ -66,6 +67,13 @@ struct PlanCard: View {
                     Text(subtitle)
                         .font(.system(size: 14))
                         .foregroundStyle(.secondary)
+                    
+                    if let trialPeriod {
+                        Text(trialPeriod)
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(Color(hex: "10B981"))
+                            .padding(.top, 2)
+                    }
                 }
                 
                 Spacer()
@@ -77,12 +85,12 @@ struct PlanCard: View {
                 } else {
                     Text(price)
                         .font(.system(size: 22, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.primary)
                 }
                 
                 ZStack {
                     Circle()
-                        .strokeBorder(isSelected ? Color(hex: "7C3AED") : Color.white.opacity(0.2), lineWidth: 2)
+                        .strokeBorder(isSelected ? Color(hex: "7C3AED") : Color.primary.opacity(0.1), lineWidth: 2)
                         .frame(width: 28, height: 28)
                     
                     if isSelected {
@@ -97,7 +105,7 @@ struct PlanCard: View {
             .background(
                 ZStack {
                     RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .fill(.white.opacity(isSelected ? 0.08 : 0.03))
+                        .fill(Color.primary.opacity(isSelected ? 0.08 : 0.03))
                     
                     if isSelected {
                         RoundedRectangle(cornerRadius: 24, style: .continuous)
