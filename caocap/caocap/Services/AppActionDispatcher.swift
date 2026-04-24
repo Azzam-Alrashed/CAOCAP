@@ -12,6 +12,12 @@ public enum AppActionID: String, CaseIterable, Identifiable, Codable, Hashable {
     case newProject = "new_project"
     case createNode = "create_node"
     case summonCoCaptain = "summon_cocaptain"
+    case openFile = "open_file"
+    case toggleGrid = "toggle_grid"
+    case shareProject = "share_project"
+    case proSubscription = "pro_subscription"
+    case signIn = "sign_in"
+    case help = "help"
 
     public var id: String { rawValue }
 }
@@ -111,6 +117,54 @@ public final class AppActionDispatcher: AppActionPerforming {
             category: .assistant,
             isMutating: false,
             allowsAutonomousExecution: true
+        ),
+        AppActionDefinition(
+            id: .openFile,
+            title: "Open File",
+            icon: "doc.text.magnifyingglass",
+            category: .project,
+            isMutating: false,
+            allowsAutonomousExecution: false
+        ),
+        AppActionDefinition(
+            id: .toggleGrid,
+            title: "Toggle Grid",
+            icon: "grid",
+            category: .navigation,
+            isMutating: false,
+            allowsAutonomousExecution: true
+        ),
+        AppActionDefinition(
+            id: .shareProject,
+            title: "Share Project",
+            icon: "square.and.arrow.up",
+            category: .project,
+            isMutating: false,
+            allowsAutonomousExecution: false
+        ),
+        AppActionDefinition(
+            id: .proSubscription,
+            title: "Pro Subscription",
+            icon: "crown",
+            category: .assistant,
+            isMutating: false,
+            allowsAutonomousExecution: false
+        ),
+        AppActionDefinition(
+            id: .signIn,
+            title: "Sign In",
+            icon: "person.crop.circle.badge.checkmark",
+            category: .assistant,
+            isMutating: false,
+            allowsAutonomousExecution: false
+        ),
+        AppActionDefinition(
+            id: .help,
+            title: "Help & Documentation",
+            icon: "questionmark.circle",
+            category: .assistant,
+            isMutating: false,
+            allowsAutonomousExecution: true
         )
     ]
 
@@ -119,6 +173,12 @@ public final class AppActionDispatcher: AppActionPerforming {
     private var newProjectHandler: (() -> Void)?
     private var createNodeHandler: (() -> Void)?
     private var summonCoCaptainHandler: (() -> Void)?
+    private var openFileHandler: (() -> Void)?
+    private var toggleGridHandler: (() -> Void)?
+    private var shareProjectHandler: (() -> Void)?
+    private var proSubscriptionHandler: (() -> Void)?
+    private var signInHandler: (() -> Void)?
+    private var helpHandler: (() -> Void)?
 
     public init() {}
 
@@ -127,13 +187,25 @@ public final class AppActionDispatcher: AppActionPerforming {
         goBack: @escaping () -> Void,
         newProject: @escaping () -> Void,
         createNode: @escaping () -> Void,
-        summonCoCaptain: @escaping () -> Void
+        summonCoCaptain: @escaping () -> Void,
+        openFile: (() -> Void)? = nil,
+        toggleGrid: (() -> Void)? = nil,
+        shareProject: (() -> Void)? = nil,
+        proSubscription: (() -> Void)? = nil,
+        signIn: (() -> Void)? = nil,
+        help: (() -> Void)? = nil
     ) {
         self.goHomeHandler = goHome
         self.goBackHandler = goBack
         self.newProjectHandler = newProject
         self.createNodeHandler = createNode
         self.summonCoCaptainHandler = summonCoCaptain
+        self.openFileHandler = openFile
+        self.toggleGridHandler = toggleGrid
+        self.shareProjectHandler = shareProject
+        self.proSubscriptionHandler = proSubscription
+        self.signInHandler = signIn
+        self.helpHandler = help
     }
 
     public func definition(for id: AppActionID) -> AppActionDefinition? {
@@ -174,6 +246,18 @@ public final class AppActionDispatcher: AppActionPerforming {
             handler = createNodeHandler
         case .summonCoCaptain:
             handler = summonCoCaptainHandler
+        case .openFile:
+            handler = openFileHandler
+        case .toggleGrid:
+            handler = toggleGridHandler
+        case .shareProject:
+            handler = shareProjectHandler
+        case .proSubscription:
+            handler = proSubscriptionHandler
+        case .signIn:
+            handler = signInHandler
+        case .help:
+            handler = helpHandler
         }
 
         guard let handler else {

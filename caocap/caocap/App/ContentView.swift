@@ -132,6 +132,12 @@ struct ContentView: View {
             summonCoCaptain: {
                 coCaptain.store = router.activeStore
                 coCaptain.setPresented(true)
+            },
+            proSubscription: {
+                showingPurchaseSheet = true
+            },
+            signIn: {
+                showingSignIn = true
             }
         )
     }
