@@ -21,6 +21,6 @@ public class LocalizationManager {
     }
     
     public func layoutDirection(for language: String) -> LayoutDirection {
-        return language == "Arabic" ? .rightToLeft : .leftToRight
+        return .leftToRight
     }
 }

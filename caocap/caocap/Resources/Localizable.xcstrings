@@ -31,7 +31,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "%lld عقد" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld عقد"
+          }
         }
       }
     },
@@ -42,7 +45,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "٧ أيام مجانية" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "٧ أيام مجانية"
+          }
         }
       }
     },
@@ -50,7 +56,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "١٤ يوماً مجانياً" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "١٤ يوماً مجانياً"
+          }
         }
       }
     },
@@ -58,9 +67,15 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "الوصول لمشاريعك من أي جهاز" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الوصول لمشاريعك من أي جهاز"
+          }
         }
       }
+    },
+    "Account" : {
+
     },
     "Action is not configured." : {
       "extractionState" : "manual",
@@ -121,15 +136,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "تكوين التطبيق والأدوات." }
-        }
-      }
-    },
-    "Arabic" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "العربية" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تكوين التطبيق والأدوات."
+          }
         }
       }
     },
@@ -155,11 +165,25 @@
         }
       }
     },
+    "Arabic" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "العربية"
+          }
+        }
+      }
+    },
     "Are you sure you want to sign out? Your local projects will remain safe." : {
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "هل أنت متأكد من تسجيل الخروج؟ ستظل مشاريعك المحلية آمنة." }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "هل أنت متأكد من تسجيل الخروج؟ ستظل مشاريعك المحلية آمنة."
+          }
         }
       }
     },
@@ -178,7 +202,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "مستخدم مسجل" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مستخدم مسجل"
+          }
         }
       }
     },
@@ -186,7 +213,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "يتم الفوترة سنوياً" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يتم الفوترة سنوياً"
+          }
         }
       }
     },
@@ -194,7 +224,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "يتم الفوترة شهرياً" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يتم الفوترة شهرياً"
+          }
         }
       }
     },
@@ -202,7 +235,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "تحرر من شجرة الملفات. تنقل في معماريتك عبر التحريك والتكبير." }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تحرر من شجرة الملفات. تنقل في معماريتك عبر التحريك والتكبير."
+          }
         }
       }
     },
@@ -210,7 +246,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "بالمتابعة، فإنك توافق على شروط الخدمة وسياسة الخصوصية الخاصة بنا." }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "بالمتابعة، فإنك توافق على شروط الخدمة وسياسة الخصوصية الخاصة بنا."
+          }
         }
       }
     },
@@ -218,7 +257,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "إلغاء" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "إلغاء"
+          }
         }
       }
     },
@@ -226,9 +268,15 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "اللوحة والرسومات" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اللوحة والرسومات"
+          }
         }
       }
+    },
+    "CAOCAP Pro" : {
+
     },
     "CAOCAP PRO" : {
       "extractionState" : "manual",
@@ -245,7 +293,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "CAOCAP نسخة %@" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CAOCAP نسخة %@"
+          }
         }
       }
     },
@@ -264,7 +315,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "مزامنة سحابية" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مزامنة سحابية"
+          }
         }
       }
     },
@@ -283,9 +337,15 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "نمط الاتصال" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نمط الاتصال"
+          }
         }
       }
+    },
+    "Contact Support" : {
+
     },
     "Continue with Apple" : {
       "extractionState" : "manual",
@@ -335,7 +395,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "سمات مخصصة" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سمات مخصصة"
+          }
         }
       }
     },
@@ -365,7 +428,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "حذف الحساب" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "حذف الحساب"
+          }
         }
       }
     },
@@ -373,7 +439,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "حذف كل شيء" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "حذف كل شيء"
+          }
         }
       }
     },
@@ -392,7 +461,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "تمثل كل عقدة مكوناً أو كتلة منطقية أو رؤية. اسحبها لتنظيم أفكارك." }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تمثل كل عقدة مكوناً أو كتلة منطقية أو رؤية. اسحبها لتنظيم أفكارك."
+          }
         }
       }
     },
@@ -400,7 +472,21 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "تكوين المحرك" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تكوين المحرك"
+          }
+        }
+      }
+    },
+    "English" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الإنجليزية"
+          }
         }
       }
     },
@@ -408,7 +494,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "ادخل إلى مساحة العمل الرئيسية لبدء بناء مشروعك المكاني الأول." }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ادخل إلى مساحة العمل الرئيسية لبدء بناء مشروعك المكاني الأول."
+          }
         }
       }
     },
@@ -416,12 +505,37 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "سمات وألوان حصرية للواجهة" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سمات وألوان حصرية للواجهة"
+          }
+        }
+      }
+    },
+    "French" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الفرنسية"
+          }
         }
       }
     },
     "G" : {
 
+    },
+    "German" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الألمانية"
+          }
+        }
+      }
     },
     "Go Back" : {
       "extractionState" : "manual",
@@ -431,38 +545,6 @@
             "state" : "translated",
             "value" : "العودة للخلف"
           }
-        }
-      }
-    },
-    "German" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "الألمانية" }
-        }
-      }
-    },
-    "English" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "الإنجليزية" }
-        }
-      }
-    },
-    "French" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "الفرنسية" }
-        }
-      }
-    },
-    "Spanish" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "الإسبانية" }
         }
       }
     },
@@ -503,7 +585,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "اللمس" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اللمس"
+          }
         }
       }
     },
@@ -533,7 +618,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "الحدة" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الحدة"
+          }
         }
       }
     },
@@ -581,6 +669,9 @@
         }
       }
     },
+    "Link Account" : {
+
+    },
     "LIVE" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -618,7 +709,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "صُنع للعصر المكاني." }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "صُنع للعصر المكاني."
+          }
         }
       }
     },
@@ -626,7 +720,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "إدارة الاشتراك" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "إدارة الاشتراك"
+          }
         }
       }
     },
@@ -634,9 +731,15 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "إدارة حسابك وتفضيلاتك." }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "إدارة حسابك وتفضيلاتك."
+          }
         }
       }
+    },
+    "Manage your subscription" : {
+
     },
     "Medium" : {
       "extractionState" : "manual",
@@ -649,11 +752,17 @@
         }
       }
     },
+    "Monetization" : {
+
+    },
     "Monthly" : {
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "شهرياً" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "شهرياً"
+          }
         }
       }
     },
@@ -683,7 +792,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "لا يوجد محتوى للعرض." }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لا يوجد محتوى للعرض."
+          }
         }
       }
     },
@@ -713,7 +825,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "تفاصيل العقدة" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تفاصيل العقدة"
+          }
         }
       }
     },
@@ -721,7 +836,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "مفتش العقدة" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مفتش العقدة"
+          }
         }
       }
     },
@@ -791,11 +909,17 @@
         }
       }
     },
+    "Permanently remove all data" : {
+
+    },
     "Press the Floating Action Button to summon tools, create nodes, or talk to the AI." : {
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "اضغط على زر الإجراء العائم لاستدعاء الأدوات أو إنشاء العقد أو التحدث إلى الذكاء الاصطناعي." }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اضغط على زر الإجراء العائم لاستدعاء الأدوات أو إنشاء العقد أو التحدث إلى الذكاء الاصطناعي."
+          }
         }
       }
     },
@@ -809,6 +933,9 @@
           }
         }
       }
+    },
+    "Privacy Policy" : {
+
     },
     "Pro Subscription" : {
       "extractionState" : "manual",
@@ -825,7 +952,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "لم يتم العثور على المنتج. يرجى المحاولة مرة أخرى لاحقاً." }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لم يتم العثور على المنتج. يرجى المحاولة مرة أخرى لاحقاً."
+          }
         }
       }
     },
@@ -866,7 +996,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "فشلت عملية الشراء" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "فشلت عملية الشراء"
+          }
         }
       }
     },
@@ -907,7 +1040,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "المتطلبات" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "المتطلبات"
+          }
         }
       }
     },
@@ -948,7 +1084,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "وفر ٣٣٪" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "وفر ٣٣٪"
+          }
         }
       }
     },
@@ -962,6 +1101,9 @@
           }
         }
       }
+    },
+    "Save your work permanently" : {
+
     },
     "SAVING" : {
       "extractionState" : "manual",
@@ -989,7 +1131,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "شاهد إبداعاتك تنبض بالحياة في الوقت الفعلي. هذه العقدة هي محرك متصفح مباشر." }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "شاهد إبداعاتك تنبض بالحياة في الوقت الفعلي. هذه العقدة هي محرك متصفح مباشر."
+          }
         }
       }
     },
@@ -1041,7 +1186,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "سجل الدخول لمزامنة مشاريعك عبر جميع أجهزتك. سيتم الحفاظ على عملك الحالي." }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سجل الدخول لمزامنة مشاريعك عبر جميع أجهزتك. سيتم الحفاظ على عملك الحالي."
+          }
         }
       }
     },
@@ -1078,6 +1226,17 @@
         }
       }
     },
+    "Spanish" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الإسبانية"
+          }
+        }
+      }
+    },
     "Spatial Glow" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1093,7 +1252,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "ابدأ تجربة مجانية لمدة ٧ أيام" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ابدأ تجربة مجانية لمدة ٧ أيام"
+          }
         }
       }
     },
@@ -1101,7 +1263,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "ابدأ تجربة مجانية لمدة ١٤ يوماً" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ابدأ تجربة مجانية لمدة ١٤ يوماً"
+          }
         }
       }
     },
@@ -1109,7 +1274,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "ابدأ رحلة مكانية جديدة." }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ابدأ رحلة مكانية جديدة."
+          }
         }
       }
     },
@@ -1117,7 +1285,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "ابدأ مشروعاً جديداً من مساحة العمل الرئيسية لرؤيته هنا." }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ابدأ مشروعاً جديداً من مساحة العمل الرئيسية لرؤيته هنا."
+          }
         }
       }
     },
@@ -1125,7 +1296,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "يتجدد الاشتراك تلقائيًا ما لم يتم إيقاف التجديد التلقائي قبل ٢٤ ساعة على الأقل من نهاية الفترة الحالية. سيتم خصم الدفع من حساب iTunes الخاص بك عند تأكيد الشراء. سيتم محاسبة الحساب على التجديد في غضون ٢٤ ساعة قبل نهاية الفترة الحالية. يمكن إدارة الاشتراكات وإيقاف التجديد التلقائي بالذهاب إلى إعدادات حسابك بعد الشراء." }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يتجدد الاشتراك تلقائيًا ما لم يتم إيقاف التجديد التلقائي قبل ٢٤ ساعة على الأقل من نهاية الفترة الحالية. سيتم خصم الدفع من حساب iTunes الخاص بك عند تأكيد الشراء. سيتم محاسبة الحساب على التجديد في غضون ٢٤ ساعة قبل نهاية الفترة الحالية. يمكن إدارة الاشتراكات وإيقاف التجديد التلقائي بالذهاب إلى إعدادات حسابك بعد الشراء."
+          }
         }
       }
     },
@@ -1150,6 +1324,9 @@
           }
         }
       }
+    },
+    "Support & Legal" : {
+
     },
     "System" : {
       "extractionState" : "manual",
@@ -1183,6 +1360,9 @@
           }
         }
       }
+    },
+    "Terms of Service" : {
+
     },
     "The Command Palette" : {
       "extractionState" : "manual",
@@ -1227,7 +1407,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "مجموعة الأدوات المثالية للمصممين المكانيين والمبرمجين." }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مجموعة الأدوات المثالية للمصممين المكانيين والمبرمجين."
+          }
         }
       }
     },
@@ -1246,7 +1429,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "لا يمكن التراجع عن هذا الإجراء. سيتم حذف جميع مشاريعك وعقدك وبيانات اشتراكك نهائياً من خوادمنا." }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لا يمكن التراجع عن هذا الإجراء. سيتم حذف جميع مشاريعك وعقدك وبيانات اشتراكك نهائياً من خوادمنا."
+          }
         }
       }
     },
@@ -1254,7 +1440,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "تمثل هذه العقدة عنصراً مكانياً في مشروعك. يمكنك سحبها حول اللوحة لتنظيم أفكارك وكودك." }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تمثل هذه العقدة عنصراً مكانياً في مشروعك. يمكنك سحبها حول اللوحة لتنظيم أفكارك وكودك."
+          }
         }
       }
     },
@@ -1284,7 +1473,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "اقتراحات تصميم ذكية غير محدودة" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اقتراحات تصميم ذكية غير محدودة"
+          }
         }
       }
     },
@@ -1314,7 +1506,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "عرض وتنظيم عملك." }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "عرض وتنظيم عملك."
+          }
         }
       }
     },
@@ -1350,7 +1545,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "سنوياً" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سنوياً"
+          }
         }
       }
     },
@@ -1358,7 +1556,10 @@
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
-          "stringUnit" : { "state" : "translated", "value" : "أنت تحدد \"ماذا\"، ومساعدك يتولى \"كيف\". البرمجة المكانية تبدأ هنا." }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أنت تحدد \"ماذا\"، ومساعدك يتولى \"كيف\". البرمجة المكانية تبدأ هنا."
+          }
         }
       }
     },

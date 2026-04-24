@@ -75,7 +75,7 @@ struct ProfileView: View {
                         // MARK: - Sections
                         VStack(spacing: 24) {
                             // Account Section
-                            SettingsSection(title: "Account") {
+                            SettingsSection("Account") {
                                 if authManager.isAnonymous {
                                     SettingsRow(icon: "person.badge.key.fill", title: "Link Account", subtitle: "Save your work permanently", color: .orange) {
                                         dismiss()
@@ -95,7 +95,7 @@ struct ProfileView: View {
                             }
                             
                             // Pro Section
-                            SettingsSection(title: "Monetization") {
+                            SettingsSection("Monetization") {
                                 SettingsRow(icon: "crown.fill", title: "CAOCAP Pro", subtitle: "Manage your subscription", color: .yellow) {
                                     dismiss()
                                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
@@ -105,7 +105,7 @@ struct ProfileView: View {
                             }
                             
                             // Support & Legal
-                            SettingsSection(title: "Support & Legal") {
+                            SettingsSection("Support & Legal") {
                                 Link(destination: URL(string: "https://caocap.app/support")!) {
                                     SettingsRow(icon: "questionmark.circle.fill", title: "Contact Support", color: .blue)
                                 }
