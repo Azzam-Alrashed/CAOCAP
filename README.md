@@ -49,10 +49,10 @@ When you create a new project in Ficruty, you don't open a file. You open a **sp
 ## The CoCaptain 🧠
 Ficruty isn't just spatial; it's **agentic**. The **CoCaptain** is your AI sidekick that understands the entire spatial graph.
 
-- **Context-Aware Intelligence**: CoCaptain reads the SRS requirements, HTML structure, and CSS styles to provide grounded coding assistance.
-- **Multi-turn Memory**: Maintain deep conversations about your project with full chat history persistence.
-- **Agentic Apply**: Ask CoCaptain to "fix the layout" or "add a dark mode," and it can generate the precise code needed for your nodes.
-- **Firebase AI Logic**: Powered by Google Gemini through Firebase AI Logic for low-latency, streaming responses.
+- **Context-Aware Intelligence**: CoCaptain reads the SRS requirements, HTML structure, CSS styles and JS logic via the `ProjectContextBuilder` to provide grounded coding assistance.
+- **Agentic Control (Vibe Coding)**: Ask CoCaptain to "fix the layout" or "add a dark mode," and it can generate precise `nodeEdits` or trigger `AppActions` (like "Create New Node").
+- **Human-in-the-Loop**: All AI-proposed changes are bundled into **Review Items**, allowing you to preview and "Apply" them with a single tap.
+- **Firebase AI Logic**: Powered by Google **Gemini 3 Flash** through Firebase AI Logic for low-latency, streaming responses.
 
 ---
 
@@ -120,9 +120,11 @@ open CAOCAP-Ficruty/caocap/caocap.xcodeproj
 
 ## Devlog
 
-### 2026-04-24: Next-Gen Intelligence
-- **Gemini 3 Flash**: Updated the core LLM to the latest `gemini-3-flash-preview` via Firebase AI Logic, bringing improved reasoning and faster response times to the CoCaptain.
-- **Model Lifecycle**: Deprecated Gemini 2.x references in the codebase to align with the latest Google AI model availability.
+### 2026-04-24: Agentic Control & Gemini 3 Flash
+- **Gemini 3 Flash**: Updated the core LLM to the latest `gemini-3-flash-preview` via Firebase AI Logic, bringing improved reasoning and faster response times.
+- **Agentic Control v1**: Scaffolded the `CoCaptainAgentCoordinator` architecture to support autonomous actions and structured node patching.
+- **Vibe Coding Workflow**: Implemented **Review Bundles** and `NodePatchEngine` for human-in-the-loop code injection. Ask the AI to modify your CSS or HTML, and apply the diff with one tap.
+- **App Action Dispatcher**: Added the `AppActionDispatcher` to allow CoCaptain to navigate the app or create nodes on behalf of the user.
 
 ### 2026-04-23: Agentic Intelligence & Firebase
 - **CoCaptain v1.0**: Implemented multi-turn chat memory and scroll position persistence for a seamless AI experience.

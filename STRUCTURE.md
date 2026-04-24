@@ -86,6 +86,9 @@ Infrastructure and heavy-lifting. These are long-lived objects that outlive indi
 | `ProjectStore.swift` | The core persistence engine. Manages `[SpatialNode]` state, atomic JSON writes, debounced `requestSave()`, viewport persistence, and the **Live Compilation Engine** (`compileLivePreview()`). |
 | `AuthenticationManager.swift` | Wraps Firebase Auth. Handles anonymous login, account linking, and social provider flows. |
 | `LLMService.swift` | Interface for the Firebase AI Logic SDK. Manages streaming sessions with the Gemini backend. |
+| `AppActionDispatcher.swift` | Centralized action registry. Allows the app and the AI agent to trigger high-level navigation and project mutations. |
+| `ProjectContextBuilder.swift` | Logic to "harvest" the spatial graph and serialize it into a grounded prompt context for the LLM. |
+| `NodePatchEngine.swift` | A precision editing engine that applies partial patches (replace/insert/append) to HTML, CSS, and JS nodes. |
 | `SubscriptionManager.swift` | StoreKit 2 integration. Manages Pro subscription state, purchase flow, and transaction verification. |
 
 ---
@@ -154,7 +157,10 @@ The agentic AI companion. A native sheet interface for real-time collaboration.
 | File | Responsibility |
 |---|---|
 | `CoCaptainView.swift` | Implements a spatial chat UI with monochromatic gradients and persistent scroll states. |
-| `CoCaptainViewModel.swift` | Orchestrates "Context Harvesting" and multi-turn chat history persistence. |
+| `CoCaptainViewModel.swift` | High-level state management for the CoCaptain UI. |
+| `CoCaptainAgentCoordinator.swift` | The orchestrator of agentic control. Manages the dual-path execution flow and review bundle generation. |
+| `CoCaptainAgentModels.swift` | Domain models for agent actions, node edits, review items, and the chat timeline. |
+| `CoCaptainAgentParser.swift` | Logic to parse raw LLM text into structured `CoCaptainAgentPayload` objects. |
 
 ---
 

@@ -30,13 +30,13 @@ This document outlines the strategic milestones for Ficruty (caocap). Our goal i
 
 - [x] **Firebase Auth**: Secure login and anonymous account linking for seamless cross-device persistence.
 - [x] **CoCaptain UI**: A polished, floating AI sidekick panel with glassmorphic design.
-- [ ] **Context Engine**: Logic to "harvest" the current canvas state (nodes, connections) as AI context.
+- [x] **Context Engine**: Logic to "harvest" the current canvas state (nodes, connections) via `ProjectContextBuilder`.
 - [ ] **Project Analysis**: Auto-analysis of canvas to suggest missing nodes (e.g., "You have HTML but no CSS").
-- [ ] **The "Apply" Flow**: A UI interaction to inject AI-generated code directly into a selected node.
+- [x] **The "Apply" Flow**: A UI interaction to preview and inject AI-generated code directly into a selected node.
 - [x] **Multi-turn Chat**: Persistent conversation memory with scroll position preservation.
 - [x] **Streaming UI**: Token-aware text view powered by Firebase AI Logic SDK.
-- [ ] **Agentic Actions**: (In Progress) Implementation of the "Apply" flow to inject code directly into nodes.
-- [ ] **Code Generation**: CoCaptain generates HTML/CSS/JS from a natural language SRS node.
+- [x] **Agentic Actions**: Implementation of `AppActionDispatcher` to allow the AI to control app navigation and project state.
+- [x] **Code Generation**: CoCaptain generates HTML/CSS/JS from a natural language SRS node.
 - [ ] **Intent-to-Node**: Transform a natural language prompt directly into a fully wired node graph.
 
 ---
