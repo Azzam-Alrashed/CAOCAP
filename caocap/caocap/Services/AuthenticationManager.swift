@@ -148,6 +148,20 @@ final class AuthenticationManager {
         }
     }
 
+    /// Deletes the current user account and all associated data.
+    /// Note: Firebase may require re-authentication for this operation.
+    func deleteAccount() async throws {
+        guard let user = Auth.auth().currentUser else { return }
+        
+        do {
+            try await user.delete()
+            logger.info("User account deleted successfully.")
+        } catch {
+            logger.error("Failed to delete account: \(error.localizedDescription)")
+            throw error
+        }
+    }
+
     // MARK: - Private Helpers
 
     /// Links `credential` to the current anonymous account if the user is anonymous,

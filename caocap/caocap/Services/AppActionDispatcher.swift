@@ -17,6 +17,7 @@ public enum AppActionID: String, CaseIterable, Identifiable, Codable, Hashable {
     case shareProject = "share_project"
     case proSubscription = "pro_subscription"
     case signIn = "sign_in"
+    case openSettings = "open_settings"
     case help = "help"
 
     public var id: String { rawValue }
@@ -159,6 +160,14 @@ public final class AppActionDispatcher: AppActionPerforming {
             allowsAutonomousExecution: false
         ),
         AppActionDefinition(
+            id: .openSettings,
+            title: "Open Settings",
+            icon: "gearshape.fill",
+            category: .assistant,
+            isMutating: false,
+            allowsAutonomousExecution: true
+        ),
+        AppActionDefinition(
             id: .help,
             title: "Help & Documentation",
             icon: "questionmark.circle",
@@ -178,6 +187,7 @@ public final class AppActionDispatcher: AppActionPerforming {
     private var shareProjectHandler: (() -> Void)?
     private var proSubscriptionHandler: (() -> Void)?
     private var signInHandler: (() -> Void)?
+    private var openSettingsHandler: (() -> Void)?
     private var helpHandler: (() -> Void)?
 
     public init() {}
@@ -193,6 +203,7 @@ public final class AppActionDispatcher: AppActionPerforming {
         shareProject: (() -> Void)? = nil,
         proSubscription: (() -> Void)? = nil,
         signIn: (() -> Void)? = nil,
+        openSettings: (() -> Void)? = nil,
         help: (() -> Void)? = nil
     ) {
         self.goHomeHandler = goHome
@@ -205,6 +216,7 @@ public final class AppActionDispatcher: AppActionPerforming {
         self.shareProjectHandler = shareProject
         self.proSubscriptionHandler = proSubscription
         self.signInHandler = signIn
+        self.openSettingsHandler = openSettings
         self.helpHandler = help
     }
 
@@ -256,6 +268,8 @@ public final class AppActionDispatcher: AppActionPerforming {
             handler = proSubscriptionHandler
         case .signIn:
             handler = signInHandler
+        case .openSettings:
+            handler = openSettingsHandler
         case .help:
             handler = helpHandler
         }

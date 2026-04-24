@@ -10,7 +10,8 @@ public struct HomeProvider {
                 title: "Profile",
                 subtitle: "Manage your account and preferences.",
                 icon: "person.crop.circle.fill",
-                theme: .blue
+                theme: .blue,
+                action: .openSettings
             ),
             SpatialNode(
                 id: UUID(),
@@ -26,7 +27,8 @@ public struct HomeProvider {
                 title: "Settings",
                 subtitle: "App configuration and tools.",
                 icon: "gearshape.fill",
-                theme: .orange
+                theme: .orange,
+                action: .openSettings
             ),
             SpatialNode(
                 id: UUID(),
