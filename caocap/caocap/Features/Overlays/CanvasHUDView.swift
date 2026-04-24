@@ -32,7 +32,7 @@ struct CanvasHUDView: View {
                     HStack(spacing: 4) {
                         Text("\(store.nodes.count)")
                             .font(.system(size: 13, weight: .semibold, design: .monospaced))
-                        Text(String(localized: "nodes"))
+                        Text("nodes")
                             .font(.system(size: 11))
                             .foregroundStyle(.secondary)
                     }
@@ -57,7 +57,7 @@ struct CanvasHUDView: View {
                                 .fill(Color.orange)
                                 .frame(width: 6, height: 6)
                                 .shadow(color: .orange.opacity(0.5), radius: 3)
-                            Text(String(localized: "SAVING"))
+                            Text("SAVING")
                                 .font(.system(size: 10, weight: .black))
                                 .foregroundStyle(.orange)
                         } else {
@@ -72,7 +72,7 @@ struct CanvasHUDView: View {
                                     .frame(width: 6, height: 6)
                             }
                             .shadow(color: .green.opacity(0.6), radius: 4)
-                            Text(String(localized: "LIVE"))
+                            Text("LIVE")
                                 .font(.system(size: 10, weight: .black))
                                 .foregroundStyle(.green)
                         }
