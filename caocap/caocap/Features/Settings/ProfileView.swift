@@ -55,7 +55,7 @@ struct ProfileView: View {
                             }
                             
                             VStack(spacing: 4) {
-                                Text(authManager.isAnonymous ? "Guest Workspace" : "Authenticated User")
+                                Text(authManager.isAnonymous ? LocalizedStringKey("Guest Workspace") : LocalizedStringKey("Authenticated User"))
                                     .font(.system(size: 20, weight: .bold, design: .rounded))
                                     .foregroundStyle(.primary)
                                 

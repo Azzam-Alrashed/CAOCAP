@@ -36,19 +36,19 @@ struct SettingsView: View {
                         
                         VStack(spacing: 24) {
                             // MARK: - Interface
-                            SettingsSection(title: String(localized: "Interface")) {
-                                SettingsPickerRow(icon: "paintbrush.fill", title: String(localized: "Theme"), selection: $selectedTheme, options: themes, color: .purple)
+                            SettingsSection("Interface") {
+                                SettingsPickerRow(icon: "paintbrush.fill", title: "Theme", selection: $selectedTheme, options: themes, color: .purple)
                                 
                                 Divider().padding(.leading, 56).opacity(0.3)
                                 
-                                SettingsPickerRow(icon: "globe", title: String(localized: "Language"), selection: $selectedLanguage, options: languages, color: .blue)
+                                SettingsPickerRow(icon: "globe", title: "Language", selection: $selectedLanguage, options: languages, color: .blue)
                             }
                             
                             // MARK: - Canvas & Graphics
-                            SettingsSection(title: String(localized: "Canvas & Graphics")) {
+                            SettingsSection("Canvas & Graphics") {
                                 VStack(alignment: .leading, spacing: 12) {
                                     HStack {
-                                        Label(String(localized: "Grid Visibility"), systemImage: "grid")
+                                        Label("Grid Visibility", systemImage: "grid")
                                             .font(.system(size: 16, weight: .medium))
                                         Spacer()
                                         Text("\(Int(gridOpacity * 100))%")
@@ -63,12 +63,12 @@ struct SettingsView: View {
                                 
                                 Divider().padding(.leading, 56).opacity(0.3)
                                 
-                                SettingsPickerRow(icon: "waveform.path", title: String(localized: "Connection Style"), selection: $connectionStyle, options: styles, color: .orange)
+                                SettingsPickerRow(icon: "waveform.path", title: "Connection Style", selection: $connectionStyle, options: styles, color: .orange)
                                 
                                 Divider().padding(.leading, 56).opacity(0.3)
                                 
                                 Toggle(isOn: $spatialGlowEnabled) {
-                                    Label(String(localized: "Spatial Glow"), systemImage: "sun.max.fill")
+                                    Label("Spatial Glow", systemImage: "sun.max.fill")
                                         .font(.system(size: 16, weight: .medium))
                                 }
                                 .padding(.horizontal, 16)
@@ -77,9 +77,9 @@ struct SettingsView: View {
                             }
                             
                             // MARK: - Haptics
-                            SettingsSection(title: String(localized: "Haptics")) {
+                            SettingsSection("Haptics") {
                                 Toggle(isOn: $hapticsEnabled) {
-                                    Label(String(localized: "Tactile Feedback"), systemImage: "sensor.touch.fill")
+                                    Label("Tactile Feedback", systemImage: "sensor.touch.fill")
                                         .font(.system(size: 16, weight: .medium))
                                 }
                                 .padding(.horizontal, 16)
@@ -89,7 +89,7 @@ struct SettingsView: View {
                                 if hapticsEnabled {
                                     Divider().padding(.leading, 56).opacity(0.3)
                                     
-                                    SettingsPickerRow(icon: "shredder.fill", title: String(localized: "Intensity"), selection: $hapticsIntensity, options: intensities, color: .green)
+                                    SettingsPickerRow(icon: "shredder.fill", title: "Intensity", selection: $hapticsIntensity, options: intensities, color: .green)
                                 }
                             }
                         }
@@ -98,10 +98,10 @@ struct SettingsView: View {
                         
                         // MARK: - Footer
                         VStack(spacing: 8) {
-                            Text(String(localized: "ENGINE CONFIGURATION"))
+                            Text("ENGINE CONFIGURATION")
                                 .font(.system(size: 12, weight: .bold))
                                 .foregroundStyle(.secondary)
-                            Text(String(localized: "Real-time synchronization active."))
+                            Text("Real-time synchronization active.")
                                 .font(.system(size: 10))
                                 .foregroundStyle(.tertiary)
                         }
@@ -111,7 +111,7 @@ struct SettingsView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Text(String(localized: "Settings"))
+                    Text("Settings")
                         .font(.system(size: 24, weight: .black, design: .rounded))
                         .foregroundStyle(.primary)
                 }
@@ -145,7 +145,7 @@ struct SettingsView: View {
 // MARK: - Helper View
 private struct SettingsPickerRow: View {
     let icon: String
-    let title: String
+    let title: LocalizedStringKey
     @Binding var selection: String
     let options: [String]
     let color: Color
@@ -157,7 +157,7 @@ private struct SettingsPickerRow: View {
             Spacer()
             Picker(title, selection: $selection) {
                 ForEach(options, id: \.self) { option in
-                    Text(String(localized: String.LocalizationValue(option))).tag(option)
+                    Text(LocalizedStringKey(option)).tag(option)
                 }
             }
             .pickerStyle(.menu)

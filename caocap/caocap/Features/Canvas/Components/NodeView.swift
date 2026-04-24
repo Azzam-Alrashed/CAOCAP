@@ -22,12 +22,12 @@ struct NodeView: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(node.title)
+                    Text(LocalizedStringKey(node.title))
                         .font(.system(size: 18, weight: .bold, design: .rounded))
                         .foregroundColor(.primary)
                     
                     if let subtitle = node.subtitle {
-                        Text(subtitle)
+                        Text(LocalizedStringKey(subtitle))
                             .font(.system(size: 14, weight: .medium, design: .default))
                             .foregroundColor(.secondary)
                             .fixedSize(horizontal: false, vertical: true)

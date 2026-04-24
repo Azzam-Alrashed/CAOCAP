@@ -84,7 +84,7 @@ struct CoCaptainView: View {
                         .padding(.bottom, 6)
 
                         HStack(spacing: 0) {
-                            TextField(String(localized: "Ask Co-Captain..."), text: $text, axis: .vertical)
+                            TextField("Ask Co-Captain...", text: $text, axis: .vertical)
                                 .lineLimit(1...5)
                                 .focused($isFocused)
                                 .padding(.horizontal, 16)
@@ -132,11 +132,11 @@ struct CoCaptainView: View {
                 }
                 .background(Color.primary.opacity(0.02))
             }
-            .navigationTitle(String(localized: "Co-Captain"))
+            .navigationTitle("Co-Captain")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(String(localized: "Done")) {
+                    Button("Done") {
                         viewModel.setPresented(false)
                     }
                 }
@@ -145,7 +145,7 @@ struct CoCaptainView: View {
                     Button(action: {
                         viewModel.clearHistory()
                     }) {
-                        Text(String(localized: "Clear"))
+                        Text("Clear")
                             .foregroundColor(.red)
                     }
                 }
@@ -189,7 +189,7 @@ struct ContextPill: View {
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: "scope")
-            Text(String(localized: "Using current canvas"))
+            Text("Using current canvas")
             Text("·")
             Text(projectName)
             Text("·")
@@ -233,11 +233,11 @@ struct ReviewBundleView: View {
                 Text(bundle.title)
                     .font(.system(size: 16, weight: .bold))
                 Spacer()
-                Button(String(localized: "Apply All")) {
+                Button("Apply All") {
                     viewModel.applyAll(in: bundleID)
                 }
                 .font(.system(size: 12, weight: .semibold))
-                Button(String(localized: "Reject All")) {
+                Button("Reject All") {
                     viewModel.rejectAll(in: bundleID)
                 }
                 .font(.system(size: 12, weight: .semibold))
@@ -282,7 +282,7 @@ struct ReviewCardView: View {
                 .font(.system(size: 13, weight: .medium))
                 .foregroundColor(.secondary)
             
-            Text(item.preview.isEmpty ? String(localized: "No preview available.") : item.preview)
+            Text(item.preview.isEmpty ? "No preview available." : item.preview)
                 .font(.system(size: 12, weight: .regular, design: .monospaced))
                 .padding(10)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -290,13 +290,13 @@ struct ReviewCardView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
             HStack {
-                Button(String(localized: "Apply")) {
+                Button("Apply") {
                     onApply()
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(item.status != .pending)
 
-                Button(String(localized: "Reject")) {
+                Button("Reject") {
                     onReject()
                 }
                 .buttonStyle(.bordered)

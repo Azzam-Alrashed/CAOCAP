@@ -125,6 +125,14 @@
         }
       }
     },
+    "Arabic" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : { "state" : "translated", "value" : "العربية" }
+        }
+      }
+    },
     "Apply" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -423,6 +431,38 @@
             "state" : "translated",
             "value" : "العودة للخلف"
           }
+        }
+      }
+    },
+    "German" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : { "state" : "translated", "value" : "الألمانية" }
+        }
+      }
+    },
+    "English" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : { "state" : "translated", "value" : "الإنجليزية" }
+        }
+      }
+    },
+    "French" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : { "state" : "translated", "value" : "الفرنسية" }
+        }
+      }
+    },
+    "Spanish" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : { "state" : "translated", "value" : "الإسبانية" }
         }
       }
     },

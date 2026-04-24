@@ -1,17 +1,18 @@
 import SwiftUI
 
 struct SettingsSection<Content: View>: View {
-    let title: String
+    let title: LocalizedStringKey
     let content: Content
     
-    init(title: String, @ViewBuilder content: () -> Content) {
+    init(_ title: LocalizedStringKey, @ViewBuilder content: () -> Content) {
         self.title = title
         self.content = content()
     }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(title.uppercased())
+            Text(title)
+                .textCase(.uppercase)
                 .font(.system(size: 11, weight: .bold))
                 .kerning(1.2)
                 .foregroundStyle(.secondary)
@@ -29,8 +30,8 @@ struct SettingsSection<Content: View>: View {
 
 struct SettingsRow: View {
     let icon: String
-    let title: String
-    var subtitle: String? = nil
+    let title: LocalizedStringKey
+    var subtitle: LocalizedStringKey? = nil
     let color: Color
     var action: (() -> Void)? = nil
     
