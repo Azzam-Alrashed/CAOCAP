@@ -83,7 +83,7 @@ public final class AppActionDispatcher: AppActionPerforming {
     public private(set) var availableActions: [AppActionDefinition] = [
         AppActionDefinition(
             id: .goHome,
-            title: String(localized: "Go to Home"),
+            title: "Go to Home",
             icon: "house.fill",
             category: .navigation,
             isMutating: false,
@@ -91,7 +91,7 @@ public final class AppActionDispatcher: AppActionPerforming {
         ),
         AppActionDefinition(
             id: .goBack,
-            title: String(localized: "Go Back"),
+            title: "Go Back",
             icon: "arrow.left.circle",
             category: .navigation,
             isMutating: false,
@@ -99,7 +99,7 @@ public final class AppActionDispatcher: AppActionPerforming {
         ),
         AppActionDefinition(
             id: .newProject,
-            title: String(localized: "New Project"),
+            title: "New Project",
             icon: "plus.circle.fill",
             category: .project,
             isMutating: true,
@@ -107,7 +107,7 @@ public final class AppActionDispatcher: AppActionPerforming {
         ),
         AppActionDefinition(
             id: .createNode,
-            title: String(localized: "Create New Node"),
+            title: "Create New Node",
             icon: "plus.square",
             category: .project,
             isMutating: true,
@@ -115,7 +115,7 @@ public final class AppActionDispatcher: AppActionPerforming {
         ),
         AppActionDefinition(
             id: .summonCoCaptain,
-            title: String(localized: "Summon Co-Captain"),
+            title: "Summon Co-Captain",
             icon: "sparkles",
             category: .assistant,
             isMutating: false,
@@ -123,7 +123,7 @@ public final class AppActionDispatcher: AppActionPerforming {
         ),
         AppActionDefinition(
             id: .openFile,
-            title: String(localized: "Open File"),
+            title: "Open File",
             icon: "doc.text.magnifyingglass",
             category: .project,
             isMutating: false,
@@ -131,7 +131,7 @@ public final class AppActionDispatcher: AppActionPerforming {
         ),
         AppActionDefinition(
             id: .toggleGrid,
-            title: String(localized: "Toggle Grid"),
+            title: "Toggle Grid",
             icon: "grid",
             category: .navigation,
             isMutating: false,
@@ -139,7 +139,7 @@ public final class AppActionDispatcher: AppActionPerforming {
         ),
         AppActionDefinition(
             id: .shareProject,
-            title: String(localized: "Share Project"),
+            title: "Share Project",
             icon: "square.and.arrow.up",
             category: .project,
             isMutating: false,
@@ -147,7 +147,7 @@ public final class AppActionDispatcher: AppActionPerforming {
         ),
         AppActionDefinition(
             id: .proSubscription,
-            title: String(localized: "Pro Subscription"),
+            title: "Pro Subscription",
             icon: "crown",
             category: .assistant,
             isMutating: false,
@@ -155,7 +155,7 @@ public final class AppActionDispatcher: AppActionPerforming {
         ),
         AppActionDefinition(
             id: .signIn,
-            title: String(localized: "Sign In"),
+            title: "Sign In",
             icon: "person.crop.circle.badge.checkmark",
             category: .assistant,
             isMutating: false,
@@ -163,7 +163,7 @@ public final class AppActionDispatcher: AppActionPerforming {
         ),
         AppActionDefinition(
             id: .openSettings,
-            title: String(localized: "Open Settings"),
+            title: "Open Settings",
             icon: "gearshape.fill",
             category: .assistant,
             isMutating: false,
@@ -171,7 +171,7 @@ public final class AppActionDispatcher: AppActionPerforming {
         ),
         AppActionDefinition(
             id: .openProfile,
-            title: String(localized: "Open Profile"),
+            title: "Open Profile",
             icon: "person.fill",
             category: .assistant,
             isMutating: false,
@@ -179,7 +179,7 @@ public final class AppActionDispatcher: AppActionPerforming {
         ),
         AppActionDefinition(
             id: .openProjectExplorer,
-            title: String(localized: "Project Explorer"),
+            title: "Project Explorer",
             icon: "folder.fill",
             category: .project,
             isMutating: false,
@@ -187,7 +187,7 @@ public final class AppActionDispatcher: AppActionPerforming {
         ),
         AppActionDefinition(
             id: .help,
-            title: String(localized: "Help & Documentation"),
+            title: "Help & Documentation",
             icon: "questionmark.circle",
             category: .assistant,
             isMutating: false,
@@ -255,7 +255,7 @@ public final class AppActionDispatcher: AppActionPerforming {
                 actionID: id,
                 title: id.rawValue,
                 executed: false,
-                message: String(localized: "Action unavailable.")
+                message: "Action unavailable."
             )
         }
 
@@ -265,7 +265,7 @@ public final class AppActionDispatcher: AppActionPerforming {
                     actionID: definition.id,
                     title: definition.title,
                     executed: false,
-                    message: String(localized: "Action requires approval.")
+                    message: "Action requires approval."
                 )
             }
         }
@@ -307,7 +307,7 @@ public final class AppActionDispatcher: AppActionPerforming {
                 actionID: definition.id,
                 title: definition.title,
                 executed: false,
-                message: String(localized: "Action is not configured.")
+                message: "Action is not configured."
             )
         }
 

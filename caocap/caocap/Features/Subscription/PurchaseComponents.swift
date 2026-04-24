@@ -19,10 +19,10 @@ struct FeatureRow: View {
             }
             
             VStack(alignment: .leading, spacing: 4) {
-                Text(feature.title)
+                Text(LocalizedStringKey(feature.title))
                     .font(.system(size: 18, weight: .bold))
                     .foregroundStyle(.primary)
-                Text(feature.subtitle)
+                Text(LocalizedStringKey(feature.subtitle))
                     .font(.system(size: 15))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -33,10 +33,10 @@ struct FeatureRow: View {
 
 struct PlanCard: View {
     let id: String
-    let title: String
+    let title: LocalizedStringKey
     let price: String
-    let subtitle: String
-    var trialPeriod: String? = nil
+    let subtitle: LocalizedStringKey
+    var trialPeriod: LocalizedStringKey? = nil
     var isSelected: Bool
     var isBestValue: Bool = false
     var isLoading: Bool = false
