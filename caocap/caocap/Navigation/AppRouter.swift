@@ -26,8 +26,11 @@ public class AppRouter {
             if let store = projects[fileName] {
                 return store
             }
-            // Fallback (should not happen if managed correctly)
-            return homeStore
+            
+            // COLD BOOT FIX: Initialize and cache synchronously to prevent race conditions
+            let newStore = ProjectStore(fileName: fileName)
+            projects[fileName] = newStore
+            return newStore
         }
     }
     
