@@ -20,7 +20,7 @@ struct PurchaseView: View {
     var body: some View {
         ZStack {
             // MARK: - Background
-            Color(hex: "050505").ignoresSafeArea()
+            Color(uiColor: .systemBackground).ignoresSafeArea()
             
             // Animated Mesh Background
             MeshBackgroundView()
@@ -68,7 +68,7 @@ struct PurchaseView: View {
                             
                             Text("Unlimited Creativity")
                                 .font(.system(size: 34, weight: .bold, design: .rounded))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(.primary)
                             
                             Text("The ultimate toolkit for spatial designers and vibecoders.")
                                 .font(.system(size: 17))
@@ -103,6 +103,7 @@ struct PurchaseView: View {
                                 title: "Monthly",
                                 price: productPrice(for: "CAOCAP_Pro_Monthly"),
                                 subtitle: "Billed monthly",
+                                trialPeriod: "7 DAYS FREE",
                                 isSelected: selectedProductID == "CAOCAP_Pro_Monthly",
                                 isLoading: manager.isLoading,
                                 action: { withAnimation(.spring()) { selectedProductID = "CAOCAP_Pro_Monthly" } }
@@ -112,7 +113,8 @@ struct PurchaseView: View {
                                 id: "CAOCAP_Pro_Yearly",
                                 title: "Yearly",
                                 price: productPrice(for: "CAOCAP_Pro_Yearly"),
-                                subtitle: "Billed annually • Save 33%",
+                                subtitle: "Billed annually",
+                                trialPeriod: "14 DAYS FREE",
                                 isSelected: selectedProductID == "CAOCAP_Pro_Yearly",
                                 isBestValue: true,
                                 isLoading: manager.isLoading,
@@ -145,9 +147,9 @@ struct PurchaseView: View {
                                         .tint(.white)
                                 } else {
                                     HStack {
-                                        Text(manager.isSubscribed ? "Manage Subscription" : "Unlock Everything")
-                                            .font(.system(size: 20, weight: .bold))
-                                        Image(systemName: manager.isSubscribed ? "gearshape.fill" : "arrow.right")
+                                        Text(manager.isSubscribed ? "Manage Subscription" : (selectedProductID == "CAOCAP_Pro_Yearly" ? "Start 14-Day Free Trial" : "Start 7-Day Free Trial"))
+                                            .font(.system(size: 18, weight: .bold))
+                                        Image(systemName: manager.isSubscribed ? "gearshape.fill" : "sparkles")
                                             .font(.system(size: 18, weight: .bold))
                                     }
                                     .foregroundStyle(.white)
@@ -171,6 +173,16 @@ struct PurchaseView: View {
                         }
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(.secondary)
+                        
+                        // Mandatory Disclosure
+                        VStack(spacing: 8) {
+                            Text("Subscription automatically renews unless auto-renew is turned off at least 24-hours before the end of the current period. Payment will be charged to your iTunes Account at confirmation of purchase. Account will be charged for renewal within 24-hours prior to the end of the current period. Subscriptions may be managed and auto-renewal may be turned off by going to your Account Settings after purchase.")
+                                .multilineTextAlignment(.center)
+                                .font(.system(size: 10))
+                                .foregroundStyle(.secondary.opacity(0.8))
+                        }
+                        .padding(.horizontal, 30)
+                        .padding(.top, 10)
                     }
                     .padding(.bottom, 60)
                     .opacity(appearAnimation ? 1 : 0)
@@ -188,7 +200,7 @@ struct PurchaseView: View {
                         .foregroundStyle(.green)
                     Text("Welcome to Pro!")
                         .font(.system(size: 24, weight: .bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.primary)
                 }
                 .transition(.scale.combined(with: .opacity))
             }
@@ -202,11 +214,11 @@ struct PurchaseView: View {
                     } label: {
                         Image(systemName: "xmark")
                             .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(.white.opacity(0.6))
+                            .foregroundStyle(.primary.opacity(0.6))
                             .padding(12)
-                            .background(.white.opacity(0.1))
+                            .background(.primary.opacity(0.1))
                             .clipShape(Circle())
-                            .overlay(Circle().stroke(.white.opacity(0.1), lineWidth: 1))
+                            .overlay(Circle().stroke(.primary.opacity(0.1), lineWidth: 1))
                     }
                     .padding()
                 }
@@ -228,7 +240,6 @@ struct PurchaseView: View {
                 Text(error)
             }
         }
-        .preferredColorScheme(.dark)
     }
     
     private func productPrice(for id: String) -> String {
