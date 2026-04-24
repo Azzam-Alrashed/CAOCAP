@@ -1005,6 +1005,7 @@
           }
         }
       }
+    },
     "Hello, CAOCAP" : {
       "extractionState" : "manual",
       "localizations" : {
