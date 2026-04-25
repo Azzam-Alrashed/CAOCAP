@@ -12,7 +12,7 @@
 
 ---
 
-[Mission](#the-mission) · [What It Does](#what-it-does) · [Philosophy](#the-philosophy) · [Tech Stack](#tech-stack) · [Status](#current-status) · [Getting Started](#getting-started) · [Devlog](#devlog) · [Contributing](#contributing) · [License](#license)
+[Mission](#the-mission) · [What It Does](#what-it-does) · [Philosophy](#the-philosophy) · [Tech Stack](#tech-stack) · [Status](#current-status) · [Repository Layout](#repository-layout) · [Getting Started](#getting-started) · [Devlog](#devlog) · [Contributing](#contributing) · [License](#license)
 
 ---
 
@@ -99,6 +99,19 @@ See [ROADMAP.md](ROADMAP.md) for the full breakdown.
 
 ---
 
+## Repository Layout
+
+Ficruty is organized as a public product monorepo.
+
+| Directory | Purpose |
+|---|---|
+| `ios-app/` | Native iOS/iPadOS app and Xcode project |
+| `android-app/` | Reserved for the future Android app |
+| `website/` | Reserved for the public website, support pages, and policies |
+| Root docs | Product overview, roadmap, architecture, contribution guide, and license |
+
+---
+
 ## Getting Started
 
 Ficruty requires **Xcode 15+** and an iOS 17+ simulator or device.
@@ -108,7 +121,7 @@ Ficruty requires **Xcode 15+** and an iOS 17+ simulator or device.
 git clone https://github.com/Azzam-Alrashed/CAOCAP-Ficruty.git
 
 # 2. Open in Xcode
-open CAOCAP-Ficruty/caocap/caocap.xcodeproj
+open CAOCAP-Ficruty/ios-app/caocap/caocap.xcodeproj
 
 # 3. Select a target and run (Cmd+R)
 ```
