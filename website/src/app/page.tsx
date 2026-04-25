@@ -12,6 +12,8 @@ import {
 const appStoreUrl = "https://apps.apple.com/us/app/caocap/id1447742145";
 const testFlightUrl = "https://testflight.apple.com/join/aS7Jwlof";
 const githubUrl = "https://github.com/Azzam-Alrashed/CAOCAP-Ficruty";
+const privacyUrl = "/privacy";
+const termsUrl = "/terms";
 
 const ctas = [
   {
@@ -231,6 +233,17 @@ export default function Home() {
         </p>
         <CtaButtons />
       </section>
+
+      <footer className="site-footer">
+        <div className="footer-content">
+          <p>© 2026 Azzam Alrashed. Built for the spatial era.</p>
+          <div className="footer-links">
+            <a href={privacyUrl}>Privacy Policy</a>
+            <a href={termsUrl}>Terms of Service</a>
+            <a href={githubUrl} target="_blank" rel="noreferrer">GitHub</a>
+          </div>
+        </div>
+      </footer>
     </main>
   );
 }
