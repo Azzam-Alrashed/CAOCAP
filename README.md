@@ -19,7 +19,7 @@
 ## The Mission
 **Push the boundaries. Improve the experience.**
 
-We aren't here to advocate for a specific niche or a "new way" to program. We are here to relentlessly challenge how software is built. If a boundary exists that limits a developer's creativity, we push it. If an experience is broken, we fix it.
+I am not here to advocate for a specific niche or a "new way" to program. I am here to relentlessly challenge how software is built. If a boundary exists that limits a developer's creativity, I want to push it. If an experience is broken, I want to fix it.
 
 Ficruty is the pursuit of the ultimate developer experience, by any means necessary.
 
@@ -173,7 +173,7 @@ open CAOCAP-Ficruty/ios-app/caocap/caocap.xcodeproj
 
 ## Contributing
 
-Ficruty is in active early-stage development ("War Room" mode). We prioritize **architectural stability** and **long-term vision** over rapid feature growth.
+Ficruty is in active early-stage development ("War Room" mode). I prioritize **architectural stability** and **long-term vision** over rapid feature growth.
 
 - **Discuss First**: For major changes, open an issue to align with the project philosophy before writing code.
 - **Standards**: `@Observable` (iOS 17+) for state, `async/await` for concurrency, no blocking `@MainActor` I/O.
