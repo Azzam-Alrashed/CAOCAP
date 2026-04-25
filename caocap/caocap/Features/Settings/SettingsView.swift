@@ -11,7 +11,7 @@ struct SettingsView: View {
     @AppStorage("connection_style") private var connectionStyle = "Dashed"
     @AppStorage("spatial_glow_enabled") private var spatialGlowEnabled = true
     
-    let languages = ["English", "Arabic", "French", "German", "Spanish"]
+    let languages = LocalizationManager.supportedLanguages
     let themes = ["System", "Light", "Dark"]
     let intensities = ["Subtle", "Medium", "Sharp"]
     let styles = ["Solid", "Dashed", "Neon"]
@@ -42,14 +42,6 @@ struct SettingsView: View {
                                 Divider().padding(.leading, 56).opacity(0.3)
                                 
                                 SettingsPickerRow(icon: "globe", title: "Language", selection: $selectedLanguage, options: languages, color: .blue)
-                                    .disabled(true)
-                                    .opacity(0.5)
-                                    .overlay(alignment: .trailing) {
-                                        Text("Locked")
-                                            .font(.caption2)
-                                            .foregroundStyle(.secondary)
-                                            .padding(.trailing, 40)
-                                    }
                             }
                             
                             // MARK: - Canvas & Graphics
@@ -138,9 +130,6 @@ struct SettingsView: View {
                 }
             }
             .preferredColorScheme(currentColorScheme)
-            .onAppear {
-                selectedLanguage = "English"
-            }
         }
     }
     

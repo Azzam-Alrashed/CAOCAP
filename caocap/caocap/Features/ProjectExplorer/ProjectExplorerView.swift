@@ -116,14 +116,19 @@ private struct ProjectRow: View {
                         .font(.system(size: 17, weight: .bold))
                         .foregroundStyle(.primary)
                     
-                    Text("Last edited \(project.lastModified.formatted(.relative(presentation: .numeric)))")
+                    Text(
+                        LocalizationManager.shared.localizedString(
+                            "Last edited %@",
+                            arguments: [LocalizationManager.shared.relativeDateString(for: project.lastModified)]
+                        )
+                    )
                         .font(.system(size: 13))
                         .foregroundStyle(.secondary)
                 }
                 
                 Spacer()
                 
-                Image(systemName: "chevron.right")
+                Image(systemName: "chevron.forward")
                     .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(.tertiary)
             }

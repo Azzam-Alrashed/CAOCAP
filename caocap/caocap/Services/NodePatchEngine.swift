@@ -15,6 +15,10 @@ public enum NodeRole: String, CaseIterable, Codable, Hashable {
         }
     }
 
+    public var localizedDisplayName: String {
+        LocalizationManager.shared.localizedString(displayName)
+    }
+
     public func matches(node: SpatialNode) -> Bool {
         switch self {
         case .srs:
@@ -56,9 +60,9 @@ public enum NodePatchError: LocalizedError, Hashable {
     public var errorDescription: String? {
         switch self {
         case .missingNode(let role):
-            return "Missing \(role.displayName) node."
+            return LocalizationManager.shared.localizedString("Missing %@ node.", arguments: [role.localizedDisplayName])
         case .conflict(let description):
-            return description
+            return LocalizationManager.shared.localizedString(description)
         }
     }
 }

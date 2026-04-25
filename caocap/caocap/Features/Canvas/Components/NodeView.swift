@@ -4,6 +4,7 @@ struct NodeView: View {
     let node: SpatialNode
     var isDragging: Bool = false
     @State private var isHovering = false
+    @AppStorage(LocalizationManager.languageStorageKey) private var selectedLanguage = "English"
     
     var body: some View {
         VStack(spacing: 0) {
@@ -22,12 +23,12 @@ struct NodeView: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(LocalizedStringKey(node.title))
+                    Text(node.displayTitle)
                         .font(.system(size: 18, weight: .bold, design: .rounded))
                         .foregroundColor(.primary)
                     
-                    if let subtitle = node.subtitle {
-                        Text(LocalizedStringKey(subtitle))
+                    if let subtitle = node.displaySubtitle {
+                        Text(subtitle)
                             .font(.system(size: 14, weight: .medium, design: .default))
                             .foregroundColor(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -36,6 +37,7 @@ struct NodeView: View {
                 }
                 .frame(maxWidth: 240, alignment: .leading)
             }
+            .environment(\.layoutDirection, LocalizationManager.shared.layoutDirection(for: selectedLanguage))
             .padding(.bottom, node.type == .webView ? 16 : 0)
             
             if node.type == .webView, let html = node.htmlContent {

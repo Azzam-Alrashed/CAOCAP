@@ -2,7 +2,15 @@
   "sourceLanguage" : "en",
   "strings" : {
     "·" : {
-
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "·"
+          }
+        }
+      }
     },
     "%@.%@" : {
       "localizations" : {
@@ -11,11 +19,26 @@
             "state" : "new",
             "value" : "%1$@.%2$@"
           }
+        },
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@.%2$@"
+          }
         }
-      }
+      },
+      "extractionState" : "manual"
     },
     "%lld" : {
-
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld"
+          }
+        }
+      }
     },
     "%lld nodes" : {
       "extractionState" : "manual",
@@ -29,7 +52,15 @@
       }
     },
     "%lld%%" : {
-
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld%%"
+          }
+        }
+      }
     },
     "7 DAYS FREE" : {
       "extractionState" : "manual",
@@ -65,7 +96,15 @@
       }
     },
     "Account" : {
-
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الحساب"
+          }
+        }
+      }
     },
     "Action is not configured." : {
       "extractionState" : "manual",
@@ -266,7 +305,15 @@
       }
     },
     "CAOCAP Pro" : {
-
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "كاوكاب برو"
+          }
+        }
+      }
     },
     "CAOCAP PRO" : {
       "extractionState" : "manual",
@@ -335,7 +382,15 @@
       }
     },
     "Contact Support" : {
-
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "التواصل مع الدعم"
+          }
+        }
+      }
     },
     "Continue with Apple" : {
       "extractionState" : "manual",
@@ -514,7 +569,15 @@
       }
     },
     "G" : {
-
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "G"
+          }
+        }
+      }
     },
     "German" : {
       "extractionState" : "manual",
@@ -649,7 +712,15 @@
       }
     },
     "Last edited %@" : {
-
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "آخر تعديل %@"
+          }
+        }
+      }
     },
     "Light" : {
       "extractionState" : "manual",
@@ -663,7 +734,15 @@
       }
     },
     "Link Account" : {
-
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ربط الحساب"
+          }
+        }
+      }
     },
     "LIVE" : {
       "extractionState" : "manual",
@@ -732,7 +811,15 @@
       }
     },
     "Manage your subscription" : {
-
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "إدارة اشتراكك"
+          }
+        }
+      }
     },
     "Medium" : {
       "extractionState" : "manual",
@@ -746,7 +833,15 @@
       }
     },
     "Monetization" : {
-
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الاشتراكات"
+          }
+        }
+      }
     },
     "Monthly" : {
       "extractionState" : "manual",
@@ -903,7 +998,15 @@
       }
     },
     "Permanently remove all data" : {
-
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "إزالة كل البيانات نهائياً"
+          }
+        }
+      }
     },
     "Press the Floating Action Button to summon tools, create nodes, or talk to the AI." : {
       "extractionState" : "manual",
@@ -928,7 +1031,15 @@
       }
     },
     "Privacy Policy" : {
-
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سياسة الخصوصية"
+          }
+        }
+      }
     },
     "Pro Subscription" : {
       "extractionState" : "manual",
@@ -1096,7 +1207,15 @@
       }
     },
     "Save your work permanently" : {
-
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "احفظ عملك بشكل دائم"
+          }
+        }
+      }
     },
     "SAVING" : {
       "extractionState" : "manual",
@@ -1319,7 +1438,15 @@
       }
     },
     "Support & Legal" : {
-
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الدعم والشؤون القانونية"
+          }
+        }
+      }
     },
     "System" : {
       "extractionState" : "manual",
@@ -1355,7 +1482,15 @@
       }
     },
     "Terms of Service" : {
-
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "شروط الخدمة"
+          }
+        }
+      }
     },
     "The Command Palette" : {
       "extractionState" : "manual",
@@ -1574,6 +1709,457 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "مشاريعك"
+          }
+        }
+      }
+    },
+    "%@ executed." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تم تنفيذ %@."
+          }
+        }
+      }
+    },
+    "Applied" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تم التطبيق"
+          }
+        }
+      }
+    },
+    "Applied updates to %@." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تم تطبيق التحديثات على %@."
+          }
+        }
+      }
+    },
+    "Awaiting approval to run %@." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "بانتظار الموافقة لتشغيل %@."
+          }
+        }
+      }
+    },
+    "Conflicted" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تعارض"
+          }
+        }
+      }
+    },
+    "Could not find exact text to insert after." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تعذر العثور على النص المطابق للإدراج بعده."
+          }
+        }
+      }
+    },
+    "Could not find exact text to insert before." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تعذر العثور على النص المطابق للإدراج قبله."
+          }
+        }
+      }
+    },
+    "Could not find exact text to replace." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تعذر العثور على النص المطابق لاستبداله."
+          }
+        }
+      }
+    },
+    "Executed: %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تم التنفيذ: %@"
+          }
+        }
+      }
+    },
+    "Missing %@ node." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "عقدة %@ مفقودة."
+          }
+        }
+      }
+    },
+    "New Logic" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "منطق جديد"
+          }
+        }
+      }
+    },
+    "No active project context is available for this edit." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لا يوجد سياق مشروع نشط لهذا التعديل."
+          }
+        }
+      }
+    },
+    "Pending" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قيد الانتظار"
+          }
+        }
+      }
+    },
+    "Pending changes" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تغييرات بانتظار المراجعة"
+          }
+        }
+      }
+    },
+    "Rejected" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مرفوض"
+          }
+        }
+      }
+    },
+    "Blue" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أزرق"
+          }
+        }
+      }
+    },
+    "Could not validate Apple ID credential. Please try again." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تعذر التحقق من بيانات اعتماد Apple ID. يرجى المحاولة مرة أخرى."
+          }
+        }
+      }
+    },
+    "Define the core logic and rules here." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "حدّد المنطق الأساسي والقواعد هنا."
+          }
+        }
+      }
+    },
+    "Document structure." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "هيكل المستند."
+          }
+        }
+      }
+    },
+    "Green" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أخضر"
+          }
+        }
+      }
+    },
+    "Hello! I'm your Co-Captain. How can I help you build today?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مرحباً! أنا مساعدك Co-Captain. كيف يمكنني مساعدتك في البناء اليوم؟"
+          }
+        }
+      }
+    },
+    "Home" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الرئيسية"
+          }
+        }
+      }
+    },
+    "Interactivity and logic." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "التفاعل والمنطق."
+          }
+        }
+      }
+    },
+    "New Project %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مشروع جديد %@"
+          }
+        }
+      }
+    },
+    "Onboarding" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "التهيئة"
+          }
+        }
+      }
+    },
+    "No view controller available to present sign-in flow." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لا يوجد متحكم عرض متاح لعرض عملية تسجيل الدخول."
+          }
+        }
+      }
+    },
+    "Orange" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "برتقالي"
+          }
+        }
+      }
+    },
+    "Pink" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "وردي"
+          }
+        }
+      }
+    },
+    "Purple" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "بنفسجي"
+          }
+        }
+      }
+    },
+    "Secondary" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ثانوي"
+          }
+        }
+      }
+    },
+    "Software Requirements (SRS)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "متطلبات البرمجيات (SRS)"
+          }
+        }
+      }
+    },
+    "Styling and layout." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "التنسيق والتخطيط."
+          }
+        }
+      }
+    },
+    "Soon" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قريباً"
+          }
+        }
+      }
+    },
+    "Sorry, I hit an error while contacting the model.\\n\\n%@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "عذراً، حدث خطأ أثناء الاتصال بالنموذج.\\n\\n%@"
+          }
+        }
+      }
+    },
+    "Spatial Node" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "عقدة مكانية"
+          }
+        }
+      }
+    },
+    "Type" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "النوع"
+          }
+        }
+      }
+    },
+    "UID: %@..." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "المعرّف: %@..."
+          }
+        }
+      }
+    },
+    "Unknown" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "غير معروف"
+          }
+        }
+      }
+    },
+    "Untitled Project" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مشروع بلا عنوان"
+          }
+        }
+      }
+    },
+    "Your mini-game will render here." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ستظهر لعبتك المصغرة هنا."
+          }
+        }
+      }
+    },
+    "Write your intent here." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اكتب نيتك هنا."
           }
         }
       }

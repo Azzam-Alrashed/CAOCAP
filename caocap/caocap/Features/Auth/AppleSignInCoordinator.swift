@@ -121,9 +121,9 @@ enum AuthError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidAppleCredential:
-            return "Could not validate Apple ID credential. Please try again."
+            return LocalizationManager.shared.localizedString("Could not validate Apple ID credential. Please try again.")
         case .missingPresentingViewController:
-            return "No view controller available to present sign-in flow."
+            return LocalizationManager.shared.localizedString("No view controller available to present sign-in flow.")
         }
     }
 }

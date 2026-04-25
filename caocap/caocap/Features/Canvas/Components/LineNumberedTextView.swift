@@ -70,6 +70,7 @@ class CodeEditorContainer: UIView, UITextViewDelegate {
     
     private func setup() {
         backgroundColor = UIColor(red: 0.12, green: 0.12, blue: 0.12, alpha: 1.0) // VS Code Dark+ Background
+        semanticContentAttribute = .forceLeftToRight
         
         // Setup Gutter
         gutterView.isEditable = false
@@ -80,6 +81,7 @@ class CodeEditorContainer: UIView, UITextViewDelegate {
         gutterView.font = font
         gutterView.textAlignment = .right
         gutterView.textContainerInset = UIEdgeInsets(top: 16, left: 0, bottom: 16, right: 8)
+        gutterView.semanticContentAttribute = .forceLeftToRight
         
         // Setup Main Text View
         textView.delegate = self
@@ -92,6 +94,8 @@ class CodeEditorContainer: UIView, UITextViewDelegate {
         textView.textColor = UIColor(white: 0.9, alpha: 1.0)
         textView.textContainerInset = UIEdgeInsets(top: 16, left: 8, bottom: 16, right: 16)
         textView.keyboardAppearance = .dark
+        textView.textAlignment = .left
+        textView.semanticContentAttribute = .forceLeftToRight
         
         addSubview(gutterView)
         addSubview(textView)

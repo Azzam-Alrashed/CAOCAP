@@ -26,11 +26,16 @@ public class ViewportState {
     }
     
     /// Updates the current offset based on the translation of an active drag gesture.
-    public func handleDragChanged(_ value: DragGesture.Value) {
+    public func handleDragTranslation(_ translation: CGSize) {
         offset = CGSize(
-            width: lastOffset.width + value.translation.width,
-            height: lastOffset.height + value.translation.height
+            width: lastOffset.width + translation.width,
+            height: lastOffset.height + translation.height
         )
+    }
+
+    /// Updates the current offset based on the translation of an active drag gesture.
+    public func handleDragChanged(_ value: DragGesture.Value) {
+        handleDragTranslation(value.translation)
     }
     
     /// Commits the current offset as the starting point for the next drag.

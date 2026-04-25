@@ -59,6 +59,7 @@ struct ContentView: View {
                 canUndo: (router.activeStore.undoStackChanged >= 0) && (undoManager?.canUndo ?? false),
                 canRedo: (router.activeStore.undoStackChanged >= 0) && (undoManager?.canRedo ?? false)
             )
+            .environment(\.layoutDirection, .leftToRight)
 
             CommandPaletteView(viewModel: commandPalette)
         }

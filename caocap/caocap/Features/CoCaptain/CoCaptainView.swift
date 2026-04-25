@@ -71,7 +71,7 @@ struct CoCaptainView: View {
                     Divider().opacity(0.5)
 
                     if let store = viewModel.store {
-                        ContextPill(projectName: store.projectName, nodeCount: store.nodes.count)
+                        ContextPill(projectName: store.projectName, fileName: store.fileName, nodeCount: store.nodes.count)
                     }
 
                     HStack(alignment: .bottom, spacing: 8) {
@@ -184,6 +184,7 @@ struct TimelineItemView: View {
 
 struct ContextPill: View {
     let projectName: String
+    let fileName: String
     let nodeCount: Int
 
     var body: some View {
@@ -191,9 +192,14 @@ struct ContextPill: View {
             Image(systemName: "scope")
             Text("Using current canvas")
             Text("·")
-            Text(projectName)
+            Text(LocalizationManager.shared.localizedProjectName(projectName, fileName: fileName))
             Text("·")
-            Text("\(nodeCount) nodes")
+            Text(
+                LocalizationManager.shared.localizedString(
+                    "%lld nodes",
+                    arguments: [Int64(nodeCount)]
+                )
+            )
         }
         .font(.system(size: 12, weight: .medium))
         .foregroundColor(.secondary)
@@ -269,7 +275,7 @@ struct ReviewCardView: View {
                 Text(item.targetLabel)
                     .font(.system(size: 14, weight: .bold))
                 Spacer()
-                Text(item.status.rawValue.capitalized)
+                Text(item.status.localizedTitle)
                     .font(.system(size: 11, weight: .bold))
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
@@ -282,7 +288,7 @@ struct ReviewCardView: View {
                 .font(.system(size: 13, weight: .medium))
                 .foregroundColor(.secondary)
             
-            Text(item.preview.isEmpty ? "No preview available." : item.preview)
+            Text(item.preview.isEmpty ? LocalizationManager.shared.localizedString("No preview available.") : item.preview)
                 .font(.system(size: 12, weight: .regular, design: .monospaced))
                 .padding(10)
                 .frame(maxWidth: .infinity, alignment: .leading)
