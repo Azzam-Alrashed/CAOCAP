@@ -71,4 +71,4 @@ firebase-debug.log
 
 # Xcode
 DerivedData/
-
+.derivedData/

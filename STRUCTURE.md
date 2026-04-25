@@ -1,6 +1,6 @@
 # Ficruty — Codebase Architecture
 
-This document is the authoritative map of the Ficruty (caocap) codebase. We use a **domain-driven, feature-based structure** to maximize isolation, scalability, and developer clarity. Every directory has a single responsibility.
+This document is the authoritative map of the Ficruty codebase. Ficruty is organized as a public product monorepo, with each platform isolated in its own top-level directory. The iOS app uses a **domain-driven, feature-based structure** to maximize isolation, scalability, and developer clarity.
 
 > [!NOTE]
 > If you add a new file that changes the architecture, update this document in the same commit.
@@ -11,7 +11,10 @@ This document is the authoritative map of the Ficruty (caocap) codebase. We use 
 
 ```
 Ficruty/
-├── caocap/               # Xcode project and all Swift source files
+├── ios-app/              # Native iOS/iPadOS app
+│   └── caocap/           # Xcode project and all Swift source files
+├── android-app/          # Future Android app
+├── website/              # Public website, support pages, and policies
 ├── README.md             # Project overview, mission, and devlog
 ├── ROADMAP.md            # Strategic milestone tracker
 ├── STRUCTURE.md          # This document — the architectural map
@@ -21,7 +24,7 @@ Ficruty/
 
 ---
 
-## Source Tree (`caocap/caocap/`)
+## iOS Source Tree (`ios-app/caocap/caocap/`)
 
 ```
 caocap/
