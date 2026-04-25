@@ -15,7 +15,10 @@ public class CommandPaletteViewModel {
     
     public var filteredActions: [AppActionDefinition] {
         if query.isEmpty { return actions }
-        return actions.filter { $0.title.localizedCaseInsensitiveContains(query) }
+        return actions.filter {
+            $0.localizedTitle.localizedCaseInsensitiveContains(query) ||
+            $0.title.localizedCaseInsensitiveContains(query)
+        }
     }
     
     public var onExecute: ((AppActionID) -> Void)?

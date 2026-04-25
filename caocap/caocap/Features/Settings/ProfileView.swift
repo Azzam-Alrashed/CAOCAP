@@ -64,7 +64,14 @@ struct ProfileView: View {
                                         .font(.system(size: 14))
                                         .foregroundStyle(.secondary)
                                 } else {
-                                    Text("UID: \(authManager.currentUID?.prefix(8) ?? "Unknown")...")
+                                    let uidPreview = authManager.currentUID.map { String($0.prefix(8)) }
+                                        ?? LocalizationManager.shared.localizedString("Unknown")
+                                    Text(
+                                        LocalizationManager.shared.localizedString(
+                                            "UID: %@...",
+                                            arguments: [uidPreview]
+                                        )
+                                    )
                                         .font(.system(size: 12, design: .monospaced))
                                         .foregroundStyle(.secondary)
                                 }
@@ -123,7 +130,12 @@ struct ProfileView: View {
                         
                         // MARK: - Footer
                         VStack(spacing: 8) {
-                            Text("CAOCAP v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0")")
+                            Text(
+                                LocalizationManager.shared.localizedString(
+                                    "CAOCAP v%@",
+                                    arguments: [Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"]
+                                )
+                            )
                                 .font(.system(size: 12, weight: .bold))
                                 .foregroundStyle(.secondary)
                             Text("Made for the spatial era.")

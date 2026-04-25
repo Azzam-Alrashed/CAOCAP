@@ -48,6 +48,10 @@ public struct AppActionDefinition: Identifiable, Hashable {
         self.isMutating = isMutating
         self.allowsAutonomousExecution = allowsAutonomousExecution
     }
+
+    public var localizedTitle: String {
+        LocalizationManager.shared.localizedString(title)
+    }
 }
 
 public enum AppActionSource: Hashable {
@@ -255,7 +259,7 @@ public final class AppActionDispatcher: AppActionPerforming {
                 actionID: id,
                 title: id.rawValue,
                 executed: false,
-                message: "Action unavailable."
+                message: LocalizationManager.shared.localizedString("Action unavailable.")
             )
         }
 
@@ -263,9 +267,9 @@ public final class AppActionDispatcher: AppActionPerforming {
             guard definition.allowsAutonomousExecution && !definition.isMutating else {
                 return AppActionResult(
                     actionID: definition.id,
-                    title: definition.title,
+                    title: definition.localizedTitle,
                     executed: false,
-                    message: "Action requires approval."
+                    message: LocalizationManager.shared.localizedString("Action requires approval.")
                 )
             }
         }
@@ -305,18 +309,18 @@ public final class AppActionDispatcher: AppActionPerforming {
         guard let handler else {
             return AppActionResult(
                 actionID: definition.id,
-                title: definition.title,
+                title: definition.localizedTitle,
                 executed: false,
-                message: "Action is not configured."
+                message: LocalizationManager.shared.localizedString("Action is not configured.")
             )
         }
 
         handler()
         return AppActionResult(
             actionID: definition.id,
-            title: definition.title,
+            title: definition.localizedTitle,
             executed: true,
-            message: "\(definition.title) executed."
+            message: LocalizationManager.shared.localizedString("%@ executed.", arguments: [definition.localizedTitle])
         )
     }
 }

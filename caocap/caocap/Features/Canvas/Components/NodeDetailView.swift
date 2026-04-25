@@ -19,7 +19,7 @@ struct NodeDetailView: View {
                             .foregroundColor(.gray)
                     }
                 }
-                .navigationTitle(node.title)
+                .navigationTitle(node.displayTitle)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .navigationBarTrailing) {
@@ -57,10 +57,10 @@ struct NodeDetailView: View {
                                 }
                                 
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text(node.title)
+                                    Text(node.displayTitle)
                                         .font(.system(size: 28, weight: .bold, design: .rounded))
                                     
-                                    if let subtitle = node.subtitle {
+                                    if let subtitle = node.displaySubtitle {
                                         Text(subtitle)
                                             .font(.system(size: 16, weight: .medium))
                                             .foregroundColor(.secondary)
@@ -84,7 +84,7 @@ struct NodeDetailView: View {
                                 
                                 HStack {
                                     DetailTag(label: "Type", value: "Spatial Node")
-                                    DetailTag(label: "Theme", value: node.theme.rawValue.capitalized)
+                                    DetailTag(label: "Theme", value: node.theme.localizedDisplayName)
                                 }
                             }
                             .padding(.vertical)
@@ -119,7 +119,7 @@ struct DetailTag: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(label.uppercased())
+            Text(LocalizationManager.shared.localizedString(label).uppercased())
                 .font(.system(size: 10, weight: .bold))
                 .foregroundColor(.secondary)
             

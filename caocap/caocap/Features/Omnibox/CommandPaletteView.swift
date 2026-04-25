@@ -109,7 +109,7 @@ struct AppActionRow: View {
                     .font(.system(size: 16))
                     .frame(width: 24)
                 
-                Text(LocalizedStringKey(item.title))
+                Text(item.localizedTitle)
                     .font(.system(size: 16))
                 
                 Spacer()

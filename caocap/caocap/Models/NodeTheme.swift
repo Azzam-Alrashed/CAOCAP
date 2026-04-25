@@ -20,4 +20,8 @@ public enum NodeTheme: String, Codable, CaseIterable {
         default: return 0.15
         }
     }
+
+    public var localizedDisplayName: String {
+        LocalizationManager.shared.localizedString(rawValue.capitalized)
+    }
 }

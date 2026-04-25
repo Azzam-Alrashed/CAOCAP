@@ -124,7 +124,12 @@ public final class CoCaptainAgentCoordinator {
         }
 
         guard !executedSummaries.isEmpty else { return nil }
-        return ExecutionStatusItem(summary: "Executed: " + executedSummaries.joined(separator: ", "))
+        return ExecutionStatusItem(
+            summary: LocalizationManager.shared.localizedString(
+                "Executed: %@",
+                arguments: [executedSummaries.joined(separator: ", ")]
+            )
+        )
     }
 
     private func buildReviewBundle(
@@ -143,9 +148,12 @@ public final class CoCaptainAgentCoordinator {
 
             items.append(
                 PendingReviewItem(
-                    targetLabel: definition.title,
-                    summary: "Awaiting approval to run \(definition.title.lowercased()).",
-                    preview: definition.title,
+                    targetLabel: definition.localizedTitle,
+                    summary: LocalizationManager.shared.localizedString(
+                        "Awaiting approval to run %@.",
+                        arguments: [definition.localizedTitle]
+                    ),
+                    preview: definition.localizedTitle,
                     source: .appAction(id)
                 )
             )
@@ -157,7 +165,7 @@ public final class CoCaptainAgentCoordinator {
                     let preview = try patchEngine.preview(role: edit.role, operations: edit.operations, in: store)
                     items.append(
                         PendingReviewItem(
-                            targetLabel: edit.role.displayName,
+                            targetLabel: edit.role.localizedDisplayName,
                             summary: edit.summary,
                             preview: previewSnippet(for: preview.resultText),
                             source: .nodeEdit(role: edit.role, operations: edit.operations, baseText: preview.originalText)
@@ -166,7 +174,7 @@ public final class CoCaptainAgentCoordinator {
                 } catch {
                     items.append(
                         PendingReviewItem(
-                            targetLabel: edit.role.displayName,
+                            targetLabel: edit.role.localizedDisplayName,
                             summary: edit.summary,
                             preview: error.localizedDescription,
                             status: .conflicted,
@@ -179,9 +187,9 @@ public final class CoCaptainAgentCoordinator {
             for edit in nodeEdits {
                 items.append(
                     PendingReviewItem(
-                        targetLabel: edit.role.displayName,
+                        targetLabel: edit.role.localizedDisplayName,
                         summary: edit.summary,
-                        preview: "No active project context is available for this edit.",
+                        preview: LocalizationManager.shared.localizedString("No active project context is available for this edit."),
                         status: .conflicted,
                         source: .nodeEdit(role: edit.role, operations: edit.operations, baseText: "")
                     )

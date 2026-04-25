@@ -86,11 +86,10 @@ public final class CoCaptainViewModel {
                 let details = String(reflecting: error)
                 updateMessage(
                     id: aiMessageID,
-                    text: """
-                    Sorry, I hit an error while contacting the model.
-
-                    \(details)
-                    """
+                    text: LocalizationManager.shared.localizedString(
+                        "Sorry, I hit an error while contacting the model.\n\n%@",
+                        arguments: [details]
+                    )
                 )
             }
 
@@ -137,7 +136,12 @@ public final class CoCaptainViewModel {
                 items.append(
                     CoCaptainTimelineItem(
                         content: .execution(
-                            ExecutionStatusItem(summary: "Applied updates to \(role.displayName).")
+                            ExecutionStatusItem(
+                                summary: LocalizationManager.shared.localizedString(
+                                    "Applied updates to %@.",
+                                    arguments: [role.localizedDisplayName]
+                                )
+                            )
                         )
                     )
                 )
@@ -212,7 +216,7 @@ public final class CoCaptainViewModel {
         CoCaptainTimelineItem(
             content: .message(
                 ChatBubbleItem(
-                    text: "Hello! I'm your Co-Captain. How can I help you build today?",
+                    text: LocalizationManager.shared.localizedString("Hello! I'm your Co-Captain. How can I help you build today?"),
                     isUser: false
                 )
             )

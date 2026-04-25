@@ -61,6 +61,19 @@ public enum ReviewItemStatus: String, Hashable {
     case applied
     case conflicted
     case rejected
+
+    public var localizedTitle: String {
+        switch self {
+        case .pending:
+            return LocalizationManager.shared.localizedString("Pending")
+        case .applied:
+            return LocalizationManager.shared.localizedString("Applied")
+        case .conflicted:
+            return LocalizationManager.shared.localizedString("Conflicted")
+        case .rejected:
+            return LocalizationManager.shared.localizedString("Rejected")
+        }
+    }
 }
 
 public struct ExecutionStatusItem: Identifiable, Hashable {
@@ -108,7 +121,11 @@ public struct ReviewBundleItem: Identifiable, Hashable {
     public let title: String
     public var items: [PendingReviewItem]
 
-    public init(id: UUID = UUID(), title: String = "Pending changes", items: [PendingReviewItem]) {
+    public init(
+        id: UUID = UUID(),
+        title: String = LocalizationManager.shared.localizedString("Pending changes"),
+        items: [PendingReviewItem]
+    ) {
         self.id = id
         self.title = title
         self.items = items

@@ -50,6 +50,7 @@ struct CodeEditorView: View {
                 .edgesIgnoringSafeArea(.bottom)
         }
         .background(Color(red: 0.12, green: 0.12, blue: 0.12).ignoresSafeArea())
+        .environment(\.layoutDirection, .leftToRight)
     }
     
     private func fileExtension(for title: String) -> String {

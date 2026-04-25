@@ -45,4 +45,12 @@ public struct SpatialNode: Identifiable, Codable, Equatable {
         self.htmlContent = htmlContent
         self.textContent = textContent
     }
+
+    public var displayTitle: String {
+        LocalizationManager.shared.localizedNodeTitle(title)
+    }
+
+    public var displaySubtitle: String? {
+        subtitle.map { LocalizationManager.shared.localizedNodeSubtitle($0) }
+    }
 }

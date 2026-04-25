@@ -21,7 +21,7 @@ struct CanvasHUDView: View {
                             .font(.system(size: 12))
                             .foregroundStyle(.secondary)
 
-                        Text(store.projectName.uppercased())
+                        Text(LocalizationManager.shared.localizedProjectName(store.projectName, fileName: store.fileName).uppercased())
                             .font(.system(size: 12, weight: .bold, design: .rounded))
                             .kerning(1)
                     }
@@ -29,20 +29,26 @@ struct CanvasHUDView: View {
                     Divider().frame(height: 16)
 
                     // Node Count
-                    HStack(spacing: 4) {
-                        Text("\(store.nodes.count)")
-                            .font(.system(size: 13, weight: .semibold, design: .monospaced))
-                        Text("nodes")
-                            .font(.system(size: 11))
-                            .foregroundStyle(.secondary)
-                    }
+                    Text(
+                        LocalizationManager.shared.localizedString(
+                            "%lld nodes",
+                            arguments: [Int64(store.nodes.count)]
+                        )
+                    )
+                    .font(.system(size: 13, weight: .semibold, design: .monospaced))
 
                     Divider().frame(height: 16)
 
                     // Zoom Level
                     HStack(spacing: 4) {
-                        Text("\(Int(viewportScale * 100))%")
-                            .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                        Text(
+                            LocalizationManager.shared.localizedString(
+                                "%lld%%",
+                                arguments: [Int64(viewportScale * 100)]
+                            )
+                        )
+                        .font(.system(size: 13, weight: .semibold, design: .monospaced))
+
                         Image(systemName: "magnifyingglass")
                             .font(.system(size: 10))
                             .foregroundStyle(.secondary)
@@ -151,4 +157,3 @@ struct CanvasHUDView: View {
             .environment(AuthenticationManager())
     }
 }
-

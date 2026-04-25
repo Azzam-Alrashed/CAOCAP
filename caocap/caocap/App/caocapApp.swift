@@ -25,6 +25,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
     }
 }
 
+
 // MARK: - App Entry Point
 
 @main
@@ -38,7 +39,8 @@ struct caocapApp: App {
             ContentView()
                 .environment(delegate.authManager)
                 .preferredColorScheme(colorScheme)
-                .environment(\.locale, Locale(identifier: "en"))
+                .environment(\.locale, appLocale)
+                .environment(\.layoutDirection, appLayoutDirection)
         }
     }
     
@@ -49,6 +51,22 @@ struct caocapApp: App {
         default: return nil
         }
     }
+
+    private var appLocale: Locale {
+        switch selectedLanguage {
+        case "Arabic":
+            return Locale(identifier: "ar")
+        default:
+            return Locale(identifier: "en")
+        }
+    }
+
+    private var appLayoutDirection: LayoutDirection {
+        switch selectedLanguage {
+        case "Arabic":
+            return .rightToLeft
+        default:
+            return .leftToRight
+        }
+    }
 }
-
-

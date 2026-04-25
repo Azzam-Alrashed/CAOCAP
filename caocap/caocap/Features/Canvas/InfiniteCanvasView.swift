@@ -143,6 +143,7 @@ struct InfiniteCanvasView: View {
                         )
                     }
             )
+            .environment(\.layoutDirection, .leftToRight)
         }
         .background(backgroundColor)
         .edgesIgnoringSafeArea(.all)

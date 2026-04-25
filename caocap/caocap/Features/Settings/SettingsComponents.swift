@@ -65,7 +65,7 @@ struct SettingsRow: View {
                 Spacer()
                 
                 if action != nil {
-                    Image(systemName: "chevron.right")
+                    Image(systemName: "chevron.forward")
                         .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(.primary.opacity(0.2))
                 }

@@ -147,7 +147,7 @@ struct PurchaseView: View {
                                         .tint(.white)
                                 } else {
                                     HStack {
-                                        Text(manager.isSubscribed ? "Manage Subscription" : (selectedProductID == "CAOCAP_Pro_Yearly" ? "Start 14-Day Free Trial" : "Start 7-Day Free Trial"))
+                                        Text(actionButtonTitle)
                                             .font(.system(size: 18, weight: .bold))
                                         Image(systemName: manager.isSubscribed ? "gearshape.fill" : "sparkles")
                                             .font(.system(size: 18, weight: .bold))
@@ -243,7 +243,18 @@ struct PurchaseView: View {
     }
     
     private func productPrice(for id: String) -> String {
-        manager.products.first(where: { $0.id == id })?.displayPrice ?? (id.contains("monthly") ? "$9.99" : "$79.99")
+        manager.products.first(where: { $0.id == id })?.displayPrice ?? (id.localizedCaseInsensitiveContains("monthly") ? "$9.99" : "$79.99")
+    }
+
+    private var actionButtonTitle: String {
+        if manager.isSubscribed {
+            return LocalizationManager.shared.localizedString("Manage Subscription")
+        }
+
+        let key = selectedProductID == "CAOCAP_Pro_Yearly"
+            ? "Start 14-Day Free Trial"
+            : "Start 7-Day Free Trial"
+        return LocalizationManager.shared.localizedString(key)
     }
     
     private func purchaseAction() {
@@ -259,7 +270,7 @@ struct PurchaseView: View {
         generator.impactOccurred()
         
         guard let product = manager.products.first(where: { $0.id == selectedProductID }) else {
-            purchaseError = "Product not found. Please try again later."
+            purchaseError = LocalizationManager.shared.localizedString("Product not found. Please try again later.")
             return
         }
         

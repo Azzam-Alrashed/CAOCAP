@@ -31,7 +31,8 @@ public class ProjectManager {
                 
                 // We could read the JSON to get the actual project name, but for speed we'll use the ID for now
                 // or do a quick peek at the first few bytes.
-                let name = getProjectName(from: url) ?? "Untitled Project"
+                let rawName = getProjectName(from: url) ?? "Untitled Project"
+                let name = LocalizationManager.shared.localizedProjectName(rawName, fileName: fileName)
                 
                 return ProjectMetadata(id: fileName, name: name, lastModified: modificationDate)
             }.sorted { $0.lastModified > $1.lastModified }
