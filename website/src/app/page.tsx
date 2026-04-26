@@ -231,6 +231,7 @@ export default function Home() {
         <div className="footer-content">
           <p>© 2026 Azzam Alrashed. Built for the spatial era.</p>
           <div className="footer-links">
+            <Link href="/support">Support</Link>
             <Link href="/privacy">Privacy Policy</Link>
             <Link href="/terms">Terms of Service</Link>
             <a href={githubUrl} target="_blank" rel="noreferrer">GitHub</a>

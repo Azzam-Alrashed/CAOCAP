@@ -167,9 +167,9 @@ struct PurchaseView: View {
                                 Task { try? await manager.restorePurchases() }
                             }
                             Circle().frame(width: 3, height: 3)
-                            Link("Terms", destination: URL(string: "https://caocap.app/terms")!)
+                            Link("Terms", destination: URL(string: "https://www.azzam.ai/caocap/terms")!)
                             Circle().frame(width: 3, height: 3)
-                            Link("Privacy", destination: URL(string: "https://caocap.app/privacy")!)
+                            Link("Privacy", destination: URL(string: "https://www.azzam.ai/caocap/privacy")!)
                         }
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(.secondary)

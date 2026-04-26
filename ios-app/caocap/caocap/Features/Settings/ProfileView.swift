@@ -113,15 +113,15 @@ struct ProfileView: View {
                             
                             // Support & Legal
                             SettingsSection("Support & Legal") {
-                                Link(destination: URL(string: "https://caocap.app/support")!) {
+                                Link(destination: URL(string: "https://www.azzam.ai/caocap/support")!) {
                                     SettingsRow(icon: "questionmark.circle.fill", title: "Contact Support", color: .blue)
                                 }
                                 
-                                Link(destination: URL(string: "https://caocap.app/privacy")!) {
+                                Link(destination: URL(string: "https://www.azzam.ai/caocap/privacy")!) {
                                     SettingsRow(icon: "shield.lefthalf.filled", title: "Privacy Policy", color: .secondary)
                                 }
                                 
-                                Link(destination: URL(string: "https://caocap.app/terms")!) {
+                                Link(destination: URL(string: "https://www.azzam.ai/caocap/terms")!) {
                                     SettingsRow(icon: "doc.text.fill", title: "Terms of Service", color: .secondary)
                                 }
                             }

@@ -126,14 +126,34 @@ struct SignInView: View {
             Spacer(minLength: 24)
 
             // Privacy note
-            Text("By continuing, you agree to our Terms of Service and Privacy Policy.")
-                .font(.system(size: 12))
-                .foregroundColor(.secondary.opacity(0.6))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
-                .opacity(footerVisible ? 1 : 0)
-                .padding(.bottom, 16)
-                .safeAreaPadding(.bottom)
+            HStack(spacing: 0) {
+                Text("By continuing, you agree to our ")
+                Button {
+                    if let url = URL(string: "https://www.azzam.ai/caocap/terms") {
+                        UIApplication.shared.open(url)
+                    }
+                } label: {
+                    Text("Terms of Service")
+                        .underline()
+                }
+                Text(" and ")
+                Button {
+                    if let url = URL(string: "https://www.azzam.ai/caocap/privacy") {
+                        UIApplication.shared.open(url)
+                    }
+                } label: {
+                    Text("Privacy Policy")
+                        .underline()
+                }
+                Text(".")
+            }
+            .font(.system(size: 11, weight: .medium))
+            .foregroundColor(.secondary.opacity(0.7))
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 32)
+            .opacity(footerVisible ? 1 : 0)
+            .padding(.bottom, 16)
+            .safeAreaPadding(.bottom)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background {
