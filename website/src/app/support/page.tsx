@@ -12,7 +12,7 @@ export default function SupportPage() {
             <LifeBuoy size={32} />
           </div>
           <h1>Support & Help</h1>
-          <p>We're here to help you build in the spatial era.</p>
+          <p>We&apos;re here to help you build in the spatial era.</p>
         </div>
 
         <section className="legal-content">
@@ -60,7 +60,7 @@ export default function SupportPage() {
 
             <div className="faq-item">
               <h3>How do I cancel my Pro subscription?</h3>
-              <p>Subscriptions are managed directly through your Apple ID settings. Open the App Store app, tap your profile, and select "Subscriptions".</p>
+              <p>Subscriptions are managed directly through your Apple ID settings. Open the App Store app, tap your profile, and select &quot;Subscriptions&quot;.</p>
             </div>
           </div>
         </section>
