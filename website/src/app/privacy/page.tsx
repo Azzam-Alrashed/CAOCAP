@@ -44,7 +44,7 @@ export default function PrivacyPage() {
 
           <h2>5. Contact</h2>
           <p>
-            If you have questions about this policy, contact us at privacy@caocap.app.
+            If you have questions about this policy, contact us at azzam.rar@gmail.com.
           </p>
         </section>
       </div>
