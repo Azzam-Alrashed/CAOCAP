@@ -23,7 +23,7 @@ export default function SupportPage() {
               </div>
               <h3>Email Support</h3>
               <p>For account issues, billing questions, or technical bugs.</p>
-              <a href="mailto:support@caocap.app" className="support-link">support@caocap.app</a>
+              <a href="mailto:azzam.rar@gmail.com" className="support-link">azzam.rar@gmail.com</a>
             </div>
 
             <div className="support-card">
@@ -41,7 +41,7 @@ export default function SupportPage() {
               </div>
               <h3>X / Twitter</h3>
               <p>Follow for updates and quick questions.</p>
-              <a href="https://twitter.com/azzamalrashed" target="_blank" rel="noreferrer" className="support-link">@azzamalrashed</a>
+              <a href="https://twitter.com/Azzam_rar" target="_blank" rel="noreferrer" className="support-link">@Azzam_rar</a>
             </div>
           </div>
 
