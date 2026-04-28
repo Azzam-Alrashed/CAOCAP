@@ -20,6 +20,8 @@ public final class CoCaptainViewModel {
     @ObservationIgnored
     private let agentCoordinator = CoCaptainAgentCoordinator()
     @ObservationIgnored
+    private let commandIntentResolver = CommandIntentResolver()
+    @ObservationIgnored
     private let patchEngine = NodePatchEngine()
     @ObservationIgnored
     private var lastStoreFileName: String?
@@ -63,6 +65,10 @@ public final class CoCaptainViewModel {
 
         let userItem = ChatBubbleItem(text: text, isUser: true)
         items.append(CoCaptainTimelineItem(content: .message(userItem)))
+
+        if handleDirectCommand(text) {
+            return
+        }
 
         isThinking = true
         let aiMessageID = UUID()
@@ -120,6 +126,57 @@ public final class CoCaptainViewModel {
         if let lastMessage, !lastMessage.isUser {
             removeEmptyMessage(id: lastMessage.id)
         }
+    }
+
+    private func handleDirectCommand(_ text: String) -> Bool {
+        guard let actionDispatcher,
+              let actionID = commandIntentResolver.resolve(text, availableActions: actionDispatcher.availableActions),
+              let definition = actionDispatcher.definition(for: actionID) else {
+            return false
+        }
+
+        if definition.isMutating || !definition.allowsAutonomousExecution {
+            items.append(
+                CoCaptainTimelineItem(
+                    content: .message(
+                        ChatBubbleItem(
+                            text: LocalizationManager.shared.localizedString(
+                                "I can do that. Review the action below, then tap Apply."
+                            ),
+                            isUser: false
+                        )
+                    )
+                )
+            )
+            items.append(
+                CoCaptainTimelineItem(
+                    content: .reviewBundle(
+                        ReviewBundleItem(
+                            items: [
+                                PendingReviewItem(
+                                    targetLabel: definition.localizedTitle,
+                                    summary: LocalizationManager.shared.localizedString(
+                                        "Awaiting approval to run %@.",
+                                        arguments: [definition.localizedTitle]
+                                    ),
+                                    preview: definition.localizedTitle,
+                                    source: .appAction(actionID)
+                                )
+                            ]
+                        )
+                    )
+                )
+            )
+            return true
+        }
+
+        let result = actionDispatcher.perform(actionID, source: .agentAutomatic)
+        items.append(
+            CoCaptainTimelineItem(
+                content: .execution(ExecutionStatusItem(summary: result.message))
+            )
+        )
+        return true
     }
 
     public func applyReviewItem(bundleID: UUID, itemID: UUID) {

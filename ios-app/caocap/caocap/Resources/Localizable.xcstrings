@@ -139,6 +139,17 @@
         }
       }
     },
+    "I can do that. Review the action below, then tap Apply." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أقدر أسوي ذلك. راجع الإجراء أدناه، ثم اضغط تطبيق."
+          }
+        }
+      }
+    },
     "Action unavailable." : {
       "extractionState" : "manual",
       "localizations" : {
