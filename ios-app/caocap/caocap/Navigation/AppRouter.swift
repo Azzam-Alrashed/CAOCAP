@@ -139,7 +139,7 @@ public class AppRouter {
             )
         ]
         
-        let newStore = ProjectStore(fileName: fileName, projectName: "New Project \(id)", initialNodes: initialNodes, initialViewportScale: 0.3)
+        let newStore = ProjectStore(fileName: fileName, projectName: "Untitled", initialNodes: initialNodes, initialViewportScale: 0.3)
         projects[fileName] = newStore
         
         navigate(to: .project(fileName), animated: true)
