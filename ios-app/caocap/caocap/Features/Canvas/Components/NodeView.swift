@@ -56,6 +56,12 @@ struct NodeView: View {
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
                     .fill(isDragging ? themeColor.opacity(0.08) : themeColor.opacity(0.03))
             }
+            .shadow(
+                color: Color.black.opacity(isDragging ? 0.25 : 0.15),
+                radius: isDragging ? 30 : 20,
+                x: 0,
+                y: isDragging ? 20 : 10
+            )
         )
         .overlay(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
@@ -71,12 +77,6 @@ struct NodeView: View {
                     ),
                     lineWidth: isDragging ? 2 : 1
                 )
-        )
-        .shadow(
-            color: Color.black.opacity(isDragging ? 0.25 : 0.15),
-            radius: isDragging ? 30 : 20,
-            x: 0,
-            y: isDragging ? 20 : 10
         )
         .scaleEffect(isDragging ? 1.05 : (isHovering ? 1.02 : 1.0))
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isDragging)

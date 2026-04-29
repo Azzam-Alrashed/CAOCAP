@@ -12,13 +12,15 @@ struct ConnectionLayer: View {
     
     var body: some View {
         Canvas { context, size in
+            let nodeDict = Dictionary(uniqueKeysWithValues: nodes.map { ($0.id, $0) })
+            
             for node in nodes {
                 var targets: [UUID] = []
                 if let next = node.nextNodeId { targets.append(next) }
                 if let connected = node.connectedNodeIds { targets.append(contentsOf: connected) }
                 
                 for targetId in targets {
-                    if let nextNode = nodes.first(where: { $0.id == targetId }) {
+                    if let nextNode = nodeDict[targetId] {
                         
                         let nodeOffset = dragOffsets[node.id] ?? .zero
                         let nextNodeOffset = dragOffsets[nextNode.id] ?? .zero
