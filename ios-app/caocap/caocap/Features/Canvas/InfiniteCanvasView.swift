@@ -52,11 +52,26 @@ struct InfiniteCanvasView: View {
                 // Layer 1: The Infinite Dotted Grid
                 DottedBackground(offset: viewport.offset, scale: viewport.scale)
                 
-                // Layer 2: Node Connections (Drawn in screen space to prevent clipping)
+                // Layer 2: Node Connections (Drawn in screen space to prevent clipping and layout bugs)
                 ConnectionLayer(nodes: store.nodes, dragOffsets: nodeDragOffsets, viewport: viewport, center: center)
                 
-                // Layer 3: The Spatial Nodes
+                // Layer 3: The Spatial Core (Scaled & Offset)
                 ZStack {
+                    // Layer 2.5: Spatial Centerpiece (Home only)
+                    if store.projectName == "Home" {
+                        Color.clear
+                            .frame(width: 0, height: 0)
+                            .overlay(
+                                Image("SpaceSketchBG")
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 2000, height: 2000)
+                                    .opacity(colorScheme == .dark ? 0.25 : 0.12)
+                                    .blendMode(colorScheme == .dark ? .screen : .multiply)
+                                    .allowsHitTesting(false)
+                            )
+                    }
+                    
                     ForEach(store.nodes) { node in
                         let currentOffset = nodeDragOffsets[node.id] ?? .zero
                         let isDraggingThisNode = nodeDragOffsets[node.id] != nil
