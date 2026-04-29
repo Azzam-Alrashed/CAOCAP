@@ -22,10 +22,12 @@ public class CommandPaletteViewModel {
     /// Filters against localized and canonical titles so command search works
     /// in the UI language while still matching stable English action names.
     public var filteredActions: [AppActionDefinition] {
-        if query.isEmpty { return actions }
+        let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedQuery.isEmpty { return actions }
+        
         return actions.filter {
-            $0.localizedTitle.localizedCaseInsensitiveContains(query) ||
-            $0.title.localizedCaseInsensitiveContains(query)
+            $0.localizedTitle.localizedCaseInsensitiveContains(trimmedQuery) ||
+            $0.title.localizedCaseInsensitiveContains(trimmedQuery)
         }
     }
     

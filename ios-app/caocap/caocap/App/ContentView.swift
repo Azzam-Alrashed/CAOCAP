@@ -1,5 +1,12 @@
 import SwiftUI
 
+extension Notification.Name {
+    static let openCommandPalette = Notification.Name("openCommandPalette")
+    static let summonCoCaptain = Notification.Name("summonCoCaptain")
+    static let performUndo = Notification.Name("performUndo")
+    static let performRedo = Notification.Name("performRedo")
+}
+
 struct ContentView: View {
     @State var commandPalette = CommandPaletteViewModel()
     @State var coCaptain = CoCaptainViewModel()
@@ -138,6 +145,26 @@ struct ContentView: View {
         .onChange(of: router.currentWorkspace) {
             router.activeStore.undoManager = undoManager
             coCaptain.store = router.activeStore
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .NSUndoManagerDidUndoChange)) { _ in
+            router.activeStore.undoStackChanged += 1
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .NSUndoManagerDidRedoChange)) { _ in
+            router.activeStore.undoStackChanged += 1
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openCommandPalette)) { _ in
+            commandPalette.setPresented(true)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .summonCoCaptain)) { _ in
+            _ = actionDispatcher.perform(.summonCoCaptain, source: .user)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .performUndo)) { _ in
+            undoManager?.undo()
+            router.activeStore.undoStackChanged += 1
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .performRedo)) { _ in
+            undoManager?.redo()
+            router.activeStore.undoStackChanged += 1
         }
     }
     

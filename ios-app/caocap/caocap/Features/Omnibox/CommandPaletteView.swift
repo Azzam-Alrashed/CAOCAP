@@ -50,14 +50,17 @@ struct CommandPaletteView: View {
                                     ) {
                                         viewModel.executeAction(action)
                                     }
-                                    .id(index)
+                                    .id(action.id)
                                 }
                             }
                         }
                         .frame(maxHeight: 400)
                         .onChange(of: viewModel.selectedIndex) { oldIndex, newIndex in
-                            withAnimation {
-                                proxy.scrollTo(newIndex, anchor: .center)
+                            let actions = viewModel.filteredActions
+                            if newIndex >= 0 && newIndex < actions.count {
+                                withAnimation {
+                                    proxy.scrollTo(actions[newIndex].id, anchor: .center)
+                                }
                             }
                         }
                     }
