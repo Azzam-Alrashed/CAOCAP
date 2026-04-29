@@ -74,6 +74,9 @@ public struct NodePatchPreview: Hashable {
     public let resultText: String
 }
 
+/// Applies deterministic text operations proposed by CoCaptain to canonical
+/// project nodes. It previews changes first so the UI can keep edits
+/// human-approved and conflict-aware.
 public struct NodePatchEngine {
     public init() {}
 
@@ -97,6 +100,8 @@ public struct NodePatchEngine {
         return NodePatchPreview(role: role, originalText: originalText, resultText: resultText)
     }
 
+    /// Applies operations in order. Exact operations fail fast when their target
+    /// text is missing, preventing model output from silently editing the wrong area.
     public func apply(operations: [NodePatchOperation], to text: String) throws -> String {
         var updatedText = text
 

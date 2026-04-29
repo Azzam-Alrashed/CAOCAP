@@ -1,5 +1,8 @@
 import SwiftUI
 
+/// Renders one spatial workspace and owns the transient gesture state needed to
+/// pan, zoom, select, and drag nodes without changing the durable project model
+/// until a gesture is committed.
 struct InfiniteCanvasView: View {
     @Environment(\.colorScheme) var colorScheme
     
@@ -12,7 +15,8 @@ struct InfiniteCanvasView: View {
     /// The central store managing node data and persistence.
     var store: ProjectStore
     
-    /// Callback triggered when a specialized action node is tapped.
+    /// Callback triggered when a specialized action node is tapped. Its
+    /// presence also marks the canvas as non-persistent onboarding mode.
     var onNodeAction: ((NodeAction) -> Void)? = nil
     
     init(store: ProjectStore, currentScale: Binding<CGFloat>, onNodeAction: ((NodeAction) -> Void)? = nil) {
@@ -20,7 +24,8 @@ struct InfiniteCanvasView: View {
         self._currentScale = currentScale
         self.onNodeAction = onNodeAction
         
-        // Onboarding always starts fresh; active projects load saved state.
+        // Onboarding is a guided route, not a user project, so it always starts
+        // from the authored viewport instead of restoring accidental gestures.
         if onNodeAction != nil && store.fileName.contains("onboarding") {
             self._viewport = State(initialValue: ViewportState(offset: .zero, scale: 1.0))
         } else {
@@ -31,14 +36,16 @@ struct InfiniteCanvasView: View {
         }
     }
     
-    // Selection and Dragging State
+    // Drag offsets stay local until the drag ends so links and nodes can track
+    // the finger smoothly without writing every intermediate frame to ProjectStore.
     @State private var selectedNode: SpatialNode?
     @State private var nodeDragOffsets: [UUID: CGSize] = [:]
     @State private var isDraggingNode = false
     
     var body: some View {
         GeometryReader { geometry in
-            // Calculate the screen center to serve as the canvas origin.
+            // Node positions are stored as offsets from the visible center, so
+            // the center point is the bridge between canvas-space and screen-space.
             let center = CGPoint(x: geometry.size.width / 2, y: geometry.size.height / 2)
             
             ZStack {
@@ -69,7 +76,9 @@ struct InfiniteCanvasView: View {
                             .highPriorityGesture(
                                 DragGesture(minimumDistance: 5)
                                     .onChanged { value in
-                                        // Block canvas panning while a node is being moved.
+                                        // The node drag gesture has priority, but the canvas
+                                        // pan gesture still observes events; this flag prevents
+                                        // both transforms from applying to the same drag.
                                         isDraggingNode = true
                                         nodeDragOffsets[node.id] = value.translation
                                     }
@@ -79,8 +88,8 @@ struct InfiniteCanvasView: View {
                                             let finalX = node.position.x + value.translation.width
                                             let finalY = node.position.y + value.translation.height
                                             
-                                            // Update the store so the node stays in place during the session.
-                                            // Only persist to disk for active projects.
+                                            // Onboarding edits are session-only; project edits
+                                            // persist because they are user-authored layout state.
                                             store.updateNodePosition(
                                                 id: node.id,
                                                 position: CGPoint(x: finalX, y: finalY),
@@ -111,8 +120,8 @@ struct InfiniteCanvasView: View {
                     .onEnded { _ in 
                         if !isDraggingNode {
                             viewport.handleDragEnded()
-                            // Update the store's viewport so it stays in place during the session.
-                            // Only persist to disk for active projects.
+                            // Persist viewport only for real projects. Onboarding
+                            // should remain a stable authored path on every run.
                             store.updateViewport(
                                 offset: viewport.offset,
                                 scale: viewport.scale,
@@ -134,8 +143,8 @@ struct InfiniteCanvasView: View {
                     .onEnded { _ in 
                         viewport.handleMagnificationEnded()
                         currentScale = viewport.scale
-                        // Update the store's viewport so it stays in place during the session.
-                        // Only persist to disk for active projects.
+                        // Persist viewport only for real projects. Onboarding
+                        // should remain a stable authored path on every run.
                         store.updateViewport(
                             offset: viewport.offset,
                             scale: viewport.scale,

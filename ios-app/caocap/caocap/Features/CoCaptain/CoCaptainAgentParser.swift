@@ -1,10 +1,14 @@
 import Foundation
 
+/// Splits model responses into user-visible text and an optional trailing
+/// `cocaptain-actions` JSON payload.
 public struct CoCaptainAgentParser {
     private static let fence = "```cocaptain-actions"
 
     public init() {}
 
+    /// Parses the last structured fence in the response. Invalid or incomplete
+    /// payloads are treated as plain chat so malformed model output remains safe.
     public func parse(_ response: String) -> CoCaptainParsedResponse {
         guard let startRange = response.range(of: Self.fence, options: .backwards) else {
             return CoCaptainParsedResponse(visibleText: response.trimmingCharacters(in: .whitespacesAndNewlines), payload: nil)
@@ -28,6 +32,8 @@ public struct CoCaptainAgentParser {
         return CoCaptainParsedResponse(visibleText: resolvedVisibleText, payload: payload)
     }
 
+    /// Returns the text that is safe to stream into the chat bubble while the
+    /// model may still be generating a hidden structured payload.
     public func visibleText(from response: String) -> String {
         if let range = response.range(of: Self.fence) {
             return String(response[..<range.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)

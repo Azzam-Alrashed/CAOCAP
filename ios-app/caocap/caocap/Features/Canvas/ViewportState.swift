@@ -1,6 +1,8 @@
 import SwiftUI
 import Observation
 
+/// Encapsulates canvas pan and zoom math. Views should feed gestures into this
+/// object rather than reimplementing coordinate transforms locally.
 @Observable
 public class ViewportState {
     /// The current visual offset of the canvas.
@@ -43,7 +45,9 @@ public class ViewportState {
         lastOffset = offset
     }
     
-    /// Updates the current scale and offset based on a magnification gesture at a specific location.
+    /// Updates scale and offset around the user's pinch anchor. The offset is
+    /// recalculated so the canvas point under the fingers stays visually pinned
+    /// while zoom changes.
     public func handleMagnificationChanged(_ magnification: CGFloat, at location: CGPoint, in viewSize: CGSize) {
         let newScale = min(max(lastScale * magnification, minScale), maxScale)
         

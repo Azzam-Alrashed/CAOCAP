@@ -1,6 +1,8 @@
 import SwiftUI
 
-/// Renders smooth, curved arrows between connected nodes.
+/// Renders smooth, curved arrows between connected nodes in screen space. Links
+/// are not placed inside the scaled node layer because large curves can clip
+/// when their endpoints sit far apart on the infinite canvas.
 struct ConnectionLayer: View {
     @AppStorage("connection_style") private var connectionStyle = "Dashed"
     let nodes: [SpatialNode]
@@ -12,6 +14,8 @@ struct ConnectionLayer: View {
         Canvas { context, size in
             for node in nodes {
                 var targets: [UUID] = []
+                // Onboarding uses `nextNodeId` for the guided path; project
+                // graphs use `connectedNodeIds` for general directed links.
                 if let next = node.nextNodeId { targets.append(next) }
                 if let connected = node.connectedNodeIds { targets.append(contentsOf: connected) }
                 
@@ -21,8 +25,9 @@ struct ConnectionLayer: View {
                         let nodeOffset = dragOffsets[node.id] ?? .zero
                         let nextNodeOffset = dragOffsets[nextNode.id] ?? .zero
                         
-                        // Manually calculate screen-space coordinates to avoid clipping.
-                        // Positions are offsets from the 'center' point.
+                        // SpatialNode positions are center-relative canvas
+                        // coordinates; convert them through the current viewport
+                        // before drawing into the full-screen Canvas.
                         let start = CGPoint(
                             x: center.x + (node.position.x + nodeOffset.width) * viewport.scale + viewport.offset.width,
                             y: center.y + (node.position.y + nodeOffset.height) * viewport.scale + viewport.offset.height

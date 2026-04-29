@@ -1,5 +1,8 @@
 import SwiftUI
 
+/// Routes a selected node to the correct full-screen inspector/editor. Adding a
+/// node type should usually update this router and the matching store/context
+/// behavior together.
 struct NodeDetailView: View {
     let node: SpatialNode
     let store: ProjectStore

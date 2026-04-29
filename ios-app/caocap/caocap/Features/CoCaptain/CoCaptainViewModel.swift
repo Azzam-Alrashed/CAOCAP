@@ -128,6 +128,8 @@ public final class CoCaptainViewModel {
         }
     }
 
+    /// Handles simple app commands locally so navigation does not need a model
+    /// round trip. Mutating commands still become review items.
     private func handleDirectCommand(_ text: String) -> Bool {
         guard let actionDispatcher,
               let actionID = commandIntentResolver.resolve(text, availableActions: actionDispatcher.availableActions),
@@ -179,6 +181,9 @@ public final class CoCaptainViewModel {
         return true
     }
 
+    /// Applies one user-approved review item. Node edits are revalidated against
+    /// their captured base text so stale AI suggestions cannot overwrite newer
+    /// user edits.
     public func applyReviewItem(bundleID: UUID, itemID: UUID) {
         guard let bundleIndex = items.firstIndex(where: { $0.id == bundleID }),
               case .reviewBundle(var bundle) = items[bundleIndex].content,
@@ -254,6 +259,8 @@ public final class CoCaptainViewModel {
         }
     }
 
+    /// Resets chat state when the active project changes so streamed responses
+    /// and review bundles cannot leak across project contexts.
     private func handleStoreChange() {
         let currentFileName = store?.fileName
         guard currentFileName != lastStoreFileName else { return }

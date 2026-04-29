@@ -8,6 +8,8 @@ public enum WorkspaceState: Equatable {
     case project(String) // filename
 }
 
+/// Coordinates top-level workspace navigation and owns the active stores for
+/// onboarding, home, and user-created projects.
 @MainActor
 @Observable
 public class AppRouter {
@@ -18,6 +20,8 @@ public class AppRouter {
     public let onboardingStore = ProjectStore(fileName: "onboarding_v2.json", projectName: "Onboarding")
     public let homeStore = ProjectStore(fileName: "home_v2.json", projectName: "Home", initialNodes: HomeProvider.homeNodes)
     
+    /// Returns the store for the current workspace, lazily creating project
+    /// stores on cold boot when navigation restores a project filename.
     public var activeStore: ProjectStore {
         switch currentWorkspace {
         case .onboarding: return onboardingStore
@@ -39,6 +43,8 @@ public class AppRouter {
         self.currentWorkspace = hasCompletedOnboarding ? .home : .onboarding
     }
     
+    /// Moves between workspaces and records onboarding completion when the user
+    /// reaches Home, which makes Home the default workspace on the next launch.
     public func navigate(to workspace: WorkspaceState, addToStack: Bool = true, animated: Bool = true) {
         let updateState = {
             if addToStack && self.currentWorkspace != workspace {

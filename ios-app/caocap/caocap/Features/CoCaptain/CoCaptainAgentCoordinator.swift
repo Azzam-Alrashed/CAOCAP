@@ -19,6 +19,8 @@ public struct CoCaptainAgentRunResult: Hashable {
     public let reviewBundle: ReviewBundleItem?
 }
 
+/// Bridges model output to app behavior while keeping mutating code edits in
+/// an explicit review flow.
 @MainActor
 public final class CoCaptainAgentCoordinator {
     private let llmClient: any CoCaptainLLMClient
@@ -42,6 +44,9 @@ public final class CoCaptainAgentCoordinator {
         llmClient.resetChat()
     }
 
+    /// Runs one assistant turn against the active project context. Structured
+    /// responses are preferred so the UI can separate visible chat text from
+    /// executable actions and reviewable node edits.
     public func run(
         userMessage: String,
         store: ProjectStore?,
@@ -96,9 +101,13 @@ public final class CoCaptainAgentCoordinator {
             onVisibleText(parser.visibleText(from: responseText))
         }
 
+        // The visible chat can stream before the structured block is complete;
+        // only parse actions after the model has finished the turn.
         let parsed = parser.parse(responseText)
         let payload = expectsStructuredResponse ? parsed.payload : nil
 
+        // Build/edit requests should produce executable work. If the model only
+        // chatted back, retry once with a stronger contract before falling back.
         if expectsStructuredResponse,
            payload == nil,
            allowAgenticRetry,
@@ -160,6 +169,8 @@ public final class CoCaptainAgentCoordinator {
         """
     }
 
+    /// Executes only actions that the model marked as safe. Mutating or
+    /// uncertain work should arrive as pending actions and be reviewed in the UI.
     private func executeSafeActions(
         _ actions: [CoCaptainAgentAction],
         dispatcher: (any AppActionPerforming)?
@@ -181,6 +192,9 @@ public final class CoCaptainAgentCoordinator {
         )
     }
 
+    /// Converts pending actions and node edits into review items. Node edit
+    /// previews capture the current text as `baseText` so apply can detect
+    /// whether the user changed the node after the model response.
     private func buildReviewBundle(
         pendingActions: [CoCaptainAgentAction],
         nodeEdits: [CoCaptainNodeEditProposal],

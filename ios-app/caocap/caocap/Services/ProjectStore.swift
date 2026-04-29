@@ -3,6 +3,8 @@ import Observation
 import OSLog
 import SwiftUI
 
+/// Owns the mutable state for one spatial project, including nodes, viewport
+/// position, persistence, undo wiring, and live preview compilation.
 @Observable
 @MainActor
 public class ProjectStore {
@@ -116,6 +118,8 @@ public class ProjectStore {
         compileLivePreview()
     }
     
+    /// Persists a snapshot of the current project state using a temporary file
+    /// and atomic replacement so interrupted writes do not corrupt the main file.
     public func save() {
         let url = fileURL
         let tempURL = url.appendingPathExtension("\(UUID().uuidString).tmp")
@@ -179,6 +183,8 @@ public class ProjectStore {
     }
     
     /// Combines HTML, CSS, and JS node contents and updates the Live Preview node.
+    /// The compiler intentionally keys off canonical node titles used by the
+    /// project template, so template changes should keep those roles stable.
     private func compileLivePreview() {
         guard let webViewIndex = nodes.firstIndex(where: { $0.type == .webView }),
               let htmlNode = nodes.first(where: { $0.title.lowercased() == "html" }) else {
