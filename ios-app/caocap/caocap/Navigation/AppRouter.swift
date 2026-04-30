@@ -17,7 +17,12 @@ public class AppRouter {
     public var projects: [String: ProjectStore] = [:]
     private var navigationStack: [WorkspaceState] = []
     
-    public let onboardingStore = ProjectStore(fileName: "onboarding_v2.json", projectName: "Onboarding")
+    public let onboardingStore = ProjectStore(
+        fileName: "onboarding_v4.json",
+        projectName: OnboardingProvider.projectName,
+        initialNodes: OnboardingProvider.manifestoNodes,
+        initialViewportScale: OnboardingProvider.initialViewportScale
+    )
     public let homeStore = ProjectStore(fileName: "home_v6.json", projectName: "Home", initialNodes: HomeProvider.homeNodes, initialViewportScale: 0.5)
     
     /// Returns the store for the current workspace, lazily creating project

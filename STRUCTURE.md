@@ -145,7 +145,7 @@ The spatial runtime — the heart of Ficruty.
 | File | Responsibility |
 |---|---|
 | `HomeProvider.swift` | Generates the default node graph for the Home workspace. |
-| `OnboardingProvider.swift` | Generates the guided node sequence for first-run onboarding. |
+| `OnboardingProvider.swift` | Loads the manifest-backed guided node sequence for first-run onboarding, with a hardcoded fallback. |
 | `ProjectTemplateProvider.swift` | Generates the default interconnected node graph for new projects. |
 
 ---
@@ -184,7 +184,7 @@ The Pro monetization UI. Contains the glassmorphic purchase sheet, plan comparis
 ---
 
 ### `Resources/`
-Asset catalogs, app icons, and any localization files.
+Asset catalogs, app icons, localization files, and bundled product manifests such as `tutorial.json`.
 
 ### `Preview Content/`
 Assets used exclusively by Xcode Previews. Not included in production builds.

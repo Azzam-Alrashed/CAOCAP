@@ -27,7 +27,8 @@ struct InfiniteCanvasView: View {
         
         // Onboarding is a guided route, not a user project, so it always starts
         // from the authored viewport instead of restoring accidental gestures.
-        if onNodeAction != nil && store.fileName.contains("onboarding") {
+        let isOnboardingCanvas = onNodeAction != nil && store.fileName.contains("onboarding")
+        if isOnboardingCanvas {
             self._viewport = State(initialValue: ViewportState(offset: .zero, scale: 1.0))
         } else {
             self._viewport = State(initialValue: ViewportState(
@@ -107,7 +108,7 @@ struct InfiniteCanvasView: View {
                                             store.updateNodePosition(
                                                 id: node.id,
                                                 position: CGPoint(x: finalX, y: finalY),
-                                                persist: onNodeAction == nil
+                                                persist: !isOnboardingCanvas
                                             )
                                             
                                             nodeDragOffsets[node.id] = nil
@@ -189,8 +190,12 @@ struct InfiniteCanvasView: View {
         store.updateViewport(
             offset: viewport.offset,
             scale: viewport.scale,
-            persist: onNodeAction == nil
+            persist: !isOnboardingCanvas
         )
+    }
+
+    private var isOnboardingCanvas: Bool {
+        onNodeAction != nil && store.fileName.contains("onboarding")
     }
 }
 

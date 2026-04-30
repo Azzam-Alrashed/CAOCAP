@@ -97,6 +97,8 @@ public class ProjectStore {
                         migratedNodes[i].action = .openProfile
                     } else if migratedNodes[i].title == "Projects" {
                         migratedNodes[i].action = .openProjectExplorer
+                    } else if migratedNodes[i].title == "Ask CoCaptain" {
+                        migratedNodes[i].action = .summonCoCaptain
                     }
                 }
             }
