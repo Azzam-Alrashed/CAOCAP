@@ -214,12 +214,12 @@ struct ContextPill: View {
         HStack(spacing: 8) {
             Image(systemName: "scope")
             Text("Using current canvas")
-            Text("·")
+            Text(verbatim: "·")
             Text(LocalizationManager.shared.localizedProjectName(projectName, fileName: fileName))
-            Text("·")
+            Text(verbatim: "·")
             Text(
                 LocalizationManager.shared.localizedString(
-                    "%lld nodes",
+                    "context.nodeCount",
                     arguments: [Int64(nodeCount)]
                 )
             )

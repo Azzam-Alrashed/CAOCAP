@@ -331,7 +331,7 @@ public final class AppActionDispatcher: AppActionPerforming {
             actionID: definition.id,
             title: definition.localizedTitle,
             executed: true,
-            message: LocalizationManager.shared.localizedString("%@ executed.", arguments: [definition.localizedTitle])
+            message: LocalizationManager.shared.localizedString("appAction.executedMessage", arguments: [definition.localizedTitle])
         )
     }
 }

@@ -38,12 +38,7 @@ struct CanvasHUDView: View {
 
                     // Zoom Level
                     HStack(spacing: 4) {
-                        Text(
-                            LocalizationManager.shared.localizedString(
-                                "%lld%%",
-                                arguments: [Int64(viewportScale * 100)]
-                            )
-                        )
+                        Text(viewportScale, format: .percent.precision(.fractionLength(0)))
                         .font(.system(size: 13, weight: .semibold, design: .monospaced))
                         .fixedSize(horizontal: true, vertical: false)
 

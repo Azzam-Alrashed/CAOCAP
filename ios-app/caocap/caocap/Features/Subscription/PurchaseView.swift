@@ -59,7 +59,7 @@ struct PurchaseView: View {
                         }
                         
                         VStack(spacing: 8) {
-                            Text("CAOCAP PRO")
+                            Text(LocalizedStringKey("subscription.paywallBadge"))
                                 .font(.system(size: 14, weight: .black))
                                 .kerning(4)
                                 .foregroundStyle(

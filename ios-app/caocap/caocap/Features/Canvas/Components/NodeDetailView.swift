@@ -86,7 +86,7 @@ struct NodeDetailView: View {
                                     .lineSpacing(4)
                                 
                                 HStack {
-                                    DetailTag(label: "Type", value: "Spatial Node")
+                                    DetailTag(label: "nodeDetail.typeLabel", value: "Spatial Node")
                                     DetailTag(label: "Theme", value: node.theme.localizedDisplayName)
                                 }
                             }
