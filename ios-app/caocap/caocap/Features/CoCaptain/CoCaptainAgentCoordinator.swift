@@ -186,7 +186,7 @@ public final class CoCaptainAgentCoordinator {
         guard !executedSummaries.isEmpty else { return nil }
         return ExecutionStatusItem(
             summary: LocalizationManager.shared.localizedString(
-                "Executed: %@",
+                "agent.executedSummary",
                 arguments: [executedSummaries.joined(separator: ", ")]
             )
         )
