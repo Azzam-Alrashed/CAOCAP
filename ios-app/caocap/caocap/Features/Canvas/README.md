@@ -39,7 +39,7 @@ When changing gestures or connection rendering, test pan, zoom, drag, and arrow 
 - node drag and viewport changes do not persist;
 - action nodes can drive navigation through the callback.
 
-Preserve this distinction unless replacing onboarding with a new manifest-backed flow.
+`OnboardingProvider` loads the authored tutorial graph from `Resources/tutorial.json`, with a Swift fallback for bundle or decode failures. Preserve the non-persistent onboarding distinction unless replacing the guided flow end to end.
 
 ## Editing Guidance
 

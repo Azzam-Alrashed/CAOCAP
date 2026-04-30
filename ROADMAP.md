@@ -22,7 +22,7 @@ This document outlines the strategic milestones for Ficruty (caocap). Our goal i
 ### Post-Launch Polish
 
 - [/] **Onboarding Polish**: Continue refining the guided first-run experience after launch.
-    - [ ] **Tutorial Manifest**: Create a `tutorial.json` with pre-placed learning nodes.
+    - [x] **Tutorial Manifest**: Create a `tutorial.json` with pre-placed learning nodes.
     - [ ] **Spatial Markers**: Implement animated "Focus Rings" to highlight UI elements during steps.
     - [ ] **Gesture Gates**: Add logic that unlocks the next step only after a specific pan/zoom/long-press action.
 - [ ] **Post-Launch Feedback Loop**: Make user support, issue triage, and release follow-up part of the product rhythm.
