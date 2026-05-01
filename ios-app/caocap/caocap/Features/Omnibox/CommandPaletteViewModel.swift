@@ -32,6 +32,7 @@ public class CommandPaletteViewModel {
     }
     
     public var onExecute: ((AppActionID) -> Void)?
+    public var onSubmitPrompt: ((String) -> Void)?
     
     public init() {}
     
@@ -62,6 +63,8 @@ public class CommandPaletteViewModel {
         if selectedIndex >= 0 && selectedIndex < filtered.count {
             let action = filtered[selectedIndex]
             executeAction(action)
+        } else {
+            submitPromptIfNeeded()
         }
     }
     
@@ -70,6 +73,21 @@ public class CommandPaletteViewModel {
     public func executeAction(_ action: AppActionDefinition) {
         logger.info("Executing action: \(action.title)")
         onExecute?(action.id)
+        setPresented(false)
+    }
+
+    public var canSubmitPrompt: Bool {
+        !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && filteredActions.isEmpty
+    }
+
+    /// Emits an unmatched palette query as a CoCaptain prompt. Listed commands
+    /// continue through `onExecute`; this path is only for no-result queries.
+    public func submitPromptIfNeeded() {
+        let prompt = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !prompt.isEmpty, filteredActions.isEmpty else { return }
+
+        logger.info("Submitting unmatched command palette query to CoCaptain")
+        onSubmitPrompt?(prompt)
         setPresented(false)
     }
     

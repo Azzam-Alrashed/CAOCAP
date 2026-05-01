@@ -241,6 +241,12 @@ struct ContentView: View {
         commandPalette.onExecute = { actionID in
             _ = actionDispatcher.perform(actionID, source: .user)
         }
+        commandPalette.onSubmitPrompt = { prompt in
+            coCaptain.store = router.activeStore
+            coCaptain.actionDispatcher = actionDispatcher
+            coCaptain.setPresented(true)
+            coCaptain.sendMessage(prompt)
+        }
     }
 }
 
