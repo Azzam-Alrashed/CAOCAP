@@ -7,17 +7,20 @@ public enum CoCaptainAgentOutputSource: String, Hashable {
 }
 
 public struct CoCaptainAgentDirective: Hashable {
+    public let preamble: String
     public let visibleText: String
     public let payload: CoCaptainAgentPayload?
     public let diagnostics: [String]
     public let source: CoCaptainAgentOutputSource
 
     public init(
+        preamble: String,
         visibleText: String,
         payload: CoCaptainAgentPayload?,
         diagnostics: [String] = [],
         source: CoCaptainAgentOutputSource
     ) {
+        self.preamble = preamble
         self.visibleText = visibleText
         self.payload = payload
         self.diagnostics = diagnostics
@@ -53,6 +56,7 @@ public struct CoCaptainFencedJSONAgentAdapter: CoCaptainAgentOutputAdapting {
     public func directive(from response: String, functionCalls: [CoCaptainAgentFunctionCall]) -> CoCaptainAgentDirective {
         let parsed = parser.parse(response)
         return CoCaptainAgentDirective(
+            preamble: parsed.preamble,
             visibleText: parsed.visibleText,
             payload: parsed.payload,
             diagnostics: parsed.diagnostic.map { [$0] } ?? [],
@@ -108,6 +112,7 @@ public struct CoCaptainFunctionCallAgentAdapter {
             )
 
         return CoCaptainAgentDirective(
+            preamble: visibleText,
             visibleText: visibleText,
             payload: payload,
             diagnostics: diagnostics,
@@ -151,6 +156,7 @@ public struct CoCaptainCompositeAgentAdapter: CoCaptainAgentOutputAdapting {
 
         let payload = combine(functionDirective.payload, fencedDirective.payload)
         return CoCaptainAgentDirective(
+            preamble: fencedDirective.preamble,
             visibleText: fencedDirective.visibleText,
             payload: payload,
             diagnostics: functionDirective.diagnostics + fencedDirective.diagnostics,

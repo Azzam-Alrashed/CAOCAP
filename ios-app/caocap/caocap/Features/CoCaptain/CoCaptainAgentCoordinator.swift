@@ -14,9 +14,15 @@ public protocol CoCaptainLLMClient: AnyObject {
 extension LLMService: CoCaptainLLMClient {}
 
 public struct CoCaptainAgentRunResult: Hashable {
-    public let visibleText: String
+    public let preamble: String
+    public let payloadMessage: String?
     public let executionSummary: ExecutionStatusItem?
     public let reviewBundle: ReviewBundleItem?
+
+    public var visibleText: String {
+        if preamble.isEmpty { return payloadMessage ?? "" }
+        return preamble
+    }
 }
 
 /// Bridges model output to app behavior while keeping mutating code edits in
@@ -142,7 +148,8 @@ public final class CoCaptainAgentCoordinator {
                 }
 
                 return CoCaptainAgentRunResult(
-                    visibleText: directive.visibleText,
+                    preamble: directive.preamble,
+                    payloadMessage: nil,
                     executionSummary: nil,
                     reviewBundle: validationReviewBundle(issues: directive.diagnostics)
                 )
@@ -191,7 +198,8 @@ public final class CoCaptainAgentCoordinator {
                     }
 
                     return CoCaptainAgentRunResult(
-                        visibleText: directive.visibleText,
+                        preamble: directive.preamble,
+                        payloadMessage: payload.assistantMessage,
                         executionSummary: nil,
                         reviewBundle: validationReviewBundle(issues: validation.issues)
                     )
@@ -208,7 +216,8 @@ public final class CoCaptainAgentCoordinator {
         )
 
         return CoCaptainAgentRunResult(
-            visibleText: directive.visibleText,
+            preamble: directive.preamble,
+            payloadMessage: payload?.assistantMessage,
             executionSummary: executionSummary,
             reviewBundle: reviewBundle
         )
