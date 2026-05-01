@@ -208,11 +208,13 @@ public final class CoCaptainViewModel {
             guard let store,
                   let node = patchEngine.resolveNode(for: role, in: store) else {
                 item.status = .conflicted
+                item.conflictDescription = LocalizationManager.shared.localizedString("The node could not be found in the current project.")
                 break
             }
 
             guard (node.textContent ?? "") == baseText else {
                 item.status = .conflicted
+                item.conflictDescription = LocalizationManager.shared.localizedString("This node was edited after the suggestion was generated. Ask Co-Captain to revise.")
                 break
             }
 
@@ -234,6 +236,7 @@ public final class CoCaptainViewModel {
                 )
             } catch {
                 item.status = .conflicted
+                item.conflictDescription = error.localizedDescription
             }
         }
 

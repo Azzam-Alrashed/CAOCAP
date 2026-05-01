@@ -310,7 +310,24 @@ struct ReviewCardView: View {
             Text(item.summary)
                 .font(.system(size: 13, weight: .medium))
                 .foregroundColor(.secondary)
-            
+
+            // Show the reason and guidance when this item conflicted.
+            if item.status == .conflicted, let reason = item.conflictDescription {
+                HStack(alignment: .top, spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 11))
+                        .foregroundColor(.orange)
+                    Text(reason)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.orange)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .background(Color.orange.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            }
+
             Text(item.preview.isEmpty ? LocalizationManager.shared.localizedString("No preview available.") : item.preview)
                 .font(.system(size: 12, weight: .regular, design: .monospaced))
                 .padding(10)
