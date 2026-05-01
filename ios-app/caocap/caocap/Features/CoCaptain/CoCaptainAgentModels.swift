@@ -98,6 +98,9 @@ public struct PendingReviewItem: Identifiable, Hashable {
     public let preview: String
     public var status: ReviewItemStatus
     public let source: PendingReviewSource
+    /// Human-readable explanation of why this item entered the conflicted state.
+    /// Nil when the item has not yet conflicted.
+    public var conflictDescription: String?
 
     public init(
         id: UUID = UUID(),
@@ -105,7 +108,8 @@ public struct PendingReviewItem: Identifiable, Hashable {
         summary: String,
         preview: String,
         status: ReviewItemStatus = .pending,
-        source: PendingReviewSource
+        source: PendingReviewSource,
+        conflictDescription: String? = nil
     ) {
         self.id = id
         self.targetLabel = targetLabel
@@ -113,6 +117,7 @@ public struct PendingReviewItem: Identifiable, Hashable {
         self.preview = preview
         self.status = status
         self.source = source
+        self.conflictDescription = conflictDescription
     }
 }
 

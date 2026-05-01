@@ -171,6 +171,91 @@ struct CoCaptainAgentTests {
     }
 
     @MainActor
+    @Test func applyReviewItemConflictsWhenNodeEditedAfterSuggestion() {
+        let store = makeStore()
+        let vm = CoCaptainViewModel()
+        vm.store = store
+
+        let htmlNode = store.nodes.first(where: { $0.title == "HTML" })!
+        let baseText = htmlNode.textContent ?? ""
+        let bundleID = UUID()
+        let itemID = UUID()
+
+        vm.items.append(CoCaptainTimelineItem(
+            id: bundleID,
+            content: .reviewBundle(ReviewBundleItem(
+                id: bundleID,
+                items: [PendingReviewItem(
+                    id: itemID,
+                    targetLabel: "HTML",
+                    summary: "Update headline",
+                    preview: "<h1>Agentic Hello!</h1>",
+                    source: .nodeEdit(
+                        role: .html,
+                        operations: [NodePatchOperation(type: .replaceAll, content: "<h1>Agentic Hello!</h1>")],
+                        baseText: baseText
+                    )
+                )]
+            ))
+        ))
+
+        // User edits the HTML node before clicking Apply — stale scenario.
+        store.updateNodeTextContent(id: htmlNode.id, text: "<h1>User wrote this instead</h1>", persist: false)
+        vm.applyReviewItem(bundleID: bundleID, itemID: itemID)
+
+        guard case .reviewBundle(let bundle) = vm.items.first(where: { $0.id == bundleID })?.content,
+              let result = bundle.items.first(where: { $0.id == itemID }) else {
+            Issue.record("Review bundle or item not found")
+            return
+        }
+
+        #expect(result.status == .conflicted)
+        #expect(result.conflictDescription?.contains("edited after") == true)
+    }
+
+    @MainActor
+    @Test func applyReviewItemSucceedsWhenNodeUnchanged() {
+        let store = makeStore()
+        let vm = CoCaptainViewModel()
+        vm.store = store
+
+        let htmlNode = store.nodes.first(where: { $0.title == "HTML" })!
+        let baseText = htmlNode.textContent ?? ""
+        let bundleID = UUID()
+        let itemID = UUID()
+
+        vm.items.append(CoCaptainTimelineItem(
+            id: bundleID,
+            content: .reviewBundle(ReviewBundleItem(
+                id: bundleID,
+                items: [PendingReviewItem(
+                    id: itemID,
+                    targetLabel: "HTML",
+                    summary: "Update headline",
+                    preview: "<h1>Agentic Hello!</h1>",
+                    source: .nodeEdit(
+                        role: .html,
+                        operations: [NodePatchOperation(type: .replaceAll, content: "<h1>Agentic Hello!</h1>")],
+                        baseText: baseText
+                    )
+                )]
+            ))
+        ))
+
+        // No user edits between suggestion and apply — should succeed.
+        vm.applyReviewItem(bundleID: bundleID, itemID: itemID)
+
+        guard case .reviewBundle(let bundle) = vm.items.first(where: { $0.id == bundleID })?.content,
+              let result = bundle.items.first(where: { $0.id == itemID }) else {
+            Issue.record("Review bundle or item not found")
+            return
+        }
+
+        #expect(result.status == .applied)
+        #expect(result.conflictDescription == nil)
+    }
+
+    @MainActor
     private func makeStore() -> ProjectStore {
         ProjectStore(
             fileName: "onboarding-test-\(UUID().uuidString).json",
