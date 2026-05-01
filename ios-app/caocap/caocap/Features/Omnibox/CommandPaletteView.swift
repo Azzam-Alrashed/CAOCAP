@@ -52,6 +52,13 @@ struct CommandPaletteView: View {
                                     }
                                     .id(action.id)
                                 }
+
+                                if viewModel.canSubmitPrompt {
+                                    CoCaptainPromptRow(prompt: viewModel.query) {
+                                        viewModel.submitPromptIfNeeded()
+                                    }
+                                    .id("cocaptain-prompt")
+                                }
                             }
                         }
                         .frame(maxHeight: 400)
@@ -129,6 +136,47 @@ struct AppActionRow: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
             .background(isSelected ? Color.blue.opacity(0.15) : Color.clear)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct CoCaptainPromptRow: View {
+    let prompt: String
+    let onSelect: () -> Void
+
+    private var trimmedPrompt: String {
+        prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    var body: some View {
+        Button(action: onSelect) {
+            HStack(spacing: 12) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 16))
+                    .frame(width: 24)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Ask CoCaptain")
+                        .font(.system(size: 16, weight: .medium))
+
+                    Text(trimmedPrompt)
+                        .font(.system(size: 12))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .opacity(0.65)
+                }
+
+                Spacer()
+
+                Image(systemName: "return")
+                    .font(.system(size: 12))
+                    .opacity(0.5)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(Color.blue.opacity(0.15))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

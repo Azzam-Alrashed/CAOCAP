@@ -11,7 +11,7 @@ public struct CoCaptainAgentParser {
     /// payloads are treated as plain chat so malformed model output remains safe.
     public func parse(_ response: String) -> CoCaptainParsedResponse {
         guard let startRange = response.range(of: Self.fence, options: .backwards) else {
-            return CoCaptainParsedResponse(visibleText: response.trimmingCharacters(in: .whitespacesAndNewlines), payload: nil)
+            return parseLooseTrailingPayload(response)
         }
 
         guard let jsonStart = response[startRange.upperBound...].firstIndex(of: "\n"),
@@ -48,6 +48,95 @@ public struct CoCaptainAgentParser {
         if let range = response.range(of: "```") {
             return String(response[..<range.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
         }
+        if let loosePayloadStart = loosePayloadStart(in: response) {
+            return sanitizedVisiblePrefix(String(response[..<loosePayloadStart]))
+        }
         return response.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func parseLooseTrailingPayload(_ response: String) -> CoCaptainParsedResponse {
+        guard let jsonStart = loosePayloadStart(in: response),
+              let jsonEnd = balancedJSONObjectEnd(startingAt: jsonStart, in: response) else {
+            return CoCaptainParsedResponse(visibleText: response.trimmingCharacters(in: .whitespacesAndNewlines), payload: nil)
+        }
+
+        let remainder = response[jsonEnd...].trimmingCharacters(in: .whitespacesAndNewlines)
+        guard remainder.isEmpty else {
+            return CoCaptainParsedResponse(visibleText: response.trimmingCharacters(in: .whitespacesAndNewlines), payload: nil)
+        }
+
+        let visibleText = sanitizedVisiblePrefix(String(response[..<jsonStart]))
+        let json = String(response[jsonStart..<jsonEnd]).trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard let data = json.data(using: .utf8),
+              let payload = try? JSONDecoder().decode(CoCaptainAgentPayload.self, from: data) else {
+            return CoCaptainParsedResponse(
+                visibleText: visibleText,
+                payload: nil,
+                diagnostic: "Malformed loose CoCaptain action JSON."
+            )
+        }
+
+        let resolvedVisibleText = visibleText.isEmpty ? payload.assistantMessage : visibleText
+        return CoCaptainParsedResponse(visibleText: resolvedVisibleText, payload: payload)
+    }
+
+    private func loosePayloadStart(in response: String) -> String.Index? {
+        guard response.contains("\"assistantMessage\"") || response.contains(#""nodeEdits""#) else {
+            return nil
+        }
+
+        var searchEnd = response.endIndex
+        while let range = response.range(of: "{", options: .backwards, range: response.startIndex..<searchEnd) {
+            let candidate = response[range.lowerBound...]
+            if candidate.contains("\"assistantMessage\"") || candidate.contains(#""nodeEdits""#) {
+                return range.lowerBound
+            }
+            searchEnd = range.lowerBound
+        }
+
+        return nil
+    }
+
+    private func balancedJSONObjectEnd(startingAt start: String.Index, in response: String) -> String.Index? {
+        var depth = 0
+        var isInsideString = false
+        var isEscaped = false
+        var index = start
+
+        while index < response.endIndex {
+            let character = response[index]
+
+            if isInsideString {
+                if isEscaped {
+                    isEscaped = false
+                } else if character == "\\" {
+                    isEscaped = true
+                } else if character == "\"" {
+                    isInsideString = false
+                }
+            } else if character == "\"" {
+                isInsideString = true
+            } else if character == "{" {
+                depth += 1
+            } else if character == "}" {
+                depth -= 1
+                if depth == 0 {
+                    return response.index(after: index)
+                }
+            }
+
+            index = response.index(after: index)
+        }
+
+        return nil
+    }
+
+    private func sanitizedVisiblePrefix(_ prefix: String) -> String {
+        var visibleText = prefix.trimmingCharacters(in: .whitespacesAndNewlines)
+        if visibleText.lowercased().hasSuffix("json") {
+            visibleText = String(visibleText.dropLast(4)).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return visibleText
     }
 }

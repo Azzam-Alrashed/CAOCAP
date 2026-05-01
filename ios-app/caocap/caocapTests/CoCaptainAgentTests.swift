@@ -90,6 +90,41 @@ struct CoCaptainAgentTests {
         #expect(resolver.resolve("لا تنشئ مشروع جديد", availableActions: actions) == nil)
     }
 
+    @MainActor
+    @Test func commandPaletteSubmitsUnmatchedQueryAsPrompt() {
+        let viewModel = CommandPaletteViewModel()
+        viewModel.actions = TestActionDispatcher().availableActions
+        viewModel.query = "  make a tiny platformer  "
+
+        var submittedPrompt: String?
+        var executedAction: AppActionID?
+        viewModel.onSubmitPrompt = { submittedPrompt = $0 }
+        viewModel.onExecute = { executedAction = $0 }
+
+        viewModel.confirmSelection()
+
+        #expect(submittedPrompt == "make a tiny platformer")
+        #expect(executedAction == nil)
+        #expect(viewModel.isPresented == false)
+    }
+
+    @MainActor
+    @Test func commandPalettePrefersListedCommandOverPrompt() {
+        let viewModel = CommandPaletteViewModel()
+        viewModel.actions = TestActionDispatcher().availableActions
+        viewModel.query = "settings"
+
+        var submittedPrompt: String?
+        var executedAction: AppActionID?
+        viewModel.onSubmitPrompt = { submittedPrompt = $0 }
+        viewModel.onExecute = { executedAction = $0 }
+
+        viewModel.confirmSelection()
+
+        #expect(executedAction == .openSettings)
+        #expect(submittedPrompt == nil)
+    }
+
     @Test func parserExtractsTrailingStructuredBlock() throws {
         let parser = CoCaptainAgentParser()
         let response =
@@ -111,6 +146,54 @@ struct CoCaptainAgentTests {
         #expect(parsed.visibleText == "I can make that update.")
         #expect(parsed.payload?.safeActions.count == 1)
         #expect(parsed.payload?.safeActions.first?.actionID == "go_home")
+    }
+
+    @Test func parserHidesLooseTrailingActionJSON() throws {
+        let parser = CoCaptainAgentParser()
+        let response =
+            """
+            I can document that preference.
+
+            json {
+              "assistantMessage": "Documented the preference.",
+              "safeActions": [],
+              "pendingActions": [],
+              "nodeEdits": [{
+                "role": "srs",
+                "summary": "Document color preference.",
+                "operations": [{
+                  "type": "append",
+                  "content": "\\nPrimary color: Slate Grey."
+                }]
+              }]
+            }
+            """
+
+        let parsed = parser.parse(response)
+
+        #expect(parsed.visibleText == "I can document that preference.")
+        #expect(parsed.payload?.nodeEdits.count == 1)
+        #expect(!parser.visibleText(from: response).contains("assistantMessage"))
+    }
+
+    @Test func parserHidesMalformedLooseTrailingActionJSON() throws {
+        let parser = CoCaptainAgentParser()
+        let response =
+            """
+            I can update the canvas.
+
+            json {
+              "assistantMessage": "Malformed",
+              "nodeEdits": [
+            }
+            """
+
+        let parsed = parser.parse(response)
+
+        #expect(parsed.visibleText == "I can update the canvas.")
+        #expect(parsed.payload == nil)
+        #expect(parsed.diagnostic == "Malformed loose CoCaptain action JSON.")
+        #expect(!parser.visibleText(from: response).contains("assistantMessage"))
     }
 
     @Test func parserFallsBackOnMalformedStructuredBlock() throws {

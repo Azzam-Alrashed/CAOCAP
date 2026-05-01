@@ -266,6 +266,22 @@
         }
       }
     },
+    "Ask CoCaptain" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اسأل CoCaptain"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Ask CoCaptain"
+          }
+        }
+      }
+    },
     "Auth Error" : {
       "localizations" : {
         "ar" : {
@@ -534,6 +550,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld عقد"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%lld nodes"
           }
         }
       }
