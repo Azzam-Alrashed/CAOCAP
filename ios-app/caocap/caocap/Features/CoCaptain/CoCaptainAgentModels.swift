@@ -49,10 +49,12 @@ public struct CoCaptainAgentPayload: Codable, Hashable {
 public struct CoCaptainParsedResponse: Hashable {
     public let visibleText: String
     public let payload: CoCaptainAgentPayload?
+    public let diagnostic: String?
 
-    public init(visibleText: String, payload: CoCaptainAgentPayload?) {
+    public init(visibleText: String, payload: CoCaptainAgentPayload?, diagnostic: String? = nil) {
         self.visibleText = visibleText
         self.payload = payload
+        self.diagnostic = diagnostic
     }
 }
 

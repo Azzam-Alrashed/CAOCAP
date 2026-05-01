@@ -26,7 +26,7 @@ public final class CoCaptainAgentCoordinator {
     private let llmClient: any CoCaptainLLMClient
     private let contextBuilder: ProjectContextBuilder
     private let patchEngine: NodePatchEngine
-    private let parser: CoCaptainAgentParser
+    private let outputAdapter: any CoCaptainAgentOutputAdapting
     private let validator: CoCaptainAgentValidator
 
     public init(
@@ -34,12 +34,13 @@ public final class CoCaptainAgentCoordinator {
         contextBuilder: ProjectContextBuilder = ProjectContextBuilder(),
         patchEngine: NodePatchEngine = NodePatchEngine(),
         parser: CoCaptainAgentParser = CoCaptainAgentParser(),
+        outputAdapter: (any CoCaptainAgentOutputAdapting)? = nil,
         validator: CoCaptainAgentValidator = CoCaptainAgentValidator()
     ) {
         self.llmClient = llmClient ?? LLMService.shared
         self.contextBuilder = contextBuilder
         self.patchEngine = patchEngine
-        self.parser = parser
+        self.outputAdapter = outputAdapter ?? CoCaptainFencedJSONAgentAdapter(parser: parser)
         self.validator = validator
     }
 
@@ -101,13 +102,13 @@ public final class CoCaptainAgentCoordinator {
 
         for try await chunk in stream {
             responseText += chunk
-            onVisibleText(parser.visibleText(from: responseText))
+            onVisibleText(outputAdapter.visibleText(from: responseText))
         }
 
         // The visible chat can stream before the structured block is complete;
         // only parse actions after the model has finished the turn.
-        let parsed = parser.parse(responseText)
-        let payload = expectsStructuredResponse ? parsed.payload : nil
+        let directive = outputAdapter.directive(from: responseText)
+        let payload = expectsStructuredResponse ? directive.payload : nil
 
         let requiresAgenticWork = shouldRequireAgenticWork(for: userMessage)
 
@@ -118,7 +119,9 @@ public final class CoCaptainAgentCoordinator {
                 return try await runOnce(
                     userMessage: agenticRetryMessage(
                         for: userMessage,
-                        validationIssues: ["Missing machine-readable `cocaptain-actions` block."]
+                        validationIssues: directive.diagnostics.isEmpty
+                            ? ["Missing machine-readable CoCaptain action directive."]
+                            : directive.diagnostics
                     ),
                     context: context,
                     expectsStructuredResponse: true,
@@ -153,7 +156,7 @@ public final class CoCaptainAgentCoordinator {
                     }
 
                     return CoCaptainAgentRunResult(
-                        visibleText: parsed.visibleText,
+                        visibleText: directive.visibleText,
                         executionSummary: nil,
                         reviewBundle: validationReviewBundle(issues: validation.issues)
                     )
@@ -170,7 +173,7 @@ public final class CoCaptainAgentCoordinator {
         )
 
         return CoCaptainAgentRunResult(
-            visibleText: parsed.visibleText,
+            visibleText: directive.visibleText,
             executionSummary: executionSummary,
             reviewBundle: reviewBundle
         )

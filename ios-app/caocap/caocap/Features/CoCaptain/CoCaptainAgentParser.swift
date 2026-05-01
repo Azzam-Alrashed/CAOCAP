@@ -16,7 +16,11 @@ public struct CoCaptainAgentParser {
 
         guard let jsonStart = response[startRange.upperBound...].firstIndex(of: "\n"),
               let endRange = response.range(of: "\n```", range: jsonStart..<response.endIndex) else {
-            return CoCaptainParsedResponse(visibleText: response.trimmingCharacters(in: .whitespacesAndNewlines), payload: nil)
+            return CoCaptainParsedResponse(
+                visibleText: response.trimmingCharacters(in: .whitespacesAndNewlines),
+                payload: nil,
+                diagnostic: "Incomplete `cocaptain-actions` block."
+            )
         }
 
         let visibleText = String(response[..<startRange.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
@@ -25,7 +29,11 @@ public struct CoCaptainAgentParser {
 
         guard let data = json.data(using: .utf8),
               let payload = try? JSONDecoder().decode(CoCaptainAgentPayload.self, from: data) else {
-            return CoCaptainParsedResponse(visibleText: visibleText.isEmpty ? response.trimmingCharacters(in: .whitespacesAndNewlines) : visibleText, payload: nil)
+            return CoCaptainParsedResponse(
+                visibleText: visibleText.isEmpty ? response.trimmingCharacters(in: .whitespacesAndNewlines) : visibleText,
+                payload: nil,
+                diagnostic: "Malformed JSON in `cocaptain-actions` block."
+            )
         }
 
         let resolvedVisibleText = visibleText.isEmpty ? payload.assistantMessage : visibleText
