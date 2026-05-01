@@ -85,11 +85,22 @@ public final class CoCaptainViewModel {
                     userMessage: text,
                     store: store,
                     dispatcher: actionDispatcher
-                ) { [weak self] partialText in
-                    self?.updateMessage(id: aiMessageID, text: partialText)
+                ) { _ in
+                    // Stop streaming characters to the UI for a cleaner 'split message' feel.
                 }
 
-                updateMessage(id: aiMessageID, text: result.visibleText)
+                // Remove the empty thinking placeholder.
+                removeEmptyMessage(id: aiMessageID)
+
+                // 1. Add Preamble bubble (the conversational part).
+                if !result.preamble.isEmpty {
+                    items.append(CoCaptainTimelineItem(content: .message(ChatBubbleItem(text: result.preamble, isUser: false))))
+                }
+
+                // 2. Add Payload Message bubble (the intent summary).
+                if let payloadMsg = result.payloadMessage, !payloadMsg.isEmpty, payloadMsg != result.preamble {
+                    items.append(CoCaptainTimelineItem(content: .message(ChatBubbleItem(text: payloadMsg, isUser: false))))
+                }
 
                 if let executionSummary = result.executionSummary {
                     items.append(CoCaptainTimelineItem(content: .execution(executionSummary)))

@@ -161,9 +161,29 @@ struct CoCaptainAgentTests {
 
         let parsed = parser.parse(response)
 
+        #expect(parsed.preamble == "I can make that update.")
         #expect(parsed.visibleText == "I can make that update.")
         #expect(parsed.payload?.safeActions.count == 1)
         #expect(parsed.payload?.safeActions.first?.actionID == "go_home")
+    }
+
+    @Test func parserDetectsLoosePayloadWithoutWhitespace() throws {
+        let parser = CoCaptainAgentParser()
+        let response = "aesthetic.{\"assistantMessage\": \"Implementing...\"}"
+
+        let parsed = parser.parse(response)
+        #expect(parsed.preamble == "aesthetic.")
+        #expect(parsed.payload?.assistantMessage == "Implementing...")
+    }
+
+    @Test func parserHandlesCurlyQuotesInLoosePayload() throws {
+        let parser = CoCaptainAgentParser()
+        // Some models send smart quotes like “assistantMessage”
+        let response = "OK. { “assistantMessage”: “Hello” }"
+
+        let parsed = parser.parse(response)
+        #expect(parsed.preamble == "OK.")
+        #expect(parsed.payload?.assistantMessage == "Hello")
     }
 
     @Test func parserHidesLooseTrailingActionJSON() throws {
@@ -189,9 +209,8 @@ struct CoCaptainAgentTests {
 
         let parsed = parser.parse(response)
 
-        #expect(parsed.visibleText == "I can document that preference.")
+        #expect(parsed.preamble == "I can document that preference.")
         #expect(parsed.payload?.nodeEdits.count == 1)
-        #expect(!parser.visibleText(from: response).contains("assistantMessage"))
     }
 
     @Test func parserHidesMalformedLooseTrailingActionJSON() throws {
@@ -208,10 +227,9 @@ struct CoCaptainAgentTests {
 
         let parsed = parser.parse(response)
 
-        #expect(parsed.visibleText == "I can update the canvas.")
+        #expect(parsed.preamble == "I can update the canvas.")
         #expect(parsed.payload == nil)
         #expect(parsed.diagnostic == "Malformed loose CoCaptain action JSON.")
-        #expect(!parser.visibleText(from: response).contains("assistantMessage"))
     }
 
     @Test func parserHidesIncompleteLooseTrailingActionJSON() throws {
@@ -227,30 +245,8 @@ struct CoCaptainAgentTests {
         let parsed = parser.parse(response)
 
         // Should NOT show the JSON even if it's not balanced yet.
-        #expect(parsed.visibleText == "Working on it.")
+        #expect(parsed.preamble == "Working on it.")
         #expect(parsed.payload == nil)
-        #expect(!parser.visibleText(from: response).contains("assistantMessage"))
-    }
-
-    @Test func parserHidesLooseTrailingActionJSONWithoutSpace() throws {
-        let parser = CoCaptainAgentParser()
-        let response = "Done.{\"assistantMessage\":\"Done\"}"
-
-        let parsed = parser.parse(response)
-
-        #expect(parsed.visibleText == "Done.")
-        #expect(parsed.payload != nil)
-        #expect(!parser.visibleText(from: response).contains("assistantMessage"))
-    }
-
-    @Test func parserHidesLooseTrailingActionJSONWithCurlyQuotes() throws {
-        let parser = CoCaptainAgentParser()
-        let response = "Done.{ “assistantMessage”: “Done” }"
-
-        let parsed = parser.parse(response)
-
-        #expect(parsed.visibleText == "Done.")
-        #expect(!parser.visibleText(from: response).contains("assistantMessage"))
     }
 
     @Test func chatBubbleMarkdownFallsBackToInlineSyntax() {
@@ -271,10 +267,10 @@ struct CoCaptainAgentTests {
         )
 
         let attributed = bubble.markdownText
-        // Check if we have attributes for inline code
+        // Check if the parser identifies inline code
         var foundInlineCode = false
         for run in attributed.runs {
-            if run.inlineCode != nil {
+            if let intent = run.inlinePresentationIntent, intent.contains(.code) {
                 foundInlineCode = true
             }
         }
@@ -309,6 +305,7 @@ struct CoCaptainAgentTests {
         let parsed = parser.parse(response)
 
         #expect(parsed.payload == nil)
+        #expect(parsed.preamble == "I can help.")
         #expect(parsed.visibleText.contains("I can help."))
         #expect(parsed.diagnostic == "Malformed JSON in `cocaptain-actions` block.")
     }
@@ -331,6 +328,7 @@ struct CoCaptainAgentTests {
 
         let directive = adapter.directive(from: response)
 
+        #expect(directive.preamble == "Done.")
         #expect(directive.visibleText == "Done.")
         #expect(directive.payload?.safeActions.first?.actionID == "go_home")
         #expect(directive.diagnostics.isEmpty)

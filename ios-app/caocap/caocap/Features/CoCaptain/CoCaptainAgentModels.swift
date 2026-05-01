@@ -64,14 +64,23 @@ public enum CoCaptainLLMStreamEvent: Hashable {
 }
 
 public struct CoCaptainParsedResponse: Hashable {
-    public let visibleText: String
+    /// The text before any structured payload or code blocks.
+    public let preamble: String
     public let payload: CoCaptainAgentPayload?
     public let diagnostic: String?
 
-    public init(visibleText: String, payload: CoCaptainAgentPayload?, diagnostic: String? = nil) {
-        self.visibleText = visibleText
+    public init(preamble: String, payload: CoCaptainAgentPayload?, diagnostic: String? = nil) {
+        self.preamble = preamble
         self.payload = payload
         self.diagnostic = diagnostic
+    }
+
+    /// Backwards compatibility or merged view
+    public var visibleText: String {
+        if preamble.isEmpty {
+            return payload?.assistantMessage ?? ""
+        }
+        return preamble
     }
 }
 
@@ -174,32 +183,16 @@ public struct ChatBubbleItem: Identifiable, Hashable {
             failurePolicy: .returnPartiallyParsedIfPossible
         )
 
-        var result: AttributedString
         if let attributed = try? AttributedString(markdown: text, options: fullOptions) {
-            result = attributed
-        } else {
-            let fallbackOptions = AttributedString.MarkdownParsingOptions(
-                allowsExtendedAttributes: true,
-                interpretedSyntax: .inlineOnlyPreservingWhitespace,
-                failurePolicy: .returnPartiallyParsedIfPossible
-            )
-            result = (try? AttributedString(markdown: text, options: fallbackOptions)) ?? AttributedString(text)
+            return attributed
         }
 
-        // Apply a base font if no font attributes are present.
-        if result.characters.count > 0 {
-            result.mergeAttributes(AttributeContainer().font(.system(size: 15, weight: .medium)), mergePolicy: .keepCurrent)
-            
-            // Style inline code snippets
-            for run in result.runs {
-                if run.inlineCode != nil {
-                    result[run.range].foregroundColor = .orange
-                    result[run.range].backgroundColor = .primary.opacity(0.05)
-                }
-            }
-        }
-        
-        return result
+        let fallbackOptions = AttributedString.MarkdownParsingOptions(
+            allowsExtendedAttributes: true,
+            interpretedSyntax: .inlineOnlyPreservingWhitespace,
+            failurePolicy: .returnPartiallyParsedIfPossible
+        )
+        return (try? AttributedString(markdown: text, options: fallbackOptions)) ?? AttributedString(text)
     }
 }
 

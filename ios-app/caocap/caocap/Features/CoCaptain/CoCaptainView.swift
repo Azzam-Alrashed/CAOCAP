@@ -525,9 +525,30 @@ struct ChatBubbleText: View {
     let message: ChatBubbleItem
 
     var body: some View {
-        Text(message.isUser ? AttributedString(message.text) : message.markdownText)
+        Text(styledMarkdown)
             .textSelection(.enabled)
             .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var styledMarkdown: AttributedString {
+        if message.isUser {
+            return AttributedString(message.text)
+        }
+        
+        var attributed = message.markdownText
+        
+        // Apply a base font if no font attributes are present.
+        attributed.mergeAttributes(AttributeContainer().font(.system(size: 15, weight: .medium)), mergePolicy: .keepCurrent)
+        
+        // Style inline code snippets using verified Foundation attribute
+        for run in attributed.runs {
+            if let intent = run.inlinePresentationIntent, intent.contains(.code) {
+                attributed[run.range].foregroundColor = .orange
+                attributed[run.range].backgroundColor = Color.primary.opacity(0.05)
+            }
+        }
+        
+        return attributed
     }
 }
 

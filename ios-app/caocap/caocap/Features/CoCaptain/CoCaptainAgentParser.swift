@@ -17,27 +17,26 @@ public struct CoCaptainAgentParser {
         guard let jsonStart = response[startRange.upperBound...].firstIndex(of: "\n"),
               let endRange = response.range(of: "\n```", range: jsonStart..<response.endIndex) else {
             return CoCaptainParsedResponse(
-                visibleText: response.trimmingCharacters(in: .whitespacesAndNewlines),
+                preamble: response.trimmingCharacters(in: .whitespacesAndNewlines),
                 payload: nil,
                 diagnostic: "Incomplete `cocaptain-actions` block."
             )
         }
 
-        let visibleText = String(response[..<startRange.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
+        let preamble = String(response[..<startRange.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
         let jsonRange = response.index(after: jsonStart)..<endRange.lowerBound
         let json = String(response[jsonRange]).trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard let data = json.data(using: .utf8),
               let payload = try? JSONDecoder().decode(CoCaptainAgentPayload.self, from: data) else {
             return CoCaptainParsedResponse(
-                visibleText: visibleText.isEmpty ? response.trimmingCharacters(in: .whitespacesAndNewlines) : visibleText,
+                preamble: preamble.isEmpty ? response.trimmingCharacters(in: .whitespacesAndNewlines) : preamble,
                 payload: nil,
                 diagnostic: "Malformed JSON in `cocaptain-actions` block."
             )
         }
 
-        let resolvedVisibleText = visibleText.isEmpty ? payload.assistantMessage : visibleText
-        return CoCaptainParsedResponse(visibleText: resolvedVisibleText, payload: payload)
+        return CoCaptainParsedResponse(preamble: preamble, payload: payload)
     }
 
     /// Returns the text that is safe to stream into the chat bubble while the
@@ -58,20 +57,20 @@ public struct CoCaptainAgentParser {
 
     private func parseLooseTrailingPayload(_ response: String) -> CoCaptainParsedResponse {
         guard let jsonStart = loosePayloadStart(in: response) else {
-            return CoCaptainParsedResponse(visibleText: response.trimmingCharacters(in: .whitespacesAndNewlines), payload: nil)
+            return CoCaptainParsedResponse(preamble: response.trimmingCharacters(in: .whitespacesAndNewlines), payload: nil)
         }
 
-        let visibleText = sanitizedVisiblePrefix(String(response[..<jsonStart]))
+        let preamble = sanitizedVisiblePrefix(String(response[..<jsonStart]))
 
         guard let jsonEnd = balancedJSONObjectEnd(startingAt: jsonStart, in: response) else {
             // It is a loose payload but it is not finished. Hide it from the visible text.
-            return CoCaptainParsedResponse(visibleText: visibleText, payload: nil)
+            return CoCaptainParsedResponse(preamble: preamble, payload: nil)
         }
 
         let remainder = response[jsonEnd...].trimmingCharacters(in: .whitespacesAndNewlines)
         guard remainder.isEmpty else {
             // Extra text after JSON? Treat the whole thing as plain text to be safe.
-            return CoCaptainParsedResponse(visibleText: response.trimmingCharacters(in: .whitespacesAndNewlines), payload: nil)
+            return CoCaptainParsedResponse(preamble: response.trimmingCharacters(in: .whitespacesAndNewlines), payload: nil)
         }
 
         let json = String(response[jsonStart..<jsonEnd]).trimmingCharacters(in: .whitespacesAndNewlines)
@@ -79,20 +78,20 @@ public struct CoCaptainAgentParser {
         guard let data = json.data(using: .utf8),
               let payload = try? JSONDecoder().decode(CoCaptainAgentPayload.self, from: data) else {
             return CoCaptainParsedResponse(
-                visibleText: visibleText,
+                preamble: preamble,
                 payload: nil,
                 diagnostic: "Malformed loose CoCaptain action JSON."
             )
         }
 
-        let resolvedVisibleText = visibleText.isEmpty ? payload.assistantMessage : visibleText
-        return CoCaptainParsedResponse(visibleText: resolvedVisibleText, payload: payload)
+        return CoCaptainParsedResponse(preamble: preamble, payload: payload)
     }
 
     private func loosePayloadStart(in response: String) -> String.Index? {
-        // Use a regex to find the start of a JSON block containing our payload keys.
-        // This is robust against curly quotes, missing spaces, and newlines.
-        let pattern = #"\{\s*["'“]?(?:assistantMessage|nodeEdits|safeActions|pendingActions)["'”]?\s*:"#
+        // Use an aggressive regex to find the start of a JSON block.
+        // We trigger as soon as we see { followed by a known key (even without a colon yet),
+        // which prevents leaks during streaming.
+        let pattern = #"\{\s*["'“]?(?:assistantMessage|nodeEdits|safeActions|pendingActions)"#
         
         guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else {
             return nil
