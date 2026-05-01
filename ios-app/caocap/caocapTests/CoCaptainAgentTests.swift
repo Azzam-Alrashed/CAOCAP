@@ -128,6 +128,77 @@ struct CoCaptainAgentTests {
 
         #expect(parsed.payload == nil)
         #expect(parsed.visibleText.contains("I can help."))
+        #expect(parsed.diagnostic == "Malformed JSON in `cocaptain-actions` block.")
+    }
+
+    @Test func fencedJSONAdapterProducesCoordinatorDirective() throws {
+        let adapter = CoCaptainFencedJSONAgentAdapter()
+        let response =
+            """
+            Done.
+
+            ```cocaptain-actions
+            {
+              "assistantMessage": "Done.",
+              "safeActions": [{"actionId":"go_home"}],
+              "pendingActions": [],
+              "nodeEdits": []
+            }
+            ```
+            """
+
+        let directive = adapter.directive(from: response)
+
+        #expect(directive.visibleText == "Done.")
+        #expect(directive.payload?.safeActions.first?.actionID == "go_home")
+        #expect(directive.diagnostics.isEmpty)
+        #expect(directive.source == .fencedJSON)
+    }
+
+    @MainActor
+    @Test func coordinatorRetriesMalformedStructuredPayloadWithParseDiagnostic() async throws {
+        let dispatcher = TestActionDispatcher()
+        let llm = TestLLMClient(
+            responses: [
+                """
+                I prepared an edit.
+
+                ```cocaptain-actions
+                {not-json}
+                ```
+                """,
+                """
+                I prepared a valid HTML edit.
+
+                ```cocaptain-actions
+                {
+                  "assistantMessage": "I prepared a valid HTML edit.",
+                  "safeActions": [],
+                  "pendingActions": [],
+                  "nodeEdits": [{
+                    "role": "html",
+                    "summary": "Update HTML.",
+                    "operations": [{
+                      "type": "replace_all",
+                      "content": "<h1>Fixed</h1>"
+                    }]
+                  }]
+                }
+                ```
+                """
+            ]
+        )
+        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
+
+        let result = try await coordinator.run(
+            userMessage: "update the HTML",
+            store: makeStore(),
+            dispatcher: dispatcher
+        ) { _ in }
+
+        #expect(llm.receivedMessages.count == 2)
+        #expect(llm.receivedMessages.last?.contains("Malformed JSON in `cocaptain-actions` block.") == true)
+        #expect(result.reviewBundle?.items.first?.status == .pending)
     }
 
     @MainActor

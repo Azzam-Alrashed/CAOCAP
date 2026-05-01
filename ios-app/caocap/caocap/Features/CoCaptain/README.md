@@ -7,6 +7,7 @@ CoCaptain is the agentic assistant for Ficruty. It reads the current spatial pro
 - `CoCaptainView` renders the timeline, input, streaming state, and review controls.
 - `CoCaptainViewModel` owns presentation state, timeline items, streaming task lifetime, direct command handling, and review item application.
 - `CoCaptainAgentCoordinator` orchestrates the model run: build context, stream text, parse structured actions, execute safe actions, and build review bundles.
+- `CoCaptainAgentOutputAdapter` converts raw model output into a source-agnostic directive for the coordinator.
 - `CoCaptainAgentParser` extracts the trailing structured payload from a `cocaptain-actions` fenced block.
 - `CoCaptainAgentValidator` validates parsed payloads before any app action can execute.
 - `CoCaptainAgentModels` defines timeline, review, action, and node edit domain models.
@@ -24,7 +25,7 @@ Supporting services live outside this feature:
 2. Direct commands are resolved locally with `CommandIntentResolver` when possible.
 3. Otherwise, `CoCaptainAgentCoordinator` builds project context from the active `ProjectStore`.
 4. `LLMService` streams text back into the current assistant bubble.
-5. `CoCaptainAgentParser` hides the structured fenced block from visible text.
+5. `CoCaptainAgentOutputAdapter` hides machine output while streaming and turns the final response into a directive.
 6. `CoCaptainAgentValidator` checks action IDs, action safety, node edit shape, and required agentic work.
 7. Safe actions are executed immediately through `AppActionDispatcher` only after validation passes.
 8. Mutating app actions and node edits become `ReviewBundleItem` entries.
@@ -57,9 +58,9 @@ Rules:
 - Node edits require a non-empty summary and at least one operation.
 - Exact operations require a non-empty target.
 
-Invalid structured payloads are not partially executed. The coordinator retries once with validation feedback. If the retry is still invalid, the user sees a conflicted review item rather than a silent no-op or unsafe action.
+Invalid structured payloads are not partially executed. The coordinator retries once with parse or validation feedback. If the retry is still invalid, the user sees a conflicted review item rather than a silent no-op or unsafe action.
 
-The fenced JSON block is the current compatibility format for streaming chat. The preferred long-term path is Gemini function calling for app actions and schema-constrained structured JSON output for node edit review bundles.
+The fenced JSON block is the current compatibility format for streaming chat. The coordinator consumes `CoCaptainAgentDirective` so a future Gemini `FunctionCallPart` adapter or schema-constrained structured-output adapter can feed the same validator/review path without rewriting UI orchestration.
 
 If this payload changes, update parser/coordinator tests and the prompt contract in `LLMService`.
 
@@ -79,6 +80,7 @@ Preserve this conflict guard when refactoring review state.
 - Do not leak raw structured payload text into the visible chat timeline.
 - Be careful with cancellation: closing the sheet cancels streaming and removes empty assistant messages.
 - Keep validation near the coordinator boundary. SwiftUI views should render review state, not decide whether model output is safe.
+- Keep raw model wire formats behind output adapters. The coordinator should consume directives, not Firebase/Gemini-specific response parts.
 
 ## Verification Checklist
 
