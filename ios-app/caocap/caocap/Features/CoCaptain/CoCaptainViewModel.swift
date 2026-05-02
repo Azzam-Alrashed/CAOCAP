@@ -204,7 +204,7 @@ public final class CoCaptainViewModel {
                                         arguments: [definition.localizedTitle]
                                     ),
                                     preview: definition.localizedTitle,
-                                    source: .appAction(actionID)
+                                    source: .appAction(actionID, nil) // args will be handled in handleDirectCommand if needed
                                 )
                             ]
                         )
@@ -214,7 +214,7 @@ public final class CoCaptainViewModel {
             return true
         }
 
-        let result = actionDispatcher.perform(actionID, source: .agentAutomatic)
+        let result = actionDispatcher.perform(actionID, source: .agentAutomatic, arguments: nil)
         items.append(
             CoCaptainTimelineItem(
                 content: .execution(ExecutionStatusItem(summary: result.message))
@@ -239,8 +239,8 @@ public final class CoCaptainViewModel {
         store?.createCheckpoint(label: "Apply Suggestion: \(item.targetLabel)")
 
         switch item.source {
-        case .appAction(let actionID):
-            let result = actionDispatcher?.perform(actionID, source: .agentApproved)
+        case .appAction(let actionID, let arguments):
+            let result = actionDispatcher?.perform(actionID, source: .agentApproved, arguments: arguments)
             item.status = result?.executed == true ? .applied : .conflicted
             if let result, result.executed {
                 items.append(

@@ -20,6 +20,8 @@ public enum AppActionID: String, CaseIterable, Identifiable, Codable, Hashable {
     case openSettings = "open_settings"
     case openProfile = "open_profile"
     case openProjectExplorer = "open_project_explorer"
+    case moveNode = "move_node"
+    case themeNode = "theme_node"
     case help = "help"
 
     public var id: String { rawValue }
@@ -83,7 +85,7 @@ public protocol AppActionPerforming: AnyObject {
     var availableActions: [AppActionDefinition] { get }
     func definition(for id: AppActionID) -> AppActionDefinition?
     @discardableResult
-    func perform(_ id: AppActionID, source: AppActionSource) -> AppActionResult
+    func perform(_ id: AppActionID, source: AppActionSource, arguments: [String: String]?) -> AppActionResult
 }
 
 /// Central registry and execution boundary for commands. UI surfaces and agents
@@ -197,6 +199,22 @@ public final class AppActionDispatcher: AppActionPerforming {
             allowsAutonomousExecution: true
         ),
         AppActionDefinition(
+            id: .moveNode,
+            title: "Move Node",
+            icon: "arrow.up.and.down.and.arrow.left.and.right",
+            category: .project,
+            isMutating: true,
+            allowsAutonomousExecution: false
+        ),
+        AppActionDefinition(
+            id: .themeNode,
+            title: "Change Node Theme",
+            icon: "paintbrush.fill",
+            category: .project,
+            isMutating: true,
+            allowsAutonomousExecution: false
+        ),
+        AppActionDefinition(
             id: .help,
             title: "Help & Documentation",
             icon: "questionmark.circle",
@@ -220,6 +238,8 @@ public final class AppActionDispatcher: AppActionPerforming {
     private var openProfileHandler: (() -> Void)?
     private var openProjectExplorerHandler: (() -> Void)?
     private var helpHandler: (() -> Void)?
+    private var moveNodeHandler: (([String: String]) -> Void)?
+    private var themeNodeHandler: (([String: String]) -> Void)?
 
     public init() {}
 
@@ -239,7 +259,9 @@ public final class AppActionDispatcher: AppActionPerforming {
         openSettings: (() -> Void)? = nil,
         openProfile: (() -> Void)? = nil,
         openProjectExplorer: (() -> Void)? = nil,
-        help: (() -> Void)? = nil
+        help: (() -> Void)? = nil,
+        moveNode: (([String: String]) -> Void)? = nil,
+        themeNode: (([String: String]) -> Void)? = nil
     ) {
         self.goHomeHandler = goHome
         self.goBackHandler = goBack
@@ -255,6 +277,8 @@ public final class AppActionDispatcher: AppActionPerforming {
         self.openProfileHandler = openProfile
         self.openProjectExplorerHandler = openProjectExplorer
         self.helpHandler = help
+        self.moveNodeHandler = moveNode
+        self.themeNodeHandler = themeNode
     }
 
     public func definition(for id: AppActionID) -> AppActionDefinition? {
@@ -264,7 +288,7 @@ public final class AppActionDispatcher: AppActionPerforming {
     /// Executes an action if configured. Automatic agent calls are blocked from
     /// mutating or non-autonomous actions; reviewed/user calls may continue.
     @discardableResult
-    public func perform(_ id: AppActionID, source: AppActionSource) -> AppActionResult {
+    public func perform(_ id: AppActionID, source: AppActionSource, arguments: [String: String]? = nil) -> AppActionResult {
         guard let definition = definition(for: id) else {
             return AppActionResult(
                 actionID: id,
@@ -315,6 +339,18 @@ public final class AppActionDispatcher: AppActionPerforming {
             handler = openProjectExplorerHandler
         case .help:
             handler = helpHandler
+        case .moveNode:
+            if let moveNodeHandler, let arguments {
+                moveNodeHandler(arguments)
+                return AppActionResult(actionID: definition.id, title: definition.localizedTitle, executed: true, message: "")
+            }
+            handler = nil
+        case .themeNode:
+            if let themeNodeHandler, let arguments {
+                themeNodeHandler(arguments)
+                return AppActionResult(actionID: definition.id, title: definition.localizedTitle, executed: true, message: "")
+            }
+            handler = nil
         }
 
         guard let handler else {

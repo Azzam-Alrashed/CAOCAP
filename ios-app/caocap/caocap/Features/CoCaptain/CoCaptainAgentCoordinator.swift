@@ -207,7 +207,7 @@ public final class CoCaptainAgentCoordinator {
             }
         }
 
-        let executionSummary = executeSafeActions(payload?.safeActions ?? [], dispatcher: dispatcher)
+        let executionSummary = executeSafeActions(payload?.safeActions ?? [], dispatcher: dispatcher, store: store)
         let reviewBundle = buildReviewBundle(
             pendingActions: payload?.pendingActions ?? [],
             nodeEdits: payload?.nodeEdits ?? [],
@@ -295,17 +295,19 @@ public final class CoCaptainAgentCoordinator {
         )
     }
 
-    /// Executes only actions that the model marked as safe. Mutating or
-    /// uncertain work should arrive as pending actions and be reviewed in the UI.
     private func executeSafeActions(
         _ actions: [CoCaptainAgentAction],
-        dispatcher: (any AppActionPerforming)?
+        dispatcher: (any AppActionPerforming)?,
+        store: ProjectStore?
     ) -> ExecutionStatusItem? {
         guard let dispatcher, !actions.isEmpty else { return nil }
 
+        // Create a checkpoint before executing multiple safe actions to allow revert
+        store?.createAutoCheckpoint(label: "Before AI Actions")
+
         let executedSummaries = actions.compactMap { action -> String? in
             guard let id = AppActionID(rawValue: action.actionID) else { return nil }
-            let result = dispatcher.perform(id, source: .agentAutomatic)
+            let result = dispatcher.perform(id, source: .agentAutomatic, arguments: action.args)
             return result.executed ? result.title : nil
         }
 
@@ -342,8 +344,8 @@ public final class CoCaptainAgentCoordinator {
                         "Awaiting approval to run %@.",
                         arguments: [definition.localizedTitle]
                     ),
-                    preview: definition.localizedTitle,
-                    source: .appAction(id)
+                    preview: action.args?.description ?? definition.localizedTitle,
+                    source: .appAction(id, action.args)
                 )
             )
         }

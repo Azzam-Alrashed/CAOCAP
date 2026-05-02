@@ -115,7 +115,7 @@ public struct ExecutionStatusItem: Identifiable, Hashable {
 }
 
 public enum PendingReviewSource: Hashable {
-    case appAction(AppActionID)
+    case appAction(AppActionID, [String: String]? = nil)
     case nodeEdit(role: NodeRole, operations: [NodePatchOperation], baseText: String)
 }
 

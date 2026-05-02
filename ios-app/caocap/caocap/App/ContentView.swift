@@ -266,6 +266,17 @@ struct ContentView: View {
             },
             openProjectExplorer: {
                 showingProjectExplorer = true
+            },
+            moveNode: { args in
+                guard let idString = args["nodeId"], let uuid = UUID(uuidString: idString),
+                      let xStr = args["x"], let x = Double(xStr),
+                      let yStr = args["y"], let y = Double(yStr) else { return }
+                router.activeStore.updateNodePosition(id: uuid, position: CGPoint(x: x, y: y))
+            },
+            themeNode: { args in
+                guard let idString = args["nodeId"], let uuid = UUID(uuidString: idString),
+                      let themeStr = args["theme"], let theme = NodeTheme(rawValue: themeStr) else { return }
+                router.activeStore.updateNodeTheme(id: uuid, theme: theme)
             }
         )
     }

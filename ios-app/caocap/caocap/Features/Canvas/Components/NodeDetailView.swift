@@ -92,6 +92,21 @@ struct NodeDetailView: View {
                             }
                             .padding(.vertical)
                             
+                            Divider()
+                            
+                            Button(role: .destructive) {
+                                HapticsManager.shared.notification(.warning)
+                                store.deleteNode(id: node.id)
+                                dismiss()
+                            } label: {
+                                Label("Delete Node", systemImage: "trash")
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(Color.red.opacity(0.1))
+                                    .cornerRadius(12)
+                            }
+                            .padding(.vertical)
+                            
                             Spacer()
                         }
                         .padding(24)

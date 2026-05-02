@@ -88,6 +88,20 @@ struct InfiniteCanvasView: View {
                                     onboardingCoordinator?.advance()
                                 }
                             }
+                            .contextMenu {
+                                Button(role: .destructive) {
+                                    HapticsManager.shared.notification(.warning)
+                                    store.deleteNode(id: node.id, persist: !isOnboardingCanvas)
+                                } label: {
+                                    Label("Delete Node", systemImage: "trash")
+                                }
+                                
+                                Button {
+                                    selectedNode = node
+                                } label: {
+                                    Label("Inspect", systemImage: "info.circle")
+                                }
+                            }
                             .highPriorityGesture(
                                 DragGesture(minimumDistance: 5)
                                     .onChanged { value in
@@ -113,6 +127,7 @@ struct InfiniteCanvasView: View {
                                             
                                             nodeDragOffsets[node.id] = nil
                                             isDraggingNode = false
+                                            HapticsManager.shared.selectionChanged()
                                         }
                                     }
                             )

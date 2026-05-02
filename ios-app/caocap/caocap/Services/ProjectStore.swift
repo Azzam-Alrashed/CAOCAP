@@ -165,6 +165,11 @@ public class ProjectStore {
         }
     }
 
+    /// Creates an automatic checkpoint before significant mutations (e.g. Co-Captain edits).
+    public func createAutoCheckpoint(label: String = "Pre-AI Snapshot") {
+        createCheckpoint(label: label)
+    }
+
     /// Restores the project graph from a historical checkpoint.
     public func restore(from metadata: SnapshotMetadata) {
         do {
@@ -235,6 +240,30 @@ public class ProjectStore {
             undoStackChanged += 1
             
             nodes[index].position = position
+            if persist {
+                requestSave()
+            }
+        }
+    }
+
+    /// Updates a specific node's theme.
+    /// - Parameters:
+    ///   - id: The UUID of the node to update.
+    ///   - theme: The new theme.
+    ///   - persist: If true, triggers a debounced save to disk.
+    public func updateNodeTheme(id: UUID, theme: NodeTheme, persist: Bool = true) {
+        if let index = nodes.firstIndex(where: { $0.id == id }) {
+            let oldTheme = nodes[index].theme
+            
+            // Register Undo
+            undoManager?.registerUndo(withTarget: self) { target in
+                MainActor.assumeIsolated {
+                    target.updateNodeTheme(id: id, theme: oldTheme, persist: persist)
+                }
+            }
+            undoStackChanged += 1
+            
+            nodes[index].theme = theme
             if persist {
                 requestSave()
             }
@@ -311,9 +340,62 @@ public class ProjectStore {
             textContent: "// Start coding here..."
         )
         
+        // Register Undo
+        undoManager?.registerUndo(withTarget: self) { target in
+            MainActor.assumeIsolated {
+                target.deleteNode(id: newNode.id, persist: true)
+            }
+        }
+        undoStackChanged += 1
+
         withAnimation(.spring()) {
             nodes.append(newNode)
         }
         requestSave()
+    }
+
+    /// Removes a node from the project and cleans up any references to it.
+    /// - Parameters:
+    ///   - id: The UUID of the node to delete.
+    ///   - persist: If true, triggers a debounced save to disk.
+    public func deleteNode(id: UUID, persist: Bool = true) {
+        guard let index = nodes.firstIndex(where: { $0.id == id }) else { return }
+        
+        let removedNode = nodes[index]
+        
+        // Register Undo
+        undoManager?.registerUndo(withTarget: self) { target in
+            MainActor.assumeIsolated {
+                // To restore a node properly, we'd need to restore its connections too.
+                // For now, we restore the node itself.
+                target.nodes.append(removedNode) // Simplification: append instead of original index for now
+                if persist {
+                    target.requestSave()
+                }
+            }
+        }
+        undoStackChanged += 1
+
+        withAnimation(.spring()) {
+            // 1. Remove the node itself
+            nodes.remove(at: index)
+            
+            // 2. Clean up connections in other nodes
+            for i in 0..<nodes.count {
+                if nodes[i].nextNodeId == id {
+                    nodes[i].nextNodeId = nil
+                }
+                if let connections = nodes[i].connectedNodeIds {
+                    nodes[i].connectedNodeIds = connections.filter { $0 != id }
+                    if nodes[i].connectedNodeIds?.isEmpty == true {
+                        nodes[i].connectedNodeIds = nil
+                    }
+                }
+            }
+        }
+        
+        if persist {
+            requestSave()
+        }
     }
 }
