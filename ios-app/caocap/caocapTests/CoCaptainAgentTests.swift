@@ -195,14 +195,14 @@ struct CoCaptainAgentTests {
             """
             I can make that update.
 
-            ```cocaptain-actions
-            {
-              "assistantMessage": "I can make that update.",
-              "safeActions": [{"actionId":"go_home"}],
-              "pendingActions": [],
-              "nodeEdits": []
-            }
-            ```
+            <cocaptain_actions>
+              <assistant_message>I can make that update.</assistant_message>
+              <safe_actions>
+                <action id="go_home" />
+              </safe_actions>
+              <pending_actions></pending_actions>
+              <node_edits></node_edits>
+            </cocaptain_actions>
             """
 
         let parsed = parser.parse(response)
@@ -215,7 +215,7 @@ struct CoCaptainAgentTests {
 
     @Test func parserDetectsLoosePayloadWithoutWhitespace() throws {
         let parser = CoCaptainAgentParser()
-        let response = "aesthetic.{\"assistantMessage\": \"Implementing...\"}"
+        let response = "aesthetic.<cocaptain_actions><assistant_message>Implementing...</assistant_message></cocaptain_actions>"
 
         let parsed = parser.parse(response)
         #expect(parsed.preamble == "aesthetic.")
@@ -232,25 +232,22 @@ struct CoCaptainAgentTests {
         #expect(parsed.payload?.assistantMessage == "Hello")
     }
 
-    @Test func parserHidesLooseTrailingActionJSON() throws {
+    @Test func parserHidesLooseTrailingActionXML() throws {
         let parser = CoCaptainAgentParser()
         let response =
             """
             I can document that preference.
 
-            json {
-              "assistantMessage": "Documented the preference.",
-              "safeActions": [],
-              "pendingActions": [],
-              "nodeEdits": [{
-                "role": "srs",
-                "summary": "Document color preference.",
-                "operations": [{
-                  "type": "append",
-                  "content": "\\nPrimary color: Slate Grey."
-                }]
-              }]
-            }
+            <cocaptain_actions>
+              <assistant_message>Documented the preference.</assistant_message>
+              <node_edits>
+                <node_edit role="srs" summary="Document color preference.">
+                  <operation type="append">
+                    <content><![CDATA[\nPrimary color: Slate Grey.]]></content>
+                  </operation>
+                </node_edit>
+              </node_edits>
+            </cocaptain_actions>
             """
 
         let parsed = parser.parse(response)
@@ -259,38 +256,19 @@ struct CoCaptainAgentTests {
         #expect(parsed.payload?.nodeEdits.count == 1)
     }
 
-    @Test func parserHidesMalformedLooseTrailingActionJSON() throws {
-        let parser = CoCaptainAgentParser()
-        let response =
-            """
-            I can update the canvas.
-
-            json {
-              "assistantMessage": "Malformed",
-              "nodeEdits": [
-            }
-            """
-
-        let parsed = parser.parse(response)
-
-        #expect(parsed.preamble == "I can update the canvas.")
-        #expect(parsed.payload == nil)
-        #expect(parsed.diagnostic == "Malformed loose CoCaptain action JSON.")
-    }
-
-    @Test func parserHidesIncompleteLooseTrailingActionJSON() throws {
+    @Test func parserHidesIncompleteLooseTrailingActionXML() throws {
         let parser = CoCaptainAgentParser()
         let response =
             """
             Working on it.
 
-            {
-              "assistantMessage": "Still generating..."
+            <cocaptain_actions>
+              <assistant_message>Still generating...
             """
 
         let parsed = parser.parse(response)
 
-        // Should NOT show the JSON even if it's not balanced yet.
+        // Should NOT show the XML even if it's not closed yet.
         #expect(parsed.preamble == "Working on it.")
         #expect(parsed.payload == nil)
     }
@@ -323,13 +301,13 @@ struct CoCaptainAgentTests {
         #expect(foundInlineCode)
     }
 
-    @Test func parserHandlesMultiLineLooseJSON() throws {
+    @Test func parserHandlesMultiLineXML() throws {
         let parser = CoCaptainAgentParser()
         let response = """
         Updating:
-        {
-          "assistantMessage": "Multi-line"
-        }
+        <cocaptain_actions>
+          <assistant_message>Multi-line</assistant_message>
+        </cocaptain_actions>
         """
 
         let parsed = parser.parse(response)
@@ -337,39 +315,34 @@ struct CoCaptainAgentTests {
         #expect(parsed.payload?.assistantMessage == "Multi-line")
     }
 
-    @Test func parserFallsBackOnMalformedStructuredBlock() throws {
+    @Test func parserFallsBackOnMissingClosingTag() throws {
         let parser = CoCaptainAgentParser()
         let response =
             """
             I can help.
 
-            ```cocaptain-actions
-            {not-json}
-            ```
+            <cocaptain_actions>
+              <assistant_message>Incomplete
             """
 
         let parsed = parser.parse(response)
 
         #expect(parsed.payload == nil)
         #expect(parsed.preamble == "I can help.")
-        #expect(parsed.visibleText.contains("I can help."))
-        #expect(parsed.diagnostic == "Malformed JSON in `cocaptain-actions` block.")
     }
 
-    @Test func fencedJSONAdapterProducesCoordinatorDirective() throws {
-        let adapter = CoCaptainFencedJSONAgentAdapter()
+    @Test func xmlAdapterProducesCoordinatorDirective() throws {
+        let adapter = CoCaptainXMLAgentAdapter()
         let response =
             """
             Done.
 
-            ```cocaptain-actions
-            {
-              "assistantMessage": "Done.",
-              "safeActions": [{"actionId":"go_home"}],
-              "pendingActions": [],
-              "nodeEdits": []
-            }
-            ```
+            <cocaptain_actions>
+              <assistant_message>Done.</assistant_message>
+              <safe_actions><action id="go_home"/></safe_actions>
+              <pending_actions></pending_actions>
+              <node_edits></node_edits>
+            </cocaptain_actions>
             """
 
         let directive = adapter.directive(from: response)
@@ -378,7 +351,7 @@ struct CoCaptainAgentTests {
         #expect(directive.visibleText == "Done.")
         #expect(directive.payload?.safeActions.first?.actionID == "go_home")
         #expect(directive.diagnostics.isEmpty)
-        #expect(directive.source == .fencedJSON)
+        #expect(directive.source == .xml)
     }
 
     @Test func functionCallAdapterMapsSafeAction() throws {
@@ -437,21 +410,16 @@ struct CoCaptainAgentTests {
             """
             I updated the project.
 
-            ```cocaptain-actions
-            {
-              "assistantMessage": "I updated the project.",
-              "safeActions": [],
-              "pendingActions": [],
-              "nodeEdits": [{
-                "role": "html",
-                "summary": "Update HTML.",
-                "operations": [{
-                  "type": "replace_all",
-                  "content": "<h1>Fixed</h1>"
-                }]
-              }]
-            }
-            ```
+            <cocaptain_actions>
+              <assistant_message>I updated the project.</assistant_message>
+              <node_edits>
+                <node_edit role="html" summary="Update HTML.">
+                  <operation type="replace_all">
+                    <content><![CDATA[<h1>Fixed</h1>]]></content>
+                  </operation>
+                </node_edit>
+              </node_edits>
+            </cocaptain_actions>
             """
 
         let directive = adapter.directive(
@@ -470,35 +438,29 @@ struct CoCaptainAgentTests {
     }
 
     @MainActor
-    @Test func coordinatorRetriesMalformedStructuredPayloadWithParseDiagnostic() async throws {
+    @Test func coordinatorRetriesMalformedStructuredPayload() async throws {
         let dispatcher = TestActionDispatcher()
         let llm = TestLLMClient(
             responses: [
                 """
                 I prepared an edit.
 
-                ```cocaptain-actions
-                {not-json}
-                ```
+                <cocaptain_actions>
+                  <assistant_message>Incomplete
                 """,
                 """
                 I prepared a valid HTML edit.
 
-                ```cocaptain-actions
-                {
-                  "assistantMessage": "I prepared a valid HTML edit.",
-                  "safeActions": [],
-                  "pendingActions": [],
-                  "nodeEdits": [{
-                    "role": "html",
-                    "summary": "Update HTML.",
-                    "operations": [{
-                      "type": "replace_all",
-                      "content": "<h1>Fixed</h1>"
-                    }]
-                  }]
-                }
-                ```
+                <cocaptain_actions>
+                  <assistant_message>I prepared a valid HTML edit.</assistant_message>
+                  <node_edits>
+                    <node_edit role="html" summary="Update HTML.">
+                      <operation type="replace_all">
+                        <content><![CDATA[<h1>Fixed</h1>]]></content>
+                      </operation>
+                    </node_edit>
+                  </node_edits>
+                </cocaptain_actions>
                 """
             ]
         )
@@ -511,7 +473,7 @@ struct CoCaptainAgentTests {
         ) { _ in }
 
         #expect(llm.receivedMessages.count == 2)
-        #expect(llm.receivedMessages.last?.contains("Malformed JSON in `cocaptain-actions` block.") == true)
+        #expect(llm.receivedMessages.last?.contains("satisfied the machine-readable CoCaptain action contract") == true)
         #expect(result.reviewBundle?.items.first?.status == .pending)
     }
 
@@ -523,22 +485,19 @@ struct CoCaptainAgentTests {
                 """
                 I moved us home and prepared an HTML update.
 
-                ```cocaptain-actions
-                {
-                  "assistantMessage": "I moved us home and prepared an HTML update.",
-                  "safeActions": [{"actionId":"go_home"}],
-                  "pendingActions": [{"actionId":"create_node"}],
-                  "nodeEdits": [{
-                    "role": "html",
-                    "summary": "Update the headline.",
-                    "operations": [{
-                      "type": "replace_exact",
-                      "target": "Hello World!",
-                      "content": "Agentic Hello!"
-                    }]
-                  }]
-                }
-                ```
+                <cocaptain_actions>
+                  <assistant_message>I moved us home and prepared an HTML update.</assistant_message>
+                  <safe_actions><action id="go_home"/></safe_actions>
+                  <pending_actions><action id="create_node"/></pending_actions>
+                  <node_edits>
+                    <node_edit role="html" summary="Update the headline.">
+                      <operation type="replace_exact">
+                        <target>Hello World!</target>
+                        <content><![CDATA[Agentic Hello!]]></content>
+                      </operation>
+                    </node_edit>
+                  </node_edits>
+                </cocaptain_actions>
                 """
         )
         let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
@@ -688,26 +647,18 @@ struct CoCaptainAgentTests {
                 """
                 I will create a node.
 
-                ```cocaptain-actions
-                {
-                  "assistantMessage": "I will create a node.",
-                  "safeActions": [{"actionId":"create_node"}],
-                  "pendingActions": [],
-                  "nodeEdits": []
-                }
-                ```
+                <cocaptain_actions>
+                  <assistant_message>I will create a node.</assistant_message>
+                  <safe_actions><action id="create_node"/></safe_actions>
+                </cocaptain_actions>
                 """,
                 """
                 I prepared the action for review.
 
-                ```cocaptain-actions
-                {
-                  "assistantMessage": "I prepared the action for review.",
-                  "safeActions": [],
-                  "pendingActions": [{"actionId":"create_node"}],
-                  "nodeEdits": []
-                }
-                ```
+                <cocaptain_actions>
+                  <assistant_message>I prepared the action for review.</assistant_message>
+                  <pending_actions><action id="create_node"/></pending_actions>
+                </cocaptain_actions>
                 """
             ]
         )
@@ -733,14 +684,10 @@ struct CoCaptainAgentTests {
                 """
                 I will use an unknown action.
 
-                ```cocaptain-actions
-                {
-                  "assistantMessage": "I will use an unknown action.",
-                  "safeActions": [{"actionId":"launch_rocket"}],
-                  "pendingActions": [],
-                  "nodeEdits": []
-                }
-                ```
+                <cocaptain_actions>
+                  <assistant_message>I will use an unknown action.</assistant_message>
+                  <safe_actions><action id="launch_rocket"/></safe_actions>
+                </cocaptain_actions>
                 """
         )
         let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
@@ -765,37 +712,27 @@ struct CoCaptainAgentTests {
                 """
                 I prepared an edit.
 
-                ```cocaptain-actions
-                {
-                  "assistantMessage": "I prepared an edit.",
-                  "safeActions": [],
-                  "pendingActions": [],
-                  "nodeEdits": [{
-                    "role": "html",
-                    "summary": "Update HTML.",
-                    "operations": []
-                  }]
-                }
-                ```
+                <cocaptain_actions>
+                  <assistant_message>I prepared an edit.</assistant_message>
+                  <node_edits>
+                    <node_edit role="html" summary="Update HTML.">
+                    </node_edit>
+                  </node_edits>
+                </cocaptain_actions>
                 """,
                 """
                 I prepared a valid HTML edit.
 
-                ```cocaptain-actions
-                {
-                  "assistantMessage": "I prepared a valid HTML edit.",
-                  "safeActions": [],
-                  "pendingActions": [],
-                  "nodeEdits": [{
-                    "role": "html",
-                    "summary": "Update HTML.",
-                    "operations": [{
-                      "type": "replace_all",
-                      "content": "<h1>Fixed</h1>"
-                    }]
-                  }]
-                }
-                ```
+                <cocaptain_actions>
+                  <assistant_message>I prepared a valid HTML edit.</assistant_message>
+                  <node_edits>
+                    <node_edit role="html" summary="Update HTML.">
+                      <operation type="replace_all">
+                        <content><![CDATA[<h1>Fixed</h1>]]></content>
+                      </operation>
+                    </node_edit>
+                  </node_edits>
+                </cocaptain_actions>
                 """
             ]
         )
@@ -1044,7 +981,7 @@ private final class TestActionDispatcher: AppActionPerforming {
     }
 
     @discardableResult
-    func perform(_ id: AppActionID, source: AppActionSource) -> AppActionResult {
+    func perform(_ id: AppActionID, source: AppActionSource, arguments: [String: String]? = nil) -> AppActionResult {
         guard let definition = definition(for: id) else {
             return AppActionResult(actionID: id, title: id.rawValue, executed: false, message: "Missing")
         }

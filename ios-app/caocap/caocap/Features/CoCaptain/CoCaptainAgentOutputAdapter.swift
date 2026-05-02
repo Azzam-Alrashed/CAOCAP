@@ -1,7 +1,7 @@
 import Foundation
 
 public enum CoCaptainAgentOutputSource: String, Hashable {
-    case fencedJSON = "fenced_json"
+    case xml = "xml"
     case functionCall = "function_call"
     case combined = "combined"
 }
@@ -42,7 +42,7 @@ public extension CoCaptainAgentOutputAdapting {
     }
 }
 
-public struct CoCaptainFencedJSONAgentAdapter: CoCaptainAgentOutputAdapting {
+public struct CoCaptainXMLAgentAdapter: CoCaptainAgentOutputAdapting {
     private let parser: CoCaptainAgentParser
 
     public init(parser: CoCaptainAgentParser = CoCaptainAgentParser()) {
@@ -60,7 +60,7 @@ public struct CoCaptainFencedJSONAgentAdapter: CoCaptainAgentOutputAdapting {
             visibleText: parsed.visibleText,
             payload: parsed.payload,
             diagnostics: parsed.diagnostic.map { [$0] } ?? [],
-            source: .fencedJSON
+            source: .xml
         )
     }
 }
@@ -130,23 +130,23 @@ public struct CoCaptainFunctionCallAgentAdapter {
 }
 
 public struct CoCaptainCompositeAgentAdapter: CoCaptainAgentOutputAdapting {
-    private let fencedJSONAdapter: CoCaptainFencedJSONAgentAdapter
+    private let xmlAdapter: CoCaptainXMLAgentAdapter
     private let functionCallAdapter: CoCaptainFunctionCallAgentAdapter
 
     public init(
-        fencedJSONAdapter: CoCaptainFencedJSONAgentAdapter = CoCaptainFencedJSONAgentAdapter(),
+        xmlAdapter: CoCaptainXMLAgentAdapter = CoCaptainXMLAgentAdapter(),
         functionCallAdapter: CoCaptainFunctionCallAgentAdapter = CoCaptainFunctionCallAgentAdapter()
     ) {
-        self.fencedJSONAdapter = fencedJSONAdapter
+        self.xmlAdapter = xmlAdapter
         self.functionCallAdapter = functionCallAdapter
     }
 
     public func visibleText(from response: String) -> String {
-        fencedJSONAdapter.visibleText(from: response)
+        xmlAdapter.visibleText(from: response)
     }
 
     public func directive(from response: String, functionCalls: [CoCaptainAgentFunctionCall]) -> CoCaptainAgentDirective {
-        let fencedDirective = fencedJSONAdapter.directive(from: response, functionCalls: [])
+        let fencedDirective = xmlAdapter.directive(from: response, functionCalls: [])
         guard !functionCalls.isEmpty else { return fencedDirective }
 
         let functionDirective = functionCallAdapter.directive(
