@@ -47,7 +47,7 @@ public final class CoCaptainAgentCoordinator {
         self.contextBuilder = contextBuilder
         self.patchEngine = patchEngine
         self.outputAdapter = outputAdapter ?? CoCaptainCompositeAgentAdapter(
-            fencedJSONAdapter: CoCaptainFencedJSONAgentAdapter(parser: parser)
+            xmlAdapter: CoCaptainXMLAgentAdapter(parser: parser)
         )
         self.validator = validator
     }
@@ -260,7 +260,7 @@ public final class CoCaptainAgentCoordinator {
         
         CRITICAL: 
         1. Do NOT just provide code in markdown chat. 
-        2. You MUST include a `cocaptain-actions` fenced block.
+        2. You MUST include a `cocaptain_actions` XML block.
         3. For app navigation/tool actions, call `request_app_action`.
         4. Put code/content implementation in `nodeEdits`.
         5. Put mutating or non-autonomous app actions in `pendingActions` or call `request_app_action` with `executionMode=pending`.

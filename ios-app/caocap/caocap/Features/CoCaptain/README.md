@@ -35,23 +35,31 @@ The core contract is human-in-the-loop code editing. Do not auto-apply node edit
 
 ## Structured Payload Contract
 
-The model may include one trailing fenced block:
+The model may include one trailing XML block:
 
-````text
-```cocaptain-actions
-{
-  "assistantMessage": "Visible fallback text.",
-  "safeActions": [],
-  "pendingActions": [],
-  "nodeEdits": []
-}
+```xml
+<cocaptain_actions>
+  <assistant_message>Visible fallback text.</assistant_message>
+  <safe_actions>
+    <action id="id" />
+  </safe_actions>
+  <pending_actions>
+    <action id="id" />
+  </pending_actions>
+  <node_edits>
+    <node_edit role="html" summary="Update headline">
+      <operation type="replace_all">
+        <content><![CDATA[<h1>New text</h1>]]></content>
+      </operation>
+    </node_edit>
+  </node_edits>
+</cocaptain_actions>
 ```
-````
 
 Rules:
 
-- The parser uses the last `cocaptain-actions` fence in the response.
-- Malformed JSON falls back to visible text with no payload.
+- The parser uses the last `cocaptain_actions` tag in the response.
+- Malformed XML falls back to visible text with no payload.
 - `safeActions` may only contain available, non-mutating, autonomous actions.
 - `pendingActions` are shown for review before execution and are required for mutating or non-autonomous app actions.
 - `nodeEdits` target `NodeRole` values and `NodePatchOperation` arrays.
@@ -60,7 +68,7 @@ Rules:
 
 Invalid structured payloads are not partially executed. The coordinator retries once with parse or validation feedback. If the retry is still invalid, the user sees a conflicted review item rather than a silent no-op or unsafe action.
 
-Firebase function calling is the preferred path for app actions through the `request_app_action` tool. The fenced JSON block remains the compatibility format for node edits until structured-output node edit payloads replace it.
+Firebase function calling is the preferred path for app actions through the `request_app_action` tool. The XML block remains the compatibility format for node edits until structured-output node edit payloads replace it.
 
 If this payload changes, update parser/coordinator tests and the prompt contract in `LLMService`.
 
