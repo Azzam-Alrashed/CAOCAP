@@ -269,6 +269,49 @@ public class ProjectStore {
             }
         }
     }
+
+    /// Changes a node's fundamental type (e.g. from Code to WebView).
+    /// - Parameters:
+    ///   - id: The UUID of the node to transform.
+    ///   - type: The target NodeType.
+    ///   - persist: If true, triggers a debounced save to disk.
+    public func updateNodeType(id: UUID, type: NodeType, persist: Bool = true) {
+        if let index = nodes.firstIndex(where: { $0.id == id }) {
+            let oldType = nodes[index].type
+            
+            // Register Undo
+            undoManager?.registerUndo(withTarget: self) { target in
+                MainActor.assumeIsolated {
+                    target.updateNodeType(id: id, type: oldType, persist: persist)
+                }
+            }
+            undoStackChanged += 1
+            
+            nodes[index].type = type
+            
+            // Type-specific initialization if content is empty
+            switch type {
+            case .srs:
+                if nodes[index].textContent?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false {
+                    nodes[index].textContent = SRSScaffold.defaultText
+                }
+            case .code:
+                if nodes[index].textContent?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false {
+                    nodes[index].textContent = "// Write code here..."
+                }
+            case .webView:
+                // Will be populated by the Live Preview compiler if connected
+                break
+            case .standard:
+                break
+            }
+            
+            if persist {
+                requestSave()
+            }
+            compileLivePreview()
+        }
+    }
     
     /// Updates a specific node's text content.
     /// For SRS nodes, also evaluates and persists the new readiness state.
@@ -360,6 +403,12 @@ public class ProjectStore {
     ///   - persist: If true, triggers a debounced save to disk.
     public func deleteNode(id: UUID, persist: Bool = true) {
         guard let index = nodes.firstIndex(where: { $0.id == id }) else { return }
+        
+        // Prevent deletion of protected main nodes (e.g. SRS, HTML, CSS, JS)
+        if nodes[index].isProtected {
+            logger.warning("Attempted to delete protected node: \(nodes[index].title)")
+            return
+        }
         
         let removedNode = nodes[index]
         

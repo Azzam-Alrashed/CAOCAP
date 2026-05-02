@@ -277,6 +277,11 @@ struct ContentView: View {
                 guard let idString = args["nodeId"], let uuid = UUID(uuidString: idString),
                       let themeStr = args["theme"], let theme = NodeTheme(rawValue: themeStr) else { return }
                 router.activeStore.updateNodeTheme(id: uuid, theme: theme)
+            },
+            transformNode: { args in
+                guard let idString = args["nodeId"], let uuid = UUID(uuidString: idString),
+                      let typeStr = args["type"], let type = NodeType(rawValue: typeStr) else { return }
+                router.activeStore.updateNodeType(id: uuid, type: type)
             }
         )
     }

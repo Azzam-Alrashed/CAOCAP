@@ -89,11 +89,13 @@ struct InfiniteCanvasView: View {
                                 }
                             }
                             .contextMenu {
-                                Button(role: .destructive) {
-                                    HapticsManager.shared.notification(.warning)
-                                    store.deleteNode(id: node.id, persist: !isOnboardingCanvas)
-                                } label: {
-                                    Label("Delete Node", systemImage: "trash")
+                                if !node.isProtected {
+                                    Button(role: .destructive) {
+                                        HapticsManager.shared.notification(.warning)
+                                        store.deleteNode(id: node.id, persist: !isOnboardingCanvas)
+                                    } label: {
+                                        Label("Delete Node", systemImage: "trash")
+                                    }
                                 }
                                 
                                 Button {
