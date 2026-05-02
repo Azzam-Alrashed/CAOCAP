@@ -8,7 +8,7 @@ struct InfiniteCanvasView: View {
     @Environment(\.colorScheme) var colorScheme
     
     /// Tracks the current panning and zooming state of the canvas.
-    @State private var viewport: ViewportState
+    @Binding var viewport: ViewportState
     
     /// Real-time scale feedback for external overlays.
     @Binding var currentScale: CGFloat
@@ -23,23 +23,12 @@ struct InfiniteCanvasView: View {
     /// Optional coordinator for guided onboarding steps.
     var onboardingCoordinator: OnboardingCoordinator? = nil
     
-    init(store: ProjectStore, currentScale: Binding<CGFloat>, onboardingCoordinator: OnboardingCoordinator? = nil, onNodeAction: ((NodeAction) -> Void)? = nil) {
+    init(store: ProjectStore, viewport: Binding<ViewportState>, currentScale: Binding<CGFloat>, onboardingCoordinator: OnboardingCoordinator? = nil, onNodeAction: ((NodeAction) -> Void)? = nil) {
         self.store = store
+        self._viewport = viewport
         self._currentScale = currentScale
         self.onboardingCoordinator = onboardingCoordinator
         self.onNodeAction = onNodeAction
-        
-        // Onboarding is a guided route, not a user project, so it always starts
-        // from the authored viewport instead of restoring accidental gestures.
-        let isOnboardingCanvas = onNodeAction != nil && store.fileName.contains("onboarding")
-        if isOnboardingCanvas {
-            self._viewport = State(initialValue: ViewportState(offset: .zero, scale: 1.0))
-        } else {
-            self._viewport = State(initialValue: ViewportState(
-                offset: store.viewportOffset,
-                scale: store.viewportScale
-            ))
-        }
     }
     
     // Drag offsets stay local until the drag ends so links and nodes can track
@@ -300,5 +289,5 @@ private struct TrackpadPanGesture: UIGestureRecognizerRepresentable {
 
 
 #Preview {
-    InfiniteCanvasView(store: ProjectStore(), currentScale: .constant(1.0), onNodeAction: nil)
+    InfiniteCanvasView(store: ProjectStore(), viewport: .constant(ViewportState()), currentScale: .constant(1.0), onNodeAction: nil)
 }

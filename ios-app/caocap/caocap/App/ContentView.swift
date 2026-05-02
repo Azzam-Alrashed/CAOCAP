@@ -23,18 +23,25 @@ struct ContentView: View {
     @State private var selectedTheme = "System"
     @State private var isLaunching = true
     @State private var onboardingCoordinator = OnboardingCoordinator()
+    @State private var viewport = ViewportState()
 
     var body: some View {
         ZStack {
             switch router.currentWorkspace {
             case .home:
-                InfiniteCanvasView(store: router.homeStore, currentScale: $currentScale, onNodeAction: { action in
-                    handleNodeAction(action)
-                })
+                InfiniteCanvasView(
+                    store: router.homeStore,
+                    viewport: $viewport,
+                    currentScale: $currentScale,
+                    onNodeAction: { action in
+                        handleNodeAction(action)
+                    }
+                )
                 .id("home_canvas")
             case .onboarding:
                 InfiniteCanvasView(
                     store: router.onboardingStore,
+                    viewport: $viewport,
                     currentScale: $currentScale,
                     onboardingCoordinator: onboardingCoordinator,
                     onNodeAction: { action in
@@ -43,9 +50,14 @@ struct ContentView: View {
                 )
                 .id("onboarding_canvas")
             case .project(let fileName):
-                InfiniteCanvasView(store: router.activeStore, currentScale: $currentScale, onNodeAction: { action in
-                    handleNodeAction(action)
-                })
+                InfiniteCanvasView(
+                    store: router.activeStore,
+                    viewport: $viewport,
+                    currentScale: $currentScale,
+                    onNodeAction: { action in
+                        handleNodeAction(action)
+                    }
+                )
                 .id("project_canvas_\(fileName)")
             }
 
@@ -159,6 +171,14 @@ struct ContentView: View {
         .onChange(of: router.currentWorkspace) {
             router.activeStore.undoManager = undoManager
             coCaptain.store = router.activeStore
+            commandPalette.nodes = router.activeStore.nodes
+            
+            // Sync viewport with new store
+            let isOnboarding = router.currentWorkspace == .onboarding
+            viewport = ViewportState(
+                offset: isOnboarding ? .zero : router.activeStore.viewportOffset,
+                scale: isOnboarding ? 1.0 : router.activeStore.viewportScale
+            )
         }
         .onReceive(NotificationCenter.default.publisher(for: .NSUndoManagerDidUndoChange)) { _ in
             router.activeStore.undoStackChanged += 1
@@ -252,8 +272,18 @@ struct ContentView: View {
 
     private func setupCommandHandlers() {
         commandPalette.actions = actionDispatcher.availableActions
+        commandPalette.nodes = router.activeStore.nodes
         commandPalette.onExecute = { actionID in
             _ = actionDispatcher.perform(actionID, source: .user)
+        }
+        commandPalette.onFlyToNode = { nodeId in
+            guard let node = router.activeStore.nodes.first(where: { $0.id == nodeId }) else { return }
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.85)) {
+                // GeometryReader size isn't easily available here, but flyTo math
+                // uses containerSize to find center. Since node.position is relative 
+                // to center already, we can pass .zero and it works.
+                viewport.flyTo(nodePosition: node.position, containerSize: .zero)
+            }
         }
         commandPalette.onSubmitPrompt = { prompt in
             coCaptain.store = router.activeStore
