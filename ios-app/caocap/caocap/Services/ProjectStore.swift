@@ -23,6 +23,9 @@ public class ProjectStore {
     /// Tracks if a save operation is currently pending or in progress.
     public var isSaving: Bool = false
     
+    /// Historical checkpoints for this project.
+    public var history: [SnapshotMetadata] = []
+    
     private let logger = Logger(subsystem: "com.ficruty.caocap", category: "Persistence")
     private let persistence: ProjectPersistenceService
     private let persistenceWriter: ProjectPersistenceWriter
@@ -91,6 +94,9 @@ public class ProjectStore {
         
         // Ensure the Live Preview is synced with the code nodes on startup
         compileLivePreview()
+        
+        // Load history
+        self.history = persistence.listSnapshots(for: fileName)
     }
     
     /// Persists a snapshot of the current project state using a temporary file
@@ -135,6 +141,52 @@ public class ProjectStore {
                 isSaving = false
             }
         }
+    }
+
+    /// Creates a durable checkpoint of the current project state.
+    public func createCheckpoint(label: String = "Manual Checkpoint") {
+        let snapshot = currentSnapshot()
+        let fileName = self.fileName
+        let persistence = self.persistence
+        
+        Task(priority: .background) { [weak self] in
+            do {
+                let metadata = try persistence.saveSnapshot(snapshot, fileName: fileName, label: label)
+                await MainActor.run {
+                    self?.history.insert(metadata, at: 0)
+                    // Keep history to last 20 for now
+                    if (self?.history.count ?? 0) > 20 {
+                        self?.history.removeLast()
+                    }
+                }
+            } catch {
+                self?.logger.error("Failed to create checkpoint: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    /// Restores the project graph from a historical checkpoint.
+    public func restore(from metadata: SnapshotMetadata) {
+        do {
+            let snapshot = try persistence.loadSnapshot(metadata: metadata, for: fileName)
+            withAnimation(.spring()) {
+                apply(snapshot: snapshot)
+            }
+            save()
+            compileLivePreview()
+        } catch {
+            logger.error("Failed to restore snapshot: \(error.localizedDescription)")
+        }
+    }
+
+    private func currentSnapshot() -> ProjectSnapshot {
+        ProjectSnapshot(
+            schemaVersion: Self.currentSchemaVersion,
+            projectName: projectName,
+            nodes: nodes,
+            viewportOffset: viewportOffset,
+            viewportScale: viewportScale
+        )
     }
     
     /// Combines canonical code nodes and updates the Live Preview node.

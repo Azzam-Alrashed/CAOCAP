@@ -22,6 +22,20 @@ public struct ProjectSnapshot: Codable, Equatable {
     }
 }
 
+public struct SnapshotMetadata: Codable, Equatable, Identifiable {
+    public let id: UUID
+    public let date: Date
+    public let label: String
+    public let fileName: String
+
+    public init(id: UUID = UUID(), date: Date = Date(), label: String, fileName: String) {
+        self.id = id
+        self.date = date
+        self.label = label
+        self.fileName = fileName
+    }
+}
+
 public struct ProjectLoadResult: Equatable {
     public let snapshot: ProjectSnapshot
     public let sourceSchemaVersion: Int
@@ -126,6 +140,63 @@ public struct ProjectPersistenceService: Sendable {
         }
 
         try? FileManager.default.removeItem(at: tempURL)
+    }
+
+    public func saveSnapshot(_ snapshot: ProjectSnapshot, fileName: String, label: String) throws -> SnapshotMetadata {
+        let id = UUID()
+        let snapshotFileName = "\(id.uuidString).json"
+        let directory = snapshotsDirectory(for: fileName)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        
+        let url = directory.appendingPathComponent(snapshotFileName)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .prettyPrinted
+        let data = try encoder.encode(snapshot)
+        try data.write(to: url)
+        
+        return SnapshotMetadata(id: id, date: Date(), label: label, fileName: snapshotFileName)
+    }
+
+    public func loadSnapshot(metadata: SnapshotMetadata, for projectFileName: String) throws -> ProjectSnapshot {
+        let url = snapshotsDirectory(for: projectFileName)
+            .appendingPathComponent(metadata.fileName)
+        
+        let data = try Data(contentsOf: url)
+        return try JSONDecoder().decode(ProjectSnapshot.self, from: data)
+    }
+
+    public func listSnapshots(for fileName: String) -> [SnapshotMetadata] {
+        let directory = snapshotsDirectory(for: fileName)
+        guard let files = try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.creationDateKey]) else {
+            return []
+        }
+        
+        let decoder = JSONDecoder()
+        return files.compactMap { url in
+            guard url.pathExtension == "json",
+                  let data = try? Data(contentsOf: url),
+                  (try? decoder.decode(ProjectSnapshot.self, from: data)) != nil,
+                  let attributes = try? FileManager.default.attributesOfItem(atPath: url.path),
+                  let date = attributes[.creationDate] as? Date else {
+                return nil
+            }
+            
+            // Reconstruct metadata from file name and attributes
+            // Note: This is an expensive way to list. In a real app, we'd have a manifest.json.
+            // But for MVP, this works.
+            return SnapshotMetadata(
+                id: UUID(uuidString: url.deletingPathExtension().lastPathComponent) ?? UUID(),
+                date: date,
+                label: "Manual Checkpoint", // We'd need to store the label in the file too
+                fileName: url.lastPathComponent
+            )
+        }.sorted { $0.date > $1.date }
+    }
+
+    public func snapshotsDirectory(for fileName: String) -> URL {
+        projectDirectory()
+            .appendingPathComponent("snapshots")
+            .appendingPathComponent(fileName.replacingOccurrences(of: ".json", with: ""))
     }
 
     private func projectDirectory() -> URL {

@@ -234,6 +234,9 @@ public final class CoCaptainViewModel {
         }
 
         var item = bundle.items[itemIndex]
+        
+        // Create checkpoint before applying a single item
+        store?.createCheckpoint(label: "Apply Suggestion: \(item.targetLabel)")
 
         switch item.source {
         case .appAction(let actionID):
@@ -292,6 +295,10 @@ public final class CoCaptainViewModel {
 
     public func applyAll(in bundleID: UUID) {
         guard let bundle = reviewBundle(for: bundleID) else { return }
+        
+        // Create one checkpoint for the whole bundle
+        store?.createCheckpoint(label: "Apply All Changes")
+        
         for itemID in bundle.items.filter({ $0.status == .pending }).map(\.id) {
             applyReviewItem(bundleID: bundleID, itemID: itemID)
         }
