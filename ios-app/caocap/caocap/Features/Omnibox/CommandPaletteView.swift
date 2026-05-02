@@ -50,7 +50,30 @@ struct CommandPaletteView: View {
                                     ) {
                                         viewModel.executeAction(action)
                                     }
-                                    .id(action.id)
+                                    .id(action.id.rawValue)
+                                }
+
+                                if !viewModel.nodeResults.isEmpty {
+                                    HStack {
+                                        Text("CANVAS NODES")
+                                            .font(.system(size: 10, weight: .bold))
+                                            .opacity(0.4)
+                                        Spacer()
+                                    }
+                                    .padding(.horizontal, 16)
+                                    .padding(.top, 12)
+                                    .padding(.bottom, 4)
+
+                                    let actionCount = viewModel.filteredActions.count
+                                    ForEach(Array(viewModel.nodeResults.enumerated()), id: \.element.id) { index, nodeResult in
+                                        NodeSearchResultRow(
+                                            result: nodeResult,
+                                            isSelected: (index + actionCount) == viewModel.selectedIndex
+                                        ) {
+                                            viewModel.flyToNode(nodeResult)
+                                        }
+                                        .id(nodeResult.id.uuidString)
+                                    }
                                 }
 
                                 if viewModel.canSubmitPrompt {
@@ -64,9 +87,15 @@ struct CommandPaletteView: View {
                         .frame(maxHeight: 400)
                         .onChange(of: viewModel.selectedIndex) { oldIndex, newIndex in
                             let actions = viewModel.filteredActions
+                            let nodeResults = viewModel.nodeResults
+                            
                             if newIndex >= 0 && newIndex < actions.count {
                                 withAnimation {
-                                    proxy.scrollTo(actions[newIndex].id, anchor: .center)
+                                    proxy.scrollTo(actions[newIndex].id.rawValue, anchor: .center)
+                                }
+                            } else if newIndex >= actions.count && newIndex < (actions.count + nodeResults.count) {
+                                withAnimation {
+                                    proxy.scrollTo(nodeResults[newIndex - actions.count].id.uuidString, anchor: .center)
                                 }
                             }
                         }
@@ -181,4 +210,52 @@ struct CoCaptainPromptRow: View {
         }
         .buttonStyle(.plain)
     }
+}
+struct NodeSearchResultRow: View {
+    let result: NodeSearchResult
+    let isSelected: Bool
+    let onSelect: () -> Void
+    
+    var body: some View {
+        Button {
+            onSelect()
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: result.role.icon)
+                    .font(.system(size: 16))
+                    .frame(width: 24)
+                    .foregroundColor(result.role.themeColor)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(result.title)
+                        .font(.system(size: 16, weight: .medium))
+                    
+                    if !result.snippet.isEmpty {
+                        Text(result.snippet)
+                            .font(.system(size: 12))
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .opacity(0.6)
+                    }
+                }
+                
+                Spacer()
+                
+                if isSelected {
+                    Image(systemName: "location.north.fill")
+                        .font(.system(size: 12))
+                        .opacity(0.5)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(isSelected ? Color.blue.opacity(0.15) : Color.clear)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+#Preview {
+    ContentView()
 }

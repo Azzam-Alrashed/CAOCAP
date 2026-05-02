@@ -76,4 +76,22 @@ public class ViewportState {
         lastScale = scale
         lastOffset = offset
     }
+
+    /// Computes and applies the offset/scale needed to center a canvas-space node
+    /// position in the visible container. Caller should wrap in withAnimation.
+    public func flyTo(nodePosition: CGPoint, containerSize: CGSize, targetScale: CGFloat = 1.0) {
+        let clampedScale = min(max(targetScale, minScale), maxScale)
+        
+        // Target offset = -nodePosition * scale
+        // This centers the node at the origin (center of the screen)
+        let newOffset = CGSize(
+            width: -nodePosition.x * clampedScale,
+            height: -nodePosition.y * clampedScale
+        )
+        
+        self.scale = clampedScale
+        self.lastScale = clampedScale
+        self.offset = newOffset
+        self.lastOffset = newOffset
+    }
 }

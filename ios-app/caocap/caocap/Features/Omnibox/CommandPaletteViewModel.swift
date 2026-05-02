@@ -18,6 +18,7 @@ public class CommandPaletteViewModel {
     public var isPresented: Bool = false
     public var selectedIndex: Int = 0
     public var actions: [AppActionDefinition] = []
+    public var nodes: [SpatialNode] = []
     
     /// Filters against localized and canonical titles so command search works
     /// in the UI language while still matching stable English action names.
@@ -30,9 +31,21 @@ public class CommandPaletteViewModel {
             $0.title.localizedCaseInsensitiveContains(trimmedQuery)
         }
     }
+
+    public var nodeResults: [NodeSearchResult] {
+        searchIndex.search(query: query, in: nodes)
+    }
+
+    private var totalResultCount: Int {
+        filteredActions.count + nodeResults.count
+    }
     
     public var onExecute: ((AppActionID) -> Void)?
+    public var onFlyToNode: ((UUID) -> Void)?
     public var onSubmitPrompt: ((String) -> Void)?
+    
+    @ObservationIgnored
+    private let searchIndex = NodeSearchIndex()
     
     public init() {}
     
@@ -47,7 +60,7 @@ public class CommandPaletteViewModel {
     }
     
     public func moveSelection(direction: Direction) {
-        let count = filteredActions.count
+        let count = totalResultCount
         guard count > 0 else { return }
         
         switch direction {
@@ -59,10 +72,13 @@ public class CommandPaletteViewModel {
     }
     
     public func confirmSelection() {
-        let filtered = filteredActions
-        if selectedIndex >= 0 && selectedIndex < filtered.count {
-            let action = filtered[selectedIndex]
-            executeAction(action)
+        let actions = filteredActions
+        let nodeResults = nodeResults
+        
+        if selectedIndex >= 0 && selectedIndex < actions.count {
+            executeAction(actions[selectedIndex])
+        } else if selectedIndex >= actions.count && selectedIndex < (actions.count + nodeResults.count) {
+            flyToNode(nodeResults[selectedIndex - actions.count])
         } else {
             submitPromptIfNeeded()
         }
@@ -76,15 +92,22 @@ public class CommandPaletteViewModel {
         setPresented(false)
     }
 
+    public func flyToNode(_ result: NodeSearchResult) {
+        logger.info("Flying to node: \(result.title)")
+        onFlyToNode?(result.id)
+        setPresented(false)
+    }
+
     public var canSubmitPrompt: Bool {
-        !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && filteredActions.isEmpty
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !trimmed.isEmpty && filteredActions.isEmpty && nodeResults.isEmpty
     }
 
     /// Emits an unmatched palette query as a CoCaptain prompt. Listed commands
     /// continue through `onExecute`; this path is only for no-result queries.
     public func submitPromptIfNeeded() {
         let prompt = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !prompt.isEmpty, filteredActions.isEmpty else { return }
+        guard !prompt.isEmpty, filteredActions.isEmpty, nodeResults.isEmpty else { return }
 
         logger.info("Submitting unmatched command palette query to CoCaptain")
         onSubmitPrompt?(prompt)
