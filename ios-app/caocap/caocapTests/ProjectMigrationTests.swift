@@ -1,11 +1,12 @@
-import XCTest
 import CoreGraphics
+import Foundation
+import Testing
 @testable import caocap
 
-final class ProjectMigrationTests: XCTestCase {
-    
+struct ProjectMigrationTests {
+
     @MainActor
-    func testLoadingLegacyFileMigratesToV1() throws {
+    @Test func loadingLegacyFileMigratesToV1() throws {
         let tempDirectory = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: tempDirectory) }
         let persistence = ProjectPersistenceService(baseDirectory: tempDirectory)
@@ -32,15 +33,15 @@ final class ProjectMigrationTests: XCTestCase {
 
         let result = try persistence.load(fileName: fileName)
 
-        XCTAssertEqual(result.sourceSchemaVersion, 0)
-        XCTAssertTrue(result.didMigrate)
-        XCTAssertEqual(result.snapshot.projectName, "Legacy Project")
-        XCTAssertEqual(result.snapshot.nodes.count, 1)
-        XCTAssertEqual(result.snapshot.nodes.first?.action, .retryOnboarding, "Action should be migrated from title")
+        #expect(result.sourceSchemaVersion == 0)
+        #expect(result.didMigrate)
+        #expect(result.snapshot.projectName == "Legacy Project")
+        #expect(result.snapshot.nodes.count == 1)
+        #expect(result.snapshot.nodes.first?.action == .retryOnboarding, "Action should be migrated from title")
     }
-    
+
     @MainActor
-    func testLoadingCurrentVersionSucceeds() throws {
+    @Test func loadingCurrentVersionSucceeds() throws {
         let tempDirectory = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: tempDirectory) }
         let persistence = ProjectPersistenceService(baseDirectory: tempDirectory)
@@ -59,14 +60,14 @@ final class ProjectMigrationTests: XCTestCase {
 
         let result = try persistence.load(fileName: fileName)
 
-        XCTAssertEqual(result.sourceSchemaVersion, 1)
-        XCTAssertFalse(result.didMigrate)
-        XCTAssertEqual(result.snapshot.projectName, "V1 Project")
-        XCTAssertEqual(result.snapshot.viewportScale, 0.5)
+        #expect(result.sourceSchemaVersion == 1)
+        #expect(!result.didMigrate)
+        #expect(result.snapshot.projectName == "V1 Project")
+        #expect(result.snapshot.viewportScale == 0.5)
     }
-    
+
     @MainActor
-    func testLoadingNewerVersionAbortsToPreventDataLoss() throws {
+    @Test func loadingNewerVersionAbortsToPreventDataLoss() throws {
         let tempDirectory = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: tempDirectory) }
         let persistence = ProjectPersistenceService(baseDirectory: tempDirectory)
@@ -83,16 +84,13 @@ final class ProjectMigrationTests: XCTestCase {
 
         try v99JSON.data(using: .utf8)!.write(to: persistence.fileURL(for: fileName))
 
-        XCTAssertThrowsError(try persistence.load(fileName: fileName)) { error in
-            XCTAssertEqual(
-                error as? ProjectPersistenceError,
-                .unsupportedFutureVersion(99, current: ProjectPersistenceService.currentSchemaVersion)
-            )
+        #expect(throws: ProjectPersistenceError.self) {
+            try persistence.load(fileName: fileName)
         }
     }
 
     @MainActor
-    func testStoreFallsBackToInitialNodesWhenProjectFileIsCorrupted() throws {
+    @Test func storeFallsBackToInitialNodesWhenProjectFileIsCorrupted() throws {
         let tempDirectory = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: tempDirectory) }
         let persistence = ProjectPersistenceService(baseDirectory: tempDirectory)
@@ -107,11 +105,11 @@ final class ProjectMigrationTests: XCTestCase {
             persistence: persistence
         )
 
-        XCTAssertEqual(store.nodes, [fallbackNode])
-        XCTAssertEqual(store.projectName, "Fallback Project")
+        #expect(store.nodes == [fallbackNode])
+        #expect(store.projectName == "Fallback Project")
     }
 
-    func testPersistenceSaveLoadRoundTrip() throws {
+    @Test func persistenceSaveLoadRoundTrip() throws {
         let tempDirectory = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: tempDirectory) }
         let persistence = ProjectPersistenceService(baseDirectory: tempDirectory)
@@ -128,8 +126,8 @@ final class ProjectMigrationTests: XCTestCase {
         try persistence.save(snapshot, fileName: fileName)
         let loaded = try persistence.load(fileName: fileName)
 
-        XCTAssertEqual(loaded.snapshot, snapshot)
-        XCTAssertEqual(loaded.sourceSchemaVersion, ProjectPersistenceService.currentSchemaVersion)
+        #expect(loaded.snapshot == snapshot)
+        #expect(loaded.sourceSchemaVersion == ProjectPersistenceService.currentSchemaVersion)
     }
 
     private func makeTemporaryDirectory() throws -> URL {

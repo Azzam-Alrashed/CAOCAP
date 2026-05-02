@@ -108,18 +108,14 @@ public class ProjectStore {
         let fileName = self.fileName
         let persistenceWriter = persistenceWriter
         
-        Task(priority: .background) {
+        Task(priority: .background) { [weak self] in
             do {
                 try await persistenceWriter.save(snapshot, fileName: fileName)
                 log.info("Successfully saved project to disk.")
             } catch {
                 log.error("Failed to save project: \(error.localizedDescription)")
             }
-        }
-        
-        // Reset isSaving only if no other task is pending
-        if saveTask == nil {
-            isSaving = false
+            await MainActor.run { self?.isSaving = false }
         }
     }
     

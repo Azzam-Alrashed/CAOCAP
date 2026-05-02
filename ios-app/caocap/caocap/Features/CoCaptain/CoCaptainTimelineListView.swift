@@ -46,7 +46,8 @@ struct CoCaptainTimelineListView: View {
             }
             .onChange(of: isFocused) { _, newValue in
                 if newValue {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(100))
                         scrollToBottom(proxy: proxy)
                     }
                 }
@@ -59,13 +60,15 @@ struct CoCaptainTimelineListView: View {
 
     private func restoreScrollPosition(proxy: ScrollViewProxy) {
         if let lastScrollPosition {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(50))
                 withAnimation {
                     proxy.scrollTo(lastScrollPosition, anchor: .top)
                 }
             }
         } else {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(200))
                 scrollToBottom(proxy: proxy)
             }
         }

@@ -117,7 +117,7 @@ public struct ProjectPersistenceService: Sendable {
         encoder.outputFormatting = .prettyPrinted
         let data = try encoder.encode(snapshot)
 
-        try data.write(to: tempURL, options: .atomic)
+        try data.write(to: tempURL)
 
         if FileManager.default.fileExists(atPath: url.path) {
             _ = try FileManager.default.replaceItemAt(url, withItemAt: tempURL)
