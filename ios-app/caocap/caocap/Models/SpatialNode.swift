@@ -12,11 +12,20 @@ public enum NodeAction: String, Codable, Equatable {
     case summonCoCaptain
 }
 
-public enum NodeType: String, Codable, Equatable {
+public enum NodeType: String, Codable, Equatable, CaseIterable {
     case standard
     case webView
     case srs
     case code
+    
+    public var displayName: String {
+        switch self {
+        case .standard: return "Standard"
+        case .webView: return "Web View"
+        case .srs: return "SRS"
+        case .code: return "Code"
+        }
+    }
 }
 
 public struct SpatialNode: Identifiable, Codable, Equatable {

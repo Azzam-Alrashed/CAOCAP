@@ -177,6 +177,8 @@ public struct CommandIntentResolver {
             return ["move node", "تحريك", "انقل"]
         case .themeNode:
             return ["change theme", "theme", "تغيير المظهر", "تغيير الثيم"]
+        case .transformNode:
+            return ["change type", "transform", "تغيير النوع", "تحويل"]
         }
     }
 

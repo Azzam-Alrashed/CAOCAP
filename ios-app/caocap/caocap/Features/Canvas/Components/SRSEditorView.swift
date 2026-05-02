@@ -51,6 +51,30 @@ struct SRSEditorView: View {
                     Text("SRS")
                         .font(.system(size: 15, weight: .semibold, design: .rounded))
                         .foregroundColor(.primary)
+                        .contextMenu {
+                            Section("Aesthetics") {
+                                ForEach(NodeTheme.allCases, id: \.self) { theme in
+                                    Button {
+                                        store.updateNodeTheme(id: node.id, theme: theme)
+                                    } label: {
+                                        Label(theme.rawValue.capitalized, systemImage: "circle.fill")
+                                            .foregroundColor(theme.color)
+                                    }
+                                }
+                            }
+                            
+                            Section("Transform") {
+                                ForEach(NodeType.allCases, id: \.self) { type in
+                                    if type != node.type {
+                                        Button {
+                                            store.updateNodeType(id: node.id, type: type)
+                                        } label: {
+                                            Label(type.displayName, systemImage: "arrow.triangle.2.circlepath")
+                                        }
+                                    }
+                                }
+                            }
+                        }
 
                     Text(analysis.readinessState.displayTitle)
                         .font(.system(size: 11, weight: .medium))

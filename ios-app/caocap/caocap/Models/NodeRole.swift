@@ -62,4 +62,8 @@ public extension SpatialNode {
             return .custom
         }
     }
+
+    public var isProtected: Bool {
+        action != nil
+    }
 }

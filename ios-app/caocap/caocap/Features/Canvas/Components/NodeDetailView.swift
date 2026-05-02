@@ -46,6 +46,36 @@ struct NodeDetailView: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 24) {
                             // Header Section
+                            Section(header: Text("Aesthetics & Role").font(.caption).foregroundStyle(.secondary)) {
+                                HStack(spacing: 12) {
+                                    Picker("Theme", selection: Binding(
+                                        get: { node.theme },
+                                        set: { store.updateNodeTheme(id: node.id, theme: $0) }
+                                    )) {
+                                        ForEach(NodeTheme.allCases, id: \.self) { theme in
+                                            Circle()
+                                                .fill(theme.color)
+                                                .frame(width: 20, height: 20)
+                                                .tag(theme)
+                                        }
+                                    }
+                                    .pickerStyle(.menu)
+                                    .buttonStyle(.bordered)
+                                    
+                                    if !node.isProtected {
+                                        Picker("Type", selection: Binding(
+                                            get: { node.type },
+                                            set: { store.updateNodeType(id: node.id, type: $0) }
+                                        )) {
+                                            ForEach(NodeType.allCases, id: \.self) { type in
+                                                Text(type.displayName).tag(type)
+                                            }
+                                        }
+                                        .pickerStyle(.menu)
+                                        .buttonStyle(.bordered)
+                                    }
+                                }
+                            }
                             HStack(spacing: 20) {
                                 if let icon = node.icon {
                                     ZStack {
@@ -92,20 +122,22 @@ struct NodeDetailView: View {
                             }
                             .padding(.vertical)
                             
-                            Divider()
-                            
-                            Button(role: .destructive) {
-                                HapticsManager.shared.notification(.warning)
-                                store.deleteNode(id: node.id)
-                                dismiss()
-                            } label: {
-                                Label("Delete Node", systemImage: "trash")
-                                    .frame(maxWidth: .infinity)
-                                    .padding()
-                                    .background(Color.red.opacity(0.1))
-                                    .cornerRadius(12)
+                            if !node.isProtected {
+                                Divider()
+                                
+                                Button(role: .destructive) {
+                                    HapticsManager.shared.notification(.warning)
+                                    store.deleteNode(id: node.id)
+                                    dismiss()
+                                } label: {
+                                    Label("Delete Node", systemImage: "trash")
+                                        .frame(maxWidth: .infinity)
+                                        .padding()
+                                        .background(Color.red.opacity(0.1))
+                                        .cornerRadius(12)
+                                }
+                                .padding(.vertical)
                             }
-                            .padding(.vertical)
                             
                             Spacer()
                         }

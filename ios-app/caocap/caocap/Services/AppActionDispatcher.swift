@@ -22,6 +22,7 @@ public enum AppActionID: String, CaseIterable, Identifiable, Codable, Hashable {
     case openProjectExplorer = "open_project_explorer"
     case moveNode = "move_node"
     case themeNode = "theme_node"
+    case transformNode = "transform_node"
     case help = "help"
 
     public var id: String { rawValue }
@@ -215,6 +216,14 @@ public final class AppActionDispatcher: AppActionPerforming {
             allowsAutonomousExecution: false
         ),
         AppActionDefinition(
+            id: .transformNode,
+            title: "Transform Node Type",
+            icon: "arrow.triangle.2.circlepath",
+            category: .project,
+            isMutating: true,
+            allowsAutonomousExecution: false
+        ),
+        AppActionDefinition(
             id: .help,
             title: "Help & Documentation",
             icon: "questionmark.circle",
@@ -240,6 +249,7 @@ public final class AppActionDispatcher: AppActionPerforming {
     private var helpHandler: (() -> Void)?
     private var moveNodeHandler: (([String: String]) -> Void)?
     private var themeNodeHandler: (([String: String]) -> Void)?
+    private var transformNodeHandler: (([String: String]) -> Void)?
 
     public init() {}
 
@@ -261,7 +271,8 @@ public final class AppActionDispatcher: AppActionPerforming {
         openProjectExplorer: (() -> Void)? = nil,
         help: (() -> Void)? = nil,
         moveNode: (([String: String]) -> Void)? = nil,
-        themeNode: (([String: String]) -> Void)? = nil
+        themeNode: (([String: String]) -> Void)? = nil,
+        transformNode: (([String: String]) -> Void)? = nil
     ) {
         self.goHomeHandler = goHome
         self.goBackHandler = goBack
@@ -279,6 +290,7 @@ public final class AppActionDispatcher: AppActionPerforming {
         self.helpHandler = help
         self.moveNodeHandler = moveNode
         self.themeNodeHandler = themeNode
+        self.transformNodeHandler = transformNode
     }
 
     public func definition(for id: AppActionID) -> AppActionDefinition? {
@@ -348,6 +360,12 @@ public final class AppActionDispatcher: AppActionPerforming {
         case .themeNode:
             if let themeNodeHandler, let arguments {
                 themeNodeHandler(arguments)
+                return AppActionResult(actionID: definition.id, title: definition.localizedTitle, executed: true, message: "")
+            }
+            handler = nil
+        case .transformNode:
+            if let transformNodeHandler, let arguments {
+                transformNodeHandler(arguments)
                 return AppActionResult(actionID: definition.id, title: definition.localizedTitle, executed: true, message: "")
             }
             handler = nil
