@@ -24,10 +24,16 @@ That will make it super E.S.C.F (easy, simple, cheap & fun) to turn any **idea i
 azm is bigger than the current implementation. the current implementation is not the doctrine. It's just an experiment in service of the larger act: challenging the inherited shape of software development and building better ways to ( ideas -> software ).
 
 ```
-func azm(i: Idea) -> Software {
-   var app: Software()
-   // ....?
-   return app
+function azm(idea) {
+  const app = new Software();
+
+  while (!app.ready) {
+    app.build(idea);
+    app.test();
+    app.improve();
+  }
+
+  return app;
 }
 ```
 
