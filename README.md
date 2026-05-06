@@ -1,4 +1,4 @@
-# CAOCAP (💡+🪐+🧠)
+# CAOCAP (💡+🪐+🧠) كوكب
 The Future of Software Development 
 
 > *"The most dangerous thought you can have as a creative person is to think you know what you're doing."*
