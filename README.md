@@ -1,4 +1,9 @@
-# CAOCAP (💡+🪐+🧠) كوكب
+<div style="display: flex; align-items: center; gap: 32px; margin-bottom: 16px;">
+   <img width="200" alt="Azzam-Alrashed" src="https://github.com/user-attachments/assets/5ebe3f09-2bad-4aa3-9b30-2d88159b242d" />
+   <img width="200" alt="CAOCAP-CAOCAP" src="https://github.com/user-attachments/assets/379cf647-5d89-48c5-85c8-5d83e851e298" />
+</div>
+
+# CAOCAP 🪐 كوكب
 The Future of Software Development 
 
 > *"The most dangerous thought you can have as a creative person is to think you know what you're doing."*
@@ -12,8 +17,7 @@ My dev journey started when a freelancer asked for more money to keep developing
 So in 2018, with only 2 years of dev-XP I decided to develop an app for non-technical users.
 That will make it super easy, simple, cheap & fun (E.S.C.F) to turn any **idea into software**.
 
->  How Hard Can It Be?
-
+>  How Hard Can It Be? ....
 >  I fried a my brain trying to figure it out. Eventually, I was diagnosed with bipolar type 1... looking at the bright side of it, you can say it's a superpower. 
 
 
