@@ -237,6 +237,14 @@ public final class CoCaptainAgentCoordinator {
             "style",
             "implement",
             "improve",
+            "document",
+            "write",
+            "rewrite",
+            "draft",
+            "requirements",
+            "srs",
+            "spec",
+            "specification",
             "game",
             "open",
             "go",
@@ -266,6 +274,7 @@ public final class CoCaptainAgentCoordinator {
         5. Put mutating or non-autonomous app actions in `pendingActions` or call `request_app_action` with `executionMode=pending`.
         6. Use `safeActions` or `executionMode=safe` only for available, non-mutating, autonomous app actions.
         7. For full builds or games, use `replace_all` for the code node with a complete single-file HTML document.
+        8. For documentation, requirements, spec, or SRS requests, target the `srs` node unless the user explicitly asks for code.
         
         Original user request:
         \(userMessage)

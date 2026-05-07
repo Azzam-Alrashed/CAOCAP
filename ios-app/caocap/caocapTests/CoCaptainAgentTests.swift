@@ -490,6 +490,46 @@ struct CoCaptainAgentTests {
     }
 
     @MainActor
+    @Test func coordinatorRetriesSRSRequestsWithoutNodeEdits() async throws {
+        let dispatcher = TestActionDispatcher()
+        let llm = TestLLMClient(
+            responses: [
+                "I can help draft the requirements in chat.",
+                """
+                I prepared an SRS update.
+
+                <cocaptain_actions>
+                  <assistant_message>I prepared an SRS update.</assistant_message>
+                  <node_edits>
+                    <node_edit role="srs" summary="Draft the product requirements.">
+                      <operation type="replace_all">
+                        <content><![CDATA[# Software Requirements
+
+## Goal
+Define a focused first version of the app.
+]]></content>
+                      </operation>
+                    </node_edit>
+                  </node_edits>
+                </cocaptain_actions>
+                """
+            ]
+        )
+        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
+
+        let result = try await coordinator.run(
+            userMessage: "draft the SRS",
+            store: makeStore(),
+            dispatcher: dispatcher
+        ) { _ in }
+
+        #expect(llm.receivedMessages.count == 2)
+        #expect(llm.receivedMessages.last?.contains("documentation, requirements, spec, or SRS requests") == true)
+        #expect(result.reviewBundle?.items.first?.targetLabel == "SRS")
+        #expect(result.reviewBundle?.items.first?.status == .pending)
+    }
+
+    @MainActor
     @Test func coordinatorExecutesSafeActionsAndStagesPendingReviews() async throws {
         let dispatcher = TestActionDispatcher()
         let llm = TestLLMClient(
