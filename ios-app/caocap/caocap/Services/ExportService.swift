@@ -7,6 +7,7 @@ public enum ExportFormat {
 }
 
 public struct ExportService {
+    @MainActor
     public static func export(from store: ProjectStore, format: ExportFormat) -> URL? {
         let fileManager = FileManager.default
         let safeName = store.projectName.replacingOccurrences(of: " ", with: "_").lowercased()
@@ -29,7 +30,7 @@ public struct ExportService {
             
         case .caocap:
             let persistence = ProjectPersistenceService()
-            guard let originalURL = persistence.fileURL(for: store.fileName) else { return nil }
+            let originalURL = persistence.fileURL(for: store.fileName)
             
             let exportURL = fileManager.temporaryDirectory.appendingPathComponent("\(safeName).caocap")
             do {
