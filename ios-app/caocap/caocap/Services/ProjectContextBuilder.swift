@@ -59,6 +59,7 @@ public struct ProjectContextBuilder {
             "Project Name: \(store.projectName)",
             "Workspace ID: \(store.fileName)",
             "Node Agent Scope: \(selectedNode.title)",
+            selectedNode.agentProfile.systemPrompt.map { "Agent System Prompt:\n\($0)" },
             "Selected Node ID: \(selectedNode.id.uuidString)",
             "Selected Node Type: \(selectedNode.type.rawValue)",
             "Selected Node Role: \(selectedNode.role.rawValue)",

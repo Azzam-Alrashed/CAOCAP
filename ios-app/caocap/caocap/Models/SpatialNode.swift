@@ -54,6 +54,18 @@ public struct NodeAgentState: Codable, Equatable, Hashable {
     }
 }
 
+public struct AgentProfile: Codable, Equatable, Hashable {
+    public var systemPrompt: String?
+    public var roleName: String
+    public var isAutoTriggerEnabled: Bool
+
+    public init(systemPrompt: String? = nil, roleName: String = "Assistant", isAutoTriggerEnabled: Bool = false) {
+        self.systemPrompt = systemPrompt
+        self.roleName = roleName
+        self.isAutoTriggerEnabled = isAutoTriggerEnabled
+    }
+}
+
 public struct SpatialNode: Identifiable, Codable, Equatable {
     public let id: UUID
     public var type: NodeType
@@ -77,7 +89,10 @@ public struct SpatialNode: Identifiable, Codable, Equatable {
     /// Persisted node-scoped CoCaptain transcript and compact memory.
     public var agentState: NodeAgentState
     
-    public init(id: UUID = UUID(), type: NodeType = .standard, position: CGPoint, title: String, subtitle: String? = nil, icon: String? = nil, theme: NodeTheme = .blue, nextNodeId: UUID? = nil, connectedNodeIds: [UUID]? = nil, action: NodeAction? = nil, htmlContent: String? = nil, textContent: String? = nil, srsReadinessState: SRSReadinessState? = nil, drawingData: Data? = nil, agentState: NodeAgentState = NodeAgentState()) {
+    /// Programmable identity and behavior rules for this node's agent.
+    public var agentProfile: AgentProfile
+    
+    public init(id: UUID = UUID(), type: NodeType = .standard, position: CGPoint, title: String, subtitle: String? = nil, icon: String? = nil, theme: NodeTheme = .blue, nextNodeId: UUID? = nil, connectedNodeIds: [UUID]? = nil, action: NodeAction? = nil, htmlContent: String? = nil, textContent: String? = nil, srsReadinessState: SRSReadinessState? = nil, drawingData: Data? = nil, agentState: NodeAgentState = NodeAgentState(), agentProfile: AgentProfile = AgentProfile()) {
         self.id = id
         self.type = type
         self.position = position
@@ -93,6 +108,7 @@ public struct SpatialNode: Identifiable, Codable, Equatable {
         self.srsReadinessState = srsReadinessState
         self.drawingData = drawingData
         self.agentState = agentState
+        self.agentProfile = agentProfile
     }
 
     public var displayTitle: String {
@@ -119,6 +135,7 @@ public struct SpatialNode: Identifiable, Codable, Equatable {
         case srsReadinessState
         case drawingData
         case agentState
+        case agentProfile
     }
 
     public init(from decoder: Decoder) throws {
@@ -138,5 +155,6 @@ public struct SpatialNode: Identifiable, Codable, Equatable {
         self.srsReadinessState = try container.decodeIfPresent(SRSReadinessState.self, forKey: .srsReadinessState)
         self.drawingData = try container.decodeIfPresent(Data.self, forKey: .drawingData)
         self.agentState = try container.decodeIfPresent(NodeAgentState.self, forKey: .agentState) ?? NodeAgentState()
+        self.agentProfile = try container.decodeIfPresent(AgentProfile.self, forKey: .agentProfile) ?? AgentProfile()
     }
 }
