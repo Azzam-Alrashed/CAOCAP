@@ -12,8 +12,8 @@ This document outlines the strategic milestones for Ficruty (caocap). Our goal i
 - [x] **Omnibox / Command Palette**: `Cmd+K` intent-driven command palette with spatial search.
 - [x] **Node Linking**: Visual Bezier-curve connections between nodes (1-to-N directed graph).
 - [x] **Live Preview WebView**: 9:16 `WKWebView` node with full-screen immersive sheet.
-- [x] **Native Code Editors**: Syntax-highlighted unified `CodeEditorView` for single-file HTML/CSS/JS + SRS Zen Mode editor.
-- [x] **Live Compilation Engine**: Real-time unified Code node rendering into WebView, debounced at 500ms, with legacy HTML+CSS+JS merging support.
+- [x] **Native Code Editors**: Syntax-highlighted unified `CodeEditorView` for the Code node + SRS Zen Mode editor.
+- [x] **Live Compilation Engine**: Real-time `SRS -> Code -> WebView` rendering, debounced at 500ms, with legacy HTML/CSS/JS project support.
 - [x] **Monetization (Pro)**: StoreKit 2 subscription integration.
 - [x] **Firebase Integration**: Authentication (Apple, Google, GitHub) and AI Logic infrastructure.
 - [x] **App Store Compliance**: Privacy Policy, Terms of Service, data usage declarations.
@@ -41,7 +41,7 @@ This document outlines the strategic milestones for Ficruty (caocap). Our goal i
 - [x] **Multi-turn Chat**: Persistent conversation memory with scroll position preservation.
 - [x] **Streaming UI**: Token-aware text view powered by Firebase AI Logic SDK.
 - [x] **Agentic Actions**: Implementation of `AppActionDispatcher` to allow the AI to control app navigation and project state.
-- [x] **Code Generation**: CoCaptain generates HTML/CSS/JS from a natural language SRS node.
+- [x] **Code Generation**: CoCaptain generates single-file app code from a natural language SRS node.
 - [ ] **Intent-to-Node**: Transform a natural language prompt directly into a fully wired node graph.
 
 ---
@@ -53,7 +53,6 @@ This document outlines the strategic milestones for Ficruty (caocap). Our goal i
     - [ ] **Search Index**: Real-time indexing of node titles and text content.
     - [ ] **Flight Engine**: Implementation of smooth viewport interpolation (Ease-In-Out) to "fly" to a node.
     - [ ] **Focus Zoom**: Automatically adjust zoom level to fit the targeted node perfectly.
-- [ ] **Multi-Project Templates**: A library of starter templates (games, landing pages, tools) selectable from the Omnibox.
 - [ ] **Spatial Debugger**: Visualize variable flow, console output, and execution state as canvas overlays.
 - [ ] **Console Node**: A dedicated node type that captures `console.log` output from the WebView in real-time.
 - [ ] **Project Templates**: A library of starter templates (games, landing pages, tools) selectable from the Omnibox.
