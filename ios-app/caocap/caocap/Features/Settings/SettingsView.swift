@@ -104,6 +104,13 @@ struct SettingsView: View {
                             Text("Real-time synchronization active.")
                                 .font(.system(size: 10))
                                 .foregroundStyle(.tertiary)
+                            
+                            if let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String,
+                               let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String {
+                                Text("Version \(version) (\(build))")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(.tertiary)
+                            }
                         }
                         .padding(.vertical, 40)
                     }

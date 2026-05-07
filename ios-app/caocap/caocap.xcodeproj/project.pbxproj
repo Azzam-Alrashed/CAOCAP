@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		ECA100012FA0000000000001 /* FirebaseRemoteConfig in Frameworks */ = {isa = PBXBuildFile; productRef = ECA100022FA0000000000001 /* FirebaseRemoteConfig */; };
 		ECD77F7D2F99BCBA00C96BF7 /* FirebaseAI in Frameworks */ = {isa = PBXBuildFile; productRef = ECD77F7C2F99BCBA00C96BF7 /* FirebaseAI */; };
 		ECD77F7F2F99BCBA00C96BF7 /* FirebaseAILogic in Frameworks */ = {isa = PBXBuildFile; productRef = ECD77F7E2F99BCBA00C96BF7 /* FirebaseAILogic */; };
 		ECD77F812F99BCBA00C96BF7 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = ECD77F802F99BCBA00C96BF7 /* FirebaseAnalytics */; };
@@ -18,7 +19,6 @@
 		ECD77F8D2F99BCBA00C96BF7 /* FirebaseFunctions in Frameworks */ = {isa = PBXBuildFile; productRef = ECD77F8C2F99BCBA00C96BF7 /* FirebaseFunctions */; };
 		ECD77F8F2F99BCBA00C96BF7 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = ECD77F8E2F99BCBA00C96BF7 /* FirebaseMessaging */; };
 		ECD77F912F99BCBA00C96BF7 /* FirebasePerformance in Frameworks */ = {isa = PBXBuildFile; productRef = ECD77F902F99BCBA00C96BF7 /* FirebasePerformance */; };
-		ECA100012FA0000000000001 /* FirebaseRemoteConfig in Frameworks */ = {isa = PBXBuildFile; productRef = ECA100022FA0000000000001 /* FirebaseRemoteConfig */; };
 		ECD77F932F99BCBA00C96BF7 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = ECD77F922F99BCBA00C96BF7 /* FirebaseStorage */; };
 		ECD77FA32F99C9C900C96BF7 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = ECD77FA22F99C9C900C96BF7 /* GoogleSignIn */; };
 		ECD77FA52F99C9C900C96BF7 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = ECD77FA42F99C9C900C96BF7 /* GoogleSignInSwift */; };
@@ -374,7 +374,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 7.2.0;
+				MARKETING_VERSION = 7.2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.Ficruty.caocap;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -405,7 +405,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 7.2.0;
+				MARKETING_VERSION = 7.2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.Ficruty.caocap;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -692,6 +692,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		ECA100022FA0000000000001 /* FirebaseRemoteConfig */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ECD77F7B2F99BCBA00C96BF7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseRemoteConfig;
+		};
 		ECD77F7C2F99BCBA00C96BF7 /* FirebaseAI */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = ECD77F7B2F99BCBA00C96BF7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
@@ -746,11 +751,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = ECD77F7B2F99BCBA00C96BF7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebasePerformance;
-		};
-		ECA100022FA0000000000001 /* FirebaseRemoteConfig */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = ECD77F7B2F99BCBA00C96BF7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseRemoteConfig;
 		};
 		ECD77F922F99BCBA00C96BF7 /* FirebaseStorage */ = {
 			isa = XCSwiftPackageProductDependency;
