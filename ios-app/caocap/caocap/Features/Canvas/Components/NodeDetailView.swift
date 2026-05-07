@@ -7,19 +7,34 @@ struct NodeDetailView: View {
     let node: SpatialNode
     let store: ProjectStore
     @Environment(\.dismiss) var dismiss
+    @Environment(\.horizontalSizeClass) var horizontalSizeClass
     
     var body: some View {
-        TabView {
-            editorContent
-                .tabItem {
-                    Label(node.type == .webView ? "Preview" : "Editor", systemImage: node.type == .webView ? "play.rectangle" : "square.and.pencil")
-                }
+        if horizontalSizeClass == .compact {
+            TabView {
+                editorContent
+                    .tabItem {
+                        Label(node.type == .webView ? "Preview" : "Artifact", systemImage: node.type == .webView ? "play.rectangle" : "square.and.pencil")
+                    }
 
-            NavigationStack {
-                NodeAgentChatView(nodeID: node.id, store: store)
+                NavigationStack {
+                    NodeAgentChatView(nodeID: node.id, store: store)
+                }
+                .tabItem {
+                    Label("Agent", systemImage: "sparkles")
+                }
             }
-            .tabItem {
-                Label("Chat", systemImage: "sparkles")
+        } else {
+            HStack(spacing: 0) {
+                editorContent
+                    .frame(maxWidth: .infinity)
+                
+                Divider()
+                
+                NavigationStack {
+                    NodeAgentChatView(nodeID: node.id, store: store)
+                }
+                .frame(width: 400)
             }
         }
     }
@@ -95,6 +110,32 @@ struct NodeDetailView: View {
                                     }
                                 }
                             }
+                            
+                            Section(header: Text("Agent Profile").font(.caption).foregroundStyle(.secondary)) {
+                                VStack(alignment: .leading, spacing: 12) {
+                                    TextField("Role Name (e.g. QA Agent)", text: Binding(
+                                        get: { node.agentProfile.roleName },
+                                        set: { store.updateNodeAgentProfile(id: node.id, profile: AgentProfile(systemPrompt: node.agentProfile.systemPrompt, roleName: $0, isAutoTriggerEnabled: node.agentProfile.isAutoTriggerEnabled)) }
+                                    ))
+                                    .textFieldStyle(.roundedBorder)
+
+                                    Text("System Prompt")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                    TextEditor(text: Binding(
+                                        get: { node.agentProfile.systemPrompt ?? "" },
+                                        set: { store.updateNodeAgentProfile(id: node.id, profile: AgentProfile(systemPrompt: $0.isEmpty ? nil : $0, roleName: node.agentProfile.roleName, isAutoTriggerEnabled: node.agentProfile.isAutoTriggerEnabled)) }
+                                    ))
+                                    .frame(minHeight: 100)
+                                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.secondary.opacity(0.2)))
+                                    
+                                    Toggle("Auto-Trigger Downstream", isOn: Binding(
+                                        get: { node.agentProfile.isAutoTriggerEnabled },
+                                        set: { store.updateNodeAgentProfile(id: node.id, profile: AgentProfile(systemPrompt: node.agentProfile.systemPrompt, roleName: node.agentProfile.roleName, isAutoTriggerEnabled: $0)) }
+                                    ))
+                                }
+                            }
+                            
                             HStack(spacing: 20) {
                                 if let icon = node.icon {
                                     ZStack {

@@ -515,6 +515,8 @@ FR-NODE-012: CAOCAP shall support Event Pipes that allow nodes to emit signals (
 
 FR-NODE-013: Node agents shall support auto-trigger behaviors based on signals from upstream nodes to enable automated workflows.
 
+FR-NODE-014: CAOCAP shall support an art-oriented node type for freehand drawing, sketching, and visual annotation.
+
 ### 4.5 Code Editing
 
 FR-CODE-001: CAOCAP shall allow users to edit source code inside code artifacts.
@@ -643,6 +645,8 @@ FR-PROJECT-012: CAOCAP shall preserve project schema version information when pr
 
 FR-PROJECT-013: CAOCAP shall provide a recovery path when persisted project data cannot be decoded.
 
+FR-PROJECT-014: CAOCAP shall provide a project snapshot history (Time Travel) allowing users to safely checkpoint and revert the canvas to previous states.
+
 ### 4.9 Onboarding And Learning
 
 FR-ONBOARD-001: CAOCAP shall provide onboarding that teaches the current workflow.
@@ -676,6 +680,8 @@ FR-COMMAND-004: Commands triggered by a user may perform configured actions imme
 FR-COMMAND-005: Commands triggered by an agent shall respect mutability and autonomous execution rules.
 
 FR-COMMAND-006: CAOCAP should support natural language command aliases in supported languages when the alias is unlikely to conflict with ordinary chat.
+
+FR-COMMAND-007: CAOCAP shall maintain a searchable index of project nodes to enable rapid navigation and command routing.
 
 ### 4.11 Authentication And Account Management
 
@@ -861,6 +867,10 @@ NFR-RELIABILITY-008B: Project load shall complete and render the workspace withi
 
 NFR-RELIABILITY-008C: CAOCAP shall attempt project recovery and present a user-visible result within 5 seconds of detecting a decode failure.
 
+NFR-RELIABILITY-009: CAOCAP shall create automatic checkpoints before significant node mutations or AI modifications to ensure user work is always recoverable.
+
+NFR-RELIABILITY-010: CAOCAP shall support structured project schema migrations and app updates via a dedicated update service to prevent data loss across app versions.
+
 ### 5.5 Privacy
 
 NFR-PRIVACY-001: CAOCAP shall minimize collection of user project data.
@@ -1014,6 +1024,8 @@ HW-001: CAOCAP shall support touch input on iPhone and iPad.
 HW-002: CAOCAP should support keyboard and pointer workflows on iPadOS.
 
 HW-003: CAOCAP may support Apple Pencil interactions when they improve organization, annotation, or direct manipulation.
+
+HW-004: CAOCAP should use haptic feedback to reinforce spatial interactions, warnings, and state changes on supported devices.
 
 ### 6.3 Software Interfaces
 

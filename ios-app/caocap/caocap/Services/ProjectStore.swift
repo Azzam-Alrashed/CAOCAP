@@ -246,6 +246,30 @@ public class ProjectStore {
         }
     }
 
+    /// Updates a specific node's agent profile.
+    /// - Parameters:
+    ///   - id: The UUID of the node to update.
+    ///   - profile: The new agent profile.
+    ///   - persist: If true, triggers a debounced save to disk.
+    public func updateNodeAgentProfile(id: UUID, profile: AgentProfile, persist: Bool = true) {
+        if let index = nodes.firstIndex(where: { $0.id == id }) {
+            let oldProfile = nodes[index].agentProfile
+            
+            // Register Undo
+            undoManager?.registerUndo(withTarget: self) { target in
+                MainActor.assumeIsolated {
+                    target.updateNodeAgentProfile(id: id, profile: oldProfile, persist: persist)
+                }
+            }
+            undoStackChanged += 1
+            
+            nodes[index].agentProfile = profile
+            if persist {
+                save()
+            }
+        }
+    }
+
     /// Updates a specific node's theme.
     /// - Parameters:
     ///   - id: The UUID of the node to update.

@@ -52,7 +52,8 @@ struct NodeAgentChatView: View {
     }
 
     private var nodeTitle: String {
-        store.nodes.first(where: { $0.id == nodeID })?.displayTitle ?? "Node Co-Captain"
+        guard let node = store.nodes.first(where: { $0.id == nodeID }) else { return "Agent" }
+        return node.agentProfile.roleName
     }
 
     private func sendCurrentMessage() {
