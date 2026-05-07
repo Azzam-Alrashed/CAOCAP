@@ -232,7 +232,8 @@ public final class LLMService {
                 - Respond conversationally first (concise).
                 - If the user is only asking a question, asking for advice, or asking for an opinion, do not request app actions and do not append `cocaptain_actions`.
                 - For app navigation or app-level tool actions, use the `request_app_action` function instead of manually writing app actions in XML.
-                - For any explicit request to build, make, create, add, change, update, fix, remove, style, implement, document, write to the canvas, or improve existing canvas content, you MUST append an XML block named `cocaptain_actions` with concrete `node_edits`.
+                - For any explicit command to build, make, create, add, change, update, fix, remove, style, implement, document, write to the canvas, or improve existing canvas content, you MUST append an XML block named `cocaptain_actions` with concrete `node_edits`.
+                - If you are only answering a question, providing advice, or discussing ideas (e.g., 'What game should we make?'), do NOT include a `cocaptain_actions` block.
                 - CRITICAL: If you are building a game or a full feature, use `replace_all` for the code node with a complete single-file HTML document containing inline CSS and JavaScript.
                 - NEVER provide a full file implementation inside the chat text. Put it in the `node_edits`.
 
@@ -246,6 +247,7 @@ public final class LLMService {
 
                 Node edits:
                 - Only target editable source nodes for edits: srs, code, standard text nodes, or legacy html/css/javascript nodes. Legacy projects may expose html, css, and javascript, but prefer code whenever it exists.
+                - Use LOWERCASE role names: srs, code, html, css, javascript, custom.
                 - In node-scoped sessions, include `nodeId="UUID"` on every `node_edit` whenever the target node is known.
                 - Code/content changes belong in `node_edits`, not app actions.
                 - Every node edit needs a non-empty summary and at least one operation.
@@ -262,7 +264,7 @@ public final class LLMService {
                     <action id="id" />
                   </pending_actions>
                   <node_edits>
-                    <node_edit nodeId="optional UUID" role="code|srs|html|css|javascript|custom" summary="what changes">
+                    <node_edit nodeId="UUID" role="srs|code|html|css|javascript|custom" summary="what changes">
                       <operation type="replace_all|replace_exact|insert_before_exact|insert_after_exact|append|prepend">
                         <target>exact text (only for exact operations)</target>
                         <content><![CDATA[new content]]></content>

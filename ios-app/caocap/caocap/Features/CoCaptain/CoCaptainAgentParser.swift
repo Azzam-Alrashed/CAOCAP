@@ -48,9 +48,9 @@ public struct CoCaptainAgentParser {
         let nodeEdits = extractTagMatches(name: "node_edit", from: xml).compactMap { item -> CoCaptainNodeEditProposal? in
             let content = item.content
             let attrs = item.attributes
-            guard let roleStr = attrs["role"], 
+            guard let roleStr = attrs["role"]?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(), 
                   let role = NodeRole(rawValue: roleStr) else { return nil }
-            let nodeID = (attrs["nodeId"] ?? attrs["node_id"]).flatMap(UUID.init(uuidString:))
+            let nodeID = (attrs["nodeId"] ?? attrs["node_id"] ?? attrs["nodeID"]).flatMap(UUID.init(uuidString:))
             
             let summary = attrs["summary"] ?? ""
             let operations = extractTagMatches(name: "operation", from: content).compactMap { opItem -> NodePatchOperation? in
@@ -150,14 +150,20 @@ public struct CoCaptainAgentParser {
 
     private func parseAttributes(_ attrString: String) -> [String: String] {
         var attributes: [String: String] = [:]
-        let pattern = "(\\w+)=[\"'](.*?)[\"']"
+        // Robust attribute parsing: handles key="val", key='val', or key=val (unquoted)
+        // and allows optional whitespace around the equals sign.
+        let pattern = "(\\w+)\\s*=\\s*(?:[\"']([^\"']*)[\"']|([^\\s>]+))"
         let regex = try? NSRegularExpression(pattern: pattern, options: [])
         let nsRange = NSRange(attrString.startIndex..<attrString.endIndex, in: attrString)
         let matches = regex?.matches(in: attrString, options: [], range: nsRange) ?? []
         for match in matches {
-            if let keyRange = Range(match.range(at: 1), in: attrString),
-               let valRange = Range(match.range(at: 2), in: attrString) {
-                attributes[String(attrString[keyRange])] = String(attrString[valRange])
+            if let keyRange = Range(match.range(at: 1), in: attrString) {
+                let key = String(attrString[keyRange])
+                if let valRange = Range(match.range(at: 2), in: attrString) {
+                    attributes[key] = String(attrString[valRange])
+                } else if let valRange = Range(match.range(at: 3), in: attrString) {
+                    attributes[key] = String(attrString[valRange])
+                }
             }
         }
         return attributes

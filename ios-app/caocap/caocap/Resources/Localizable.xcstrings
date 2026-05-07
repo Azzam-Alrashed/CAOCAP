@@ -1457,6 +1457,9 @@
         }
       }
     },
+    "Preparing Export..." : {
+
+    },
     "Press the Floating Action Button to summon tools, create nodes, or talk to the AI." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2353,6 +2356,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "باستخدام اللوحة الحالية"
+          }
+        }
+      }
+    },
+    "Version %@ (%@)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Version %1$@ (%2$@)"
           }
         }
       }
