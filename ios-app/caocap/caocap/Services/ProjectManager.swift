@@ -9,7 +9,7 @@ public struct ProjectMetadata: Identifiable {
 
 public class ProjectManager {
     public static let shared = ProjectManager()
-    private let logger = Logger(subsystem: "com.ficruty.caocap", category: "ProjectManager")
+    private let logger = Logger(subsystem: "com.caocap.app", category: "ProjectManager")
     
     private var baseDir: URL {
         let paths = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)

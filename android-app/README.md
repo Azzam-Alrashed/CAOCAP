@@ -1,4 +1,4 @@
-# Ficruty Android App
+# CAOCAP Android App
 
 This directory is reserved for the future Android app.
 

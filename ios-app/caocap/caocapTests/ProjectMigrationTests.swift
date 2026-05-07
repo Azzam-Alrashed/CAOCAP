@@ -166,7 +166,7 @@ struct ProjectMigrationTests {
 
     private func makeTemporaryDirectory() throws -> URL {
         let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("ficruty-tests-\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("caocap-tests-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         return url
     }

@@ -13,7 +13,7 @@ public final class LLMService {
 
     public static let shared = LLMService()
 
-    private let logger = Logger(subsystem: "com.ficruty.caocap", category: "LLMService")
+    private let logger = Logger(subsystem: "com.caocap.app", category: "LLMService")
 
     // MARK: - Model & Session
 
@@ -146,7 +146,7 @@ public final class LLMService {
             systemInstruction: ModelContent(
                 role: "system",
                 parts: """
-                You are Co-Captain, a spatial programming assistant for the Ficruty platform.
+                You are Co-Captain, a spatial programming assistant for the CAOCAP platform.
                 You can request app actions with the `request_app_action` function and request node edits with a `cocaptain_actions` XML block. The app validates every requested action before execution.
                 
                 Personality:
@@ -170,7 +170,7 @@ public final class LLMService {
 
     private static let requestAppActionDeclaration = FunctionDeclaration(
         name: CoCaptainFunctionCallAgentAdapter.requestAppActionName,
-        description: "Requests a Ficruty app action. The app validates and either executes or stages the action for user review.",
+        description: "Requests a CAOCAP app action. The app validates and either executes or stages the action for user review.",
         parameters: [
             "actionId": .string(description: "The exact app action id to request."),
             "executionMode": .enumeration(

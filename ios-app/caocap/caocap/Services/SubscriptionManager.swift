@@ -9,7 +9,7 @@ import OSLog
 @Observable
 public class SubscriptionManager {
     public static let shared = SubscriptionManager()
-    private let logger = Logger(subsystem: "Ficruty", category: "SubscriptionManager")
+    private let logger = Logger(subsystem: "CAOCAP", category: "SubscriptionManager")
     
     public private(set) var products: [Product] = []
     public private(set) var purchasedProductIDs = Set<String>()

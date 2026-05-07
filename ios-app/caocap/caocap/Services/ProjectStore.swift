@@ -26,7 +26,7 @@ public class ProjectStore {
     /// Historical checkpoints for this project.
     public var history: [SnapshotMetadata] = []
     
-    private let logger = Logger(subsystem: "com.ficruty.caocap", category: "Persistence")
+    private let logger = Logger(subsystem: "com.caocap.app", category: "Persistence")
     private let persistence: ProjectPersistenceService
     private let persistenceWriter: ProjectPersistenceWriter
     private let livePreviewCompiler = LivePreviewCompiler()

@@ -1,6 +1,6 @@
 # CoCaptain Feature
 
-CoCaptain is the agentic assistant for Ficruty. It reads the current spatial project, streams model responses, executes safe app actions, and stages code changes for human review.
+CoCaptain is the agentic assistant for CAOCAP. It reads the current spatial project, streams model responses, executes safe app actions, and stages code changes for human review.
 
 ## Ownership
 

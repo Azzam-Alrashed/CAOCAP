@@ -4,7 +4,7 @@ Guidance for AI coding agents working in this repository.
 
 ## Project Snapshot
 
-Ficruty, also called CAOCAP in the iOS target, is a spatial, agentic code editor for iOS and iPadOS. The main product is the native SwiftUI app in `ios-app/caocap`. The website in `website` supports the public product, support, privacy, and terms pages. `android-app` is reserved for future work.
+CAOCAP is a spatial, agentic code editor for iOS and iPadOS. The main product is the native SwiftUI app in `ios-app/caocap`. The website in `website` supports the public product, support, privacy, and terms pages. `android-app` is reserved for future work.
 
 The current product priority is launch readiness: onboarding polish, App Store compliance, TestFlight readiness, and careful improvements to the CoCaptain agent flow.
 
@@ -99,7 +99,7 @@ Prefer running the narrowest useful verification for the change. If verification
 
 ## Product Guardrails
 
-- Ficruty is a spatial IDE, not a conventional file-tree editor. Preserve the canvas-first mental model.
+- CAOCAP is a spatial IDE, not a conventional file-tree editor. Preserve the canvas-first mental model.
 - The product philosophy prioritizes developer experience, direct manipulation, and agentic assistance.
 - The app should remain polished enough for App Store/TestFlight work. Compliance, privacy links, account deletion, and subscription wording matter.
 - New features should improve the spatial workflow or launch readiness, not just add surface area.

@@ -67,7 +67,7 @@ final class AuthenticationManager {
 
     // MARK: - Private
 
-    private let logger = Logger(subsystem: "com.ficruty.caocap", category: "Auth")
+    private let logger = Logger(subsystem: "com.caocap.app", category: "Auth")
 
     /// Wraps the Firebase listener handle so it can be safely cancelled
     /// from `deinit`, which is always nonisolated in Swift 6.

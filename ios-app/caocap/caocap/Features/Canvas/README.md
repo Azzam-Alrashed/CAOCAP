@@ -1,6 +1,6 @@
 # Canvas Feature
 
-The Canvas feature is Ficruty's spatial runtime. It renders the infinite workspace, nodes, links, embedded previews, and editor sheets.
+The Canvas feature is CAOCAP's spatial runtime. It renders the infinite workspace, nodes, links, embedded previews, and editor sheets.
 
 ## Ownership
 

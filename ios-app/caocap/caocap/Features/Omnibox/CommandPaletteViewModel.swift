@@ -6,7 +6,7 @@ import OSLog
 /// values so action execution remains centralized in `AppActionDispatcher`.
 @Observable
 public class CommandPaletteViewModel {
-    private let logger = Logger(subsystem: "Ficruty", category: "CommandPalette")
+    private let logger = Logger(subsystem: "CAOCAP", category: "CommandPalette")
     
     public var query: String = "" {
         didSet {
