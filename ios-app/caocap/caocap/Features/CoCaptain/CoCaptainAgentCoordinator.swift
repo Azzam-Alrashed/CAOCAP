@@ -265,7 +265,7 @@ public final class CoCaptainAgentCoordinator {
         4. Put code/content implementation in `nodeEdits`.
         5. Put mutating or non-autonomous app actions in `pendingActions` or call `request_app_action` with `executionMode=pending`.
         6. Use `safeActions` or `executionMode=safe` only for available, non-mutating, autonomous app actions.
-        7. For full builds or games, use `replace_all` for html, css, and javascript nodes.
+        7. For full builds or games, use `replace_all` for the code node with a complete single-file HTML document.
         
         Original user request:
         \(userMessage)

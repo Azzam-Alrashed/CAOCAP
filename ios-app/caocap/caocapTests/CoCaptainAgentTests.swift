@@ -21,9 +21,7 @@ struct CoCaptainAgentTests {
 
         #expect(context.contains("Project Name: Test Project"))
         #expect(context.contains("SRS:"))
-        #expect(context.contains("HTML:"))
-        #expect(context.contains("CSS:"))
-        #expect(context.contains("JavaScript:"))
+        #expect(context.contains("Code:"))
         #expect(context.contains("Build a landing page"))
         #expect(!context.contains("compiled"))
     }
@@ -67,6 +65,7 @@ struct CoCaptainAgentTests {
 
     @Test func nodeRoleInferenceRecognizesCanonicalTemplateNodes() {
         #expect(SpatialNode(type: .srs, position: .zero, title: "Software Requirements (SRS)").role == .srs)
+        #expect(SpatialNode(type: .code, position: .zero, title: "Code").role == .code)
         #expect(SpatialNode(type: .code, position: .zero, title: "HTML").role == .html)
         #expect(SpatialNode(type: .code, position: .zero, title: "CSS").role == .css)
         #expect(SpatialNode(type: .code, position: .zero, title: "JavaScript").role == .javascript)
@@ -89,6 +88,19 @@ struct CoCaptainAgentTests {
         #expect(compilation.html.range(of: "<script>")!.lowerBound < compilation.html.range(of: "</body>")!.lowerBound)
     }
 
+    @Test func livePreviewCompilerUsesCombinedCodeNodeWhenPresent() throws {
+        let nodes = [
+            SpatialNode(type: .webView, position: .zero, title: "Live Preview"),
+            SpatialNode(type: .code, position: .zero, title: "Code", textContent: "<html><body><h1>Combined</h1></body></html>"),
+            SpatialNode(type: .code, position: .zero, title: "HTML", textContent: "<h1>Legacy</h1>")
+        ]
+
+        let compilation = try #require(LivePreviewCompiler().compile(nodes: nodes))
+
+        #expect(compilation.html.contains("Combined"))
+        #expect(!compilation.html.contains("Legacy"))
+    }
+
     @Test func livePreviewCompilerHandlesMissingHeadAndBodyTags() throws {
         let nodes = makePreviewNodes(
             html: "<main>Hello</main>",
@@ -102,12 +114,12 @@ struct CoCaptainAgentTests {
         #expect(compilation.html.hasSuffix("\n<script>\nwindow.ready = true;\n</script>\n"))
     }
 
-    @Test func livePreviewCompilerRequiresPreviewAndHTMLNodes() {
+    @Test func livePreviewCompilerRequiresPreviewAndCodeOrHTMLNodes() {
         let compiler = LivePreviewCompiler()
-        let htmlOnly = [SpatialNode(type: .code, position: .zero, title: "HTML", textContent: "<h1>Hello</h1>")]
+        let codeOnly = [SpatialNode(type: .code, position: .zero, title: "Code", textContent: "<h1>Hello</h1>")]
         let previewOnly = [SpatialNode(type: .webView, position: .zero, title: "Live Preview")]
 
-        #expect(compiler.compile(nodes: htmlOnly) == nil)
+        #expect(compiler.compile(nodes: codeOnly) == nil)
         #expect(compiler.compile(nodes: previewOnly) == nil)
     }
 
@@ -413,7 +425,7 @@ struct CoCaptainAgentTests {
             <cocaptain_actions>
               <assistant_message>I updated the project.</assistant_message>
               <node_edits>
-                <node_edit role="html" summary="Update HTML.">
+                <node_edit role="code" summary="Update Code.">
                   <operation type="replace_all">
                     <content><![CDATA[<h1>Fixed</h1>]]></content>
                   </operation>
@@ -433,7 +445,7 @@ struct CoCaptainAgentTests {
         )
 
         #expect(directive.payload?.safeActions.first?.actionID == "go_home")
-        #expect(directive.payload?.nodeEdits.first?.role == .html)
+        #expect(directive.payload?.nodeEdits.first?.role == .code)
         #expect(directive.source == .combined)
     }
 
@@ -449,12 +461,12 @@ struct CoCaptainAgentTests {
                   <assistant_message>Incomplete
                 """,
                 """
-                I prepared a valid HTML edit.
+                I prepared a valid code edit.
 
                 <cocaptain_actions>
-                  <assistant_message>I prepared a valid HTML edit.</assistant_message>
+                  <assistant_message>I prepared a valid code edit.</assistant_message>
                   <node_edits>
-                    <node_edit role="html" summary="Update HTML.">
+                    <node_edit role="code" summary="Update Code.">
                       <operation type="replace_all">
                         <content><![CDATA[<h1>Fixed</h1>]]></content>
                       </operation>
@@ -467,7 +479,7 @@ struct CoCaptainAgentTests {
         let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
 
         let result = try await coordinator.run(
-            userMessage: "update the HTML",
+            userMessage: "update the code",
             store: makeStore(),
             dispatcher: dispatcher
         ) { _ in }
@@ -483,14 +495,14 @@ struct CoCaptainAgentTests {
         let llm = TestLLMClient(
             response:
                 """
-                I moved us home and prepared an HTML update.
+                I moved us home and prepared a code update.
 
                 <cocaptain_actions>
-                  <assistant_message>I moved us home and prepared an HTML update.</assistant_message>
+                  <assistant_message>I moved us home and prepared a code update.</assistant_message>
                   <safe_actions><action id="go_home"/></safe_actions>
                   <pending_actions><action id="create_node"/></pending_actions>
                   <node_edits>
-                    <node_edit role="html" summary="Update the headline.">
+                    <node_edit role="code" summary="Update the headline.">
                       <operation type="replace_exact">
                         <target>Hello World!</target>
                         <content><![CDATA[Agentic Hello!]]></content>
@@ -715,18 +727,18 @@ struct CoCaptainAgentTests {
                 <cocaptain_actions>
                   <assistant_message>I prepared an edit.</assistant_message>
                   <node_edits>
-                    <node_edit role="html" summary="Update HTML.">
+                    <node_edit role="code" summary="Update Code.">
                     </node_edit>
                   </node_edits>
                 </cocaptain_actions>
                 """,
                 """
-                I prepared a valid HTML edit.
+                I prepared a valid code edit.
 
                 <cocaptain_actions>
-                  <assistant_message>I prepared a valid HTML edit.</assistant_message>
+                  <assistant_message>I prepared a valid code edit.</assistant_message>
                   <node_edits>
-                    <node_edit role="html" summary="Update HTML.">
+                    <node_edit role="code" summary="Update Code.">
                       <operation type="replace_all">
                         <content><![CDATA[<h1>Fixed</h1>]]></content>
                       </operation>
@@ -739,7 +751,7 @@ struct CoCaptainAgentTests {
         let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
 
         let result = try await coordinator.run(
-            userMessage: "update the HTML",
+            userMessage: "update the code",
             store: makeStore(),
             dispatcher: dispatcher
         ) { _ in }
@@ -755,8 +767,8 @@ struct CoCaptainAgentTests {
         let vm = CoCaptainViewModel()
         vm.store = store
 
-        let htmlNode = store.nodes.first(where: { $0.title == "HTML" })!
-        let baseText = htmlNode.textContent ?? ""
+        let codeNode = store.nodes.first(where: { $0.title == "Code" })!
+        let baseText = codeNode.textContent ?? ""
         let bundleID = UUID()
         let itemID = UUID()
 
@@ -766,11 +778,11 @@ struct CoCaptainAgentTests {
                 id: bundleID,
                 items: [PendingReviewItem(
                     id: itemID,
-                    targetLabel: "HTML",
+                    targetLabel: "Code",
                     summary: "Update headline",
                     preview: "<h1>Agentic Hello!</h1>",
                     source: .nodeEdit(
-                        role: .html,
+                        role: .code,
                         operations: [NodePatchOperation(type: .replaceAll, content: "<h1>Agentic Hello!</h1>")],
                         baseText: baseText
                     )
@@ -778,8 +790,8 @@ struct CoCaptainAgentTests {
             ))
         ))
 
-        // User edits the HTML node before clicking Apply — stale scenario.
-        store.updateNodeTextContent(id: htmlNode.id, text: "<h1>User wrote this instead</h1>", persist: false)
+        // User edits the Code node before clicking Apply — stale scenario.
+        store.updateNodeTextContent(id: codeNode.id, text: "<h1>User wrote this instead</h1>", persist: false)
         vm.applyReviewItem(bundleID: bundleID, itemID: itemID)
 
         guard case .reviewBundle(let bundle) = vm.items.first(where: { $0.id == bundleID })?.content,
@@ -798,8 +810,8 @@ struct CoCaptainAgentTests {
         let vm = CoCaptainViewModel()
         vm.store = store
 
-        let htmlNode = store.nodes.first(where: { $0.title == "HTML" })!
-        let baseText = htmlNode.textContent ?? ""
+        let codeNode = store.nodes.first(where: { $0.title == "Code" })!
+        let baseText = codeNode.textContent ?? ""
         let bundleID = UUID()
         let itemID = UUID()
 
@@ -809,11 +821,11 @@ struct CoCaptainAgentTests {
                 id: bundleID,
                 items: [PendingReviewItem(
                     id: itemID,
-                    targetLabel: "HTML",
+                    targetLabel: "Code",
                     summary: "Update headline",
                     preview: "<h1>Agentic Hello!</h1>",
                     source: .nodeEdit(
-                        role: .html,
+                        role: .code,
                         operations: [NodePatchOperation(type: .replaceAll, content: "<h1>Agentic Hello!</h1>")],
                         baseText: baseText
                     )
@@ -850,23 +862,9 @@ struct CoCaptainAgentTests {
                 SpatialNode(
                     type: .code,
                     position: CGPoint(x: 10, y: 0),
-                    title: "HTML",
+                    title: "Code",
                     theme: .orange,
-                    textContent: "<h1>Hello World!</h1>"
-                ),
-                SpatialNode(
-                    type: .code,
-                    position: CGPoint(x: 20, y: 0),
-                    title: "CSS",
-                    theme: .blue,
-                    textContent: "body { color: white; }"
-                ),
-                SpatialNode(
-                    type: .code,
-                    position: CGPoint(x: 30, y: 0),
-                    title: "JavaScript",
-                    theme: .green,
-                    textContent: "console.log('hi');"
+                    textContent: "<html><body><h1>Hello World!</h1></body></html>"
                 )
             ]
         )

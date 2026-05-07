@@ -17,7 +17,7 @@ The Canvas feature is Ficruty's spatial runtime. It renders the infinite workspa
 2. `InfiniteCanvasView` renders `store.nodes`.
 3. Tapping a normal node opens `NodeDetailView`; tapping an action node calls `onNodeAction`.
 4. Editors call `ProjectStore` mutation methods such as `updateNodeTextContent`.
-5. `ProjectStore` debounces saves and recompiles the WebView payload from HTML, CSS, and JavaScript nodes.
+5. `ProjectStore` debounces saves and recompiles the WebView payload from the unified Code node. Older projects with separate HTML, CSS, and JavaScript nodes still compile through the legacy path.
 6. `ConnectionLayer` draws arrows from `nextNodeId` and `connectedNodeIds`.
 
 Views should call store methods rather than mutating `store.nodes` directly.
@@ -53,7 +53,7 @@ When changing gestures or connection rendering, test pan, zoom, drag, and arrow 
 
 - Create/open a project and confirm nodes render at the expected zoom.
 - Drag a node, pan the canvas, pinch zoom, then reopen the project and verify persisted state.
-- Edit HTML, CSS, and JavaScript nodes and confirm the Live Preview updates.
+- Edit the Code node and confirm the Live Preview updates.
 - Open the WebView node full-screen and confirm the same compiled payload renders.
 - Check connection arrows while dragging nodes and at multiple zoom levels.
 - Run onboarding and confirm action nodes navigate without persisting onboarding canvas edits.

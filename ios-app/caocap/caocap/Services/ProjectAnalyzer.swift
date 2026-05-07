@@ -3,7 +3,7 @@ import Foundation
 /// Represents a potential improvement or action identified by analyzing the project nodes.
 public struct ProjectSuggestion: Identifiable, Equatable {
     public let id: UUID
-    /// Short title for the suggestion (e.g., "HTML node is empty").
+    /// Short title for the suggestion (e.g., "Code node is empty").
     public let title: String
     /// More detailed explanation for the user.
     public let detail: String
@@ -33,6 +33,7 @@ public struct ProjectAnalyzer {
     public func analyze(nodes: [SpatialNode]) -> [ProjectSuggestion] {
         var suggestions: [ProjectSuggestion] = []
 
+        let code = nodes.first(where: { $0.role == .code })
         let html = nodes.first(where: { $0.role == .html })
         let css = nodes.first(where: { $0.role == .css })
         let js = nodes.first(where: { $0.role == .javascript })
@@ -49,8 +50,21 @@ public struct ProjectAnalyzer {
             ))
         }
 
-        // Rule: HTML exists but is empty
-        if let html, html.textContent?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true {
+        // Rule: canonical Code exists but is empty
+        if let code {
+            let isCodeEmpty = code.textContent?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true
+            if isCodeEmpty {
+                let detail = srs != nil ? "CoCaptain can generate a starter app from your SRS." : "Start by adding a small HTML/CSS/JS app."
+                let prompt = srs != nil ? "Can you generate a starter single-file web app based on my SRS requirements?" : "Generate a basic single-file HTML/CSS/JS app for me."
+
+                suggestions.append(ProjectSuggestion(
+                    title: "Code is empty",
+                    detail: detail,
+                    suggestedPrompt: prompt,
+                    severity: .warning
+                ))
+            }
+        } else if let html, html.textContent?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true {
             let detail = srs != nil ? "CoCaptain can generate starter HTML from your SRS." : "Start by adding some HTML structure."
             let prompt = srs != nil ? "Can you generate a starter HTML structure based on my SRS requirements?" : "Generate a basic HTML boilerplate for me."
             
@@ -62,8 +76,9 @@ public struct ProjectAnalyzer {
             ))
         }
 
-        // Rule: HTML has content but CSS is empty
-        if let html, !(html.textContent?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true),
+        // Legacy rule: HTML has content but CSS is empty
+        if code == nil,
+           let html, !(html.textContent?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true),
            let css, css.textContent?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true {
             suggestions.append(ProjectSuggestion(
                 title: "No styles added",
@@ -73,8 +88,9 @@ public struct ProjectAnalyzer {
             ))
         }
         
-        // Rule: HTML and CSS exist but JS is empty
-        if let html, !(html.textContent?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true),
+        // Legacy rule: HTML and CSS exist but JS is empty
+        if code == nil,
+           let html, !(html.textContent?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true),
            let css, !(css.textContent?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true),
            let js, js.textContent?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true {
             suggestions.append(ProjectSuggestion(

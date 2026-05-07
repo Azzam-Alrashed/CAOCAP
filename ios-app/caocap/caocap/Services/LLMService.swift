@@ -213,7 +213,7 @@ public final class LLMService {
                 - If the user is only asking a question, asking for advice, or asking for an opinion, do not request app actions and do not append `cocaptain_actions`.
                 - For app navigation or app-level tool actions, use the `request_app_action` function instead of manually writing app actions in XML.
                 - For any explicit request to build, make, create, add, change, update, fix, remove, style, implement, document, write to the canvas, or improve existing canvas content, you MUST append an XML block named `cocaptain_actions` with concrete `node_edits`.
-                - CRITICAL: If you are building a game or a full feature, use `replace_all` for the html, css, and javascript nodes. 
+                - CRITICAL: If you are building a game or a full feature, use `replace_all` for the code node with a complete single-file HTML document containing inline CSS and JavaScript.
                 - NEVER provide a full file implementation inside the chat text. Put it in the `node_edits`.
 
                 App actions:
@@ -225,7 +225,7 @@ public final class LLMService {
                 - Never request a mutating or non-autonomous action with executionMode `safe`.
 
                 Node edits:
-                - Only target these node roles for edits: srs, html, css, javascript.
+                - Only target these node roles for edits: srs, code. Legacy projects may expose html, css, and javascript, but prefer code whenever it exists.
                 - Code/content changes belong in `node_edits`, not app actions.
                 - Every node edit needs a non-empty summary and at least one operation.
                 - Exact operations require a non-empty `target`; append/prepend/replace_all do not.
@@ -241,7 +241,7 @@ public final class LLMService {
                     <action id="id" />
                   </pending_actions>
                   <node_edits>
-                    <node_edit role="html|css|javascript|srs" summary="what changes">
+                    <node_edit role="code|srs" summary="what changes">
                       <operation type="replace_all|replace_exact|insert_before_exact|insert_after_exact|append|prepend">
                         <target>exact text (only for exact operations)</target>
                         <content><![CDATA[new content]]></content>

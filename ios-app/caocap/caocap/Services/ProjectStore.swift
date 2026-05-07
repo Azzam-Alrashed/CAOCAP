@@ -431,7 +431,7 @@ public class ProjectStore {
     public func deleteNode(id: UUID, persist: Bool = true) {
         guard let index = self.nodes.firstIndex(where: { $0.id == id }) else { return }
         
-        // Prevent deletion of protected main nodes (e.g. SRS, HTML, CSS, JS)
+        // Prevent deletion of protected action nodes.
         if self.nodes[index].isProtected {
             self.logger.warning("Attempted to delete protected node: \(self.nodes[index].title)")
             return

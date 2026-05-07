@@ -2,6 +2,7 @@ import Foundation
 
 public enum NodeRole: String, CaseIterable, Codable, Hashable {
     case srs
+    case code
     case html
     case css
     case javascript
@@ -10,6 +11,7 @@ public enum NodeRole: String, CaseIterable, Codable, Hashable {
 
     public static let editableCanonicalRoles: [NodeRole] = [
         .srs,
+        .code,
         .html,
         .css,
         .javascript
@@ -18,6 +20,7 @@ public enum NodeRole: String, CaseIterable, Codable, Hashable {
     public var displayName: String {
         switch self {
         case .srs: return "SRS"
+        case .code: return "Code"
         case .html: return "HTML"
         case .css: return "CSS"
         case .javascript: return "JavaScript"
@@ -50,6 +53,8 @@ public extension SpatialNode {
         }
 
         switch title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "code":
+            return .code
         case "html":
             return .html
         case "css":

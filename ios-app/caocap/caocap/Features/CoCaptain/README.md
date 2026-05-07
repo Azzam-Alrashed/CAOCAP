@@ -47,7 +47,7 @@ The model may include one trailing XML block:
     <action id="id" />
   </pending_actions>
   <node_edits>
-    <node_edit role="html" summary="Update headline">
+      <node_edit role="code" summary="Update headline">
       <operation type="replace_all">
         <content><![CDATA[<h1>New text</h1>]]></content>
       </operation>
@@ -62,7 +62,7 @@ Rules:
 - Malformed XML falls back to visible text with no payload.
 - `safeActions` may only contain available, non-mutating, autonomous actions.
 - `pendingActions` are shown for review before execution and are required for mutating or non-autonomous app actions.
-- `nodeEdits` target `NodeRole` values and `NodePatchOperation` arrays.
+- `nodeEdits` target `NodeRole` values and `NodePatchOperation` arrays. New projects should target the unified `code` role; legacy `html`, `css`, and `javascript` roles remain supported for older saved projects.
 - Node edits require a non-empty summary and at least one operation.
 - Exact operations require a non-empty target.
 
@@ -90,7 +90,7 @@ Preserve this conflict guard when refactoring review state.
 - Be careful with cancellation: closing the sheet cancels streaming and removes empty assistant messages.
 - Keep validation near the coordinator boundary. SwiftUI views should render review state, not decide whether model output is safe.
 - Keep raw model wire formats behind output adapters. The coordinator should consume directives, not Firebase/Gemini-specific response parts.
-- Keep app actions in `request_app_action`; keep code/content changes in `nodeEdits`.
+- Keep app actions in `request_app_action`; keep code/content changes in `nodeEdits`, preferring the unified Code node for new projects.
 
 ## Verification Checklist
 

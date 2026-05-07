@@ -20,7 +20,7 @@ struct CodeEditorView: View {
                     Image(systemName: "curlybraces")
                         .foregroundColor(.blue)
                         .font(.system(size: 14, weight: .semibold))
-                    Text("\(node.title.lowercased()).\(fileExtension(for: node.title))")
+                    Text(fileName(for: node.title))
                         .font(.system(size: 13, weight: .medium, design: .monospaced))
                         .foregroundColor(.white)
                         .contextMenu {
@@ -79,10 +79,15 @@ struct CodeEditorView: View {
     
     private func fileExtension(for title: String) -> String {
         switch title.lowercased() {
+        case "code": return "html"
         case "html": return "html"
         case "css": return "css"
         case "javascript": return "js"
         default: return "txt"
         }
+    }
+
+    private func fileName(for title: String) -> String {
+        "\(title.lowercased()).\(fileExtension(for: title))"
     }
 }

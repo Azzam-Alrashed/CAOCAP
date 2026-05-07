@@ -5,14 +5,21 @@ public struct LivePreviewCompilation: Hashable {
     public let html: String
 }
 
-/// Produces the WebView payload from the canonical HTML, CSS, and JavaScript
-/// nodes without mutating project state.
+/// Produces the WebView payload from the canonical Code node, with legacy
+/// support for older projects that still have separate HTML, CSS, and JS nodes.
 public struct LivePreviewCompiler {
     public init() {}
 
     public func compile(nodes: [SpatialNode]) -> LivePreviewCompilation? {
-        guard let webViewNode = nodes.first(where: { $0.role == .livePreview }),
-              let htmlNode = nodes.first(where: { $0.role == .html }) else {
+        guard let webViewNode = nodes.first(where: { $0.role == .livePreview }) else {
+            return nil
+        }
+
+        if let codeNode = nodes.first(where: { $0.role == .code }) {
+            return LivePreviewCompilation(webViewNodeID: webViewNode.id, html: codeNode.textContent ?? "")
+        }
+
+        guard let htmlNode = nodes.first(where: { $0.role == .html }) else {
             return nil
         }
 

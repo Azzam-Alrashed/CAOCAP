@@ -81,7 +81,7 @@ Pure domain data. No UI, no persistence, no side effects. These structs define t
 |---|---|
 | `SpatialNode.swift` | The core canvas primitive. Holds `id`, `type` (`.standard`, `.webView`, `.srs`, `.code`), `position`, `textContent`, `htmlContent`, `connectedNodeIds`, and `theme`. |
 | `NodeTheme.swift` | Color tokens for the six node themes (blue, purple, green, orange, red, gray). |
-| `NodeRole.swift` | Canonical role inference for SRS, HTML, CSS, JavaScript, Live Preview, and custom nodes. |
+| `NodeRole.swift` | Canonical role inference for SRS, unified Code, legacy HTML/CSS/JavaScript, Live Preview, and custom nodes. |
 | `SRSReadinessState.swift` | Domain state for whether an SRS node is empty, structured, drafted, or ready. |
 
 ---
@@ -93,7 +93,7 @@ Infrastructure and heavy-lifting. These are long-lived objects that outlive indi
 |---|---|
 | `ProjectStore.swift` | Observable project state owner. Manages `[SpatialNode]`, viewport state, undo wiring, debounced save requests, and Live Preview refresh. |
 | `ProjectPersistenceService.swift` | Project file URLs, JSON schema decoding/encoding, migrations, and atomic writes. |
-| `LivePreviewCompiler.swift` | Pure compiler that combines canonical HTML, CSS, and JavaScript nodes into a WebView payload. |
+| `LivePreviewCompiler.swift` | Pure compiler that renders the unified Code node into a WebView payload, with legacy HTML/CSS/JavaScript merging support for older projects. |
 | `ProjectManager.swift` | Lists and deletes saved local project files for the project explorer. |
 | `AuthenticationManager.swift` | Wraps Firebase Auth. Handles anonymous login, account linking, and social provider flows. |
 | `LLMService.swift` | Interface for the Firebase AI Logic SDK. Manages streaming sessions with the Gemini backend. |
@@ -102,7 +102,7 @@ Infrastructure and heavy-lifting. These are long-lived objects that outlive indi
 | `HapticsManager.swift` | Central haptic feedback helper that honors app haptics settings. |
 | `LocalizationManager.swift` | Runtime language selection, localized strings, localized project/node labels, and date formatting. |
 | `ProjectContextBuilder.swift` | Logic to "harvest" the spatial graph and serialize it into a grounded prompt context for the LLM. |
-| `NodePatchEngine.swift` | A precision editing engine that applies partial patches (replace/insert/append) to HTML, CSS, and JS nodes. |
+| `NodePatchEngine.swift` | A precision editing engine that applies partial patches (replace/insert/append) to canonical SRS and Code nodes, while still supporting legacy HTML/CSS/JS roles. |
 | `SRSReadinessEvaluator.swift` | Evaluates SRS text completeness and acceptance-check readiness. |
 | `SubscriptionManager.swift` | StoreKit 2 integration. Manages Pro subscription state, purchase flow, and transaction verification. |
 

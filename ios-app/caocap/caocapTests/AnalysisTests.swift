@@ -4,17 +4,17 @@ import Testing
 
 struct AnalysisTests {
 
-    @Test func analyzerIdentifiesEmptyHTML() throws {
+    @Test func analyzerIdentifiesEmptyCode() throws {
         let nodes = [
-            SpatialNode(position: .zero, title: "HTML", textContent: "")
+            SpatialNode(type: .code, position: .zero, title: "Code", textContent: "")
         ]
         let analyzer = ProjectAnalyzer()
         let suggestions = analyzer.analyze(nodes: nodes)
         
-        #expect(suggestions.contains { $0.title == "HTML is empty" })
+        #expect(suggestions.contains { $0.title == "Code is empty" })
     }
 
-    @Test func analyzerIdentifiesNoStylesWhenHTMLHasContent() throws {
+    @Test func analyzerStillSupportsLegacyHTMLCSSProjects() throws {
         let nodes = [
             SpatialNode(position: .zero, title: "HTML", textContent: "<h1>Hello</h1>"),
             SpatialNode(position: .zero, title: "CSS", textContent: "")
