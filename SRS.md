@@ -107,6 +107,9 @@ This SRS does not prescribe every internal implementation detail. Architecture b
 | Human-in-the-loop | A safety model where the user remains responsible for approving meaningful AI-generated changes. |
 | Local-first | A product principle where user work remains usable and durable on-device, with network services used only where they add clear value. |
 | Product expression | A concrete implementation of CAOCAP's larger mission, such as the current iOS app or a future platform/version. |
+| Agent Node | A node acting as an autonomous AI Agent with its own identity, system prompt, and artifact context. |
+| Event Pipe | A data connection between nodes where an upstream node's update triggers a downstream node's agent. |
+| Agentic Execution Environment | The paradigm where nodes are programmable agents and CoCaptain orchestrates them, rather than CoCaptain doing all work itself. |
 
 ### 1.7 References
 
@@ -318,6 +321,16 @@ The following journeys define the product behaviors this SRS must support.
 3. CAOCAP shows a recovery path or non-destructive fallback.
 4. User can continue editing where possible.
 
+#### 2.8.6 Orchestrating Agent Nodes
+
+1. User instructs CoCaptain to build a complex feature (e.g., a login screen).
+2. CoCaptain spawns an SRS Node (Product Manager Agent) and a Code Node (Engineer Agent).
+3. CoCaptain connects the nodes to form an Event Pipe.
+4. User chats with the Product Manager Agent to refine the specs in the SRS Node.
+5. When the SRS Node updates, it pulses and triggers the downstream Engineer Agent.
+6. The Engineer Agent automatically writes or updates the code based on the new requirements.
+7. User reviews the Artifacts and the Agent Chat within the split-screen Node Workspace.
+
 ### 2.9 Product Decision Rubric
 
 CAOCAP should prioritize work that satisfies at least one of these criteria:
@@ -496,6 +509,12 @@ FR-NODE-009: Users shall be able to create new nodes through direct interaction,
 
 FR-NODE-010: CAOCAP shall use stable typed identifiers for node behavior where practical instead of fragile user-visible strings.
 
+FR-NODE-011: CAOCAP shall support an Agentic Execution Environment where each node can act as an autonomous AI Agent with its own identity, role, and system prompt.
+
+FR-NODE-012: CAOCAP shall support Event Pipes that allow nodes to emit signals (e.g., content updated) to trigger downstream connected agents.
+
+FR-NODE-013: Node agents shall support auto-trigger behaviors based on signals from upstream nodes to enable automated workflows.
+
 ### 4.5 Code Editing
 
 FR-CODE-001: CAOCAP shall allow users to edit source code inside code artifacts.
@@ -591,6 +610,10 @@ FR-AGENT-025: P1 CoCaptain behavior should include project analysis, clarifying 
 FR-AGENT-026: CoCaptain shall make it clear when it is explaining, proposing, executing a safe action, or waiting for user approval.
 
 FR-AGENT-027: CoCaptain shall not present an unavailable or failed AI action as completed.
+
+FR-AGENT-028: CoCaptain shall act as a global orchestrator capable of spawning, wiring, and managing specialized agent nodes within the Agentic Execution Environment.
+
+FR-AGENT-029: Users shall be able to delegate complex tasks to CoCaptain, allowing it to construct the appropriate Event Pipes and agent graph instead of executing all code changes directly.
 
 ### 4.8 Project Creation And Templates
 
