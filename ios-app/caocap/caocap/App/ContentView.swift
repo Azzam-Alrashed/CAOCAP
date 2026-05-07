@@ -284,6 +284,17 @@ struct ContentView: View {
                 coCaptain.configureProjectSession(store: router.activeStore, dispatcher: actionDispatcher)
                 coCaptain.setPresented(true)
             },
+            shareProject: {
+                // First try exporting as HTML bundle
+                if let url = ExportService.export(from: router.activeStore, format: .html) {
+                    exportURL = url
+                    showExportSheet = true
+                } else if let url = ExportService.export(from: router.activeStore, format: .caocap) {
+                    // Fallback to raw CAOCAP bundle
+                    exportURL = url
+                    showExportSheet = true
+                }
+            },
             proSubscription: {
                 showingPurchaseSheet = true
             },
@@ -298,17 +309,6 @@ struct ContentView: View {
             },
             openProjectExplorer: {
                 showingProjectExplorer = true
-            },
-            shareProject: {
-                // First try exporting as HTML bundle
-                if let url = ExportService.export(from: router.activeStore, format: .html) {
-                    exportURL = url
-                    showExportSheet = true
-                } else if let url = ExportService.export(from: router.activeStore, format: .caocap) {
-                    // Fallback to raw CAOCAP bundle
-                    exportURL = url
-                    showExportSheet = true
-                }
             },
             moveNode: { args in
                 guard let idString = args["nodeId"], let uuid = UUID(uuidString: idString),
