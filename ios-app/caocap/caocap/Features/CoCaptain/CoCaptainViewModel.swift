@@ -6,6 +6,8 @@ import SwiftUI
 public final class CoCaptainViewModel {
     public var isPresented: Bool = false
     public var items: [CoCaptainTimelineItem]
+    public private(set) var scope: CoCaptainAgentScope = .project
+    public private(set) var focusedNodeID: UUID?
     public var store: ProjectStore? {
         didSet {
             handleStoreChange()
@@ -48,8 +50,36 @@ public final class CoCaptainViewModel {
 
     public func clearHistory() {
         items = [CoCaptainViewModel.greetingItem()]
-        agentCoordinator.resetChat()
+        agentCoordinator.resetChat(scope: scope)
+        if case .node(let nodeID) = scope {
+            store?.clearNodeAgentMessages(id: nodeID)
+            loadPersistedNodeMessages(nodeID: nodeID)
+        }
         lastScrollPosition = nil
+    }
+
+    public func configureProjectSession(store: ProjectStore?, dispatcher: (any AppActionPerforming)?) {
+        self.scope = .project
+        self.focusedNodeID = nil
+        self.store = store
+        self.actionDispatcher = dispatcher
+    }
+
+    public func configureNodeSession(store: ProjectStore, nodeID: UUID, dispatcher: (any AppActionPerforming)? = nil) {
+        let newScope: CoCaptainAgentScope = .node(nodeID)
+        if scope != newScope {
+            streamingTask?.cancel()
+            streamingTask = nil
+            isThinking = false
+            lastScrollPosition = nil
+        }
+
+        self.scope = newScope
+        self.focusedNodeID = nodeID
+        self.store = store
+        self.actionDispatcher = dispatcher
+        loadPersistedNodeMessages(nodeID: nodeID)
+        runAnalysis()
     }
 
     public func setPresented(_ presented: Bool) {
@@ -96,6 +126,7 @@ public final class CoCaptainViewModel {
 
         let userItem = ChatBubbleItem(text: text, isUser: true)
         items.append(CoCaptainTimelineItem(content: .message(userItem)))
+        persistNodeMessageIfNeeded(userItem)
 
         if handleDirectCommand(text) {
             return
@@ -115,7 +146,8 @@ public final class CoCaptainViewModel {
                 let result = try await agentCoordinator.run(
                     userMessage: text,
                     store: store,
-                    dispatcher: actionDispatcher
+                    dispatcher: actionDispatcher,
+                    scope: scope
                 ) { _ in
                     // Stop streaming characters to the UI for a cleaner 'split message' feel.
                 }
@@ -125,12 +157,12 @@ public final class CoCaptainViewModel {
 
                 // 1. Add Preamble bubble (the conversational part).
                 if !result.preamble.isEmpty {
-                    items.append(CoCaptainTimelineItem(content: .message(ChatBubbleItem(text: result.preamble, isUser: false))))
+                    appendAssistantMessage(result.preamble)
                 }
 
                 // 2. Add Payload Message bubble (the intent summary).
                 if let payloadMsg = result.payloadMessage, !payloadMsg.isEmpty, payloadMsg != result.preamble {
-                    items.append(CoCaptainTimelineItem(content: .message(ChatBubbleItem(text: payloadMsg, isUser: false))))
+                    appendAssistantMessage(payloadMsg)
                 }
 
                 if let executionSummary = result.executionSummary {
@@ -173,6 +205,7 @@ public final class CoCaptainViewModel {
     /// Handles simple app commands locally so navigation does not need a model
     /// round trip. Mutating commands still become review items.
     private func handleDirectCommand(_ text: String) -> Bool {
+        guard scope == .project else { return false }
         guard let actionDispatcher,
               let actionID = commandIntentResolver.resolve(text, availableActions: actionDispatcher.availableActions),
               let definition = actionDispatcher.definition(for: actionID) else {
@@ -251,7 +284,7 @@ public final class CoCaptainViewModel {
             }
         case .nodeEdit(let role, let operations, let baseText):
             guard let store,
-                  let node = patchEngine.resolveNode(for: role, in: store) else {
+                  let node = patchEngine.resolveNode(nodeID: item.targetNodeID, for: role, in: store) else {
                 item.status = .conflicted
                 item.conflictDescription = LocalizationManager.shared.localizedString("The node could not be found in the current project.")
                 break
@@ -264,7 +297,7 @@ public final class CoCaptainViewModel {
             }
 
             do {
-                let preview = try patchEngine.preview(role: role, operations: operations, in: store)
+                let preview = try patchEngine.preview(nodeID: item.targetNodeID, role: role, operations: operations, in: store)
                 store.updateNodeTextContent(id: node.id, text: preview.resultText, persist: true)
                 item.status = .applied
                 items.append(
@@ -318,7 +351,7 @@ public final class CoCaptainViewModel {
         guard currentFileName != lastStoreFileName else { return }
         defer { lastStoreFileName = currentFileName }
 
-        if lastStoreFileName != nil {
+        if scope == .project, lastStoreFileName != nil {
             streamingTask?.cancel()
             streamingTask = nil
             isThinking = false
@@ -376,6 +409,50 @@ public final class CoCaptainViewModel {
             content: .message(
                 ChatBubbleItem(
                     text: LocalizationManager.shared.localizedString("Hello! I'm your Co-Captain. How can I help you build today?"),
+                    isUser: false
+                )
+            )
+        )
+    }
+
+    private func appendAssistantMessage(_ text: String) {
+        let bubble = ChatBubbleItem(text: text, isUser: false)
+        items.append(CoCaptainTimelineItem(content: .message(bubble)))
+        persistNodeMessageIfNeeded(bubble)
+    }
+
+    private func persistNodeMessageIfNeeded(_ bubble: ChatBubbleItem) {
+        guard case .node(let nodeID) = scope else { return }
+        store?.appendNodeAgentMessage(
+            id: nodeID,
+            message: NodeAgentMessage(id: bubble.id, text: bubble.text, isUser: bubble.isUser)
+        )
+    }
+
+    private func loadPersistedNodeMessages(nodeID: UUID) {
+        guard let node = store?.nodes.first(where: { $0.id == nodeID }) else {
+            items = [CoCaptainViewModel.nodeGreetingItem(title: LocalizationManager.shared.localizedString("this node"))]
+            return
+        }
+
+        let messages = node.agentState.messages.sorted { $0.createdAt < $1.createdAt }
+        if messages.isEmpty {
+            items = [CoCaptainViewModel.nodeGreetingItem(title: node.displayTitle)]
+        } else {
+            items = messages.map { message in
+                CoCaptainTimelineItem(
+                    id: message.id,
+                    content: .message(ChatBubbleItem(id: message.id, text: message.text, isUser: message.isUser))
+                )
+            }
+        }
+    }
+
+    private static func nodeGreetingItem(title: String) -> CoCaptainTimelineItem {
+        CoCaptainTimelineItem(
+            content: .message(
+                ChatBubbleItem(
+                    text: LocalizationManager.shared.localizedString("This node has its own Co-Captain context. Ask for focused changes to %@.", arguments: [title]),
                     isUser: false
                 )
             )

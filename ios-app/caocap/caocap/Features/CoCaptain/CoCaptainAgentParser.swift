@@ -13,6 +13,12 @@ public struct CoCaptainAgentParser {
         guard let startRange = response.range(of: Self.startTag, options: .backwards),
               let endRange = response.range(of: Self.endTag, options: .backwards),
               startRange.lowerBound < endRange.lowerBound else {
+            if let startRange = response.range(of: Self.startTag) {
+                return CoCaptainParsedResponse(
+                    preamble: String(response[..<startRange.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines),
+                    payload: nil
+                )
+            }
             return CoCaptainParsedResponse(
                 preamble: response.trimmingCharacters(in: .whitespacesAndNewlines),
                 payload: nil
@@ -44,6 +50,7 @@ public struct CoCaptainAgentParser {
             let attrs = item.attributes
             guard let roleStr = attrs["role"], 
                   let role = NodeRole(rawValue: roleStr) else { return nil }
+            let nodeID = (attrs["nodeId"] ?? attrs["node_id"]).flatMap(UUID.init(uuidString:))
             
             let summary = attrs["summary"] ?? ""
             let operations = extractTagMatches(name: "operation", from: content).compactMap { opItem -> NodePatchOperation? in
@@ -58,7 +65,7 @@ public struct CoCaptainAgentParser {
                 return NodePatchOperation(type: type, target: target, content: body)
             }
             
-            return CoCaptainNodeEditProposal(role: role, summary: summary, operations: operations)
+            return CoCaptainNodeEditProposal(nodeID: nodeID, role: role, summary: summary, operations: operations)
         }
 
         let payload = CoCaptainAgentPayload(

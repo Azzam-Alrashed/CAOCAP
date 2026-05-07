@@ -374,6 +374,32 @@ public class ProjectStore {
             }
         }
     }
+
+    /// Replaces the persisted node-agent transcript for a single node.
+    public func updateNodeAgentState(id: UUID, agentState: NodeAgentState, persist: Bool = true) {
+        guard let index = nodes.firstIndex(where: { $0.id == id }) else { return }
+        nodes[index].agentState = agentState
+        if persist {
+            requestSave()
+        }
+    }
+
+    /// Appends one persisted chat message to a node-scoped agent transcript.
+    public func appendNodeAgentMessage(id: UUID, message: NodeAgentMessage, persist: Bool = true) {
+        guard let index = nodes.firstIndex(where: { $0.id == id }) else { return }
+        nodes[index].agentState.messages.append(message)
+        if persist {
+            requestSave()
+        }
+    }
+
+    public func clearNodeAgentMessages(id: UUID, persist: Bool = true) {
+        guard let index = nodes.firstIndex(where: { $0.id == id }) else { return }
+        nodes[index].agentState.messages = []
+        if persist {
+            requestSave()
+        }
+    }
     
     /// Updates the viewport state.
     /// - Parameters:

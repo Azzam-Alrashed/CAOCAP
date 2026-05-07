@@ -59,7 +59,7 @@ public enum ProjectPersistenceError: LocalizedError, Equatable {
 /// Encapsulates project file layout, schema decoding, migrations, and atomic
 /// JSON writes so ProjectStore can stay focused on observable project state.
 public struct ProjectPersistenceService: Sendable {
-    public static let currentSchemaVersion = 1
+    public static let currentSchemaVersion = 2
 
     private struct VersionCheck: Codable {
         let schemaVersion: Int?
@@ -116,7 +116,7 @@ public struct ProjectPersistenceService: Sendable {
         let migrated = ProjectSnapshot(
             schemaVersion: Self.currentSchemaVersion,
             projectName: decoded.projectName,
-            nodes: sourceVersion < 1 ? migrateV0ToV1(nodes: decoded.nodes) : decoded.nodes,
+            nodes: migrate(nodes: decoded.nodes, from: sourceVersion),
             viewportOffset: decoded.viewportOffset,
             viewportScale: decoded.viewportScale
         )
@@ -214,6 +214,17 @@ public struct ProjectPersistenceService: Sendable {
         return appSupport
     }
 
+    private func migrate(nodes: [SpatialNode], from sourceVersion: Int) -> [SpatialNode] {
+        var migrated = nodes
+        if sourceVersion < 1 {
+            migrated = migrateV0ToV1(nodes: migrated)
+        }
+        if sourceVersion < 2 {
+            migrated = migrateV1ToV2(nodes: migrated)
+        }
+        return migrated
+    }
+
     private func migrateV0ToV1(nodes: [SpatialNode]) -> [SpatialNode] {
         var migrated = nodes
         for i in 0..<migrated.count {
@@ -229,6 +240,14 @@ public struct ProjectPersistenceService: Sendable {
                 default: break
                 }
             }
+        }
+        return migrated
+    }
+
+    private func migrateV1ToV2(nodes: [SpatialNode]) -> [SpatialNode] {
+        var migrated = nodes
+        for i in 0..<migrated.count where migrated[i].agentState.messages.isEmpty {
+            migrated[i].agentState = NodeAgentState()
         }
         return migrated
     }

@@ -2,12 +2,13 @@ import Foundation
 
 @MainActor
 public protocol CoCaptainLLMClient: AnyObject {
-    func resetChat()
+    func resetChat(scope: CoCaptainAgentScope)
     func streamAgentEvents(
         for userMessage: String,
         context: String?,
         expectsStructuredResponse: Bool,
-        availableActions: [AppActionDefinition]
+        availableActions: [AppActionDefinition],
+        scope: CoCaptainAgentScope
     ) -> AsyncThrowingStream<CoCaptainLLMStreamEvent, Error>
 }
 
@@ -52,8 +53,8 @@ public final class CoCaptainAgentCoordinator {
         self.validator = validator
     }
 
-    public func resetChat() {
-        llmClient.resetChat()
+    public func resetChat(scope: CoCaptainAgentScope = .project) {
+        llmClient.resetChat(scope: scope)
     }
 
     /// Runs one assistant turn against the active project context. Structured
@@ -63,9 +64,17 @@ public final class CoCaptainAgentCoordinator {
         userMessage: String,
         store: ProjectStore?,
         dispatcher: (any AppActionPerforming)?,
+        scope: CoCaptainAgentScope = .project,
         onVisibleText: @escaping (String) -> Void
     ) async throws -> CoCaptainAgentRunResult {
-        let context = store.map { contextBuilder.buildPromptContext(from: $0) }
+        let context = store.map { store in
+            switch scope {
+            case .project:
+                return contextBuilder.buildPromptContext(from: store)
+            case .node(let nodeID):
+                return contextBuilder.buildNodePromptContext(from: store, nodeID: nodeID)
+            }
+        }
         do {
             return try await runOnce(
                 userMessage: userMessage,
@@ -73,6 +82,7 @@ public final class CoCaptainAgentCoordinator {
                 expectsStructuredResponse: true,
                 store: store,
                 dispatcher: dispatcher,
+                scope: scope,
                 onVisibleText: onVisibleText,
                 allowAgenticRetry: true
             )
@@ -85,6 +95,7 @@ public final class CoCaptainAgentCoordinator {
                 expectsStructuredResponse: false,
                 store: store,
                 dispatcher: dispatcher,
+                scope: scope,
                 onVisibleText: onVisibleText,
                 allowAgenticRetry: false
             )
@@ -97,6 +108,7 @@ public final class CoCaptainAgentCoordinator {
         expectsStructuredResponse: Bool,
         store: ProjectStore?,
         dispatcher: (any AppActionPerforming)?,
+        scope: CoCaptainAgentScope,
         onVisibleText: @escaping (String) -> Void,
         allowAgenticRetry: Bool
     ) async throws -> CoCaptainAgentRunResult {
@@ -108,7 +120,8 @@ public final class CoCaptainAgentCoordinator {
             for: userMessage,
             context: context,
             expectsStructuredResponse: expectsStructuredResponse,
-            availableActions: dispatcher?.availableActions ?? []
+            availableActions: dispatcher?.availableActions ?? [],
+            scope: scope
         )
 
         for try await event in stream {
@@ -142,6 +155,7 @@ public final class CoCaptainAgentCoordinator {
                         expectsStructuredResponse: true,
                         store: store,
                         dispatcher: dispatcher,
+                        scope: scope,
                         onVisibleText: onVisibleText,
                         allowAgenticRetry: false
                     )
@@ -169,6 +183,7 @@ public final class CoCaptainAgentCoordinator {
                     expectsStructuredResponse: true,
                     store: store,
                     dispatcher: dispatcher,
+                    scope: scope,
                     onVisibleText: onVisibleText,
                     allowAgenticRetry: false
                 )
@@ -192,6 +207,7 @@ public final class CoCaptainAgentCoordinator {
                             expectsStructuredResponse: true,
                             store: store,
                             dispatcher: dispatcher,
+                            scope: scope,
                             onVisibleText: onVisibleText,
                             allowAgenticRetry: false
                         )
@@ -362,10 +378,12 @@ public final class CoCaptainAgentCoordinator {
         if let store {
             for edit in nodeEdits {
                 do {
-                    let preview = try patchEngine.preview(role: edit.role, operations: edit.operations, in: store)
+                    let preview = try patchEngine.preview(nodeID: edit.nodeID, role: edit.role, operations: edit.operations, in: store)
+                    let targetNode = store.nodes.first(where: { $0.id == preview.nodeID })
                     items.append(
                         PendingReviewItem(
-                            targetLabel: edit.role.localizedDisplayName,
+                            targetNodeID: preview.nodeID,
+                            targetLabel: targetNode?.displayTitle ?? edit.role.localizedDisplayName,
                             summary: edit.summary,
                             preview: previewSnippet(for: preview.resultText),
                             source: .nodeEdit(role: edit.role, operations: edit.operations, baseText: preview.originalText)
@@ -374,6 +392,7 @@ public final class CoCaptainAgentCoordinator {
                 } catch {
                     items.append(
                         PendingReviewItem(
+                            targetNodeID: edit.nodeID,
                             targetLabel: edit.role.localizedDisplayName,
                             summary: edit.summary,
                             preview: error.localizedDescription,
@@ -387,6 +406,7 @@ public final class CoCaptainAgentCoordinator {
             for edit in nodeEdits {
                 items.append(
                     PendingReviewItem(
+                        targetNodeID: edit.nodeID,
                         targetLabel: edit.role.localizedDisplayName,
                         summary: edit.summary,
                         preview: LocalizationManager.shared.localizedString("No active project context is available for this edit."),

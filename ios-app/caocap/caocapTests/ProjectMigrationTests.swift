@@ -45,14 +45,49 @@ struct ProjectMigrationTests {
         let tempDirectory = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: tempDirectory) }
         let persistence = ProjectPersistenceService(baseDirectory: tempDirectory)
+        let fileName = "v2.json"
+        let v2JSON = """
+        {
+            "schemaVersion": 2,
+            "projectName": "V2 Project",
+            "viewportOffset": {"width": 10, "height": 20},
+            "viewportScale": 0.5,
+            "nodes": []
+        }
+        """
+
+        try v2JSON.data(using: .utf8)!.write(to: persistence.fileURL(for: fileName))
+
+        let result = try persistence.load(fileName: fileName)
+
+        #expect(result.sourceSchemaVersion == 2)
+        #expect(!result.didMigrate)
+        #expect(result.snapshot.projectName == "V2 Project")
+        #expect(result.snapshot.viewportScale == 0.5)
+    }
+
+    @MainActor
+    @Test func loadingV1ProjectMigratesNodeAgentState() throws {
+        let tempDirectory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: tempDirectory) }
+        let persistence = ProjectPersistenceService(baseDirectory: tempDirectory)
         let fileName = "v1.json"
         let v1JSON = """
         {
             "schemaVersion": 1,
             "projectName": "V1 Project",
-            "viewportOffset": {"width": 10, "height": 20},
-            "viewportScale": 0.5,
-            "nodes": []
+            "viewportOffset": {"width": 0, "height": 0},
+            "viewportScale": 1.0,
+            "nodes": [
+                {
+                    "id": "A1B2C3D4-E5F6-4A5B-8C9D-0E1F2A3B4C5D",
+                    "type": "code",
+                    "position": {"x": 0, "y": 0},
+                    "title": "Code",
+                    "theme": "orange",
+                    "textContent": "<h1>Hello</h1>"
+                }
+            ]
         }
         """
 
@@ -61,9 +96,8 @@ struct ProjectMigrationTests {
         let result = try persistence.load(fileName: fileName)
 
         #expect(result.sourceSchemaVersion == 1)
-        #expect(!result.didMigrate)
-        #expect(result.snapshot.projectName == "V1 Project")
-        #expect(result.snapshot.viewportScale == 0.5)
+        #expect(result.didMigrate)
+        #expect(result.snapshot.nodes.first?.agentState.messages.isEmpty == true)
     }
 
     @MainActor

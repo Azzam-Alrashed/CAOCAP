@@ -26,6 +26,96 @@ struct CoCaptainAgentTests {
         #expect(!context.contains("compiled"))
     }
 
+    @MainActor
+    @Test func nodeContextIncludesSelectedNodeAndLinkedNeighbors() throws {
+        let codeID = UUID()
+        let srsID = UUID()
+        let unrelatedID = UUID()
+        let store = ProjectStore(
+            fileName: "node-context-\(UUID().uuidString).json",
+            projectName: "Node Context",
+            initialNodes: [
+                SpatialNode(id: srsID, type: .srs, position: .zero, title: "Software Requirements (SRS)", connectedNodeIds: [codeID], textContent: "Selected SRS content"),
+                SpatialNode(id: codeID, type: .code, position: .zero, title: "Code", textContent: "<h1>Linked code</h1>"),
+                SpatialNode(id: unrelatedID, type: .code, position: .zero, title: "Unrelated", textContent: "Do not leak full unrelated content")
+            ]
+        )
+
+        let context = ProjectContextBuilder().buildNodePromptContext(from: store, nodeID: srsID)
+
+        #expect(context.contains("Selected Node ID: \(srsID.uuidString)"))
+        #expect(context.contains("Selected Node Content:\nSelected SRS content"))
+        #expect(context.contains("Linked Neighbor Nodes:"))
+        #expect(context.contains("<h1>Linked code</h1>"))
+        #expect(context.contains("Unrelated [code] id: \(unrelatedID.uuidString)"))
+        #expect(!context.contains("Do not leak full unrelated content"))
+    }
+
+    @Test func parserExtractsNodeIDTargetedNodeEdit() throws {
+        let nodeID = UUID()
+        let parser = CoCaptainAgentParser()
+        let response =
+            """
+            Updating this node.
+
+            <cocaptain_actions>
+              <assistant_message>Prepared a targeted edit.</assistant_message>
+              <node_edits>
+                <node_edit nodeId="\(nodeID.uuidString)" role="code" summary="Target exact code node.">
+                  <operation type="replace_all">
+                    <content><![CDATA[<h1>Targeted</h1>]]></content>
+                  </operation>
+                </node_edit>
+              </node_edits>
+            </cocaptain_actions>
+            """
+
+        let parsed = parser.parse(response)
+
+        #expect(parsed.payload?.nodeEdits.first?.nodeID == nodeID)
+        #expect(parsed.payload?.nodeEdits.first?.role == .code)
+    }
+
+    @MainActor
+    @Test func nodePatchEngineTargetsNodeIDBeforeRoleFallback() throws {
+        let targetID = UUID()
+        let otherID = UUID()
+        let store = ProjectStore(
+            fileName: "node-patch-\(UUID().uuidString).json",
+            initialNodes: [
+                SpatialNode(id: otherID, type: .code, position: .zero, title: "Code", textContent: "wrong"),
+                SpatialNode(id: targetID, type: .code, position: .zero, title: "Custom Code", textContent: "right")
+            ]
+        )
+
+        let preview = try NodePatchEngine().preview(
+            nodeID: targetID,
+            role: .code,
+            operations: [NodePatchOperation(type: .replaceAll, content: "updated")],
+            in: store
+        )
+
+        #expect(preview.nodeID == targetID)
+        #expect(preview.originalText == "right")
+        #expect(preview.resultText == "updated")
+    }
+
+    @MainActor
+    @Test func nodeAgentMessagesPersistOnNode() {
+        let store = makeStore()
+        let node = store.nodes.first(where: { $0.role == .srs })!
+
+        store.appendNodeAgentMessage(
+            id: node.id,
+            message: NodeAgentMessage(text: "Draft the intro", isUser: true),
+            persist: false
+        )
+
+        let updatedNode = store.nodes.first(where: { $0.id == node.id })
+        #expect(updatedNode?.agentState.messages.first?.text == "Draft the intro")
+        #expect(updatedNode?.agentState.messages.first?.isUser == true)
+    }
+
     @Test func nodePatchEngineAppliesOrderedOperations() throws {
         let engine = NodePatchEngine()
         let result = try engine.apply(
@@ -567,6 +657,42 @@ Define a focused first version of the app.
     }
 
     @MainActor
+    @Test func coordinatorUsesNodeScopedSessionAndStagesTargetedEdit() async throws {
+        let dispatcher = TestActionDispatcher()
+        let store = makeStore()
+        let codeNode = try #require(store.nodes.first(where: { $0.role == .code }))
+        let llm = TestLLMClient(
+            response:
+                """
+                I prepared a code-node update.
+
+                <cocaptain_actions>
+                  <assistant_message>I prepared a code-node update.</assistant_message>
+                  <node_edits>
+                    <node_edit nodeId="\(codeNode.id.uuidString)" role="code" summary="Update targeted code node.">
+                      <operation type="replace_all">
+                        <content><![CDATA[<h1>Scoped</h1>]]></content>
+                      </operation>
+                    </node_edit>
+                  </node_edits>
+                </cocaptain_actions>
+                """
+        )
+        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
+
+        let result = try await coordinator.run(
+            userMessage: "change this code node",
+            store: store,
+            dispatcher: dispatcher,
+            scope: .node(codeNode.id)
+        ) { _ in }
+
+        #expect(llm.receivedScopes == [.node(codeNode.id)])
+        #expect(result.reviewBundle?.items.first?.targetNodeID == codeNode.id)
+        #expect(result.reviewBundle?.items.first?.targetLabel == "Code")
+    }
+
+    @MainActor
     @Test func coordinatorExecutesFunctionCalledSafeAction() async throws {
         let dispatcher = TestActionDispatcher()
         let llm = TestLLMClient(
@@ -930,6 +1056,7 @@ private final class TestLLMClient: CoCaptainLLMClient {
     private let functionCalls: [[CoCaptainAgentFunctionCall]]
     private var streamCount = 0
     var receivedMessages: [String] = []
+    var receivedScopes: [CoCaptainAgentScope] = []
 
     init(response: String) {
         self.responses = [response]
@@ -951,15 +1078,17 @@ private final class TestLLMClient: CoCaptainLLMClient {
         self.functionCalls = functionCalls
     }
 
-    func resetChat() {}
+    func resetChat(scope: CoCaptainAgentScope) {}
 
     func streamAgentEvents(
         for userMessage: String,
         context: String?,
         expectsStructuredResponse: Bool,
-        availableActions: [AppActionDefinition]
+        availableActions: [AppActionDefinition],
+        scope: CoCaptainAgentScope
     ) -> AsyncThrowingStream<CoCaptainLLMStreamEvent, Error> {
         receivedMessages.append(userMessage)
+        receivedScopes.append(scope)
         let index = streamCount
         let response = responses[min(index, responses.count - 1)]
         let calls = functionCalls.indices.contains(index) ? functionCalls[index] : []

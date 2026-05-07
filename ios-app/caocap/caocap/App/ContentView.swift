@@ -150,8 +150,7 @@ struct ContentView: View {
             router.homeStore.undoManager = undoManager
             router.onboardingStore.undoManager = undoManager
 
-            coCaptain.store = router.activeStore
-            coCaptain.actionDispatcher = actionDispatcher
+            coCaptain.configureProjectSession(store: router.activeStore, dispatcher: actionDispatcher)
 
             onboardingCoordinator.load(steps: OnboardingProvider.steps)
 
@@ -170,7 +169,7 @@ struct ContentView: View {
         }
         .onChange(of: router.currentWorkspace) {
             router.activeStore.undoManager = undoManager
-            coCaptain.store = router.activeStore
+            coCaptain.configureProjectSession(store: router.activeStore, dispatcher: actionDispatcher)
             commandPalette.nodes = router.activeStore.nodes
             
             // Sync viewport with new store
@@ -249,7 +248,7 @@ struct ContentView: View {
                 router.activeStore.addNode()
             },
             summonCoCaptain: {
-                coCaptain.store = router.activeStore
+                coCaptain.configureProjectSession(store: router.activeStore, dispatcher: actionDispatcher)
                 coCaptain.setPresented(true)
             },
             proSubscription: {
@@ -302,8 +301,7 @@ struct ContentView: View {
             }
         }
         commandPalette.onSubmitPrompt = { prompt in
-            coCaptain.store = router.activeStore
-            coCaptain.actionDispatcher = actionDispatcher
+            coCaptain.configureProjectSession(store: router.activeStore, dispatcher: actionDispatcher)
             coCaptain.setPresented(true)
             coCaptain.sendMessage(prompt)
         }

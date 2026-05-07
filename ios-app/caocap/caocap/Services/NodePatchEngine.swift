@@ -23,12 +23,15 @@ public struct NodePatchOperation: Codable, Hashable {
 
 public enum NodePatchError: LocalizedError, Hashable {
     case missingNode(NodeRole)
+    case missingNodeID(UUID)
     case conflict(String)
 
     public var errorDescription: String? {
         switch self {
         case .missingNode(let role):
             return LocalizationManager.shared.localizedString("Missing %@ node.", arguments: [role.localizedDisplayName])
+        case .missingNodeID:
+            return LocalizationManager.shared.localizedString("The targeted node could not be found.")
         case .conflict(let description):
             return LocalizationManager.shared.localizedString(description)
         }
@@ -36,6 +39,7 @@ public enum NodePatchError: LocalizedError, Hashable {
 }
 
 public struct NodePatchPreview: Hashable {
+    public let nodeID: UUID
     public let role: NodeRole
     public let originalText: String
     public let resultText: String
@@ -48,24 +52,36 @@ public struct NodePatchEngine {
     public init() {}
 
     @MainActor
-    public func resolveNode(for role: NodeRole, in store: ProjectStore) -> SpatialNode? {
+    public func resolveNode(nodeID: UUID? = nil, for role: NodeRole, in store: ProjectStore) -> SpatialNode? {
+        if let nodeID {
+            guard let node = store.nodes.first(where: { $0.id == nodeID }),
+                  node.type != .webView,
+                  node.type != .art else {
+                return nil
+            }
+            return node
+        }
         guard role.isEditableCanonicalRole else { return nil }
         return store.nodes.first(where: { role.matches(node: $0) })
     }
 
     @MainActor
     public func preview(
+        nodeID: UUID? = nil,
         role: NodeRole,
         operations: [NodePatchOperation],
         in store: ProjectStore
     ) throws -> NodePatchPreview {
-        guard let node = resolveNode(for: role, in: store) else {
+        guard let node = resolveNode(nodeID: nodeID, for: role, in: store) else {
+            if let nodeID {
+                throw NodePatchError.missingNodeID(nodeID)
+            }
             throw NodePatchError.missingNode(role)
         }
 
         let originalText = node.textContent ?? ""
         let resultText = try apply(operations: operations, to: originalText)
-        return NodePatchPreview(role: role, originalText: originalText, resultText: resultText)
+        return NodePatchPreview(nodeID: node.id, role: node.role, originalText: originalText, resultText: resultText)
     }
 
     /// Applies operations in order. Exact operations fail fast when their target

@@ -69,15 +69,6 @@ When editing this flow, preserve review bundles and avoid auto-applying code edi
 
 ## Build And Test
 
-iOS project:
-
-```bash
-xcodebuild -project ios-app/caocap/caocap.xcodeproj -scheme caocap -destination 'platform=iOS Simulator,name=iPhone 16' build
-xcodebuild -project ios-app/caocap/caocap.xcodeproj -scheme caocap -destination 'platform=iOS Simulator,name=iPhone 16' test
-```
-
-If the named simulator is unavailable, run `xcrun simctl list devices available` and use an installed iOS simulator destination.
-
 Website:
 
 ```bash

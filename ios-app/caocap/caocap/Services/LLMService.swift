@@ -36,16 +36,16 @@ public final class LLMService {
     }
 
     /// The active chat session that maintains history.
-    private var chat: Chat?
+    private var chats: [CoCaptainAgentScope: Chat] = [:]
 
     private init() {}
 
     // MARK: - API
 
     /// Resets the current chat session, clearing all history.
-    public func resetChat() {
-        chat = nil
-        logger.info("Chat session reset.")
+    public func resetChat(scope: CoCaptainAgentScope = .project) {
+        chats[scope] = nil
+        logger.info("Chat session reset for \(scope.storageKey, privacy: .public).")
     }
 
     /// Generates a streaming response for the given user prompt, maintaining conversation history.
@@ -57,7 +57,8 @@ public final class LLMService {
             for: prompt,
             context: nil,
             expectsStructuredResponse: false,
-            availableActions: []
+            availableActions: [],
+            scope: .project
         )
 
         return AsyncThrowingStream { continuation in
@@ -81,30 +82,32 @@ public final class LLMService {
         for userMessage: String,
         context: String?,
         expectsStructuredResponse: Bool,
-        availableActions: [AppActionDefinition]
+        availableActions: [AppActionDefinition],
+        scope: CoCaptainAgentScope = .project
     ) -> AsyncThrowingStream<CoCaptainLLMStreamEvent, Error> {
         // Initialize chat session if it doesn't exist
-        if chat == nil {
+        if chats[scope] == nil {
             // Ensure model is initialised with the latest preferred name at first use.
             model = makeModel(modelName: preferredModelName)
-            chat = model.startChat()
+            chats[scope] = model.startChat()
         }
 
         let prompt = buildPrompt(
             userMessage: userMessage,
             context: context,
             expectsStructuredResponse: expectsStructuredResponse,
-            availableActions: availableActions
+            availableActions: availableActions,
+            scope: scope
         )
 
         return AsyncThrowingStream { continuation in
             let task = Task {
                 do {
                     logger.debug("Starting LLM stream with history.")
-                    logger.debug("Model: \(self.preferredModelName, privacy: .public) structured=\(expectsStructuredResponse, privacy: .public) contextChars=\((context ?? "").count, privacy: .public)")
+                    logger.debug("Model: \(self.preferredModelName, privacy: .public) scope=\(scope.storageKey, privacy: .public) structured=\(expectsStructuredResponse, privacy: .public) contextChars=\((context ?? "").count, privacy: .public)")
                     
                     // Use sendMessageStream to participate in the multi-turn session
-                    let stream = try chat!.sendMessageStream(prompt)
+                    let stream = try self.chats[scope]!.sendMessageStream(prompt)
                     
                     for try await chunk in stream {
                         if let text = chunk.text {
@@ -124,7 +127,7 @@ public final class LLMService {
 
                     // Attempt a one-time recovery by resetting the chat session.
                     // This helps when the underlying session is in a bad state.
-                    self.chat = nil
+                    self.chats[scope] = nil
                     continuation.finish(throwing: error)
                 }
             }
@@ -183,7 +186,8 @@ public final class LLMService {
         userMessage: String,
         context: String?,
         expectsStructuredResponse: Bool,
-        availableActions: [AppActionDefinition]
+        availableActions: [AppActionDefinition],
+        scope: CoCaptainAgentScope
     ) -> String {
         var parts: [String] = []
 
@@ -192,6 +196,20 @@ public final class LLMService {
         }
 
         if expectsStructuredResponse {
+            let scopeInstructions: String = {
+                switch scope {
+                case .project:
+                    return "You are in the global project CoCaptain scope. You may reason across the full canvas."
+                case .node:
+                    return """
+                    You are in a node-scoped agent session.
+                    - Focus on the selected node in the context.
+                    - For edits to the selected node or linked source nodes, include the exact `nodeId` attribute in each `node_edit`.
+                    - Do not directly edit WebView compiled preview HTML. If the selected node is a WebView, debug the preview and propose edits to upstream Code or SRS nodes.
+                    """
+                }
+            }()
+
             let autonomousActionLines = availableActions
                 .filter { !$0.isMutating && $0.allowsAutonomousExecution }
                 .map { action in
@@ -209,6 +227,8 @@ public final class LLMService {
             parts.append(
                 """
                 Agent contract:
+                \(scopeInstructions)
+
                 - Respond conversationally first (concise).
                 - If the user is only asking a question, asking for advice, or asking for an opinion, do not request app actions and do not append `cocaptain_actions`.
                 - For app navigation or app-level tool actions, use the `request_app_action` function instead of manually writing app actions in XML.
@@ -225,7 +245,8 @@ public final class LLMService {
                 - Never request a mutating or non-autonomous action with executionMode `safe`.
 
                 Node edits:
-                - Only target these node roles for edits: srs, code. Legacy projects may expose html, css, and javascript, but prefer code whenever it exists.
+                - Only target editable source nodes for edits: srs, code, standard text nodes, or legacy html/css/javascript nodes. Legacy projects may expose html, css, and javascript, but prefer code whenever it exists.
+                - In node-scoped sessions, include `nodeId="UUID"` on every `node_edit` whenever the target node is known.
                 - Code/content changes belong in `node_edits`, not app actions.
                 - Every node edit needs a non-empty summary and at least one operation.
                 - Exact operations require a non-empty `target`; append/prepend/replace_all do not.
@@ -241,7 +262,7 @@ public final class LLMService {
                     <action id="id" />
                   </pending_actions>
                   <node_edits>
-                    <node_edit role="code|srs" summary="what changes">
+                    <node_edit nodeId="optional UUID" role="code|srs|html|css|javascript|custom" summary="what changes">
                       <operation type="replace_all|replace_exact|insert_before_exact|insert_after_exact|append|prepend">
                         <target>exact text (only for exact operations)</target>
                         <content><![CDATA[new content]]></content>

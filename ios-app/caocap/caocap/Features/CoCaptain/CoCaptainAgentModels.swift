@@ -1,5 +1,19 @@
 import Foundation
 
+public enum CoCaptainAgentScope: Hashable {
+    case project
+    case node(UUID)
+
+    public var storageKey: String {
+        switch self {
+        case .project:
+            return "project"
+        case .node(let id):
+            return "node:\(id.uuidString)"
+        }
+    }
+}
+
 public struct CoCaptainAgentAction: Codable, Hashable {
     public let actionID: String
     public let args: [String: String]?
@@ -16,14 +30,23 @@ public struct CoCaptainAgentAction: Codable, Hashable {
 }
 
 public struct CoCaptainNodeEditProposal: Codable, Hashable {
+    public let nodeID: UUID?
     public let role: NodeRole
     public let summary: String
     public let operations: [NodePatchOperation]
 
-    public init(role: NodeRole, summary: String, operations: [NodePatchOperation]) {
+    public init(nodeID: UUID? = nil, role: NodeRole, summary: String, operations: [NodePatchOperation]) {
+        self.nodeID = nodeID
         self.role = role
         self.summary = summary
         self.operations = operations
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case nodeID = "nodeId"
+        case role
+        case summary
+        case operations
     }
 }
 
@@ -121,6 +144,7 @@ public enum PendingReviewSource: Hashable {
 
 public struct PendingReviewItem: Identifiable, Hashable {
     public let id: UUID
+    public let targetNodeID: UUID?
     public let targetLabel: String
     public let summary: String
     public let preview: String
@@ -132,6 +156,7 @@ public struct PendingReviewItem: Identifiable, Hashable {
 
     public init(
         id: UUID = UUID(),
+        targetNodeID: UUID? = nil,
         targetLabel: String,
         summary: String,
         preview: String,
@@ -140,6 +165,7 @@ public struct PendingReviewItem: Identifiable, Hashable {
         conflictDescription: String? = nil
     ) {
         self.id = id
+        self.targetNodeID = targetNodeID
         self.targetLabel = targetLabel
         self.summary = summary
         self.preview = preview

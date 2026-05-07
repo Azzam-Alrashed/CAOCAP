@@ -9,6 +9,23 @@ struct NodeDetailView: View {
     @Environment(\.dismiss) var dismiss
     
     var body: some View {
+        TabView {
+            editorContent
+                .tabItem {
+                    Label(node.type == .webView ? "Preview" : "Editor", systemImage: node.type == .webView ? "play.rectangle" : "square.and.pencil")
+                }
+
+            NavigationStack {
+                NodeAgentChatView(nodeID: node.id, store: store)
+            }
+            .tabItem {
+                Label("Chat", systemImage: "sparkles")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var editorContent: some View {
         if node.type == .webView {
             NavigationView {
                 ZStack {
