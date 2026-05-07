@@ -9,6 +9,7 @@ struct ConnectionLayer: View {
     let dragOffsets: [UUID: CGSize]
     let viewport: ViewportState
     let center: CGPoint
+    let activeAgentStates: [UUID: AgentExecutionState]
     
     var body: some View {
         Canvas { context, size in
@@ -36,7 +37,10 @@ struct ConnectionLayer: View {
                             y: center.y + (nextNode.position.y + nextNodeOffset.height) * viewport.scale + viewport.offset.height
                         )
                         
-                        drawArrow(context: context, from: start, to: end, themeColor: node.theme.color, scale: viewport.scale)
+                        let isEventPipe = nextNode.agentProfile.isAutoTriggerEnabled
+                        let isActive = activeAgentStates[nextNode.id] == .thinking || activeAgentStates[nextNode.id] == .applying
+                        
+                        drawArrow(context: context, from: start, to: end, themeColor: node.theme.color, scale: viewport.scale, isEventPipe: isEventPipe, isActive: isActive)
                     }
                 }
             }
@@ -45,7 +49,7 @@ struct ConnectionLayer: View {
         .allowsHitTesting(false)
     }
     
-    private func drawArrow(context: GraphicsContext, from: CGPoint, to: CGPoint, themeColor: Color, scale: CGFloat) {
+    private func drawArrow(context: GraphicsContext, from: CGPoint, to: CGPoint, themeColor: Color, scale: CGFloat, isEventPipe: Bool, isActive: Bool) {
         var path = Path()
         path.move(to: from)
         
@@ -59,6 +63,18 @@ struct ConnectionLayer: View {
         
         let stroke: StrokeStyle
         let color: Color
+        
+        if isEventPipe {
+            let pipeColor = isActive ? Color.blue : themeColor
+            stroke = StrokeStyle(lineWidth: (isActive ? 5 : 3) * scale, lineCap: .round, lineJoin: .round, dash: isActive ? [15 * scale, 15 * scale] : [])
+            color = pipeColor.opacity(isActive ? 1.0 : 0.8)
+            
+            var arrowContext = context
+            arrowContext.addFilter(.shadow(color: pipeColor, radius: (isActive ? 8 : 4) * scale))
+            arrowContext.stroke(path, with: .color(color), style: stroke)
+            drawArrowhead(context: arrowContext, at: to, direction: calculateDirection(from: cp2, to: to), color: color, scale: scale * (isActive ? 1.5 : 1.2))
+            return
+        }
         
         switch connectionStyle {
         case "Solid":

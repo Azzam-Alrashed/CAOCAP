@@ -48,7 +48,7 @@ struct InfiniteCanvasView: View {
                 DottedBackground(offset: viewport.offset, scale: viewport.scale)
                 
                 // Layer 2: Node Connections (Drawn in screen space to prevent clipping and layout bugs)
-                ConnectionLayer(nodes: store.nodes, dragOffsets: nodeDragOffsets, viewport: viewport, center: center)
+                ConnectionLayer(nodes: store.nodes, dragOffsets: nodeDragOffsets, viewport: viewport, center: center, activeAgentStates: store.activeAgentStates)
                 
                 // Layer 3: The Spatial Core (Scaled & Offset)
                 ZStack {
@@ -69,7 +69,7 @@ struct InfiniteCanvasView: View {
                         let currentOffset = nodeDragOffsets[node.id] ?? .zero
                         let isDraggingThisNode = nodeDragOffsets[node.id] != nil
                         
-                        NodeView(node: node, isDragging: isDraggingThisNode)
+                        NodeView(node: node, isDragging: isDraggingThisNode, agentState: store.activeAgentStates[node.id] ?? .idle)
                             .offset(
                                 x: node.position.x + currentOffset.width,
                                 y: node.position.y + currentOffset.height

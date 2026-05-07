@@ -14,6 +14,13 @@ public enum CoCaptainAgentScope: Hashable {
     }
 }
 
+public enum AgentExecutionState: Equatable {
+    case idle
+    case thinking
+    case applying
+    case error(String)
+}
+
 public struct CoCaptainAgentAction: Codable, Hashable {
     public let actionID: String
     public let args: [String: String]?
