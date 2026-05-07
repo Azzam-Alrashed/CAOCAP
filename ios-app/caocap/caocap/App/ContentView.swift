@@ -25,6 +25,11 @@ struct ContentView: View {
     @State private var onboardingCoordinator = OnboardingCoordinator()
     @State private var appUpdateService = AppUpdateService.shared
     @State private var viewport = ViewportState()
+    
+    // Export State
+    @State private var isExporting = false
+    @State private var exportURL: URL?
+    @State private var showExportSheet = false
 
     var body: some View {
         ZStack {
@@ -65,7 +70,8 @@ struct ContentView: View {
             CanvasHUDView(
                 store: router.activeStore,
                 viewportScale: currentScale,
-                onSignInTapped: { showingSignIn = true }
+                onSignInTapped: { showingSignIn = true },
+                onShareTapped: { _ = actionDispatcher.perform(.shareProject, source: .user) }
             )
 
             FloatingCommandButton(
@@ -143,6 +149,18 @@ struct ContentView: View {
             SettingsView()
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showExportSheet) {
+            if let url = exportURL {
+                ActivityView(activityItems: [url])
+                    .presentationDetents([.medium, .large])
+            } else {
+                VStack(spacing: 20) {
+                    ProgressView()
+                    Text("Preparing Export...")
+                }
+                .presentationDetents([.height(200)])
+            }
         }
         .sheet(isPresented: $showingProfile) {
             ProfileView(onSignIn: {
@@ -280,6 +298,17 @@ struct ContentView: View {
             },
             openProjectExplorer: {
                 showingProjectExplorer = true
+            },
+            shareProject: {
+                // First try exporting as HTML bundle
+                if let url = ExportService.export(from: router.activeStore, format: .html) {
+                    exportURL = url
+                    showExportSheet = true
+                } else if let url = ExportService.export(from: router.activeStore, format: .caocap) {
+                    // Fallback to raw CAOCAP bundle
+                    exportURL = url
+                    showExportSheet = true
+                }
             },
             moveNode: { args in
                 guard let idString = args["nodeId"], let uuid = UUID(uuidString: idString),

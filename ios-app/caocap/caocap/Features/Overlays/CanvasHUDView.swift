@@ -4,6 +4,7 @@ struct CanvasHUDView: View {
     let store: ProjectStore
     let viewportScale: CGFloat
     var onSignInTapped: (() -> Void)? = nil
+    var onShareTapped: (() -> Void)? = nil
 
     @Environment(AuthenticationManager.self) private var authManager
     @Environment(\.colorScheme) var colorScheme
@@ -83,6 +84,18 @@ struct CanvasHUDView: View {
                 .padding(.horizontal, 20)
                 .padding(.vertical, 12)
                 .allowsHitTesting(false)
+                
+                Divider().frame(height: 16)
+                
+                // Share / Export Button
+                Button(action: {
+                    onShareTapped?()
+                }) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.primary)
+                        .padding(.horizontal, 16)
+                }
 
                 // Profile Indicator (interactive for anonymous)
                 if authManager.isAnonymous {
