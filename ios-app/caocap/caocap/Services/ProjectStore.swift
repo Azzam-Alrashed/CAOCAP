@@ -32,7 +32,11 @@ public class ProjectStore {
     private let livePreviewCompiler = LivePreviewCompiler()
     
     /// A reference to the pending save task used for debouncing disk writes.
-    private var saveTask: Task<Void, Never>? = nil
+    private var saveTask: Task<Void, Never>?
+    private var agentTriggerTasks: [UUID: Task<Void, Never>] = [:]
+    
+    /// Tracks active background agents working on specific nodes.
+    public var activeAgentStates: [UUID: AgentExecutionState] = [:]
     
     /// The current version of the project file schema. Incremented when
     /// structural changes are made to nodes or the project envelope.
@@ -139,6 +143,81 @@ public class ProjectStore {
                 save()
                 saveTask = nil
                 isSaving = false
+            }
+        }
+    }
+    
+    /// Autonomously triggers agents on downstream nodes when an upstream node updates.
+    public func triggerDownstreamAgents(from sourceNodeID: UUID) {
+        agentTriggerTasks[sourceNodeID]?.cancel()
+        
+        agentTriggerTasks[sourceNodeID] = Task { @MainActor in
+            // Wait for 3 seconds of inactivity before triggering heavy LLM calls
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            guard !Task.isCancelled else { return }
+            
+            guard let sourceNode = nodes.first(where: { $0.id == sourceNodeID }) else { return }
+            let title = sourceNode.displayTitle
+            
+            let downstreamNodes = nodes.filter { node in
+                node.agentProfile.isAutoTriggerEnabled &&
+                (node.connectedNodeIds?.contains(sourceNodeID) == true || sourceNode.connectedNodeIds?.contains(node.id) == true || sourceNode.nextNodeId == node.id)
+            }
+            
+            guard !downstreamNodes.isEmpty else { return }
+            
+            for downstreamNode in downstreamNodes {
+                let prompt = "AUTO-TRIGGER: The upstream node '\(title)' was just updated. Please review its new state in the context and apply any necessary changes to your own code/content to stay synchronized."
+                
+                let triggerMsg = NodeAgentMessage(text: prompt, isUser: true)
+                self.appendNodeAgentMessage(id: downstreamNode.id, message: triggerMsg)
+                self.activeAgentStates[downstreamNode.id] = .thinking
+                
+                let coordinator = CoCaptainAgentCoordinator()
+                
+                do {
+                    let result = try await coordinator.run(
+                        userMessage: prompt,
+                        store: self,
+                        dispatcher: nil, 
+                        scope: .node(downstreamNode.id),
+                        onVisibleText: { _ in } 
+                    )
+                    
+                    if let payloadMessage = result.payloadMessage, !payloadMessage.isEmpty {
+                        let aiMsg = NodeAgentMessage(text: payloadMessage, isUser: false)
+                        self.appendNodeAgentMessage(id: downstreamNode.id, message: aiMsg)
+                    }
+                    
+                    if let reviewBundle = result.reviewBundle {
+                        self.activeAgentStates[downstreamNode.id] = .applying
+                        let engine = NodePatchEngine()
+                        self.createCheckpoint(label: "Auto-Triggered Edits")
+                        for item in reviewBundle.items {
+                            if case .nodeEdit(let role, let operations, _) = item.source {
+                                if let preview = try? engine.preview(nodeID: downstreamNode.id, role: role, operations: operations, in: self) {
+                                    self.updateNodeTextContent(id: preview.nodeID, text: preview.resultText, persist: true)
+                                    let appliedMsg = NodeAgentMessage(text: "Auto-applied edits to \(role.localizedDisplayName).", isUser: false)
+                                    self.appendNodeAgentMessage(id: downstreamNode.id, message: appliedMsg)
+                                }
+                            }
+                        }
+                    }
+                    
+                    self.activeAgentStates[downstreamNode.id] = .idle
+                } catch {
+                    let errorMsg = NodeAgentMessage(text: "Auto-trigger failed: \(error.localizedDescription)", isUser: false)
+                    self.appendNodeAgentMessage(id: downstreamNode.id, message: errorMsg)
+                    self.activeAgentStates[downstreamNode.id] = .error(error.localizedDescription)
+                    
+                    // Clear error after a short delay
+                    Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 3_000_000_000)
+                        if case .error = self.activeAgentStates[downstreamNode.id] {
+                            self.activeAgentStates[downstreamNode.id] = .idle
+                        }
+                    }
+                }
             }
         }
     }
@@ -396,6 +475,7 @@ public class ProjectStore {
             if persist {
                 requestSave()
             }
+            triggerDownstreamAgents(from: id)
         }
     }
 

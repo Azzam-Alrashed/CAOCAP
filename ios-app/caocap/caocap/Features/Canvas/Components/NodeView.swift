@@ -3,7 +3,9 @@ import SwiftUI
 struct NodeView: View {
     let node: SpatialNode
     var isDragging: Bool = false
+    var agentState: AgentExecutionState = .idle
     @State private var isHovering = false
+    @State private var isPulsing = false
     @AppStorage(LocalizationManager.languageStorageKey) private var selectedLanguage = "English"
     
     var body: some View {
@@ -23,9 +25,22 @@ struct NodeView: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(node.displayTitle)
-                        .font(.system(size: 18, weight: .bold, design: .rounded))
-                        .foregroundColor(.primary)
+                    HStack {
+                        Text(node.displayTitle)
+                            .font(.system(size: 18, weight: .bold, design: .rounded))
+                            .foregroundColor(.primary)
+                            
+                        if agentState == .thinking {
+                            ProgressView()
+                                .scaleEffect(0.7)
+                        } else if agentState == .applying {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                        } else if case .error = agentState {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(.red)
+                        }
+                    }
                     
                     if let subtitle = node.displaySubtitle {
                         Text(subtitle)
@@ -95,6 +110,29 @@ struct NodeView: View {
                     ),
                     lineWidth: isDragging ? 2 : 1
                 )
+        )
+        .overlay(
+            Group {
+                if agentState == .thinking {
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .stroke(Color.blue.opacity(0.8), lineWidth: 3)
+                        .shadow(color: .blue, radius: isPulsing ? 15 : 5)
+                        .opacity(isPulsing ? 1.0 : 0.5)
+                        .onAppear {
+                            withAnimation(Animation.easeInOut(duration: 1.0).repeatForever(autoreverses: true)) {
+                                isPulsing = true
+                            }
+                        }
+                } else if agentState == .applying {
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .stroke(Color.green.opacity(0.8), lineWidth: 3)
+                        .shadow(color: .green, radius: 15)
+                } else if case .error = agentState {
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .stroke(Color.red.opacity(0.8), lineWidth: 3)
+                        .shadow(color: .red, radius: 10)
+                }
+            }
         )
         .scaleEffect(isDragging ? 1.05 : (isHovering ? 1.02 : 1.0))
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isDragging)

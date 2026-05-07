@@ -27,7 +27,12 @@ public struct ProjectTemplateProvider {
                 icon: "doc.text.fill",
                 theme: .purple,
                 connectedNodeIds: [codeId],
-                textContent: SRSScaffold.defaultText
+                textContent: SRSScaffold.defaultText,
+                agentProfile: AgentProfile(
+                    systemPrompt: "You are the Product Manager. Your job is to refine the SRS and product intent. Ensure requirements are clear and executable.",
+                    roleName: "PM Agent",
+                    isAutoTriggerEnabled: false
+                )
             ),
             SpatialNode(
                 id: codeId,
@@ -38,7 +43,12 @@ public struct ProjectTemplateProvider {
                 icon: "chevron.left.slash.chevron.right",
                 theme: .orange,
                 connectedNodeIds: [webViewId],
-                textContent: defaultCode
+                textContent: defaultCode,
+                agentProfile: AgentProfile(
+                    systemPrompt: "You are an expert Frontend Engineer. You receive updates from the PM (SRS node). Your job is to strictly write the HTML/CSS/JS code to implement the requirements.",
+                    roleName: "Engineer Agent",
+                    isAutoTriggerEnabled: true
+                )
             )
         ]
     }
