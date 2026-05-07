@@ -32,7 +32,7 @@ export default function SupportPage() {
               </div>
               <h3>GitHub Issues</h3>
               <p>Report bugs or request features in the open.</p>
-              <a href="https://github.com/Azzam-Alrashed/CAOCAP-Ficruty/issues" target="_blank" rel="noreferrer" className="support-link">Open Issue</a>
+              <a href="https://github.com/Azzam-Alrashed/CAOCAP/issues" target="_blank" rel="noreferrer" className="support-link">Open Issue</a>
             </div>
 
             <div className="support-card">

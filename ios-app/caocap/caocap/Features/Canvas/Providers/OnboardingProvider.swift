@@ -11,7 +11,7 @@ public struct OnboardingManifest: Codable, Equatable {
 }
 
 public struct OnboardingProvider {
-    private static let logger = Logger(subsystem: "com.ficruty.caocap", category: "Onboarding")
+    private static let logger = Logger(subsystem: "com.caocap.app", category: "Onboarding")
     private static let resourceName = "tutorial"
 
     public static var projectName: String {

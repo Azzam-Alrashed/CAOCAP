@@ -1,6 +1,6 @@
 # Omnibox Feature
 
-The Omnibox is Ficruty's command palette. It gives users a fast way to search available app actions and gives CoCaptain a shared local command vocabulary.
+The Omnibox is CAOCAP's command palette. It gives users a fast way to search available app actions and gives CoCaptain a shared local command vocabulary.
 
 ## Ownership
 

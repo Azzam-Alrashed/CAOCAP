@@ -6,7 +6,7 @@ import OSLog
 /// `SubscriptionManager` owns products, entitlements, and transactions.
 struct PurchaseView: View {
     @Environment(\.dismiss) var dismiss
-    private let logger = Logger(subsystem: "Ficruty", category: "PurchaseView")
+    private let logger = Logger(subsystem: "CAOCAP", category: "PurchaseView")
     @State private var manager = SubscriptionManager.shared
     @State private var selectedProductID: String = "CAOCAP_Pro_Yearly"
     @State private var isPurchasing = false

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ThemeToggle } from "./ThemeToggle";
 
-const githubUrl = "https://github.com/Azzam-Alrashed/CAOCAP-Ficruty";
+const githubUrl = "https://github.com/Azzam-Alrashed/CAOCAP";
 
 type SiteNavProps = {
   homeHref?: string;

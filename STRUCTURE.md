@@ -1,6 +1,6 @@
-# Ficruty — Codebase Architecture
+# CAOCAP — Codebase Architecture
 
-This document is the authoritative map of the Ficruty codebase. Ficruty is organized as a public product monorepo, with each platform isolated in its own top-level directory. The iOS app uses a **domain-driven, feature-based structure** to maximize isolation, scalability, and developer clarity.
+This document is the authoritative map of the CAOCAP codebase. CAOCAP is organized as a public product monorepo, with each platform isolated in its own top-level directory. The iOS app uses a **domain-driven, feature-based structure** to maximize isolation, scalability, and developer clarity.
 
 > [!NOTE]
 > If you add a new file that changes the architecture, update this document in the same commit.
@@ -10,7 +10,7 @@ This document is the authoritative map of the Ficruty codebase. Ficruty is organ
 ## Repository Root
 
 ```
-Ficruty/
+CAOCAP/
 ├── ios-app/              # Native iOS/iPadOS app
 │   └── caocap/           # Xcode project and all Swift source files
 ├── android-app/          # Future Android app
@@ -101,6 +101,7 @@ Infrastructure and heavy-lifting. These are long-lived objects that outlive indi
 | `CommandIntentResolver.swift` | Maps plain-language command palette and CoCaptain prompts to available app actions. |
 | `HapticsManager.swift` | Central haptic feedback helper that honors app haptics settings. |
 | `LocalizationManager.swift` | Runtime language selection, localized strings, localized project/node labels, and date formatting. |
+| `AppUpdateService.swift` | Firebase Remote Config minimum-version gate for required App Store update prompts. |
 | `ProjectContextBuilder.swift` | Logic to "harvest" the spatial graph and serialize it into a grounded prompt context for the LLM. |
 | `NodePatchEngine.swift` | A precision editing engine that applies partial patches (replace/insert/append) to SRS and Code nodes, while still supporting legacy HTML/CSS/JS roles. |
 | `SRSReadinessEvaluator.swift` | Evaluates SRS text completeness and acceptance-check readiness. |
@@ -132,7 +133,7 @@ Identity management and account security.
 ---
 
 #### `Canvas/`
-The spatial runtime — the heart of Ficruty.
+The spatial runtime — the heart of CAOCAP.
 
 | File | Responsibility |
 |---|---|
@@ -188,7 +189,12 @@ The agentic AI companion. A native sheet interface for real-time collaboration.
 ---
 
 #### `Launch/`
-Launch transition UI shown by the root app shell.
+Launch transition and global launch-time prompts shown by the root app shell.
+
+| File | Responsibility |
+|---|---|
+| `LaunchScreenView.swift` | Branded launch transition overlay presented while the app shell warms up. |
+| `AppUpdatePromptView.swift` | Blocking required-update prompt shown when Remote Config says the installed app version is unsupported. |
 
 ---
 

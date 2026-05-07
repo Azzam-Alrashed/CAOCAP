@@ -17,7 +17,7 @@ final class AppConfiguration {
 
     static let shared = AppConfiguration()
 
-    private let logger = Logger(subsystem: "com.ficruty.caocap", category: "AppConfiguration")
+    private let logger = Logger(subsystem: "com.caocap.app", category: "AppConfiguration")
 
     private init() {}
 
@@ -59,4 +59,3 @@ final class AppConfiguration {
         logger.info("Google Sign-In configured successfully.")
     }
 }
-

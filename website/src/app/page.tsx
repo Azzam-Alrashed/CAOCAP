@@ -13,7 +13,7 @@ import { SiteNav } from "./components/SiteNav";
 
 const appStoreUrl = "https://apps.apple.com/us/app/caocap/id1447742145";
 const testFlightUrl = "https://testflight.apple.com/join/aS7Jwlof";
-const githubUrl = "https://github.com/Azzam-Alrashed/CAOCAP-Ficruty";
+const githubUrl = "https://github.com/Azzam-Alrashed/CAOCAP";
 
 const ctas = [
   {

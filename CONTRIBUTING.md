@@ -1,6 +1,6 @@
-# Contributing to Ficruty
+# Contributing to CAOCAP
 
-First off, thank you for considering contributing to Ficruty! It's people like you that make software development better for everyone.
+First off, thank you for considering contributing to CAOCAP! It's people like you that make software development better for everyone.
 
 ## Our Philosophy
 
@@ -36,7 +36,7 @@ Maintain the domain-driven, feature-based structure:
 
 ## The "Vibe Coding" Way
 
-Ficruty is built in high-bandwidth development sessions. We value:
+CAOCAP is built in high-bandwidth development sessions. We value:
 - **Clean Documentation**: Update `STRUCTURE.md` and `README.md` if your changes alter the app's architecture.
 - **Vision First**: If a change doesn't align with the project's long-term mission, let's discuss it in an issue first.
 

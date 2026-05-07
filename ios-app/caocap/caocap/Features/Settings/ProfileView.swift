@@ -5,7 +5,7 @@ import OSLog
 struct ProfileView: View {
     @Environment(AuthenticationManager.self) private var authManager
     @Environment(\.dismiss) private var dismiss
-    private let logger = Logger(subsystem: "Ficruty", category: "ProfileView")
+    private let logger = Logger(subsystem: "CAOCAP", category: "ProfileView")
     @AppStorage("app_theme") private var selectedTheme = "System"
     
     var onSignIn: (() -> Void)? = nil

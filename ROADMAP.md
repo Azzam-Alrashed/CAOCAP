@@ -1,6 +1,6 @@
-# Ficruty Project Roadmap
+# CAOCAP Project Roadmap
 
-This document tracks the current product milestones for Ficruty (caocap). The near-term priority is to keep the shipped iOS app stable while deepening the spatial, agentic workflow.
+This document tracks the current product milestones for CAOCAP. The near-term priority is to keep the shipped iOS app stable while deepening the spatial, agentic workflow.
 
 ---
 
@@ -17,7 +17,7 @@ This document tracks the current product milestones for Ficruty (caocap). The ne
 - [x] **Monetization (Pro)**: StoreKit 2 subscription integration.
 - [x] **Firebase Integration**: Authentication (Apple, Google, GitHub) and AI Logic infrastructure.
 - [x] **App Store Compliance**: Privacy Policy, Terms of Service, data usage declarations.
-- [x] **App Store Release**: Ficruty is available to users through the App Store.
+- [x] **App Store Release**: CAOCAP is available to users through the App Store.
 
 ### Post-Launch Polish
 
@@ -68,7 +68,7 @@ This document tracks the current product milestones for Ficruty (caocap). The ne
 - [ ] **Real-time Collaboration**: Multi-user spatial canvases with presence indicators and shared agentic history.
 - [ ] **Cloud Sync**: iCloud-backed project persistence across devices.
 - [ ] **Plugin System**: Allow third-party developers to create custom node types and agent behaviors.
-- [ ] **Share Sheet**: Export a project as a shareable, self-contained `.ficruty` bundle.
+- [ ] **Share Sheet**: Export a project as a shareable, self-contained `.caocap` bundle.
 
 ---
 

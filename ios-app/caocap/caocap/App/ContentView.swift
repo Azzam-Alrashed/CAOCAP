@@ -23,6 +23,7 @@ struct ContentView: View {
     @State private var selectedTheme = "System"
     @State private var isLaunching = true
     @State private var onboardingCoordinator = OnboardingCoordinator()
+    @State private var appUpdateService = AppUpdateService.shared
     @State private var viewport = ViewportState()
 
     var body: some View {
@@ -97,6 +98,17 @@ struct ContentView: View {
                     .zIndex(100)
             }
         }
+        .overlay {
+            if let availableUpdate = appUpdateService.availableUpdate,
+               appUpdateService.shouldPresentUpdatePrompt,
+               !isLaunching {
+                AppUpdatePromptView(
+                    update: availableUpdate,
+                    onUpdate: {}
+                )
+                .zIndex(90)
+            }
+        }
         .preferredColorScheme(currentColorScheme)
         .sheet(isPresented: $coCaptain.isPresented) {
             CoCaptainView(viewModel: coCaptain)
@@ -161,6 +173,9 @@ struct ContentView: View {
                     isLaunching = false
                 }
             }
+        }
+        .task {
+            await appUpdateService.checkForUpdate()
         }
         .onChange(of: onboardingCoordinator.isComplete) { _, isComplete in
             if isComplete {

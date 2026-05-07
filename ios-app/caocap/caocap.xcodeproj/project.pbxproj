@@ -18,6 +18,7 @@
 		ECD77F8D2F99BCBA00C96BF7 /* FirebaseFunctions in Frameworks */ = {isa = PBXBuildFile; productRef = ECD77F8C2F99BCBA00C96BF7 /* FirebaseFunctions */; };
 		ECD77F8F2F99BCBA00C96BF7 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = ECD77F8E2F99BCBA00C96BF7 /* FirebaseMessaging */; };
 		ECD77F912F99BCBA00C96BF7 /* FirebasePerformance in Frameworks */ = {isa = PBXBuildFile; productRef = ECD77F902F99BCBA00C96BF7 /* FirebasePerformance */; };
+		ECA100012FA0000000000001 /* FirebaseRemoteConfig in Frameworks */ = {isa = PBXBuildFile; productRef = ECA100022FA0000000000001 /* FirebaseRemoteConfig */; };
 		ECD77F932F99BCBA00C96BF7 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = ECD77F922F99BCBA00C96BF7 /* FirebaseStorage */; };
 		ECD77FA32F99C9C900C96BF7 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = ECD77FA22F99C9C900C96BF7 /* GoogleSignIn */; };
 		ECD77FA52F99C9C900C96BF7 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = ECD77FA42F99C9C900C96BF7 /* GoogleSignInSwift */; };
@@ -100,6 +101,7 @@
 				ECD77FAF2F9AA83700C96BF7 /* Lottie in Frameworks */,
 				ECEC6A1D2F9AA8D3007F3CF0 /* SwiftSoup in Frameworks */,
 				ECD77F932F99BCBA00C96BF7 /* FirebaseStorage in Frameworks */,
+				ECA100012FA0000000000001 /* FirebaseRemoteConfig in Frameworks */,
 				ECD77F8D2F99BCBA00C96BF7 /* FirebaseFunctions in Frameworks */,
 				ECD77F892F99BCBA00C96BF7 /* FirebaseCrashlytics in Frameworks */,
 				ECD77FA52F99C9C900C96BF7 /* GoogleSignInSwift in Frameworks */,
@@ -178,6 +180,7 @@
 				ECD77F8C2F99BCBA00C96BF7 /* FirebaseFunctions */,
 				ECD77F8E2F99BCBA00C96BF7 /* FirebaseMessaging */,
 				ECD77F902F99BCBA00C96BF7 /* FirebasePerformance */,
+				ECA100022FA0000000000001 /* FirebaseRemoteConfig */,
 				ECD77F922F99BCBA00C96BF7 /* FirebaseStorage */,
 				ECD77FA22F99C9C900C96BF7 /* GoogleSignIn */,
 				ECD77FA42F99C9C900C96BF7 /* GoogleSignInSwift */,
@@ -743,6 +746,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = ECD77F7B2F99BCBA00C96BF7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebasePerformance;
+		};
+		ECA100022FA0000000000001 /* FirebaseRemoteConfig */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ECD77F7B2F99BCBA00C96BF7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseRemoteConfig;
 		};
 		ECD77F922F99BCBA00C96BF7 /* FirebaseStorage */ = {
 			isa = XCSwiftPackageProductDependency;
