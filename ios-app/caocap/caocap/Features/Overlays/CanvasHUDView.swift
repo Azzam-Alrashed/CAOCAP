@@ -3,8 +3,8 @@ import SwiftUI
 struct CanvasHUDView: View {
     let store: ProjectStore
     let viewportScale: CGFloat
+    var isHome: Bool = false
     var onSignInTapped: (() -> Void)? = nil
-    var onShareTapped: (() -> Void)? = nil
 
     @Environment(AuthenticationManager.self) private var authManager
     @Environment(\.colorScheme) var colorScheme
@@ -34,8 +34,6 @@ struct CanvasHUDView: View {
                     .clipped()
 
                     Divider().frame(height: 16)
-
-
 
                     // Zoom Level
                     HStack(spacing: 4) {
@@ -81,22 +79,30 @@ struct CanvasHUDView: View {
                     }
                     .animation(.spring(), value: store.isSaving)
                 }
-                .padding(.horizontal, 20)
+                .padding(.leading, 20)
+                .padding(.trailing, 12)
                 .padding(.vertical, 12)
                 .allowsHitTesting(false)
                 
-                Divider().frame(height: 16)
-                
-                // Share / Export Button
-                Button(action: {
-                    onShareTapped?()
-                }) {
-                    Image(systemName: "square.and.arrow.up")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.primary)
-                        .padding(.horizontal, 16)
+                // Interactive Tools
+                HStack(spacing: 12) {
+                    Button {
+                        store.organizeNodes(isHome: isHome)
+                    } label: {
+                        ZStack {
+                            Circle()
+                                .fill(.primary.opacity(0.1))
+                                .frame(width: 32, height: 32)
+                            
+                            Image(systemName: "wand.and.stars")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(colorScheme == .dark ? .white : .black)
+                        }
+                    }
                 }
-
+                .padding(.leading, 4)
+                .padding(.trailing, 8)
+                
                 // Profile Indicator (interactive for anonymous)
                 if authManager.isAnonymous {
                     Button(action: { onSignInTapped?() }) {

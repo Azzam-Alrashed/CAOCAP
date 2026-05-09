@@ -25,6 +25,7 @@ struct ContentView: View {
     @State private var onboardingCoordinator = OnboardingCoordinator()
     @State private var appUpdateService = AppUpdateService.shared
     @State private var viewport = ViewportState()
+    @State private var showingNodeCreationMenu = false
     
     // Export State
     @State private var isExporting = false
@@ -41,7 +42,8 @@ struct ContentView: View {
                     currentScale: $currentScale,
                     onNodeAction: { action in
                         handleNodeAction(action)
-                    }
+                    },
+                    isHome: true
                 )
                 .id("home_canvas")
             case .onboarding:
@@ -70,8 +72,8 @@ struct ContentView: View {
             CanvasHUDView(
                 store: router.activeStore,
                 viewportScale: currentScale,
-                onSignInTapped: { showingSignIn = true },
-                onShareTapped: { _ = actionDispatcher.perform(.shareProject, source: .user) }
+                isHome: router.currentWorkspace == .home,
+                onSignInTapped: { showingSignIn = true }
             )
 
             FloatingCommandButton(
@@ -116,6 +118,14 @@ struct ContentView: View {
             }
         }
         .preferredColorScheme(currentColorScheme)
+        .sheet(isPresented: $showingNodeCreationMenu) {
+            NodeCreationMenuView { type in
+                router.activeStore.addNode(type: type)
+                showingNodeCreationMenu = false
+            }
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
+        }
         .sheet(isPresented: $coCaptain.isPresented) {
             CoCaptainView(viewModel: coCaptain)
                 .presentationDetents([.medium, .large])
@@ -171,7 +181,11 @@ struct ContentView: View {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
+        .onChange(of: router.currentWorkspace) {
+            setupCommandHandlers()
+        }
         .onAppear {
+            setupCommandHandlers()
             configureActionDispatcher()
             setupCommandHandlers()
 
@@ -203,6 +217,7 @@ struct ContentView: View {
         .onChange(of: router.currentWorkspace) {
             router.activeStore.undoManager = undoManager
             coCaptain.configureProjectSession(store: router.activeStore, dispatcher: actionDispatcher)
+            syncCommandPaletteActions()
             commandPalette.nodes = router.activeStore.nodes
             
             // Sync viewport with new store
@@ -278,7 +293,26 @@ struct ContentView: View {
                 router.createNewProject()
             },
             createNode: {
-                router.activeStore.addNode()
+                guard router.currentWorkspace != .home else { return }
+                showingNodeCreationMenu = true
+            },
+            onCreateTextNode: {
+                router.activeStore.addNode(type: .text)
+            },
+            onCreateCalculationNode: {
+                router.activeStore.addNode(type: .calculation)
+            },
+            onCreateDisplayNode: {
+                router.activeStore.addNode(type: .display)
+            },
+            onCreateNumberNode: {
+                router.activeStore.addNode(type: .number)
+            },
+            onCreateTableNode: {
+                router.activeStore.addNode(type: .table)
+            },
+            onCreateAiAgentNode: {
+                router.activeStore.addNode(type: .aiAgent)
             },
             summonCoCaptain: {
                 coCaptain.configureProjectSession(store: router.activeStore, dispatcher: actionDispatcher)
@@ -330,7 +364,7 @@ struct ContentView: View {
     }
 
     private func setupCommandHandlers() {
-        commandPalette.actions = actionDispatcher.availableActions
+        syncCommandPaletteActions()
         commandPalette.nodes = router.activeStore.nodes
         commandPalette.onExecute = { actionID in
             _ = actionDispatcher.perform(actionID, source: .user)
@@ -348,6 +382,28 @@ struct ContentView: View {
             coCaptain.configureProjectSession(store: router.activeStore, dispatcher: actionDispatcher)
             coCaptain.setPresented(true)
             coCaptain.sendMessage(prompt)
+        }
+    }
+
+    private func syncCommandPaletteActions() {
+        let isProject: Bool
+        if case .project = router.currentWorkspace {
+            isProject = true
+        } else {
+            isProject = false
+        }
+        
+        // Filter out node creation actions when on the Home screen to keep it clean.
+        let forbiddenOnHome: Set<AppActionID> = [.createNode, .createTextNode, .createCalculationNode, .createDisplayNode, .createAiAgentNode, .createNumberNode, .createTableNode]
+        
+        commandPalette.actions = actionDispatcher.availableActions.filter { action in
+            if router.currentWorkspace == .home {
+                return !forbiddenOnHome.contains(action.id)
+            }
+            if action.id == .shareProject {
+                return isProject
+            }
+            return true
         }
     }
 }

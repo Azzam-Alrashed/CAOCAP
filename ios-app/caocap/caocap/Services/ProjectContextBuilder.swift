@@ -81,13 +81,23 @@ public struct ProjectContextBuilder {
     private func srsReadinessContext(from store: ProjectStore) -> String? {
         guard let srsNode = store.nodes.first(where: { $0.role == .srs }) else { return nil }
         let state = srsNode.srsReadinessState ?? .empty
-        return "SRS Readiness: \(state.contextLabel)"
+        
+        var context = "SRS Readiness: \(state.contextLabel)"
+        
+        let hasImplementationNodes = store.nodes.contains(where: { $0.role == .code || $0.role == .html || $0.role == .javascript || $0.role == .css })
+        if !hasImplementationNodes {
+            context += "\nImplementation State: Blank Canvas (No code nodes exist yet)"
+        }
+        
+        return context
     }
 
+    @MainActor
     private func node(for role: NodeRole, in nodes: [SpatialNode]) -> SpatialNode? {
         nodes.first(where: { role.matches(node: $0) })
     }
 
+    @MainActor
     private func linkedNeighbors(of selectedNode: SpatialNode, in nodes: [SpatialNode]) -> [SpatialNode] {
         var ids = Set<UUID>()
         if let nextNodeId = selectedNode.nextNodeId {
@@ -108,8 +118,13 @@ public struct ProjectContextBuilder {
             return selected ? trimmed(node.htmlContent ?? "", limit: 1600) : trimmed(node.htmlContent ?? "", limit: 500)
         case .art:
             return node.drawingData == nil ? "[No drawing data]" : "[Pencil drawing data: \(node.drawingData?.count ?? 0) bytes]"
-        case .standard, .srs, .code:
+        case .standard, .srs, .code, .text, .number, .table:
             return selected ? (node.textContent ?? "") : trimmed(node.textContent ?? "", limit: 500)
+        case .calculation, .display:
+            let val = node.outputValue ?? 0.0
+            return "Output Value: \(val)"
+        case .aiAgent:
+            return node.aiResponse ?? "[No response yet]"
         }
     }
 
