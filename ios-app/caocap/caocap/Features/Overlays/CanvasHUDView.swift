@@ -84,24 +84,6 @@ struct CanvasHUDView: View {
                 .padding(.vertical, 12)
                 .allowsHitTesting(false)
                 
-                // Interactive Tools
-                HStack(spacing: 12) {
-                    Button {
-                        store.organizeNodes(isHome: isHome)
-                    } label: {
-                        ZStack {
-                            Circle()
-                                .fill(.primary.opacity(0.1))
-                                .frame(width: 32, height: 32)
-                            
-                            Image(systemName: "wand.and.stars")
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundStyle(colorScheme == .dark ? .white : .black)
-                        }
-                    }
-                }
-                .padding(.leading, 4)
-                .padding(.trailing, 8)
                 
                 // Profile Indicator (interactive for anonymous)
                 if authManager.isAnonymous {

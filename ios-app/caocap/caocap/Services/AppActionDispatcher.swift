@@ -30,6 +30,7 @@ public enum AppActionID: String, CaseIterable, Identifiable, Codable, Hashable {
     case transformNode = "transform_node"
     case createAiAgentNode = "create_ai_agent_node"
     case help = "help"
+    case organizeNodes = "organize_nodes"
 
     public var id: String { rawValue }
 }
@@ -284,6 +285,14 @@ public final class AppActionDispatcher: AppActionPerforming {
             category: .assistant,
             isMutating: false,
             allowsAutonomousExecution: true
+        ),
+        AppActionDefinition(
+            id: .organizeNodes,
+            title: "Organize Nodes",
+            icon: "wand.and.stars",
+            category: .project,
+            isMutating: true,
+            allowsAutonomousExecution: true
         )
     ]
 
@@ -310,6 +319,7 @@ public final class AppActionDispatcher: AppActionPerforming {
     private var moveNodeHandler: (([String: String]) -> Void)?
     private var themeNodeHandler: (([String: String]) -> Void)?
     private var transformNodeHandler: (([String: String]) -> Void)?
+    private var organizeNodesHandler: (() -> Void)?
 
     public init() {}
 
@@ -338,7 +348,8 @@ public final class AppActionDispatcher: AppActionPerforming {
         help: (() -> Void)? = nil,
         moveNode: (([String: String]) -> Void)? = nil,
         themeNode: (([String: String]) -> Void)? = nil,
-        transformNode: (([String: String]) -> Void)? = nil
+        transformNode: (([String: String]) -> Void)? = nil,
+        organizeNodes: (() -> Void)? = nil
     ) {
         self.goHomeHandler = goHome
         self.goBackHandler = goBack
@@ -363,6 +374,7 @@ public final class AppActionDispatcher: AppActionPerforming {
         self.moveNodeHandler = moveNode
         self.themeNodeHandler = themeNode
         self.transformNodeHandler = transformNode
+        self.organizeNodesHandler = organizeNodes
     }
 
     public func definition(for id: AppActionID) -> AppActionDefinition? {
@@ -453,6 +465,8 @@ public final class AppActionDispatcher: AppActionPerforming {
                 return AppActionResult(actionID: definition.id, title: definition.localizedTitle, executed: true, message: "")
             }
             handler = nil
+        case .organizeNodes:
+            handler = organizeNodesHandler
         }
 
         guard let handler else {

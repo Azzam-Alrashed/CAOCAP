@@ -359,6 +359,9 @@ struct ContentView: View {
                 guard let idString = args["nodeId"], let uuid = UUID(uuidString: idString),
                       let typeStr = args["type"], let type = NodeType(rawValue: typeStr) else { return }
                 router.activeStore.updateNodeType(id: uuid, type: type)
+            },
+            organizeNodes: {
+                router.activeStore.organizeNodes(isHome: router.currentWorkspace == .home)
             }
         )
     }
@@ -393,8 +396,8 @@ struct ContentView: View {
             isProject = false
         }
         
-        // Filter out node creation actions when on the Home screen to keep it clean.
-        let forbiddenOnHome: Set<AppActionID> = [.createNode, .createTextNode, .createCalculationNode, .createDisplayNode, .createAiAgentNode, .createNumberNode, .createTableNode]
+        // Filter out redundant navigation and node creation actions when on the Home screen.
+        let forbiddenOnHome: Set<AppActionID> = [.goHome, .goBack, .createNode, .createTextNode, .createCalculationNode, .createDisplayNode, .createAiAgentNode, .createNumberNode, .createTableNode]
         
         commandPalette.actions = actionDispatcher.availableActions.filter { action in
             if router.currentWorkspace == .home {
