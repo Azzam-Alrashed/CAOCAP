@@ -595,9 +595,9 @@ struct CoCaptainAgentTests {
                       <operation type="replace_all">
                         <content><![CDATA[# Software Requirements
 
-## Goal
-Define a focused first version of the app.
-]]></content>
+                ## Goal
+                Define a focused first version of the app.
+                ]]></content>
                       </operation>
                     </node_edit>
                   </node_edits>

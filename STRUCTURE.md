@@ -79,7 +79,7 @@ Pure domain data. No UI, no persistence, no side effects. These structs define t
 
 | File | Responsibility |
 |---|---|
-| `SpatialNode.swift` | The core canvas primitive. Holds `id`, `type` (`.standard`, `.webView`, `.srs`, `.code`), `position`, `textContent`, `htmlContent`, `connectedNodeIds`, and `theme`. |
+| `SpatialNode.swift` | The core canvas primitive. Holds `id`, `type` (`.standard`, `.webView`, `.srs`, `.code`, `.art`), `position`, content fields, drawing data, relationships, agent metadata, and theme. |
 | `NodeTheme.swift` | Color tokens for the six node themes (blue, purple, green, orange, red, gray). |
 | `NodeRole.swift` | Canonical role inference for SRS, Code, Live Preview, custom nodes, and legacy HTML/CSS/JavaScript nodes. |
 | `SRSReadinessState.swift` | Domain state for whether an SRS node is empty, structured, drafted, or ready. |
@@ -105,7 +105,10 @@ Infrastructure and heavy-lifting. These are long-lived objects that outlive indi
 | `ProjectContextBuilder.swift` | Logic to "harvest" the spatial graph and serialize it into a grounded prompt context for the LLM. |
 | `NodePatchEngine.swift` | A precision editing engine that applies partial patches (replace/insert/append) to SRS and Code nodes, while still supporting legacy HTML/CSS/JS roles. |
 | `SRSReadinessEvaluator.swift` | Evaluates SRS text completeness and acceptance-check readiness. |
+| `ExportService.swift` | Generates shareable exports from the active project, currently HTML preview output with a `.caocap` project-file fallback. |
 | `SubscriptionManager.swift` | StoreKit 2 integration. Manages Pro subscription state, purchase flow, and transaction verification. |
+
+`ProjectStore` and `ProjectPersistenceService` also maintain checkpoint metadata and saved project snapshots. The infrastructure is used to protect work before significant AI or mutation flows; a full user-facing snapshot browser remains roadmap work.
 
 ---
 
@@ -151,6 +154,7 @@ The spatial runtime — the heart of CAOCAP.
 | `LineNumberedTextView.swift` | `UIViewRepresentable` wrapping a dual-pane `UIView` (gutter + `UITextView`). Implements synchronized scrolling and regex-based syntax highlighting for single-file app code. |
 | `SRSEditorView.swift` | Notion-style "Zen Mode" editor for `.srs` nodes. Serif font, increased line spacing, generous padding, and a branded top bar. |
 | `HTMLWebView.swift` | Thin `UIViewRepresentable` wrapping `WKWebView`. Receives compiled HTML payloads and renders them. Scroll disabled for canvas embedding. |
+| `ArtEditorView.swift` | PencilKit-backed editor for `.art` nodes and freehand visual annotations. |
 | `DottedBackground.swift` | The infinite dotted grid. Renders efficiently using `Canvas` and adapts to the current viewport transform. |
 
 **`Providers/`** — Static node graph factories:

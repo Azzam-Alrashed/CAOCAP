@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 import SwiftUI
 
 public enum ExportFormat {
@@ -7,6 +8,8 @@ public enum ExportFormat {
 }
 
 public struct ExportService {
+    private static let logger = Logger(subsystem: "com.caocap.app", category: "ExportService")
+
     @MainActor
     public static func export(from store: ProjectStore, format: ExportFormat) -> URL? {
         let fileManager = FileManager.default
@@ -24,7 +27,7 @@ public struct ExportService {
                 try compilation.html.write(to: tempURL, atomically: true, encoding: .utf8)
                 return tempURL
             } catch {
-                print("ExportService Error: \(error.localizedDescription)")
+                logger.error("Failed to export HTML: \(error.localizedDescription)")
                 return nil
             }
             
@@ -40,7 +43,7 @@ public struct ExportService {
                 try fileManager.copyItem(at: originalURL, to: exportURL)
                 return exportURL
             } catch {
-                print("ExportService Error: \(error.localizedDescription)")
+                logger.error("Failed to export CAOCAP project: \(error.localizedDescription)")
                 return nil
             }
         }

@@ -42,6 +42,7 @@ This document tracks the current product milestones for CAOCAP. The near-term pr
 - [x] **Streaming UI**: Token-aware text view powered by Firebase AI Logic SDK.
 - [x] **Agentic Actions**: Implementation of `AppActionDispatcher` to allow the AI to control app navigation and project state.
 - [x] **Code Generation**: CoCaptain generates single-file app code from a natural language SRS node.
+- [x] **Recovery Checkpoints**: Automatic project checkpoints protect user work before AI-applied changes.
 - [ ] **Intent-to-Node**: Transform a natural language prompt directly into a fully wired node graph.
 - [ ] **Agent Contract Hardening**: Keep parser, validator, dispatcher, patching, and review-bundle behavior covered by focused tests as contracts evolve.
 
@@ -56,9 +57,9 @@ This document tracks the current product milestones for CAOCAP. The near-term pr
     - [ ] **Focus Zoom**: Automatically adjust zoom level to fit the targeted node perfectly.
 - [ ] **Spatial Debugger**: Visualize variable flow, console output, and execution state as canvas overlays.
 - [ ] **Console Node**: A dedicated node type that captures `console.log` output from the WebView in real-time.
-- [ ] **Project Templates**: A library of starter templates (games, landing pages, tools) selectable from the Omnibox.
-- [ ] **File System Bridge**: Export projects as a standard HTML/CSS/JS file bundle or a Git repository.
-- [ ] **Snapshot Browser**: Expose saved project checkpoints in the UI so users can inspect and restore prior states.
+- [ ] **Project Templates**: A public library of starter templates (games, landing pages, tools) selectable from the Omnibox.
+- [/] **File System Bridge**: Basic project sharing/export exists; next step is a fuller HTML/CSS/JS bundle and future Git-style export.
+- [/] **Snapshot Browser**: Checkpoint infrastructure exists; next step is a user-facing browser for inspecting and restoring prior states.
 
 ---
 
@@ -68,7 +69,7 @@ This document tracks the current product milestones for CAOCAP. The near-term pr
 - [ ] **Real-time Collaboration**: Multi-user spatial canvases with presence indicators and shared agentic history.
 - [ ] **Cloud Sync**: iCloud-backed project persistence across devices.
 - [ ] **Plugin System**: Allow third-party developers to create custom node types and agent behaviors.
-- [ ] **Share Sheet**: Export a project as a shareable, self-contained `.caocap` bundle.
+- [ ] **Agent Node Ecosystem**: Specialized node-level agents and event pipes become a designed collaboration/runtime model rather than hidden plumbing.
 
 ---
 
