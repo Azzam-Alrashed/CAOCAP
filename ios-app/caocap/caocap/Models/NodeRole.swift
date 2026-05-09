@@ -7,6 +7,10 @@ public enum NodeRole: String, CaseIterable, Codable, Hashable {
     case css
     case javascript
     case livePreview
+    case text
+    case calculation
+    case display
+    case aiAgent
     case custom
 
     public static let editableCanonicalRoles: [NodeRole] = [
@@ -14,7 +18,9 @@ public enum NodeRole: String, CaseIterable, Codable, Hashable {
         .code,
         .html,
         .css,
-        .javascript
+        .javascript,
+        .text,
+        .calculation
     ]
 
     public var displayName: String {
@@ -25,6 +31,10 @@ public enum NodeRole: String, CaseIterable, Codable, Hashable {
         case .css: return "CSS"
         case .javascript: return "JavaScript"
         case .livePreview: return "Live Preview"
+        case .text: return "Text"
+        case .calculation: return "Calculation"
+        case .display: return "Display"
+        case .aiAgent: return "AI Agent"
         case .custom: return "Custom"
         }
     }
@@ -44,25 +54,30 @@ public enum NodeRole: String, CaseIterable, Codable, Hashable {
 
 public extension SpatialNode {
     var role: NodeRole {
-        if type == .webView {
+        switch type {
+        case .webView:
             return .livePreview
-        }
-
-        if type == .srs || title.localizedCaseInsensitiveContains("software requirements") {
+        case .srs:
             return .srs
-        }
-
-        switch title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
-        case "code":
-            return .code
-        case "html":
-            return .html
-        case "css":
-            return .css
-        case "javascript":
-            return .javascript
-        case "live preview":
-            return .livePreview
+        case .text:
+            return .text
+        case .calculation:
+            return .calculation
+        case .display:
+            return .display
+        case .code:
+            switch title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+            case "html":
+                return .html
+            case "css":
+                return .css
+            case "javascript":
+                return .javascript
+            default:
+                return .code
+            }
+        case .aiAgent:
+            return .aiAgent
         default:
             return .custom
         }

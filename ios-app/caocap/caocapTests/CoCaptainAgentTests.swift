@@ -27,6 +27,27 @@ struct CoCaptainAgentTests {
     }
 
     @MainActor
+    @Test func projectContextIncludesBlankCanvasHintWhenNoCodeNodesExist() throws {
+        let store = ProjectStore(
+            fileName: "blank-canvas-test-\(UUID().uuidString).json",
+            projectName: "Blank Project",
+            initialNodes: [
+                SpatialNode(
+                    type: .srs,
+                    position: CGPoint(x: 0, y: 0),
+                    title: "Software Requirements (SRS)",
+                    theme: .purple,
+                    textContent: "Just starting out."
+                )
+            ]
+        )
+
+        let context = ProjectContextBuilder().buildPromptContext(from: store)
+
+        #expect(context.contains("Implementation State: Blank Canvas (No code nodes exist yet)"))
+    }
+
+    @MainActor
     @Test func nodeContextIncludesSelectedNodeAndLinkedNeighbors() throws {
         let codeID = UUID()
         let srsID = UUID()

@@ -9,6 +9,10 @@ extension NodeRole {
         case .css: return "number"
         case .javascript: return "curlybraces"
         case .livePreview: return "play.display"
+        case .text: return "text.cursor"
+        case .calculation: return "plus.forwardslash.minus"
+        case .display: return "opticaldisc.fill"
+        case .aiAgent: return "brain.head.profile.fill"
         case .custom: return "square.grid.2x2.fill"
         }
     }
@@ -21,6 +25,10 @@ extension NodeRole {
         case .css: return .pink
         case .javascript: return .yellow
         case .livePreview: return .green
+        case .text: return .blue
+        case .calculation: return .orange
+        case .display: return .green
+        case .aiAgent: return .indigo
         case .custom: return .purple
         }
     }

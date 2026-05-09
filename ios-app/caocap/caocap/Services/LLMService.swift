@@ -100,14 +100,21 @@ public final class LLMService {
             scope: scope
         )
 
+        // Get the chat session for the given scope
+        guard let session = self.chats[scope] else {
+            return AsyncThrowingStream { continuation in
+                continuation.finish(throwing: NSError(domain: "LLMService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to initialize chat session"]))
+            }
+        }
+
         return AsyncThrowingStream { continuation in
             let task = Task {
                 do {
                     logger.debug("Starting LLM stream with history.")
                     logger.debug("Model: \(self.preferredModelName, privacy: .public) scope=\(scope.storageKey, privacy: .public) structured=\(expectsStructuredResponse, privacy: .public) contextChars=\((context ?? "").count, privacy: .public)")
                     
-                    // Use sendMessageStream to participate in the multi-turn session
-                    let stream = try self.chats[scope]!.sendMessageStream(prompt)
+                    // Use the captured session to prevent nil-unwrapping crashes if self.chats changes
+                    let stream = try session.sendMessageStream(prompt)
                     
                     for try await chunk in stream {
                         if let text = chunk.text {
@@ -124,6 +131,12 @@ public final class LLMService {
                 } catch {
                     let reflected = String(reflecting: error)
                     logger.error("LLM stream error: \(reflected, privacy: .public)")
+                    
+                    if reflected.contains("429") || reflected.contains("quota") || reflected.contains("RESOURCE_EXHAUSTED") {
+                        continuation.yield(.text("[Sandbox Mode] API Quota limit reached. This is a simulated response to allow you to continue testing your Node Linking and Prompt Templates."))
+                        continuation.finish()
+                        return
+                    }
 
                     // Attempt a one-time recovery by resetting the chat session.
                     // This helps when the underlying session is in a bad state.
@@ -228,6 +241,10 @@ public final class LLMService {
                 """
                 Agent contract:
                 \(scopeInstructions)
+
+                SRS and Guarded Generation:
+                - If the context indicates SRS Readiness is "Draft", "Empty", or "Needs Clarification": prioritize asking clarifying questions to help the user complete the requirements. Do NOT write implementation code (HTML/CSS/JS) unless the user explicitly forces you to.
+                - If the context indicates SRS Readiness is "Implementation-Ready" and Implementation State is "Blank Canvas": your primary goal is to propose a complete project skeleton (a `code` node with a complete single-file HTML document containing inline CSS/JS) using `node_edits` in a `cocaptain_actions` block.
 
                 - Respond conversationally first (concise).
                 - If the user is only asking a question, asking for advice, or asking for an opinion, do not request app actions and do not append `cocaptain_actions`.
