@@ -191,6 +191,19 @@ public struct CommandIntentResolver {
             return ["change theme", "theme", "تغيير المظهر", "تغيير الثيم"]
         case .transformNode:
             return ["change type", "transform", "تغيير النوع", "تحويل"]
+        case .organizeNodes:
+            return [
+                "organize nodes",
+                "organize",
+                "arrange nodes",
+                "arrange",
+                "magic wand",
+                "clean up",
+                "ترتيب العقد",
+                "رتب العقد",
+                "نظم العقد",
+                "ترتيب"
+            ]
         }
     }
 
