@@ -8,6 +8,8 @@ import SwiftUI
 @Observable
 @MainActor
 public class ProjectStore {
+    public static let experimentalAgentPipesEnabledKey = "experimental_agent_pipes_enabled"
+
     /// The display name of the project.
     public var projectName: String = "Untitled Project"
     
@@ -149,6 +151,10 @@ public class ProjectStore {
     
     /// Autonomously triggers agents on downstream nodes when an upstream node updates.
     public func triggerDownstreamAgents(from sourceNodeID: UUID) {
+        guard UserDefaults.standard.bool(forKey: Self.experimentalAgentPipesEnabledKey) else {
+            return
+        }
+
         agentTriggerTasks[sourceNodeID]?.cancel()
         
         agentTriggerTasks[sourceNodeID] = Task { @MainActor in
@@ -189,22 +195,21 @@ public class ProjectStore {
                         self.appendNodeAgentMessage(id: downstreamNode.id, message: aiMsg)
                     }
                     
-                    if let reviewBundle = result.reviewBundle {
-                        self.activeAgentStates[downstreamNode.id] = .applying
-                        let engine = NodePatchEngine()
-                        self.createCheckpoint(label: "Auto-Triggered Edits")
-                        for item in reviewBundle.items {
-                            if case .nodeEdit(let role, let operations, _) = item.source {
-                                if let preview = try? engine.preview(nodeID: downstreamNode.id, role: role, operations: operations, in: self) {
-                                    self.updateNodeTextContent(id: preview.nodeID, text: preview.resultText, persist: true)
-                                    let appliedMsg = NodeAgentMessage(text: "Auto-applied edits to \(role.localizedDisplayName).", isUser: false)
-                                    self.appendNodeAgentMessage(id: downstreamNode.id, message: appliedMsg)
-                                }
-                            }
-                        }
+                    if let reviewBundle = result.reviewBundle, !reviewBundle.items.isEmpty {
+                        self.activeAgentStates[downstreamNode.id] = .awaitingReview
+                        let summaries = reviewBundle.items
+                            .map { "- \($0.targetLabel): \($0.summary)" }
+                            .joined(separator: "\n")
+                        let reviewMsg = NodeAgentMessage(
+                            text: "CoCaptain prepared changes that require review before anything is applied:\n\(summaries)",
+                            isUser: false
+                        )
+                        self.appendNodeAgentMessage(id: downstreamNode.id, message: reviewMsg)
                     }
                     
-                    self.activeAgentStates[downstreamNode.id] = .idle
+                    if self.activeAgentStates[downstreamNode.id] != .awaitingReview {
+                        self.activeAgentStates[downstreamNode.id] = .idle
+                    }
                 } catch {
                     let errorMsg = NodeAgentMessage(text: "Auto-trigger failed: \(error.localizedDescription)", isUser: false)
                     self.appendNodeAgentMessage(id: downstreamNode.id, message: errorMsg)
@@ -415,6 +420,8 @@ public class ProjectStore {
                 if nodes[index].textContent?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false {
                     nodes[index].textContent = SRSScaffold.defaultText
                 }
+                let text = nodes[index].textContent ?? ""
+                nodes[index].srsReadinessState = SRSReadinessEvaluator().evaluate(text: text, currentState: nil)
             case .code:
                 if nodes[index].textContent?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false {
                     nodes[index].textContent = "// Write code here..."

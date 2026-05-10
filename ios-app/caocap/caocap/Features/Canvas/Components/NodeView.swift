@@ -36,6 +36,9 @@ struct NodeView: View {
                         } else if agentState == .applying {
                             Image(systemName: "checkmark.circle.fill")
                                 .foregroundColor(.green)
+                        } else if agentState == .awaitingReview {
+                            Image(systemName: "doc.badge.clock")
+                                .foregroundColor(.orange)
                         } else if case .error = agentState {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .foregroundColor(.red)
@@ -136,6 +139,10 @@ struct NodeView: View {
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
                     .stroke(Color.green.opacity(0.8), lineWidth: 3)
                     .shadow(color: .green, radius: 15)
+            } else if agentState == .awaitingReview {
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .stroke(Color.orange.opacity(0.8), lineWidth: 3)
+                    .shadow(color: .orange, radius: 10)
             } else if case .error = agentState {
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
                     .stroke(Color.red.opacity(0.8), lineWidth: 3)

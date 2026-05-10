@@ -26,20 +26,17 @@ export default function PrivacyPage() {
             <strong>Authentication:</strong> We use Firebase Authentication to secure your account. This may collect your email address or unique identifiers provided by Apple, Google, or GitHub.
           </p>
           <p>
-            <strong>Usage Data:</strong> We collect anonymous crash reports and performance telemetry via Firebase Crashlytics to improve the stability of the app.
-          </p>
-          <p>
-            <strong>Project Data:</strong> Your project files, nodes, and code are stored locally on your device and synced via Firebase only if you are signed in. We do not sell your project data to third parties.
+            <strong>Project Data:</strong> Your project files, nodes, SRS content, code, and previews are stored locally on your device in the current app. CAOCAP does not sell your project data.
           </p>
 
           <h2>3. AI Processing (CoCaptain)</h2>
           <p>
-            When you use the CoCaptain AI features, relevant snippets of your project context (SRS, HTML, CSS, JS) are sent to Google Gemini via Firebase AI Logic to generate suggestions. This data is processed transiently and is subject to Google&apos;s Enterprise Privacy standards.
+            When you explicitly use CoCaptain, relevant project context such as SRS text, code-node content, node inventory, and relationship metadata may be sent to Google Gemini through Firebase AI Logic to generate responses. CAOCAP does not send project content to AI services merely because you create or edit a local project.
           </p>
 
           <h2>4. Your Rights</h2>
           <p>
-            You have the right to access, export, or delete your account at any time directly from the &quot;Profile&quot; section of the app. Deleting your account permanently removes all project data from our servers.
+            You can export your work from the app and request account deletion from the &quot;Profile&quot; section. Account deletion removes your Firebase account record; local projects remain on your device unless you delete them there.
           </p>
 
           <h2>5. Contact</h2>

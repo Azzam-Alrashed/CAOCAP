@@ -28,6 +28,7 @@ public struct ProjectTemplateProvider {
                 theme: .purple,
                 connectedNodeIds: [codeId],
                 textContent: SRSScaffold.defaultText,
+                srsReadinessState: SRSReadinessEvaluator().evaluate(text: SRSScaffold.defaultText, currentState: nil),
                 agentProfile: AgentProfile(
                     systemPrompt: "You are the Product Manager. Your job is to refine the SRS and product intent. Ensure requirements are clear and executable.",
                     roleName: "PM Agent",
@@ -47,7 +48,7 @@ public struct ProjectTemplateProvider {
                 agentProfile: AgentProfile(
                     systemPrompt: "You are an expert Frontend Engineer. You receive updates from the PM (SRS node). Your job is to strictly write the HTML/CSS/JS code to implement the requirements.",
                     roleName: "Engineer Agent",
-                    isAutoTriggerEnabled: true
+                    isAutoTriggerEnabled: false
                 )
             )
         ]

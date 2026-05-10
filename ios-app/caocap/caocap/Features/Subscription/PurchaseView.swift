@@ -14,11 +14,10 @@ struct PurchaseView: View {
     @State private var purchaseError: String?
     @State private var showSuccess = false
     
-    // Mock features based on CAOCAP Pro
     let features = [
-        FeatureItem(icon: "sparkles", title: "AI Co-Captain", subtitle: "Unlimited intelligent design suggestions", color: Color(hex: "A855F7")),
-        FeatureItem(icon: "cloud.fill", title: "Cloud Sync", subtitle: "Access your projects from any device", color: Color(hex: "10B981")),
-        FeatureItem(icon: "paintpalette.fill", title: "Custom Themes", subtitle: "Exclusive premium UI themes and colors", color: Color(hex: "F59E0B")),
+        FeatureItem(icon: "sparkles", title: "AI CoCaptain", subtitle: "Project-aware assistance for SRS and code review", color: Color(hex: "A855F7")),
+        FeatureItem(icon: "checklist", title: "Review Bundles", subtitle: "Inspect proposed changes before they touch your work", color: Color(hex: "10B981")),
+        FeatureItem(icon: "square.and.arrow.up", title: "Portable Exports", subtitle: "Share runnable web bundles with project context", color: Color(hex: "F59E0B")),
     ]
     
     var body: some View {
@@ -168,7 +167,7 @@ struct PurchaseView: View {
                         // Footer Links
                         HStack(spacing: 20) {
                             Button("Restore Purchases") {
-                                Task { try? await manager.restorePurchases() }
+                                Task { await restorePurchases() }
                             }
                             Circle().frame(width: 3, height: 3)
                             Link("Terms of Use (EULA)", destination: URL(string: "https://www.azzam.ai/caocap/terms")!)
@@ -242,7 +241,7 @@ struct PurchaseView: View {
         .task {
             await manager.fetchProducts()
         }
-        .alert("Purchase Failed", isPresented: Binding(get: { purchaseError != nil }, set: { if !$0 { purchaseError = nil } })) {
+        .alert("Subscription Update", isPresented: Binding(get: { purchaseError != nil }, set: { if !$0 { purchaseError = nil } })) {
             Button("OK", role: .cancel) { }
         } message: {
             if let error = purchaseError {
@@ -316,6 +315,18 @@ struct PurchaseView: View {
                 logger.error("Purchase failed: \(error)")
                 purchaseError = error.localizedDescription
             }
+        }
+    }
+
+    private func restorePurchases() async {
+        do {
+            try await manager.restorePurchases()
+            purchaseError = manager.isSubscribed
+                ? LocalizationManager.shared.localizedString("Purchases restored.")
+                : LocalizationManager.shared.localizedString("No active CAOCAP Pro subscription was found for this Apple ID.")
+        } catch {
+            logger.error("Restore purchases failed: \(error)")
+            purchaseError = error.localizedDescription
         }
     }
 }

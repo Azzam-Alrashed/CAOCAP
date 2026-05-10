@@ -4,6 +4,7 @@ import SwiftUI
 
 public enum ExportFormat {
     case html
+    case webBundle(includeProjectContext: Bool = true)
     case caocap
 }
 
@@ -30,6 +31,42 @@ public struct ExportService {
                 logger.error("Failed to export HTML: \(error.localizedDescription)")
                 return nil
             }
+
+        case .webBundle(let includeProjectContext):
+            let compiler = LivePreviewCompiler()
+            guard let compilation = compiler.compile(nodes: store.nodes), !compilation.html.isEmpty else {
+                return nil
+            }
+
+            let bundleURL = fileManager.temporaryDirectory
+                .appendingPathComponent("\(safeName)-web-bundle", isDirectory: true)
+
+            do {
+                if fileManager.fileExists(atPath: bundleURL.path) {
+                    try fileManager.removeItem(at: bundleURL)
+                }
+                try fileManager.createDirectory(at: bundleURL, withIntermediateDirectories: true)
+                try compilation.html.write(
+                    to: bundleURL.appendingPathComponent("index.html"),
+                    atomically: true,
+                    encoding: .utf8
+                )
+
+                if includeProjectContext,
+                   let readme = readmeContent(from: store),
+                   !readme.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    try readme.write(
+                        to: bundleURL.appendingPathComponent("README.md"),
+                        atomically: true,
+                        encoding: .utf8
+                    )
+                }
+
+                return bundleURL
+            } catch {
+                logger.error("Failed to export web bundle: \(error.localizedDescription)")
+                return nil
+            }
             
         case .caocap:
             let persistence = ProjectPersistenceService()
@@ -47,6 +84,23 @@ public struct ExportService {
                 return nil
             }
         }
+    }
+
+    @MainActor
+    private static func readmeContent(from store: ProjectStore) -> String? {
+        let srsText = store.nodes.first(where: { $0.role == .srs })?.textContent?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let srsText, !srsText.isEmpty else { return nil }
+
+        return """
+        # \(store.projectName)
+
+        Exported from CAOCAP.
+
+        ## Software Requirements
+
+        \(srsText)
+        """
     }
 }
 

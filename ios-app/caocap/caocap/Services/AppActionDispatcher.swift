@@ -40,8 +40,9 @@ public struct AppActionDefinition: Identifiable, Hashable {
     public let title: String
     public let icon: String
     public let category: AppActionCategory
-    /// Mutating actions change user data or project structure and should be
-    /// reviewed before an agent performs them.
+    /// Mutating actions change user data or project structure. Most require
+    /// review, but small reversible workspace actions may opt into autonomous
+    /// execution through `allowsAutonomousExecution`.
     public let isMutating: Bool
     /// Indicates whether trusted non-user callers, such as CoCaptain, may run
     /// this action without an explicit review item.
@@ -260,7 +261,7 @@ public final class AppActionDispatcher: AppActionPerforming {
             icon: "arrow.up.and.down.and.arrow.left.and.right",
             category: .project,
             isMutating: true,
-            allowsAutonomousExecution: false
+            allowsAutonomousExecution: true
         ),
         AppActionDefinition(
             id: .themeNode,
@@ -381,8 +382,8 @@ public final class AppActionDispatcher: AppActionPerforming {
         availableActions.first(where: { $0.id == id })
     }
 
-    /// Executes an action if configured. Automatic agent calls are blocked from
-    /// mutating or non-autonomous actions; reviewed/user calls may continue.
+    /// Executes an action if configured. Automatic agent calls are blocked
+    /// unless the action has explicitly opted into autonomous execution.
     @discardableResult
     public func perform(_ id: AppActionID, source: AppActionSource, arguments: [String: String]? = nil) -> AppActionResult {
         guard let definition = definition(for: id) else {
@@ -395,7 +396,7 @@ public final class AppActionDispatcher: AppActionPerforming {
         }
 
         if source == .agentAutomatic {
-            guard definition.allowsAutonomousExecution && !definition.isMutating else {
+            guard definition.allowsAutonomousExecution else {
                 return AppActionResult(
                     actionID: definition.id,
                     title: definition.localizedTitle,

@@ -13,6 +13,7 @@ struct ProfileView: View {
     
     @State private var showingDeleteAlert = false
     @State private var showingSignOutAlert = false
+    @State private var deleteErrorMessage: String?
     
     var body: some View {
         NavigationStack {
@@ -205,13 +206,18 @@ struct ProfileView: View {
                             try await authManager.deleteAccount()
                             dismiss()
                         } catch {
-                            // In a real app, show a re-auth prompt here
                             logger.error("Deletion failed: \(error)")
+                            deleteErrorMessage = error.localizedDescription
                         }
                     }
                 }
             } message: {
-                Text("This action cannot be undone. All your projects, nodes, and subscription data will be permanently deleted from our servers.")
+                Text("This removes your CAOCAP account from Firebase. Local projects on this device remain available unless you delete them separately. Firebase may ask you to sign in again before deletion.")
+            }
+            .alert("Delete Account Failed", isPresented: Binding(get: { deleteErrorMessage != nil }, set: { if !$0 { deleteErrorMessage = nil } })) {
+                Button("OK", role: .cancel) { deleteErrorMessage = nil }
+            } message: {
+                Text(deleteErrorMessage ?? "Try signing in again, then delete the account.")
             }
             .preferredColorScheme(currentColorScheme)
         }

@@ -33,10 +33,6 @@ public struct CoCaptainAgentValidator {
                 continue
             }
 
-            if definition.isMutating {
-                issues.append("Safe action `\(id.rawValue)` is mutating; move it to `pendingActions`.")
-            }
-
             if !definition.allowsAutonomousExecution {
                 issues.append("Safe action `\(id.rawValue)` is not autonomous; move it to `pendingActions`.")
             }

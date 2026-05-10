@@ -50,12 +50,12 @@ export default function SupportPage() {
             
             <div className="faq-item">
               <h3>Is my code private?</h3>
-              <p>Yes. Your code is stored locally on your device. It is only synced to our servers if you sign in to an account for cross-device access.</p>
+              <p>Your code, SRS, and project graph are stored locally on your device in the current app. Project context is sent to AI services only when you explicitly ask CoCaptain for help.</p>
             </div>
 
             <div className="faq-item">
               <h3>Does CoCaptain use my data for training?</h3>
-              <p>No. We use Google Gemini via Firebase AI Logic. Your project context is processed transiently and is not used to train global AI models.</p>
+              <p>CoCaptain uses Google Gemini through Firebase AI Logic to answer your request. CAOCAP only sends the project context needed for the CoCaptain action you start.</p>
             </div>
 
             <div className="faq-item">

@@ -18,6 +18,7 @@ public enum AgentExecutionState: Equatable {
     case idle
     case thinking
     case applying
+    case awaitingReview
     case error(String)
 }
 

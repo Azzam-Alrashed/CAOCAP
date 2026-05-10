@@ -23,7 +23,7 @@ export default function TermsPage() {
 
           <h2>2. License</h2>
           <p>
-            We grant you a personal, non-transferable license to use CAOCAP on supported iOS and iPadOS devices. The core application logic and spatial engine are proprietary, while specific exported components may be subject to open-source licenses as noted in our repository.
+            CAOCAP is distributed under the GNU General Public License v3.0 as described in the public repository. App Store distribution, Apple platform terms, and third-party service terms may also apply when you install or use the app.
           </p>
 
           <h2>3. Pro Subscriptions</h2>
@@ -38,7 +38,7 @@ export default function TermsPage() {
 
           <h2>5. AI CoCaptain</h2>
           <p>
-            AI-generated code and suggestions are provided &quot;as is.&quot; While CoCaptain is designed to be helpful, we do not guarantee the accuracy, security, or functionality of AI-proposed changes. Always review AI suggestions before applying them to your production projects.
+            CoCaptain responses and AI-generated suggestions are provided &quot;as is.&quot; CAOCAP is designed to stage meaningful code and SRS changes for review, but you are responsible for deciding whether to apply or use AI-proposed work.
           </p>
 
           <h2>6. Limitation of Liability</h2>

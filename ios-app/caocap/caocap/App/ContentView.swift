@@ -319,8 +319,7 @@ struct ContentView: View {
                 coCaptain.setPresented(true)
             },
             shareProject: {
-                // First try exporting as HTML bundle
-                if let url = ExportService.export(from: router.activeStore, format: .html) {
+                if let url = ExportService.export(from: router.activeStore, format: .webBundle(includeProjectContext: true)) {
                     exportURL = url
                     showExportSheet = true
                 } else if let url = ExportService.export(from: router.activeStore, format: .caocap) {

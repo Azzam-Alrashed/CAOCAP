@@ -212,7 +212,7 @@ public final class CoCaptainViewModel {
             return false
         }
 
-        if definition.isMutating || !definition.allowsAutonomousExecution {
+        if !definition.allowsAutonomousExecution {
             items.append(
                 CoCaptainTimelineItem(
                     content: .message(

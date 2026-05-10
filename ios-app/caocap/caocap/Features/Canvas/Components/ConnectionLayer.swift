@@ -27,7 +27,9 @@ struct ConnectionLayer: View {
                         let end = screenPoint(for: targetNode, in: size)
                         
                         let isEventPipe = targetNode.agentProfile.isAutoTriggerEnabled
-                        let isActive = activeAgentStates[targetNode.id] == .thinking || activeAgentStates[targetNode.id] == .applying
+                        let isActive = activeAgentStates[targetNode.id] == .thinking
+                            || activeAgentStates[targetNode.id] == .applying
+                            || activeAgentStates[targetNode.id] == .awaitingReview
                         
                         drawArrow(context: context, from: start, to: end, themeColor: node.theme.color, scale: viewport.scale, isEventPipe: isEventPipe, isActive: isActive, isLogic: false)
                     }

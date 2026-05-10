@@ -108,7 +108,8 @@ final class AuthenticationManager {
         }
         do {
             let result = try await Auth.auth().signInAnonymously()
-            logger.info("Anonymous sign-in succeeded. UID: \(result.user.uid)")
+            logger.info("Anonymous sign-in succeeded.")
+            handle(user: result.user)
         } catch {
             logger.error("Anonymous sign-in failed: \(error.localizedDescription)")
             authState = .failed(reason: error.localizedDescription)
@@ -178,7 +179,7 @@ final class AuthenticationManager {
             // The UID stays the same — all data is preserved.
             do {
                 let result = try await currentUser.link(with: credential)
-                logger.info("Successfully linked \(provider) to anonymous account. UID: \(result.user.uid)")
+                logger.info("Successfully linked \(provider) to anonymous account.")
                 
                 // FORCE UI UPDATE: Firebase listener might not fire immediately on link
                 handle(user: result.user)
@@ -197,7 +198,7 @@ final class AuthenticationManager {
                     // The credential belongs to a different account — sign in to that account instead.
                     logger.warning("\(provider) credential conflict (code: \(error.code)). Switching to existing account.")
                     let result = try await Auth.auth().signIn(with: credential)
-                    logger.info("Signed into existing \(provider) account. UID: \(result.user.uid)")
+                    logger.info("Signed into existing \(provider) account.")
                     handle(user: result.user)
                 } else {
                     // It's a genuine error (network, cancel, etc) — rethrow
@@ -207,7 +208,7 @@ final class AuthenticationManager {
         } else {
             // Fresh sign-in (no anonymous session).
             let result = try await Auth.auth().signIn(with: credential)
-            logger.info("\(provider) sign-in succeeded. UID: \(result.user.uid)")
+            logger.info("\(provider) sign-in succeeded.")
             handle(user: result.user)
         }
     }
@@ -224,10 +225,10 @@ final class AuthenticationManager {
 
         if user.isAnonymous {
             authState = .anonymous(uid: user.uid)
-            logger.info("Session restored: anonymous user \(user.uid)")
+            logger.info("Anonymous session restored.")
         } else {
             authState = .authenticated(uid: user.uid)
-            logger.info("Session restored: authenticated user \(user.uid)")
+            logger.info("Authenticated session restored.")
         }
     }
 }

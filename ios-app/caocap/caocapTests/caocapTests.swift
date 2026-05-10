@@ -6,6 +6,7 @@
 //
 
 import CoreGraphics
+import Foundation
 import Testing
 @testable import caocap
 
@@ -46,6 +47,12 @@ struct caocapTests {
         #expect(text.contains("## Core Flow"))
         #expect(text.contains("## Acceptance Checks"))
         #expect(text.contains("CoCaptain has enough context"))
+        #expect(srsNode.srsReadinessState == .needsClarification)
+    }
+
+    @Test func defaultProjectDoesNotAutoTriggerNodeAgents() throws {
+        let codeNode = try #require(ProjectTemplateProvider.defaultNodes.first { $0.type == .code })
+        #expect(codeNode.agentProfile.isAutoTriggerEnabled == false)
     }
 
     @Test func srsScaffoldPreservesDraftAndAddsMissingSections() {
@@ -56,5 +63,76 @@ struct caocapTests {
         #expect(structuredText.contains("## People"))
         #expect(structuredText.contains("## Requirements"))
         #expect(structuredText.contains("## Constraints"))
+    }
+
+    @MainActor
+    @Test func dispatcherAllowsExplicitlyAutonomousWorkspaceMutations() {
+        let dispatcher = AppActionDispatcher()
+        var createdTextNode = false
+
+        dispatcher.configure(
+            goHome: {},
+            goBack: {},
+            newProject: {},
+            createNode: {},
+            onCreateTextNode: { createdTextNode = true },
+            onCreateCalculationNode: {},
+            onCreateDisplayNode: {},
+            onCreateNumberNode: {},
+            onCreateTableNode: {},
+            onCreateAiAgentNode: {},
+            summonCoCaptain: {}
+        )
+
+        let result = dispatcher.perform(.createTextNode, source: .agentAutomatic)
+
+        #expect(result.executed)
+        #expect(createdTextNode)
+    }
+
+    @MainActor
+    @Test func dispatcherBlocksNonAutonomousProjectCreationFromAgentAutomatic() {
+        let dispatcher = AppActionDispatcher()
+        var createdProject = false
+
+        dispatcher.configure(
+            goHome: {},
+            goBack: {},
+            newProject: { createdProject = true },
+            createNode: {},
+            onCreateCalculationNode: {},
+            onCreateDisplayNode: {},
+            onCreateNumberNode: {},
+            onCreateTableNode: {},
+            onCreateAiAgentNode: {},
+            summonCoCaptain: {}
+        )
+
+        let result = dispatcher.perform(.newProject, source: .agentAutomatic)
+
+        #expect(!result.executed)
+        #expect(!createdProject)
+    }
+
+    @MainActor
+    @Test func webBundleExportIncludesRunnableIndexAndSRSReadme() throws {
+        let store = ProjectStore(
+            fileName: "onboarding-export-test-\(UUID().uuidString).json",
+            projectName: "Export Test",
+            initialNodes: ProjectTemplateProvider.defaultNodes
+        )
+
+        let exportURL = try #require(ExportService.export(from: store, format: .webBundle(includeProjectContext: true)))
+        defer { try? FileManager.default.removeItem(at: exportURL) }
+
+        var isDirectory: ObjCBool = false
+        #expect(FileManager.default.fileExists(atPath: exportURL.path, isDirectory: &isDirectory))
+        #expect(isDirectory.boolValue)
+        #expect(FileManager.default.fileExists(atPath: exportURL.appendingPathComponent("index.html").path))
+        #expect(FileManager.default.fileExists(atPath: exportURL.appendingPathComponent("README.md").path))
+
+        let readme = try String(contentsOf: exportURL.appendingPathComponent("README.md"), encoding: .utf8)
+        #expect(readme.contains("## Software Requirements"))
+        #expect(readme.contains("# Intent"))
     }
 }

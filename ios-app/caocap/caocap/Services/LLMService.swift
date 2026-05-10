@@ -224,14 +224,14 @@ public final class LLMService {
             }()
 
             let autonomousActionLines = availableActions
-                .filter { !$0.isMutating && $0.allowsAutonomousExecution }
+                .filter(\.allowsAutonomousExecution)
                 .map { action in
-                    "- \(action.id.rawValue): \(action.title)"
+                    "- \(action.id.rawValue): \(action.title) [mutating=\(action.isMutating)]"
                 }
                 .joined(separator: "\n")
 
             let reviewActionLines = availableActions
-                .filter { $0.isMutating || !$0.allowsAutonomousExecution }
+                .filter { !$0.allowsAutonomousExecution }
                 .map { action in
                     "- \(action.id.rawValue): \(action.title) [mutating=\(action.isMutating), autonomous=\(action.allowsAutonomousExecution)]"
                 }
@@ -256,11 +256,11 @@ public final class LLMService {
 
                 App actions:
                 - Prefer `request_app_action(actionId, executionMode, reason)` for app actions.
-                - Use executionMode `safe` ONLY for these non-mutating autonomous action ids:
+                - Use executionMode `safe` ONLY for these explicitly autonomous action ids:
                 \(autonomousActionLines.isEmpty ? "- none" : autonomousActionLines)
-                - Use executionMode `pending` for these review-required or mutating action ids:
+                - Use executionMode `pending` for these review-required action ids:
                 \(reviewActionLines.isEmpty ? "- none" : reviewActionLines)
-                - Never request a mutating or non-autonomous action with executionMode `safe`.
+                - Never request a non-autonomous action with executionMode `safe`.
 
                 Node edits:
                 - Only target editable source nodes for edits: srs, code, standard text nodes, or legacy html/css/javascript nodes. Legacy projects may expose html, css, and javascript, but prefer code whenever it exists.
