@@ -125,6 +125,10 @@ public struct ProjectContextBuilder {
             return "Output Value: \(val)"
         case .aiAgent:
             return node.aiResponse ?? "[No response yet]"
+        case .chart:
+            let style = node.chartStyle?.displayName ?? "Bar Chart"
+            let inputCount = node.inputNodeIds?.count ?? 0
+            return "Chart Style: \(style)\nInput Count: \(inputCount)"
         }
     }
 

@@ -12,7 +12,7 @@ public enum NodeAction: String, Codable, Equatable {
     case summonCoCaptain
 }
 
-public enum NodeType: String, Codable, Equatable, CaseIterable {
+public enum NodeType: String, Codable, Equatable, Hashable, CaseIterable {
     case standard
     case webView
     case srs
@@ -24,6 +24,7 @@ public enum NodeType: String, Codable, Equatable, CaseIterable {
     case calculation
     case display
     case aiAgent
+    case chart
     
     public var displayName: String {
         switch self {
@@ -38,6 +39,29 @@ public enum NodeType: String, Codable, Equatable, CaseIterable {
         case .calculation: return "Calculation"
         case .display: return "Display"
         case .aiAgent: return "AI Agent"
+        case .chart: return "Chart"
+        }
+    }
+}
+
+public enum ChartStyle: String, Codable, Equatable, CaseIterable {
+    case bar
+    case line
+    case area
+
+    public var displayName: String {
+        switch self {
+        case .bar: return "Bar Chart"
+        case .line: return "Line Trend"
+        case .area: return "Area Graph"
+        }
+    }
+
+    public var icon: String {
+        switch self {
+        case .bar: return "chart.bar.fill"
+        case .line: return "chart.line.uptrend.xyaxis"
+        case .area: return "chart.xyaxis.line"
         }
     }
 }
@@ -150,11 +174,23 @@ public struct SpatialNode: Identifiable, Codable, Equatable {
     
     /// The AI prompt template for AI-processing nodes.
     public var promptTemplate: String?
+
+    /// The chart style for chart nodes.
+    public var chartStyle: ChartStyle?
+
+    /// The selected table column index for X-axis labels.
+    public var chartXColumnIndex: Int?
+
+    /// The selected table column index for Y-axis values.
+    public var chartYColumnIndex: Int?
+
+    /// Whether the source table's first row should be treated as headers.
+    public var chartHasHeaderRow: Bool?
     
     /// IDs of nodes providing input data to this node.
     public var inputNodeIds: [UUID]?
     
-    public init(id: UUID = UUID(), type: NodeType = .standard, position: CGPoint, title: String, subtitle: String? = nil, icon: String? = nil, theme: NodeTheme = .blue, nextNodeId: UUID? = nil, connectedNodeIds: [UUID]? = nil, action: NodeAction? = nil, htmlContent: String? = nil, textContent: String? = nil, srsReadinessState: SRSReadinessState? = nil, drawingData: Data? = nil, agentState: NodeAgentState = NodeAgentState(), agentProfile: AgentProfile = AgentProfile(), operation: ArithmeticOperation? = nil, displayStyle: DisplayStyle? = nil, outputValue: Double? = nil, aiResponse: String? = nil, promptTemplate: String? = nil, inputNodeIds: [UUID]? = nil) {
+    public init(id: UUID = UUID(), type: NodeType = .standard, position: CGPoint, title: String, subtitle: String? = nil, icon: String? = nil, theme: NodeTheme = .blue, nextNodeId: UUID? = nil, connectedNodeIds: [UUID]? = nil, action: NodeAction? = nil, htmlContent: String? = nil, textContent: String? = nil, srsReadinessState: SRSReadinessState? = nil, drawingData: Data? = nil, agentState: NodeAgentState = NodeAgentState(), agentProfile: AgentProfile = AgentProfile(), operation: ArithmeticOperation? = nil, displayStyle: DisplayStyle? = nil, outputValue: Double? = nil, aiResponse: String? = nil, promptTemplate: String? = nil, chartStyle: ChartStyle? = nil, chartXColumnIndex: Int? = nil, chartYColumnIndex: Int? = nil, chartHasHeaderRow: Bool? = nil, inputNodeIds: [UUID]? = nil) {
         self.id = id
         self.type = type
         self.position = position
@@ -176,6 +212,10 @@ public struct SpatialNode: Identifiable, Codable, Equatable {
         self.outputValue = outputValue
         self.aiResponse = aiResponse
         self.promptTemplate = promptTemplate
+        self.chartStyle = chartStyle
+        self.chartXColumnIndex = chartXColumnIndex
+        self.chartYColumnIndex = chartYColumnIndex
+        self.chartHasHeaderRow = chartHasHeaderRow
         self.inputNodeIds = inputNodeIds
     }
 
@@ -209,6 +249,10 @@ public struct SpatialNode: Identifiable, Codable, Equatable {
         case outputValue
         case aiResponse
         case promptTemplate
+        case chartStyle
+        case chartXColumnIndex
+        case chartYColumnIndex
+        case chartHasHeaderRow
         case inputNodeIds
     }
 
@@ -235,6 +279,10 @@ public struct SpatialNode: Identifiable, Codable, Equatable {
         self.outputValue = try container.decodeIfPresent(Double.self, forKey: .outputValue)
         self.aiResponse = try container.decodeIfPresent(String.self, forKey: .aiResponse)
         self.promptTemplate = try container.decodeIfPresent(String.self, forKey: .promptTemplate)
+        self.chartStyle = try container.decodeIfPresent(ChartStyle.self, forKey: .chartStyle)
+        self.chartXColumnIndex = try container.decodeIfPresent(Int.self, forKey: .chartXColumnIndex)
+        self.chartYColumnIndex = try container.decodeIfPresent(Int.self, forKey: .chartYColumnIndex)
+        self.chartHasHeaderRow = try container.decodeIfPresent(Bool.self, forKey: .chartHasHeaderRow)
         self.inputNodeIds = try container.decodeIfPresent([UUID].self, forKey: .inputNodeIds)
     }
 }
