@@ -4,6 +4,9 @@ struct NodeView: View {
     let node: SpatialNode
     var isDragging: Bool = false
     var agentState: AgentExecutionState = .idle
+    var allNodes: [SpatialNode] = []
+    var onUpdateChartX: ((Int?) -> Void)? = nil
+    var onUpdateChartY: ((Int?) -> Void)? = nil
     @State private var isHovering = false
     @State private var isPulsing = false
     @AppStorage(LocalizationManager.languageStorageKey) private var selectedLanguage = "English"
@@ -75,13 +78,28 @@ struct NodeView: View {
             .environment(\.layoutDirection, LocalizationManager.shared.layoutDirection(for: selectedLanguage))
             .padding(.bottom, node.type == .webView ? 16 : 0)
             
-            NodePreviewContent(node: node, agentState: agentState, themeColor: themeColor)
+            NodePreviewContent(
+                node: node,
+                agentState: agentState,
+                themeColor: themeColor,
+                allNodes: allNodes,
+                onUpdateChartX: onUpdateChartX,
+                onUpdateChartY: onUpdateChartY
+            )
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 20)
         .background(backgroundStack)
         .overlay(borderOverlay)
         .overlay(statusOverlay)
+        .background(
+            GeometryReader { geometry in
+                Color.clear.preference(
+                    key: NodeFramePreferenceKey.self,
+                    value: [node.id: NodeFrameData(nodeId: node.id, frame: geometry.frame(in: .named("canvas")))]
+                )
+            }
+        )
         .scaleEffect(isDragging ? 1.05 : (isHovering ? 1.02 : 1.0))
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isDragging)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isHovering)
@@ -156,6 +174,9 @@ private struct NodePreviewContent: View {
     let node: SpatialNode
     let agentState: AgentExecutionState
     let themeColor: Color
+    let allNodes: [SpatialNode]
+    let onUpdateChartX: ((Int?) -> Void)?
+    let onUpdateChartY: ((Int?) -> Void)?
     
     var body: some View {
         Group {
@@ -239,6 +260,14 @@ private struct NodePreviewContent: View {
                             .cornerRadius(8)
                     }
                     .padding(.top, 12)
+
+                case .chart:
+                    ChartNodeView(
+                        node: node,
+                        allNodes: allNodes,
+                        onUpdateX: onUpdateChartX,
+                        onUpdateY: onUpdateChartY
+                    )
                     
                 default:
                     EmptyView()

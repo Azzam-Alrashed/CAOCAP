@@ -17,7 +17,22 @@ struct NodeDetailView: View {
     }
     
     private var eligibleInputNodes: [SpatialNode] {
-        store.nodes.filter { $0.id != currentNode.id && ($0.type == .text || $0.type == .calculation) }
+        store.nodes.filter { node in
+            node.id != currentNode.id && eligibleInputTypes.contains(node.type)
+        }
+    }
+
+    private var eligibleInputTypes: Set<NodeType> {
+        switch currentNode.type {
+        case .calculation:
+            return [.text, .number, .calculation, .display]
+        case .display:
+            return [.text, .number, .calculation, .display, .aiAgent]
+        case .chart:
+            return [.text, .number, .table, .calculation, .display, .aiAgent]
+        default:
+            return []
+        }
     }
     
     var body: some View {
@@ -386,17 +401,80 @@ struct NodeDetailView: View {
                                             .cornerRadius(12)
                                     }
                                 }
+                            } else if currentNode.type == .chart {
+                                VStack(alignment: .leading, spacing: 16) {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        Label("Chart Preview", systemImage: "eye.fill")
+                                            .font(.system(size: 10, weight: .black))
+                                            .opacity(0.4)
+
+                                        ChartNodeView(
+                                            node: currentNode,
+                                            allNodes: store.nodes,
+                                            isScrollable: true,
+                                            onUpdateX: { index in
+                                                store.updateNodeChartXColumn(id: currentNode.id, index: index)
+                                            },
+                                            onUpdateY: { index in
+                                                store.updateNodeChartYColumn(id: currentNode.id, index: index)
+                                            }
+                                        )
+                                        .frame(height: 240)
+                                        .padding()
+                                        .background(.ultraThinMaterial)
+                                        .cornerRadius(20)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 20)
+                                                .stroke(themeColor.opacity(0.1), lineWidth: 1)
+                                        )
+                                    }
+
+                                    Label("Chart Style", systemImage: "chart.line.uptrend.xyaxis")
+                                        .font(.headline)
+                                        .foregroundColor(themeColor)
+
+                                    Picker("Style", selection: Binding(
+                                        get: { currentNode.chartStyle ?? .bar },
+                                        set: { store.updateNodeChartStyle(id: currentNode.id, style: $0) }
+                                    )) {
+                                        ForEach(ChartStyle.allCases, id: \.self) { style in
+                                            Label(style.displayName, systemImage: style.icon).tag(style)
+                                        }
+                                    }
+                                    .pickerStyle(.segmented)
+                                    .padding()
+                                    .background(.ultraThinMaterial)
+                                    .cornerRadius(16)
+
+                                    Toggle(isOn: Binding(
+                                        get: { currentNode.chartHasHeaderRow ?? false },
+                                        set: { store.updateNodeChartHasHeaderRow(id: currentNode.id, hasHeader: $0) }
+                                    )) {
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("First row is header")
+                                                .font(.system(size: 16, weight: .medium))
+                                            Text("Use the first table row for column labels.")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        }
+                                    }
+                                    .tint(themeColor)
+
+                                    Text("\(currentNode.inputNodeIds?.count ?? 0) active data streams")
+                                        .font(.subheadline.bold())
+                                        .foregroundColor(.secondary)
+                                }
                             }
 
                             // Input Connections Section
-                            if currentNode.type == .calculation || currentNode.type == .display {
+                            if currentNode.type == .calculation || currentNode.type == .display || currentNode.type == .chart {
                                 VStack(alignment: .leading, spacing: 12) {
                                     Label("Connect Inputs", systemImage: "link")
                                         .font(.headline)
                                         .foregroundColor(themeColor)
                                     
                                     if eligibleInputNodes.isEmpty {
-                                        Text("No text or calculation nodes available to connect.")
+                                        Text("No compatible nodes available to connect.")
                                             .font(.caption)
                                             .foregroundColor(.secondary)
                                     } else {

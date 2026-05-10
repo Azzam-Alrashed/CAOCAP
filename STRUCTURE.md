@@ -79,7 +79,7 @@ Pure domain data. No UI, no persistence, no side effects. These structs define t
 
 | File | Responsibility |
 |---|---|
-| `SpatialNode.swift` | The core canvas primitive. Holds `id`, `type` (`.standard`, `.webView`, `.srs`, `.code`, `.art`), `position`, content fields, drawing data, relationships, agent metadata, and theme. |
+| `SpatialNode.swift` | The core canvas primitive. Holds `id`, `type` (`.standard`, `.webView`, `.srs`, `.code`, `.art`, `.text`, `.number`, `.table`, `.calculation`, `.display`, `.aiAgent`, `.chart`), `position`, content fields, drawing data, relationships, agent metadata, chart configuration, and theme. |
 | `NodeTheme.swift` | Color tokens for the six node themes (blue, purple, green, orange, red, gray). |
 | `NodeRole.swift` | Canonical role inference for SRS, Code, Live Preview, custom nodes, and legacy HTML/CSS/JavaScript nodes. |
 | `SRSReadinessState.swift` | Domain state for whether an SRS node is empty, structured, drafted, or ready. |
@@ -149,6 +149,8 @@ The spatial runtime — the heart of CAOCAP.
 |---|---|
 | `NodeView.swift` | Renders a single `SpatialNode` on the canvas. Handles the glassmorphic card, icon, title, and inline WebView embed for `.webView` nodes. |
 | `NodeDetailView.swift` | The sheet-level router. Inspects `node.type` and presents the correct editor: `HTMLWebView` for `.webView`, `CodeEditorView` for `.code`, `SRSEditorView` for `.srs`. |
+| `ChartNodeView.swift` | Swift Charts-powered preview for `.chart` nodes, including table-backed column mapping and bar/line/area styles. |
+| `NodeFrameData.swift` | Preference-key plumbing that reports rendered node frames so connection arrows can target real node centers. |
 | `ConnectionLayer.swift` | Draws Bezier-curve connections for all `connectedNodeIds` relationships. Operates in screen-space to prevent clipping. |
 | `CodeEditorView.swift` | VS Code-style editor sheet for `.code` nodes. Wraps `LineNumberedTextView` with a sleek dark tab bar and file extension label. |
 | `LineNumberedTextView.swift` | `UIViewRepresentable` wrapping a dual-pane `UIView` (gutter + `UITextView`). Implements synchronized scrolling and regex-based syntax highlighting for single-file app code. |

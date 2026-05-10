@@ -78,7 +78,7 @@ npm run lint
 npm run build
 ```
 
-Prefer running the narrowest useful verification for the change. If verification cannot be run, state why in the final response.
+Only run tests or build verification when the user explicitly asks for it. When iOS simulator testing is requested, use the latest available simulator on the machine instead of hard-coding a specific device name. If requested verification cannot be run, state why in the final response.
 
 ## Editing Guidance
 
@@ -89,7 +89,7 @@ Prefer running the narrowest useful verification for the change. If verification
 - When adding Swift source files, make sure they are included in the Xcode project target.
 - Prefer extracting large hardcoded graph/template literals into providers instead of expanding routers or views.
 - When adding user-facing text, keep localization in mind and avoid scattering duplicate strings.
-- For UI changes, check compact and regular device sizes when possible.
+- For UI changes, check compact and regular device sizes only when the user asks for UI verification.
 
 ## Good First Debt Payments
 

@@ -456,6 +456,10 @@ public class ProjectStore {
                 if nodes[index].promptTemplate == nil {
                     nodes[index].promptTemplate = "Compare {{input1}} and {{input2}}"
                 }
+            case .chart:
+                if nodes[index].chartStyle == nil {
+                    nodes[index].chartStyle = .bar
+                }
             }
             
             if persist {
@@ -463,6 +467,30 @@ public class ProjectStore {
             }
             compileLivePreview()
         }
+    }
+
+    public func updateNodeChartStyle(id: UUID, style: ChartStyle) {
+        guard let index = nodes.firstIndex(where: { $0.id == id }) else { return }
+        nodes[index].chartStyle = style
+        requestSave()
+    }
+
+    public func updateNodeChartXColumn(id: UUID, index: Int?) {
+        guard let nodeIndex = nodes.firstIndex(where: { $0.id == id }) else { return }
+        nodes[nodeIndex].chartXColumnIndex = index
+        requestSave()
+    }
+
+    public func updateNodeChartYColumn(id: UUID, index: Int?) {
+        guard let nodeIndex = nodes.firstIndex(where: { $0.id == id }) else { return }
+        nodes[nodeIndex].chartYColumnIndex = index
+        requestSave()
+    }
+
+    public func updateNodeChartHasHeaderRow(id: UUID, hasHeader: Bool) {
+        guard let nodeIndex = nodes.firstIndex(where: { $0.id == id }) else { return }
+        nodes[nodeIndex].chartHasHeaderRow = hasHeader
+        requestSave()
     }
 
     /// Updates the PencilKit drawing data for an .art node.
@@ -523,6 +551,7 @@ public class ProjectStore {
             if persist {
                 requestSave()
             }
+            recalculateGraph()
             triggerDownstreamAgents(from: id)
         }
     }
@@ -684,7 +713,8 @@ public class ProjectStore {
             subtitle: type == .code ? "Write your intent here." : nil,
             icon: nodeIcon(for: type),
             theme: nodeTheme(for: type),
-            textContent: type == .code ? "// Start coding here..." : nil
+            textContent: type == .code ? "// Start coding here..." : nil,
+            chartStyle: type == .chart ? .bar : nil
         )
         
         // Register Undo
@@ -715,6 +745,7 @@ public class ProjectStore {
         case .art: return "pencil.tip"
         case .standard: return "square.grid.2x2"
         case .aiAgent: return "brain.head.profile.fill"
+        case .chart: return "chart.line.uptrend.xyaxis"
         }
     }
 
@@ -726,6 +757,7 @@ public class ProjectStore {
         case .calculation: return .orange
         case .display: return .green
         case .aiAgent: return .indigo
+        case .chart: return .purple
         default: return .blue
         }
     }
@@ -850,11 +882,11 @@ public class ProjectStore {
                     }
                     
                     let values = inputs.compactMap { inputNode -> Double? in
-                        if inputNode.type == .number {
-                            return Double(inputNode.textContent ?? "0")
-                        } else {
-                            return inputNode.outputValue
+                        if let outputValue = inputNode.outputValue {
+                            return outputValue
                         }
+
+                        return numericValue(from: inputNode)
                     }
                     
                     let result: Double
@@ -885,7 +917,7 @@ public class ProjectStore {
                     // Display nodes mirror their first input
                     if let inputId = node.inputNodeIds?.first,
                        let inputNode = nodes.first(where: { $0.id == inputId }) {
-                        let value = inputNode.type == .text ? Double(inputNode.textContent ?? "0") : inputNode.outputValue
+                        let value = inputNode.outputValue ?? numericValue(from: inputNode) ?? 0
                         if nodes[i].outputValue != value {
                             nodes[i].outputValue = value
                             currentPassChanged = true
@@ -906,18 +938,12 @@ public class ProjectStore {
             nodes[index].inputNodeIds = inputNodeIds
             recalculateGraph()
             requestSave()
-            
-            // If it's an AI Agent, automatically trigger evaluation when inputs change
-            if nodes[index].type == .aiAgent {
-                evaluateAINode(id: id)
-            }
         }
     }
 
     public func updateNodePrompt(id: UUID, prompt: String) {
         if let index = nodes.firstIndex(where: { $0.id == id }) {
             nodes[index].promptTemplate = prompt
-            evaluateAINode(id: id)
             requestSave()
         }
     }
@@ -976,5 +1002,12 @@ public class ProjectStore {
 
     private func findInputs(for nodeId: UUID) -> [SpatialNode] {
         nodes.filter { $0.nextNodeId == nodeId }
+    }
+
+    private func numericValue(from node: SpatialNode) -> Double? {
+        let text = node.textContent ?? node.aiResponse ?? node.subtitle ?? ""
+        let cleaned = text.filter { "0123456789.-".contains($0) }
+        guard !cleaned.isEmpty else { return nil }
+        return Double(cleaned)
     }
 }
