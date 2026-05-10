@@ -10,6 +10,7 @@ struct ConnectionLayer: View {
     let viewport: ViewportState
     let center: CGPoint
     let activeAgentStates: [UUID: AgentExecutionState]
+    let nodeFrames: [UUID: NodeFrameData]
     
     var body: some View {
         Canvas { context, size in
@@ -23,8 +24,8 @@ struct ConnectionLayer: View {
                 
                 for targetId in structuralTargets {
                     if let targetNode = nodeDict[targetId] {
-                        let start = screenPoint(for: node, in: size)
-                        let end = screenPoint(for: targetNode, in: size)
+                        let start = screenPoint(for: node)
+                        let end = screenPoint(for: targetNode)
                         
                         let isEventPipe = targetNode.agentProfile.isAutoTriggerEnabled
                         let isActive = activeAgentStates[targetNode.id] == .thinking
@@ -39,10 +40,9 @@ struct ConnectionLayer: View {
                 if let inputIds = node.inputNodeIds {
                     for sourceId in inputIds {
                         if let sourceNode = nodeDict[sourceId] {
-                            let start = screenPoint(for: sourceNode, in: size)
-                            let end = screenPoint(for: node, in: size)
-                            // Logic links are always orange/gold to distinguish them from structural flow
-                            drawArrow(context: context, from: start, to: end, themeColor: .orange, scale: viewport.scale, isEventPipe: false, isActive: false, isLogic: true)
+                            let start = screenPoint(for: sourceNode)
+                            let end = screenPoint(for: node)
+                            drawArrow(context: context, from: start, to: end, themeColor: sourceNode.theme.color, scale: viewport.scale, isEventPipe: false, isActive: false, isLogic: false)
                         }
                     }
                 }
@@ -52,7 +52,11 @@ struct ConnectionLayer: View {
         .allowsHitTesting(false)
     }
 
-    private func screenPoint(for node: SpatialNode, in size: CGSize) -> CGPoint {
+    private func screenPoint(for node: SpatialNode) -> CGPoint {
+        if let frameData = nodeFrames[node.id] {
+            return frameData.center
+        }
+
         let nodeOffset = dragOffsets[node.id] ?? .zero
         return CGPoint(
             x: center.x + (node.position.x + nodeOffset.width) * viewport.scale + viewport.offset.width,
