@@ -14,6 +14,7 @@ extension NodeRole {
         case .display: return "opticaldisc.fill"
         case .aiAgent: return "brain.head.profile.fill"
         case .chart: return "chart.line.uptrend.xyaxis"
+        case .firebase: return "flame.fill"
         case .custom: return "square.grid.2x2.fill"
         }
     }
@@ -31,6 +32,7 @@ extension NodeRole {
         case .display: return .green
         case .aiAgent: return .indigo
         case .chart: return .purple
+        case .firebase: return .orange
         case .custom: return .purple
         }
     }
