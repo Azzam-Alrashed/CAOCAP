@@ -18,7 +18,7 @@ So in 2018, with only 2 years of dev XP, I decided to develop an app for non-tec
 The goal: make it super easy, simple, cheap & fun (E.S.C.F) to turn any **idea into software**.
 
 >  How Hard Can It Be? ....
->  I fried my brain trying to figure it out. Eventually, I was diagnosed with bipolar type 1... looking at the bright side of it, you can say it's a superpower.
+>  I fried my brain trying to figure it out. 
 
 
 **CAOCAP is the refusal to accept today's software development process as the final form.**
