@@ -314,6 +314,9 @@ struct ContentView: View {
             onCreateChartNode: {
                 router.activeStore.addNode(type: .chart)
             },
+            onCreateFirebaseNode: {
+                router.activeStore.addNode(type: .firebase)
+            },
             onCreateAiAgentNode: {
                 router.activeStore.addNode(type: .aiAgent)
             },
@@ -399,7 +402,7 @@ struct ContentView: View {
         }
         
         // Filter out redundant navigation and node creation actions when on the Home screen.
-        let forbiddenOnHome: Set<AppActionID> = [.goHome, .goBack, .createNode, .createTextNode, .createCalculationNode, .createDisplayNode, .createAiAgentNode, .createNumberNode, .createTableNode, .createChartNode]
+        let forbiddenOnHome: Set<AppActionID> = [.goHome, .goBack, .createNode, .createTextNode, .createCalculationNode, .createDisplayNode, .createAiAgentNode, .createNumberNode, .createTableNode, .createChartNode, .createFirebaseNode]
         
         commandPalette.actions = actionDispatcher.availableActions.filter { action in
             if router.currentWorkspace == .home {

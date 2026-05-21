@@ -261,6 +261,19 @@ private struct NodePreviewContent: View {
                     }
                     .padding(.top, 12)
 
+                case .firebase:
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label("FIREBASE (WEB)", systemImage: "flame.fill")
+                            .font(.system(size: 10, weight: .black))
+                            .opacity(0.4)
+
+                        Text(FirebasePreviewBootstrap.canvasSummaryLine(for: node))
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.top, 12)
+
                 case .chart:
                     ChartNodeView(
                         node: node,

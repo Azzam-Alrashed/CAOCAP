@@ -17,6 +17,7 @@ public enum AppActionID: String, CaseIterable, Identifiable, Codable, Hashable {
     case createNumberNode = "create_number_node"
     case createTableNode = "create_table_node"
     case createChartNode = "create_chart_node"
+    case createFirebaseNode = "create_firebase_node"
     case summonCoCaptain = "summon_cocaptain"
     case openFile = "open_file"
     case toggleGrid = "toggle_grid"
@@ -193,6 +194,14 @@ public final class AppActionDispatcher: AppActionPerforming {
             allowsAutonomousExecution: true
         ),
         AppActionDefinition(
+            id: .createFirebaseNode,
+            title: "Create Firebase Node",
+            icon: "flame.fill",
+            category: .project,
+            isMutating: true,
+            allowsAutonomousExecution: true
+        ),
+        AppActionDefinition(
             id: .summonCoCaptain,
             title: "Summon Co-Captain",
             icon: "sparkles",
@@ -316,6 +325,7 @@ public final class AppActionDispatcher: AppActionPerforming {
     private var createNumberNodeHandler: (() -> Void)?
     private var createTableNodeHandler: (() -> Void)?
     private var createChartNodeHandler: (() -> Void)?
+    private var createFirebaseNodeHandler: (() -> Void)?
     private var createAiAgentNodeHandler: (() -> Void)?
     private var summonCoCaptainHandler: (() -> Void)?
     private var openFileHandler: (() -> Void)?
@@ -347,6 +357,7 @@ public final class AppActionDispatcher: AppActionPerforming {
         onCreateNumberNode: @escaping () -> Void,
         onCreateTableNode: @escaping () -> Void,
         onCreateChartNode: (() -> Void)? = nil,
+        onCreateFirebaseNode: (() -> Void)? = nil,
         onCreateAiAgentNode: @escaping () -> Void,
         summonCoCaptain: @escaping () -> Void,
         openFile: (() -> Void)? = nil,
@@ -373,6 +384,7 @@ public final class AppActionDispatcher: AppActionPerforming {
         self.createNumberNodeHandler = onCreateNumberNode
         self.createTableNodeHandler = onCreateTableNode
         self.createChartNodeHandler = onCreateChartNode
+        self.createFirebaseNodeHandler = onCreateFirebaseNode
         self.createAiAgentNodeHandler = onCreateAiAgentNode
         self.summonCoCaptainHandler = summonCoCaptain
         self.openFileHandler = openFile
@@ -440,6 +452,8 @@ public final class AppActionDispatcher: AppActionPerforming {
             handler = createTableNodeHandler
         case .createChartNode:
             handler = createChartNodeHandler
+        case .createFirebaseNode:
+            handler = createFirebaseNodeHandler
         case .createAiAgentNode:
             handler = createAiAgentNodeHandler
         case .summonCoCaptain:

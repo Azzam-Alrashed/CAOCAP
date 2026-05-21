@@ -3,7 +3,7 @@ import SwiftUI
 struct NodeCreationMenuView: View {
     var onSelect: (NodeType) -> Void
     
-    let options: [NodeType] = [.code, .srs, .art, .text, .number, .table, .calculation, .display, .chart, .aiAgent]
+    let options: [NodeType] = [.code, .srs, .art, .text, .number, .table, .calculation, .display, .chart, .aiAgent, .firebase]
     
     var body: some View {
         VStack(spacing: 24) {
@@ -109,6 +109,7 @@ struct NodeCreationMenuView: View {
         case .display: return "Live result output"
         case .chart: return "Visual analytics from data"
         case .aiAgent: return "Smart processing agent"
+        case .firebase: return "Web app config for Live Preview"
         default: return "Standard node"
         }
     }
@@ -125,6 +126,7 @@ struct NodeCreationMenuView: View {
         case .display: return "opticaldisc.fill"
         case .chart: return "chart.line.uptrend.xyaxis"
         case .aiAgent: return "brain.head.profile.fill"
+        case .firebase: return "flame.fill"
         default: return "square.grid.2x2"
         }
     }
@@ -139,6 +141,7 @@ struct NodeCreationMenuView: View {
         case .display: return .green
         case .chart: return .purple
         case .aiAgent: return .indigo
+        case .firebase: return .orange
         default: return .secondary
         }
     }
