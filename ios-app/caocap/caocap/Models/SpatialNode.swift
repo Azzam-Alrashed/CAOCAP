@@ -25,6 +25,7 @@ public enum NodeType: String, Codable, Equatable, Hashable, CaseIterable {
     case display
     case aiAgent
     case chart
+    case firebase
     
     public var displayName: String {
         switch self {
@@ -40,6 +41,7 @@ public enum NodeType: String, Codable, Equatable, Hashable, CaseIterable {
         case .display: return "Display"
         case .aiAgent: return "AI Agent"
         case .chart: return "Chart"
+        case .firebase: return "Firebase"
         }
     }
 }
@@ -189,8 +191,11 @@ public struct SpatialNode: Identifiable, Codable, Equatable {
     
     /// IDs of nodes providing input data to this node.
     public var inputNodeIds: [UUID]?
+
+    /// Optional default Firestore path for preview JS (`window.__caocapFirestoreDefaultPath`).
+    public var firebaseFirestorePath: String?
     
-    public init(id: UUID = UUID(), type: NodeType = .standard, position: CGPoint, title: String, subtitle: String? = nil, icon: String? = nil, theme: NodeTheme = .blue, nextNodeId: UUID? = nil, connectedNodeIds: [UUID]? = nil, action: NodeAction? = nil, htmlContent: String? = nil, textContent: String? = nil, srsReadinessState: SRSReadinessState? = nil, drawingData: Data? = nil, agentState: NodeAgentState = NodeAgentState(), agentProfile: AgentProfile = AgentProfile(), operation: ArithmeticOperation? = nil, displayStyle: DisplayStyle? = nil, outputValue: Double? = nil, aiResponse: String? = nil, promptTemplate: String? = nil, chartStyle: ChartStyle? = nil, chartXColumnIndex: Int? = nil, chartYColumnIndex: Int? = nil, chartHasHeaderRow: Bool? = nil, inputNodeIds: [UUID]? = nil) {
+    public init(id: UUID = UUID(), type: NodeType = .standard, position: CGPoint, title: String, subtitle: String? = nil, icon: String? = nil, theme: NodeTheme = .blue, nextNodeId: UUID? = nil, connectedNodeIds: [UUID]? = nil, action: NodeAction? = nil, htmlContent: String? = nil, textContent: String? = nil, srsReadinessState: SRSReadinessState? = nil, drawingData: Data? = nil, agentState: NodeAgentState = NodeAgentState(), agentProfile: AgentProfile = AgentProfile(), operation: ArithmeticOperation? = nil, displayStyle: DisplayStyle? = nil, outputValue: Double? = nil, aiResponse: String? = nil, promptTemplate: String? = nil, chartStyle: ChartStyle? = nil, chartXColumnIndex: Int? = nil, chartYColumnIndex: Int? = nil, chartHasHeaderRow: Bool? = nil, inputNodeIds: [UUID]? = nil, firebaseFirestorePath: String? = nil) {
         self.id = id
         self.type = type
         self.position = position
@@ -217,6 +222,7 @@ public struct SpatialNode: Identifiable, Codable, Equatable {
         self.chartYColumnIndex = chartYColumnIndex
         self.chartHasHeaderRow = chartHasHeaderRow
         self.inputNodeIds = inputNodeIds
+        self.firebaseFirestorePath = firebaseFirestorePath
     }
 
     public var displayTitle: String {
@@ -254,6 +260,7 @@ public struct SpatialNode: Identifiable, Codable, Equatable {
         case chartYColumnIndex
         case chartHasHeaderRow
         case inputNodeIds
+        case firebaseFirestorePath
     }
 
     public init(from decoder: Decoder) throws {
@@ -284,5 +291,6 @@ public struct SpatialNode: Identifiable, Codable, Equatable {
         self.chartYColumnIndex = try container.decodeIfPresent(Int.self, forKey: .chartYColumnIndex)
         self.chartHasHeaderRow = try container.decodeIfPresent(Bool.self, forKey: .chartHasHeaderRow)
         self.inputNodeIds = try container.decodeIfPresent([UUID].self, forKey: .inputNodeIds)
+        self.firebaseFirestorePath = try container.decodeIfPresent(String.self, forKey: .firebaseFirestorePath)
     }
 }
