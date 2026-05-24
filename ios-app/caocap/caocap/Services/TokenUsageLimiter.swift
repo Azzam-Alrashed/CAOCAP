@@ -69,7 +69,7 @@ public final class TokenUsageLimiter {
     }
 
     public func status(
-        limitTokens: Int = Self.freeMonthlyTokenLimit,
+        limitTokens: Int = TokenUsageLimiter.freeMonthlyTokenLimit,
         now: Date = Date()
     ) -> TokenUsageStatus {
         resetIfNeeded(now: now)
@@ -83,8 +83,8 @@ public final class TokenUsageLimiter {
     public func preflight(
         prompt: String,
         isSubscribed: Bool,
-        limitTokens: Int = Self.freeMonthlyTokenLimit,
-        responseReserveTokens: Int = Self.minimumResponseTokenReserve,
+        limitTokens: Int = TokenUsageLimiter.freeMonthlyTokenLimit,
+        responseReserveTokens: Int = TokenUsageLimiter.minimumResponseTokenReserve,
         now: Date = Date()
     ) -> Result<Void, TokenUsageLimitError> {
         guard !isSubscribed else { return .success(()) }
