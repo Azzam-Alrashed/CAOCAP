@@ -11,6 +11,8 @@ The Subscription feature presents CAOCAP Pro plans, loads StoreKit products, han
 
 The feature's core contract is simple: grant Pro only from verified StoreKit transactions.
 
+`LLMService` reads `SubscriptionManager.isSubscribed` before Firebase AI Logic calls. Unsubscribed users are subject to the local estimated-token cap in `TokenUsageLimiter`; Pro users bypass that cap.
+
 ## Purchase Flow
 
 1. `PurchaseView` appears and calls `SubscriptionManager.fetchProducts()`.

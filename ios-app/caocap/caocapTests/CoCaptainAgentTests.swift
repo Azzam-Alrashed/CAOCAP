@@ -1115,6 +1115,53 @@ struct CoCaptainAgentTests {
     }
 
     @MainActor
+    @Test func tokenLimitErrorAppendsProUpgradeReviewItem() async throws {
+        let dispatcher = TestActionDispatcher()
+        let error = TokenUsageLimitError(limitTokens: 20_000, usedTokens: 20_000, requestedTokens: 1_000)
+        let coordinator = CoCaptainAgentCoordinator(llmClient: ThrowingLLMClient(error: error))
+        let vm = CoCaptainViewModel(agentCoordinator: coordinator)
+        vm.actionDispatcher = dispatcher
+
+        vm.sendMessage("build a tiny app")
+
+        for _ in 0..<20 where vm.isThinking {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+
+        #expect(!vm.isThinking)
+
+        let assistantMessage = vm.items.compactMap { item -> ChatBubbleItem? in
+            guard case .message(let bubble) = item.content, !bubble.isUser else { return nil }
+            return bubble
+        }.last
+
+        let upgradeBundleItem = vm.items.first { item in
+            guard case .reviewBundle(let bundle) = item.content else { return false }
+            return bundle.items.contains { reviewItem in
+                if case .appAction(.proSubscription, nil) = reviewItem.source {
+                    return true
+                }
+                return false
+            }
+        }
+
+        #expect(assistantMessage?.text.contains("Free CoCaptain usage is capped") == true)
+        #expect(upgradeBundleItem != nil)
+
+        guard let upgradeBundleItem,
+              case .reviewBundle(let bundle) = upgradeBundleItem.content,
+              let reviewItem = bundle.items.first else {
+            Issue.record("Expected upgrade review item.")
+            return
+        }
+
+        vm.applyReviewItem(bundleID: upgradeBundleItem.id, itemID: reviewItem.id)
+
+        #expect(dispatcher.executedActionIDs.contains(.proSubscription))
+        #expect(dispatcher.executedSources.last == .agentApproved)
+    }
+
+    @MainActor
     private func makeStore() -> ProjectStore {
         ProjectStore(
             fileName: "onboarding-test-\(UUID().uuidString).json",
@@ -1149,6 +1196,29 @@ struct CoCaptainAgentTests {
             SpatialNode(type: .code, position: .zero, title: "CSS", textContent: css),
             SpatialNode(type: .code, position: .zero, title: "JavaScript", textContent: javascript)
         ]
+    }
+}
+
+@MainActor
+private final class ThrowingLLMClient: CoCaptainLLMClient {
+    private let error: Error
+
+    init(error: Error) {
+        self.error = error
+    }
+
+    func resetChat(scope: CoCaptainAgentScope) {}
+
+    func streamAgentEvents(
+        for userMessage: String,
+        context: String?,
+        expectsStructuredResponse: Bool,
+        availableActions: [AppActionDefinition],
+        scope: CoCaptainAgentScope
+    ) -> AsyncThrowingStream<CoCaptainLLMStreamEvent, Error> {
+        AsyncThrowingStream { continuation in
+            continuation.finish(throwing: error)
+        }
     }
 }
 
@@ -1240,10 +1310,19 @@ private final class TestActionDispatcher: AppActionPerforming {
             category: .project,
             isMutating: false,
             allowsAutonomousExecution: true
+        ),
+        AppActionDefinition(
+            id: .proSubscription,
+            title: "Pro Subscription",
+            icon: "crown",
+            category: .assistant,
+            isMutating: false,
+            allowsAutonomousExecution: false
         )
     ]
 
     var executedActionIDs: [AppActionID] = []
+    var executedSources: [AppActionSource] = []
 
     func definition(for id: AppActionID) -> AppActionDefinition? {
         availableActions.first(where: { $0.id == id })
@@ -1260,6 +1339,7 @@ private final class TestActionDispatcher: AppActionPerforming {
         }
 
         executedActionIDs.append(id)
+        executedSources.append(source)
         return AppActionResult(actionID: id, title: definition.title, executed: true, message: "\(definition.title) executed.")
     }
 }

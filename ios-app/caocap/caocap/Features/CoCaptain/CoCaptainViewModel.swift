@@ -24,11 +24,15 @@ public final class CoCaptainViewModel {
     public var lastScrollPosition: UUID?
 
     @ObservationIgnored
-    private let agentCoordinator = CoCaptainAgentCoordinator()
+    private let agentCoordinator: CoCaptainAgentCoordinator
     @ObservationIgnored
     private let commandIntentResolver = CommandIntentResolver()
     @ObservationIgnored
     private let patchEngine = NodePatchEngine()
+    @ObservationIgnored
+    private let tokenUsageLimiter: TokenUsageLimiter
+    @ObservationIgnored
+    private let subscriptionManager: SubscriptionManager
     @ObservationIgnored
     private var lastStoreFileName: String?
     @ObservationIgnored
@@ -44,7 +48,22 @@ public final class CoCaptainViewModel {
         return lastMessage.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    public init() {
+    public var usageStatus: TokenUsageStatus? {
+        subscriptionManager.isSubscribed ? nil : tokenUsageLimiter.status()
+    }
+
+    public var isSubscribed: Bool {
+        subscriptionManager.isSubscribed
+    }
+
+    public init(
+        agentCoordinator: CoCaptainAgentCoordinator = CoCaptainAgentCoordinator(),
+        tokenUsageLimiter: TokenUsageLimiter = .shared,
+        subscriptionManager: SubscriptionManager = .shared
+    ) {
+        self.agentCoordinator = agentCoordinator
+        self.tokenUsageLimiter = tokenUsageLimiter
+        self.subscriptionManager = subscriptionManager
         self.items = [CoCaptainViewModel.greetingItem()]
     }
 
@@ -178,18 +197,27 @@ public final class CoCaptainViewModel {
                     return
                 }
 
-                let details = String(reflecting: error)
-                updateMessage(
-                    id: aiMessageID,
-                    text: LocalizationManager.shared.localizedString(
-                        "Sorry, I hit an error while contacting the model.\n\n%@",
-                        arguments: [details]
+                if let limitError = error as? TokenUsageLimitError {
+                    updateMessage(id: aiMessageID, text: limitError.localizedDescription)
+                    appendUpgradeReviewBundle()
+                } else {
+                    let details = String(reflecting: error)
+                    updateMessage(
+                        id: aiMessageID,
+                        text: LocalizationManager.shared.localizedString(
+                            "Sorry, I hit an error while contacting the model.\n\n%@",
+                            arguments: [details]
+                        )
                     )
-                )
+                }
             }
 
             isThinking = false
         }
+    }
+
+    public func openProSubscription() {
+        _ = actionDispatcher?.perform(.proSubscription, source: .user, arguments: nil)
     }
 
     public func stopStreaming() {
@@ -419,6 +447,26 @@ public final class CoCaptainViewModel {
         let bubble = ChatBubbleItem(text: text, isUser: false)
         items.append(CoCaptainTimelineItem(content: .message(bubble)))
         persistNodeMessageIfNeeded(bubble)
+    }
+
+    private func appendUpgradeReviewBundle() {
+        items.append(
+            CoCaptainTimelineItem(
+                content: .reviewBundle(
+                    ReviewBundleItem(
+                        title: LocalizationManager.shared.localizedString("Upgrade for more CoCaptain usage"),
+                        items: [
+                            PendingReviewItem(
+                                targetLabel: LocalizationManager.shared.localizedString("CAOCAP Pro"),
+                                summary: LocalizationManager.shared.localizedString("Open the Pro subscription screen to continue with unlimited CoCaptain usage."),
+                                preview: LocalizationManager.shared.localizedString("Manage or start a CAOCAP Pro subscription."),
+                                source: .appAction(.proSubscription, nil)
+                            )
+                        ]
+                    )
+                )
+            )
+        )
     }
 
     private func persistNodeMessageIfNeeded(_ bubble: ChatBubbleItem) {

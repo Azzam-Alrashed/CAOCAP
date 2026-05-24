@@ -6,6 +6,7 @@ CoCaptain is the agentic assistant for CAOCAP. It reads the current spatial proj
 
 - `CoCaptainView` renders the timeline, input, streaming state, and review controls.
 - `CoCaptainViewModel` owns presentation state, timeline items, streaming task lifetime, direct command handling, and review item application.
+- `CoCaptainInputComposer` shows the current project context and free-tier estimated-token usage before a prompt is sent.
 - `CoCaptainAgentCoordinator` orchestrates the model run: build context, stream text, parse structured actions, execute safe actions, and build review bundles.
 - `CoCaptainAgentOutputAdapter` converts raw model output into a source-agnostic directive for the coordinator.
 - `CoCaptainAgentParser` extracts the trailing structured payload from a `cocaptain-actions` fenced block.
@@ -91,6 +92,7 @@ Preserve this conflict guard when refactoring review state.
 - Keep validation near the coordinator boundary. SwiftUI views should render review state, not decide whether model output is safe.
 - Keep raw model wire formats behind output adapters. The coordinator should consume directives, not Firebase/Gemini-specific response parts.
 - Keep app actions in `request_app_action`; keep code/content changes in `nodeEdits`, preferring the Code node for new projects.
+- Keep free-tier quota enforcement in `LLMService`/`TokenUsageLimiter`; CoCaptain UI should only display usage state and route upgrades through the Pro Subscription app action.
 
 ## Verification Checklist
 

@@ -6,11 +6,14 @@ struct CoCaptainInputComposer: View {
     let store: ProjectStore?
     let isThinking: Bool
     let analysisItems: [ProjectSuggestion]
+    let usageStatus: TokenUsageStatus?
+    let isSubscribed: Bool
     let onSend: () -> Void
     let onStop: () -> Void
     let onQuickPrompt: (String) -> Void
     let onApplySuggestion: (ProjectSuggestion) -> Void
     let onDismissSuggestion: (ProjectSuggestion) -> Void
+    let onUpgrade: () -> Void
 
     private var isInputValid: Bool {
         !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -33,12 +36,18 @@ struct CoCaptainInputComposer: View {
                 .transition(.move(edge: .top).combined(with: .opacity))
             }
 
-            if let store {
-                ContextPill(
-                    projectName: store.projectName,
-                    fileName: store.fileName,
-                    nodeCount: store.nodes.count
-                )
+            VStack(spacing: 8) {
+                if let store {
+                    ContextPill(
+                        projectName: store.projectName,
+                        fileName: store.fileName,
+                        nodeCount: store.nodes.count
+                    )
+                }
+
+                if let usageStatus, !isSubscribed {
+                    CoCaptainUsagePill(status: usageStatus, onUpgrade: onUpgrade)
+                }
             }
 
             HStack(alignment: .bottom, spacing: 8) {
@@ -151,5 +160,36 @@ struct CoCaptainInputComposer: View {
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isInputValid)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isThinking)
         .padding(.bottom, 5)
+    }
+}
+
+struct CoCaptainUsagePill: View {
+    let status: TokenUsageStatus
+    let onUpgrade: () -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: status.isNearLimit ? "exclamationmark.circle.fill" : "bolt.circle.fill")
+                .foregroundColor(status.isNearLimit ? .orange : .blue)
+
+            Text("Free usage: \(status.formattedUsedTokens) / \(status.formattedLimitTokens) estimated tokens")
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+
+            if status.isNearLimit {
+                Button("Upgrade") {
+                    onUpgrade()
+                }
+                .font(.system(size: 12, weight: .bold))
+                .buttonStyle(.borderedProminent)
+                .controlSize(.mini)
+            }
+        }
+        .font(.system(size: 12, weight: .medium))
+        .foregroundColor(.secondary)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background((status.isNearLimit ? Color.orange : Color.blue).opacity(0.08))
+        .clipShape(Capsule())
     }
 }

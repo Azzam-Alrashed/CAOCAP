@@ -25,11 +25,14 @@ struct NodeAgentChatView: View {
                 store: store,
                 isThinking: viewModel.isThinking,
                 analysisItems: [],
+                usageStatus: viewModel.usageStatus,
+                isSubscribed: viewModel.isSubscribed,
                 onSend: sendCurrentMessage,
                 onStop: viewModel.stopStreaming,
                 onQuickPrompt: sendQuickPrompt,
                 onApplySuggestion: viewModel.applySuggestion,
-                onDismissSuggestion: viewModel.dismissSuggestion
+                onDismissSuggestion: viewModel.dismissSuggestion,
+                onUpgrade: viewModel.openProSubscription
             )
         }
         .navigationTitle(nodeTitle)

@@ -37,6 +37,8 @@ public final class LLMService {
 
     /// The active chat session that maintains history.
     private var chats: [CoCaptainAgentScope: Chat] = [:]
+    private let tokenUsageLimiter = TokenUsageLimiter.shared
+    private let subscriptionManager = SubscriptionManager.shared
 
     private init() {}
 
@@ -85,13 +87,6 @@ public final class LLMService {
         availableActions: [AppActionDefinition],
         scope: CoCaptainAgentScope = .project
     ) -> AsyncThrowingStream<CoCaptainLLMStreamEvent, Error> {
-        // Initialize chat session if it doesn't exist
-        if chats[scope] == nil {
-            // Ensure model is initialised with the latest preferred name at first use.
-            model = makeModel(modelName: preferredModelName)
-            chats[scope] = model.startChat()
-        }
-
         let prompt = buildPrompt(
             userMessage: userMessage,
             context: context,
@@ -99,6 +94,22 @@ public final class LLMService {
             availableActions: availableActions,
             scope: scope
         )
+
+        if case .failure(let error) = tokenUsageLimiter.preflight(
+            prompt: prompt,
+            isSubscribed: subscriptionManager.isSubscribed
+        ) {
+            return AsyncThrowingStream { continuation in
+                continuation.finish(throwing: error)
+            }
+        }
+
+        // Initialize chat session if it doesn't exist
+        if chats[scope] == nil {
+            // Ensure model is initialised with the latest preferred name at first use.
+            model = makeModel(modelName: preferredModelName)
+            chats[scope] = model.startChat()
+        }
 
         // Get the chat session for the given scope
         guard let session = self.chats[scope] else {
@@ -110,6 +121,7 @@ public final class LLMService {
         return AsyncThrowingStream { continuation in
             let task = Task {
                 do {
+                    var responseText = ""
                     logger.debug("Starting LLM stream with history.")
                     logger.debug("Model: \(self.preferredModelName, privacy: .public) scope=\(scope.storageKey, privacy: .public) structured=\(expectsStructuredResponse, privacy: .public) contextChars=\((context ?? "").count, privacy: .public)")
                     
@@ -118,6 +130,7 @@ public final class LLMService {
                     
                     for try await chunk in stream {
                         if let text = chunk.text {
+                            responseText += text
                             continuation.yield(.text(text))
                         }
 
@@ -126,6 +139,11 @@ public final class LLMService {
                             continuation.yield(.functionCalls(functionCalls))
                         }
                     }
+                    self.tokenUsageLimiter.record(
+                        prompt: prompt,
+                        response: responseText,
+                        isSubscribed: self.subscriptionManager.isSubscribed
+                    )
                     continuation.finish()
                     logger.info("LLM stream completed.")
                 } catch {
