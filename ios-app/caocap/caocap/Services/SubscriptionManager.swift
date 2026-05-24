@@ -34,6 +34,10 @@ public class SubscriptionManager {
     private let updatesCanceller = TaskCanceller()
     
     init() {
+        Task { [weak self] in
+            await self?.updatePurchasedProducts()
+        }
+
         // Keep entitlement state fresh for renewals, refunds, upgrades, and
         // purchases completed outside the current paywall session.
         updatesCanceller.task = Task { [weak self] in

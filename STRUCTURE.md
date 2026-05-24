@@ -97,6 +97,7 @@ Infrastructure and heavy-lifting. These are long-lived objects that outlive indi
 | `ProjectManager.swift` | Lists and deletes saved local project files for the project explorer. |
 | `AuthenticationManager.swift` | Wraps Firebase Auth. Handles anonymous login, account linking, and social provider flows. |
 | `LLMService.swift` | Interface for the Firebase AI Logic SDK. Manages streaming sessions with the Gemini backend. |
+| `TokenUsageLimiter.swift` | Local estimated-token quota tracker for free CoCaptain and AI node usage; Pro entitlements bypass the free monthly cap. |
 | `AppActionDispatcher.swift` | Centralized action registry. Allows the app and the AI agent to trigger high-level navigation and project mutations. |
 | `CommandIntentResolver.swift` | Maps plain-language command palette and CoCaptain prompts to available app actions. |
 | `HapticsManager.swift` | Central haptic feedback helper that honors app haptics settings. |
