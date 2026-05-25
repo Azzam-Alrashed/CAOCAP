@@ -6,19 +6,22 @@ public struct ProjectSnapshot: Codable, Equatable {
     public let nodes: [SpatialNode]
     public let viewportOffset: CGSize
     public let viewportScale: CGFloat
+    public var checkpointLabel: String?
 
     public init(
         schemaVersion: Int = ProjectPersistenceService.currentSchemaVersion,
         projectName: String?,
         nodes: [SpatialNode],
         viewportOffset: CGSize,
-        viewportScale: CGFloat
+        viewportScale: CGFloat,
+        checkpointLabel: String? = nil
     ) {
         self.schemaVersion = schemaVersion
         self.projectName = projectName
         self.nodes = nodes
         self.viewportOffset = viewportOffset
         self.viewportScale = viewportScale
+        self.checkpointLabel = checkpointLabel
     }
 }
 
@@ -148,10 +151,13 @@ public struct ProjectPersistenceService: Sendable {
         let directory = snapshotsDirectory(for: fileName)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         
+        var mutableSnapshot = snapshot
+        mutableSnapshot.checkpointLabel = label
+        
         let url = directory.appendingPathComponent(snapshotFileName)
         let encoder = JSONEncoder()
         encoder.outputFormatting = .prettyPrinted
-        let data = try encoder.encode(snapshot)
+        let data = try encoder.encode(mutableSnapshot)
         try data.write(to: url)
         
         return SnapshotMetadata(id: id, date: Date(), label: label, fileName: snapshotFileName)
@@ -165,6 +171,14 @@ public struct ProjectPersistenceService: Sendable {
         return try JSONDecoder().decode(ProjectSnapshot.self, from: data)
     }
 
+    public func deleteSnapshot(metadata: SnapshotMetadata, for projectFileName: String) throws {
+        let url = snapshotsDirectory(for: projectFileName)
+            .appendingPathComponent(metadata.fileName)
+        if FileManager.default.fileExists(atPath: url.path) {
+            try FileManager.default.removeItem(at: url)
+        }
+    }
+
     public func listSnapshots(for fileName: String) -> [SnapshotMetadata] {
         let directory = snapshotsDirectory(for: fileName)
         guard let files = try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.creationDateKey]) else {
@@ -175,19 +189,17 @@ public struct ProjectPersistenceService: Sendable {
         return files.compactMap { url in
             guard url.pathExtension == "json",
                   let data = try? Data(contentsOf: url),
-                  (try? decoder.decode(ProjectSnapshot.self, from: data)) != nil,
+                  let snapshot = try? decoder.decode(ProjectSnapshot.self, from: data),
                   let attributes = try? FileManager.default.attributesOfItem(atPath: url.path),
                   let date = attributes[.creationDate] as? Date else {
                 return nil
             }
             
-            // Reconstruct metadata from file name and attributes
-            // Note: This is an expensive way to list. In a real app, we'd have a manifest.json.
-            // But for MVP, this works.
+            // Reconstruct metadata from file name, contents, and attributes
             return SnapshotMetadata(
                 id: UUID(uuidString: url.deletingPathExtension().lastPathComponent) ?? UUID(),
                 date: date,
-                label: "Manual Checkpoint", // We'd need to store the label in the file too
+                label: snapshot.checkpointLabel ?? "Manual Checkpoint",
                 fileName: url.lastPathComponent
             )
         }.sorted { $0.date > $1.date }
