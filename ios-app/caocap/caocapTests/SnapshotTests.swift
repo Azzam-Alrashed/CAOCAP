@@ -16,7 +16,7 @@ struct SnapshotTests {
         try? await Task.sleep(nanoseconds: 200_000_000)
         
         #expect(store.history.count == 1)
-        #expect(store.history[0].label == "Manual Checkpoint") // Currently hardcoded in listSnapshots
+        #expect(store.history[0].label == "Initial State")
         
         // 2. Modify nodes
         store.nodes = [SpatialNode(id: UUID(), position: .zero, title: "Modified")]
@@ -27,6 +27,21 @@ struct SnapshotTests {
         store.restore(from: metadata)
         
         #expect(store.nodes.first?.title == "Original")
+    }
+
+    @MainActor
+    @Test func deleteCheckpoint() async throws {
+        let store = ProjectStore(fileName: "test_delete.json", projectName: "Delete Test")
+        store.createCheckpoint(label: "Temp Checkpoint")
+        
+        try? await Task.sleep(nanoseconds: 200_000_000)
+        #expect(store.history.count == 1)
+        
+        let metadata = store.history[0]
+        store.deleteCheckpoint(metadata: metadata)
+        
+        try? await Task.sleep(nanoseconds: 200_000_000)
+        #expect(store.history.isEmpty)
     }
 
     @MainActor
