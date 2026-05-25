@@ -33,6 +33,7 @@ public enum AppActionID: String, CaseIterable, Identifiable, Codable, Hashable {
     case createAiAgentNode = "create_ai_agent_node"
     case help = "help"
     case organizeNodes = "organize_nodes"
+    case openSnapshotBrowser = "open_snapshot_browser"
 
     public var id: String { rawValue }
 }
@@ -312,6 +313,14 @@ public final class AppActionDispatcher: AppActionPerforming {
             category: .project,
             isMutating: true,
             allowsAutonomousExecution: true
+        ),
+        AppActionDefinition(
+            id: .openSnapshotBrowser,
+            title: "Browse Checkpoints",
+            icon: "clock.arrow.circlepath",
+            category: .project,
+            isMutating: false,
+            allowsAutonomousExecution: true
         )
     ]
 
@@ -341,6 +350,7 @@ public final class AppActionDispatcher: AppActionPerforming {
     private var themeNodeHandler: (([String: String]) -> Void)?
     private var transformNodeHandler: (([String: String]) -> Void)?
     private var organizeNodesHandler: (() -> Void)?
+    private var openSnapshotBrowserHandler: (() -> Void)?
 
     public init() {}
 
@@ -368,6 +378,7 @@ public final class AppActionDispatcher: AppActionPerforming {
         openSettings: (() -> Void)? = nil,
         openProfile: (() -> Void)? = nil,
         openProjectExplorer: (() -> Void)? = nil,
+        openSnapshotBrowser: (() -> Void)? = nil,
         help: (() -> Void)? = nil,
         moveNode: (([String: String]) -> Void)? = nil,
         themeNode: (([String: String]) -> Void)? = nil,
@@ -395,6 +406,7 @@ public final class AppActionDispatcher: AppActionPerforming {
         self.openSettingsHandler = openSettings
         self.openProfileHandler = openProfile
         self.openProjectExplorerHandler = openProjectExplorer
+        self.openSnapshotBrowserHandler = openSnapshotBrowser
         self.helpHandler = help
         self.moveNodeHandler = moveNode
         self.themeNodeHandler = themeNode
@@ -496,6 +508,8 @@ public final class AppActionDispatcher: AppActionPerforming {
             handler = nil
         case .organizeNodes:
             handler = organizeNodesHandler
+        case .openSnapshotBrowser:
+            handler = openSnapshotBrowserHandler
         }
 
         guard let handler else {
