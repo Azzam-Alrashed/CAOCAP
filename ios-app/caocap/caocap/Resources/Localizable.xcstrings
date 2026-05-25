@@ -2585,6 +2585,12 @@
             "state" : "translated",
             "value" : "كاوكاب برو"
           }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CAOCAP PRO"
+          }
         }
       }
     },
@@ -2595,6 +2601,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "وفر ٣٣٪"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SAVE 33%"
           }
         }
       }
