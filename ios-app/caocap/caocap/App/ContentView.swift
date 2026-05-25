@@ -341,7 +341,24 @@ struct ContentView: View {
                 }
             },
             proSubscription: {
-                showingPurchaseSheet = true
+                if coCaptain.isPresented {
+                    coCaptain.setPresented(false)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        showingPurchaseSheet = true
+                    }
+                } else if showingProfile {
+                    showingProfile = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        showingPurchaseSheet = true
+                    }
+                } else if showingSettings {
+                    showingSettings = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        showingPurchaseSheet = true
+                    }
+                } else {
+                    showingPurchaseSheet = true
+                }
             },
             signIn: {
                 showingSignIn = true

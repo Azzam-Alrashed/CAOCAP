@@ -10,6 +10,10 @@ struct TimelineItemView: View {
             ChatBubbleView(message: bubble)
         case .execution(let status):
             ExecutionSummaryView(status: status)
+        case .productCTA(let cta):
+            ProductCTAView(item: cta) {
+                viewModel.performProductCTA(cta)
+            }
         case .reviewBundle(let bundle):
             ReviewBundleView(bundle: bundle, viewModel: viewModel, bundleID: item.id)
         }
@@ -70,5 +74,68 @@ struct ExecutionSummaryView: View {
         .padding(.vertical, 10)
         .background(Color.green.opacity(0.08))
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+}
+
+struct ProductCTAView: View {
+    let item: CoCaptainProductCTAItem
+    let onPrimaryAction: () -> Void
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image("cocaptain")
+                .resizable()
+                .scaledToFill()
+                .frame(width: 32, height: 32)
+                .clipShape(Circle())
+                .overlay(Circle().stroke(Color.blue.opacity(0.3), lineWidth: 1))
+                .shadow(color: .blue.opacity(0.35), radius: 6)
+
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(Color.blue)
+                        .frame(width: 28, height: 28)
+                        .background(Color.blue.opacity(0.12))
+                        .clipShape(Circle())
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(item.title)
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundColor(.primary)
+
+                        Text(item.message)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
+                HStack {
+                    Button {
+                        onPrimaryAction()
+                    } label: {
+                        Text(item.primaryButtonTitle)
+                            .font(.system(size: 13, weight: .bold))
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.regular)
+
+                    Spacer(minLength: 0)
+                }
+            }
+            .padding(14)
+            .background(.ultraThinMaterial)
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(Color.blue.opacity(0.22), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .frame(maxWidth: 420, alignment: .leading)
+
+            Spacer(minLength: 0)
+        }
+        .transition(.asymmetric(insertion: .push(from: .bottom).combined(with: .opacity), removal: .opacity))
     }
 }

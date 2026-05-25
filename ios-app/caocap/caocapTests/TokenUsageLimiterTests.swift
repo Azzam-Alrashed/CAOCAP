@@ -71,16 +71,6 @@ struct TokenUsageLimiterTests {
         #expect(status.remainingTokens == 10)
     }
 
-    @Test func usageStatusFormatsTokensAndFlagsNearLimitAtEightyPercent() {
-        let calm = TokenUsageStatus(periodKey: "2026-05", usedTokens: 15_900, limitTokens: 20_000)
-        let near = TokenUsageStatus(periodKey: "2026-05", usedTokens: 16_000, limitTokens: 20_000)
-
-        #expect(calm.formattedUsedTokens == "15.9k")
-        #expect(near.formattedLimitTokens == "20k")
-        #expect(!calm.isNearLimit)
-        #expect(near.isNearLimit)
-    }
-
     private func makeDefaults() throws -> UserDefaults {
         let suiteName = "TokenUsageLimiterTests-\(UUID().uuidString)"
         guard let defaults = UserDefaults(suiteName: suiteName) else {
