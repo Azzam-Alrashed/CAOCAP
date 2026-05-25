@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		08C16FF37B35C98A575493DA /* MLXLMCommon in Frameworks */ = {isa = PBXBuildFile; productRef = B36C7D0E9F35FACB923F7C12 /* MLXLMCommon */; };
+		3BB60B13F4B0C5F54C3E2D75 /* MLXLLM in Frameworks */ = {isa = PBXBuildFile; productRef = 65AD28C9CC90B00E135BC8F1 /* MLXLLM */; };
 		ECA100012FA0000000000001 /* FirebaseRemoteConfig in Frameworks */ = {isa = PBXBuildFile; productRef = ECA100022FA0000000000001 /* FirebaseRemoteConfig */; };
 		ECD77F7D2F99BCBA00C96BF7 /* FirebaseAI in Frameworks */ = {isa = PBXBuildFile; productRef = ECD77F7C2F99BCBA00C96BF7 /* FirebaseAI */; };
 		ECD77F7F2F99BCBA00C96BF7 /* FirebaseAILogic in Frameworks */ = {isa = PBXBuildFile; productRef = ECD77F7E2F99BCBA00C96BF7 /* FirebaseAILogic */; };
@@ -51,7 +53,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		EC997C9D2F96179000C19E5E /* Exceptions for "caocap" folder in "caocap" target */ = {
+		EC997C9D2F96179000C19E5E /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				App/Info.plist,
@@ -69,7 +71,7 @@
 		EC997C792F96178E00C19E5E /* caocap */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				EC997C9D2F96179000C19E5E /* Exceptions for "caocap" folder in "caocap" target */,
+				EC997C9D2F96179000C19E5E /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
 			);
 			path = caocap;
 			sourceTree = "<group>";
@@ -123,6 +125,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3BB60B13F4B0C5F54C3E2D75 /* MLXLLM in Frameworks */,
+				08C16FF37B35C98A575493DA /* MLXLMCommon in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -233,6 +237,8 @@
 			);
 			name = caocapUITests;
 			packageProductDependencies = (
+				65AD28C9CC90B00E135BC8F1 /* MLXLLM */,
+				B36C7D0E9F35FACB923F7C12 /* MLXLMCommon */,
 			);
 			productName = caocapUITests;
 			productReference = EC997C952F96179000C19E5E /* caocapUITests.xctest */;
@@ -277,6 +283,7 @@
 				ECD77FAA2F9AA6C400C96BF7 /* XCRemoteSwiftPackageReference "Popovers" */,
 				ECD77FAD2F9AA83700C96BF7 /* XCRemoteSwiftPackageReference "lottie-ios" */,
 				ECEC6A1B2F9AA8D3007F3CF0 /* XCRemoteSwiftPackageReference "SwiftSoup" */,
+				148A25BC04F83D65386EC1C1 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = EC997C782F96178E00C19E5E /* Products */;
@@ -359,7 +366,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = caocap/App/caocap.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_ASSET_PATHS = "\"caocap/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -390,7 +397,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = caocap/App/caocap.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_ASSET_PATHS = "\"caocap/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -649,6 +656,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		148A25BC04F83D65386EC1C1 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/ml-explore/mlx-swift-lm";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.31.3;
+			};
+		};
 		ECD77F7B2F99BCBA00C96BF7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
@@ -692,6 +707,16 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		65AD28C9CC90B00E135BC8F1 /* MLXLLM */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 148A25BC04F83D65386EC1C1 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
+			productName = MLXLLM;
+		};
+		B36C7D0E9F35FACB923F7C12 /* MLXLMCommon */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 148A25BC04F83D65386EC1C1 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
+			productName = MLXLMCommon;
+		};
 		ECA100022FA0000000000001 /* FirebaseRemoteConfig */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = ECD77F7B2F99BCBA00C96BF7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
