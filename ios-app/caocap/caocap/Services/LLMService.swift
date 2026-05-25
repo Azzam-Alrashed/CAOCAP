@@ -3,6 +3,9 @@ import FirebaseAILogic
 import OSLog
 import MLXLLM
 import MLXLMCommon
+import MLXHuggingFace
+import HuggingFace
+import Tokenizers
 import Observation
 
 /// A singleton service that manages the interaction with the Gemini LLM via Firebase AI Logic.
@@ -21,6 +24,7 @@ public final class LLMService {
     // MARK: - Model & Session
 
     /// Lazily initialised so Firebase is guaranteed to be configured before first use.
+    @ObservationIgnored
     private lazy var model: GenerativeModel = makeModel(modelName: preferredModelName)
 
     /// Currently-selected model name (can be overridden via `UserDefaults`).
@@ -39,7 +43,7 @@ public final class LLMService {
     }
 
     /// The active chat session that maintains history.
-    private var chats: [CoCaptainAgentScope: Chat] = [:]
+    private var chats: [CoCaptainAgentScope: FirebaseAILogic.Chat] = [:]
     private let tokenUsageLimiter = TokenUsageLimiter.shared
     private let subscriptionManager = SubscriptionManager.shared
     private var lastUsedModelName: String?
@@ -146,7 +150,12 @@ public final class LLMService {
             localModelDownloadProgress = 0.0
             
             do {
-                container = try await LLMModelFactory.shared.loadContainer(configuration: configuration) { progress in
+                container = try await LLMModelFactory.shared.loadContainer(
+                    from: #hubDownloader(),
+                    using: #huggingFaceTokenizerLoader(),
+                    configuration: configuration,
+                    useLatest: false
+                ) { progress in
                     Task { @MainActor in
                         self.localModelDownloadProgress = progress.fractionCompleted
                         self.isDownloadingLocalModel = progress.fractionCompleted < 1.0
@@ -161,7 +170,7 @@ public final class LLMService {
             }
         }
         
-        let session = ChatSession(container, history: [.system(Self.systemInstructionText)])
+        let session = ChatSession(container, history: [MLXLMCommon.Chat.Message.system(Self.systemInstructionText)])
         mlxSessions[scope] = session
         return session
     }
@@ -485,7 +494,7 @@ private extension CoCaptainAgentFunctionCall {
     }
 }
 
-private extension JSONValue {
+private extension FirebaseAILogic.JSONValue {
     var cocaptainStringValue: String? {
         switch self {
         case .string(let value):

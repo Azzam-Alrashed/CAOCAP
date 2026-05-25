@@ -43,6 +43,12 @@ This document tracks the current product milestones for CAOCAP. The near-term pr
 - [x] **Agentic Actions**: Implementation of `AppActionDispatcher` to allow the AI to control app navigation and project state.
 - [x] **Code Generation**: CoCaptain generates single-file app code from a natural language SRS node.
 - [x] **Recovery Checkpoints**: Automatic project checkpoints protect user work before AI-applied changes.
+- [/] **Free-Tier Token Quota**: Local estimated-token usage limit and CoCaptain upgrade prompts exist; next step is server-side usage enforcement.
+    - [x] **Local Usage UX**: Keep CoCaptain free of persistent quota meters and route limit-hit users to the Pro subscription flow.
+    - [ ] **Server-Side Usage Tracking**: Track monthly AI usage by authenticated UID in Firebase so quota enforcement protects real backend/API spend.
+    - [ ] **Backend Quota Gate**: Preflight AI requests through a backend function or route model calls through the backend before Firebase AI Logic is invoked.
+    - [ ] **Remote Config Quota Tuning**: Move free monthly token caps and warning thresholds to Remote Config so launch pricing/cost controls can change without an app update.
+    - [ ] **Entitlement-Aware Enforcement**: Ensure verified Pro subscriptions bypass server-side quota checks while free and anonymous users share a consistent monthly usage window.
 - [ ] **Intent-to-Node**: Transform a natural language prompt directly into a fully wired node graph.
 - [ ] **Agent Contract Hardening**: Keep parser, validator, dispatcher, patching, and review-bundle behavior covered by focused tests as contracts evolve.
 

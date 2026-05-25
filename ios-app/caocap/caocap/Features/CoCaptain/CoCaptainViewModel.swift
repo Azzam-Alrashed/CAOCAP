@@ -30,10 +30,6 @@ public final class CoCaptainViewModel {
     @ObservationIgnored
     private let patchEngine = NodePatchEngine()
     @ObservationIgnored
-    private let tokenUsageLimiter: TokenUsageLimiter
-    @ObservationIgnored
-    private let subscriptionManager: SubscriptionManager
-    @ObservationIgnored
     private var lastStoreFileName: String?
     @ObservationIgnored
     private var streamingTask: Task<Void, Never>?
@@ -48,22 +44,10 @@ public final class CoCaptainViewModel {
         return lastMessage.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    public var usageStatus: TokenUsageStatus? {
-        subscriptionManager.isSubscribed ? nil : tokenUsageLimiter.status()
-    }
-
-    public var isSubscribed: Bool {
-        subscriptionManager.isSubscribed
-    }
-
     public init(
-        agentCoordinator: CoCaptainAgentCoordinator = CoCaptainAgentCoordinator(),
-        tokenUsageLimiter: TokenUsageLimiter = .shared,
-        subscriptionManager: SubscriptionManager = .shared
+        agentCoordinator: CoCaptainAgentCoordinator? = nil
     ) {
-        self.agentCoordinator = agentCoordinator
-        self.tokenUsageLimiter = tokenUsageLimiter
-        self.subscriptionManager = subscriptionManager
+        self.agentCoordinator = agentCoordinator ?? CoCaptainAgentCoordinator()
         self.items = [CoCaptainViewModel.greetingItem()]
     }
 
@@ -199,7 +183,7 @@ public final class CoCaptainViewModel {
 
                 if let limitError = error as? TokenUsageLimitError {
                     updateMessage(id: aiMessageID, text: limitError.localizedDescription)
-                    appendUpgradeReviewBundle()
+                    appendLimitReachedCTA()
                 } else {
                     let details = String(reflecting: error)
                     updateMessage(
@@ -216,10 +200,6 @@ public final class CoCaptainViewModel {
         }
     }
 
-    public func openProSubscription() {
-        _ = actionDispatcher?.perform(.proSubscription, source: .user, arguments: nil)
-    }
-
     public func stopStreaming() {
         streamingTask?.cancel()
         streamingTask = nil
@@ -228,6 +208,10 @@ public final class CoCaptainViewModel {
         if let lastMessage, !lastMessage.isUser {
             removeEmptyMessage(id: lastMessage.id)
         }
+    }
+
+    public func performProductCTA(_ item: CoCaptainProductCTAItem) {
+        _ = actionDispatcher?.perform(item.actionID, source: .user, arguments: nil)
     }
 
     /// Handles simple app commands locally so navigation does not need a model
@@ -449,20 +433,15 @@ public final class CoCaptainViewModel {
         persistNodeMessageIfNeeded(bubble)
     }
 
-    private func appendUpgradeReviewBundle() {
+    private func appendLimitReachedCTA() {
         items.append(
             CoCaptainTimelineItem(
-                content: .reviewBundle(
-                    ReviewBundleItem(
-                        title: LocalizationManager.shared.localizedString("Upgrade for more CoCaptain usage"),
-                        items: [
-                            PendingReviewItem(
-                                targetLabel: LocalizationManager.shared.localizedString("CAOCAP Pro"),
-                                summary: LocalizationManager.shared.localizedString("Open the Pro subscription screen to continue with unlimited CoCaptain usage."),
-                                preview: LocalizationManager.shared.localizedString("Manage or start a CAOCAP Pro subscription."),
-                                source: .appAction(.proSubscription, nil)
-                            )
-                        ]
+                content: .productCTA(
+                    CoCaptainProductCTAItem(
+                        title: LocalizationManager.shared.localizedString("Free CoCaptain usage reached"),
+                        message: LocalizationManager.shared.localizedString("You've used this month's free CoCaptain help. Pro keeps CoCaptain available whenever you need it."),
+                        primaryButtonTitle: LocalizationManager.shared.localizedString("View Pro"),
+                        actionID: .proSubscription
                     )
                 )
             )
