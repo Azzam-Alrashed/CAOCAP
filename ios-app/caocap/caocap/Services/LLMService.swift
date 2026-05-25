@@ -1,6 +1,9 @@
 import Foundation
 import FirebaseAILogic
 import OSLog
+import MLXLLM
+import MLXLMCommon
+import Observation
 
 /// A singleton service that manages the interaction with the Gemini LLM via Firebase AI Logic.
 ///
@@ -8,7 +11,7 @@ import OSLog
 /// Swift API as of the `FirebaseAILogic` SDK.
 ///
 /// Provides a streaming interface and maintains chat history for multi-turn conversations.
-@MainActor
+@Observable @MainActor
 public final class LLMService {
 
     public static let shared = LLMService()
@@ -39,6 +42,65 @@ public final class LLMService {
     private var chats: [CoCaptainAgentScope: Chat] = [:]
     private let tokenUsageLimiter = TokenUsageLimiter.shared
     private let subscriptionManager = SubscriptionManager.shared
+    private var lastUsedModelName: String?
+
+    // Local MLX Model and Session State
+    private var mlxModelContainer: ModelContainer?
+    private var mlxSessions: [CoCaptainAgentScope: ChatSession] = [:]
+
+    // Observable properties for local model downloading status
+    public var isDownloadingLocalModel: Bool = false
+    public var localModelDownloadProgress: Double = 0.0
+    public var localModelError: String?
+
+    /// Formatted cache size for local MLX model storage
+    public var localModelCacheSizeFormatted: String {
+        let fileManager = FileManager.default
+        let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let huggingFaceCacheURL = documentsURL.appendingPathComponent("huggingface")
+        
+        guard let enumerator = fileManager.enumerator(at: huggingFaceCacheURL, includingPropertiesForKeys: [.fileSizeKey], options: []) else {
+            return "0 MB"
+        }
+        
+        var totalSize: Int64 = 0
+        for case let fileURL as URL in enumerator {
+            if let resourceValues = try? fileURL.resourceValues(forKeys: [.fileSizeKey]),
+               let fileSize = resourceValues.fileSize {
+                totalSize += Int64(fileSize)
+            }
+        }
+        
+        if totalSize == 0 {
+            return "0 MB"
+        }
+        
+        let formatter = ByteCountFormatter()
+        formatter.allowedUnits = [.useGB, .useMB]
+        formatter.countStyle = .file
+        return formatter.string(fromByteCount: totalSize)
+    }
+
+    /// Clears the local model storage files to free up device space.
+    public func clearLocalModelCache() {
+        let fileManager = FileManager.default
+        let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let huggingFaceCacheURL = documentsURL.appendingPathComponent("huggingface")
+        
+        do {
+            if fileManager.fileExists(atPath: huggingFaceCacheURL.path) {
+                try fileManager.removeItem(at: huggingFaceCacheURL)
+                logger.info("Local model cache cleared successfully.")
+            }
+            // Reset local session container
+            mlxModelContainer = nil
+            mlxSessions.removeAll()
+            isDownloadingLocalModel = false
+            localModelDownloadProgress = 0.0
+        } catch {
+            logger.error("Failed to clear local model cache: \(error.localizedDescription, privacy: .public)")
+        }
+    }
 
     private init() {}
 
@@ -47,7 +109,61 @@ public final class LLMService {
     /// Resets the current chat session, clearing all history.
     public func resetChat(scope: CoCaptainAgentScope = .project) {
         chats[scope] = nil
+        mlxSessions[scope] = nil
         logger.info("Chat session reset for \(scope.storageKey, privacy: .public).")
+    }
+
+    /// Preloads the local model asynchronously on launch if it is selected as the preferred model.
+    public func preloadLocalModelIfNeeded() {
+        guard preferredModelName == "gemma-4-local" else { return }
+        Task {
+            do {
+                logger.info("Preloading local MLX model on launch...")
+                _ = try await getMLXSession(scope: .project)
+                logger.info("Local MLX model preloaded successfully.")
+            } catch {
+                logger.error("Failed to preload local MLX model on launch: \(error.localizedDescription, privacy: .public)")
+            }
+        }
+    }
+
+    private func getMLXSession(scope: CoCaptainAgentScope) async throws -> ChatSession {
+        if let session = mlxSessions[scope] {
+            return session
+        }
+        
+        let container: ModelContainer
+        if let existingContainer = mlxModelContainer {
+            container = existingContainer
+        } else {
+            // MLX quantized Gemma 4 model optimized for Edge devices
+            let modelId = "mlx-community/gemma-4-e2b-it-OptiQ-4bit"
+            logger.info("Loading local MLX model: \(modelId, privacy: .public)")
+            let configuration = ModelConfiguration(id: modelId)
+            
+            // Set downloading flag initially
+            isDownloadingLocalModel = true
+            localModelDownloadProgress = 0.0
+            
+            do {
+                container = try await LLMModelFactory.shared.loadContainer(configuration: configuration) { progress in
+                    Task { @MainActor in
+                        self.localModelDownloadProgress = progress.fractionCompleted
+                        self.isDownloadingLocalModel = progress.fractionCompleted < 1.0
+                    }
+                }
+                isDownloadingLocalModel = false
+                mlxModelContainer = container
+            } catch {
+                isDownloadingLocalModel = false
+                localModelError = error.localizedDescription
+                throw error
+            }
+        }
+        
+        let session = ChatSession(container, history: [.system(Self.systemInstructionText)])
+        mlxSessions[scope] = session
+        return session
     }
 
     /// Generates a streaming response for the given user prompt, maintaining conversation history.
@@ -104,10 +220,46 @@ public final class LLMService {
             }
         }
 
-        // Initialize chat session if it doesn't exist
-        if chats[scope] == nil {
-            // Ensure model is initialised with the latest preferred name at first use.
-            model = makeModel(modelName: preferredModelName)
+        let currentPreferred = preferredModelName
+        let isLocal = currentPreferred == "gemma-4-local"
+
+        if isLocal {
+            return AsyncThrowingStream { continuation in
+                let task = Task {
+                    do {
+                        var responseText = ""
+                        logger.debug("Starting local MLX stream.")
+                        
+                        let session = try await self.getMLXSession(scope: scope)
+                        let stream = try await session.streamResponse(to: prompt)
+                        
+                        for try await chunk in stream {
+                            responseText += chunk
+                            continuation.yield(.text(chunk))
+                        }
+                        
+                        self.tokenUsageLimiter.record(
+                            prompt: prompt,
+                            response: responseText,
+                            isSubscribed: self.subscriptionManager.isSubscribed
+                        )
+                        continuation.finish()
+                        logger.info("Local MLX stream completed.")
+                    } catch {
+                        logger.error("Local MLX stream error: \(error.localizedDescription, privacy: .public)")
+                        self.mlxSessions[scope] = nil
+                        continuation.finish(throwing: error)
+                    }
+                }
+                continuation.onTermination = { _ in task.cancel() }
+            }
+        }
+
+        // Initialize chat session or reconfigure if the selected model has changed
+        if chats[scope] == nil || lastUsedModelName != currentPreferred {
+            lastUsedModelName = currentPreferred
+            logger.info("Initializing generative model with \(currentPreferred, privacy: .public) for scope \(scope.storageKey, privacy: .public)")
+            model = makeModel(modelName: currentPreferred)
             chats[scope] = model.startChat()
         }
 
@@ -167,6 +319,30 @@ public final class LLMService {
         }
     }
 
+    private static let systemInstructionText = """
+        You are Co-Captain, a spatial programming assistant for the CAOCAP platform.
+        You can request app actions with the `request_app_action` function and request node edits with a `cocaptain_actions` XML block. The app validates every requested action before execution.
+        
+        Personality:
+        - You are a high-performance agentic engine. Be concise, authoritative, and proactive.
+        - You can execute mutations on a spatial canvas when the user asks for canvas changes.
+        - Use technical, precise language. Avoid conversational fluff like "I can help with that" or "Sure thing."
+        - You think in architectures and spatial relationships.
+        
+        Core Rule:
+        - Answer ordinary questions, opinions, and advice conversationally without app actions or node edits.
+        - Use app actions or node edits only when the user explicitly asks to navigate, use a tool, create, edit, write, document, apply, implement, or otherwise change the current canvas.
+        - Never provide full code in Markdown chat. Code belongs EXCLUSIVELY in `node_edits`. 
+        - If the user asks you to apply a change, you MUST provide the XML to implement it.
+        - Use `request_app_action` for app navigation and app-level tool actions.
+        - Append the `cocaptain_actions` block at the end of every response that involves node content changes.
+        - Safe actions are only for non-mutating autonomous app actions. Mutating or review-required app actions must use executionMode `pending`.
+
+        Firebase / Firestore (Live Preview):
+        - When the user asks to link JavaScript to Firebase, save/persist/sync data to Firestore, or connect the app to the backend, read the canvas context block about `window.__caocapFirestore` and `window.__caocapFirestoreDefaultPath`.
+        - Implement persistence with **`javascript` `node_edits`** using the Firestore compat instance on `window.__caocapFirestore` (never invent a second `initializeApp` in JS). If there is no Firebase node yet, propose `create_firebase_node` as a pending app action or tell the user to add the Firebase node and paste Web config from Firebase Console.
+        """
+
     private func makeModel(modelName: String) -> GenerativeModel {
         FirebaseAI.firebaseAI(backend: .googleAI()).generativeModel(
             modelName: modelName,
@@ -176,29 +352,7 @@ public final class LLMService {
             ),
             systemInstruction: ModelContent(
                 role: "system",
-                parts: """
-                You are Co-Captain, a spatial programming assistant for the CAOCAP platform.
-                You can request app actions with the `request_app_action` function and request node edits with a `cocaptain_actions` XML block. The app validates every requested action before execution.
-                
-                Personality:
-                - You are a high-performance agentic engine. Be concise, authoritative, and proactive.
-                - You can execute mutations on a spatial canvas when the user asks for canvas changes.
-                - Use technical, precise language. Avoid conversational fluff like "I can help with that" or "Sure thing."
-                - You think in architectures and spatial relationships.
-                
-                Core Rule:
-                - Answer ordinary questions, opinions, and advice conversationally without app actions or node edits.
-                - Use app actions or node edits only when the user explicitly asks to navigate, use a tool, create, edit, write, document, apply, implement, or otherwise change the current canvas.
-                - Never provide full code in Markdown chat. Code belongs EXCLUSIVELY in `node_edits`. 
-                - If the user asks you to apply a change, you MUST provide the XML to implement it.
-                - Use `request_app_action` for app navigation and app-level tool actions.
-                - Append the `cocaptain_actions` block at the end of every response that involves node content changes.
-                - Safe actions are only for non-mutating autonomous app actions. Mutating or review-required app actions must use executionMode `pending`.
-
-                Firebase / Firestore (Live Preview):
-                - When the user asks to link JavaScript to Firebase, save/persist/sync data to Firestore, or connect the app to the backend, read the canvas context block about `window.__caocapFirestore` and `window.__caocapFirestoreDefaultPath`.
-                - Implement persistence with **`javascript` `node_edits`** using the Firestore compat instance on `window.__caocapFirestore` (never invent a second `initializeApp` in JS). If there is no Firebase node yet, propose `create_firebase_node` as a pending app action or tell the user to add the Firebase node and paste Web config from Firebase Console.
-                """
+                parts: Self.systemInstructionText
             )
         )
     }

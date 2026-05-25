@@ -10,11 +10,34 @@ struct SettingsView: View {
     @AppStorage("grid_opacity") private var gridOpacity: Double = 0.1
     @AppStorage("connection_style") private var connectionStyle = "Dashed"
     @AppStorage("spatial_glow_enabled") private var spatialGlowEnabled = true
-    
+    @AppStorage("cocaptain.modelName") private var modelName = "gemini-3-flash-preview"
+
+    @State private var llmService = LLMService.shared
+
     let languages = LocalizationManager.supportedLanguages
     let themes = ["System", "Light", "Dark"]
     let intensities = ["Subtle", "Medium", "Sharp"]
     let styles = ["Solid", "Dashed", "Neon"]
+    let modelOptions = ["Gemini 3 Flash (Cloud)", "Gemma 4 (Local)"]
+
+    private var modelSelectionBinding: Binding<String> {
+        Binding(
+            get: {
+                if modelName == "gemma-4-local" {
+                    return "Gemma 4 (Local)"
+                } else {
+                    return "Gemini 3 Flash (Cloud)"
+                }
+            },
+            set: { newValue in
+                if newValue == "Gemma 4 (Local)" {
+                    modelName = "gemma-4-local"
+                } else {
+                    modelName = "gemini-3-flash-preview"
+                }
+            }
+        )
+    }
     
     var body: some View {
         NavigationStack {
@@ -42,6 +65,58 @@ struct SettingsView: View {
                                 Divider().padding(.leading, 56).opacity(0.3)
                                 
                                 SettingsPickerRow(icon: "globe", title: "Language", selection: $selectedLanguage, options: languages, color: .blue)
+                            }
+
+                            // MARK: - CoCaptain AI
+                            SettingsSection("CoCaptain AI") {
+                                SettingsPickerRow(icon: "cpu", title: "Active Model", selection: modelSelectionBinding, options: modelOptions, color: .orange)
+                                
+                                if modelName == "gemma-4-local" {
+                                    Divider().padding(.leading, 56).opacity(0.3)
+                                    
+                                    HStack {
+                                        Label("Local Cache Size", systemImage: "internaldrive")
+                                            .font(.system(size: 16, weight: .medium))
+                                        Spacer()
+                                        Text(llmService.localModelCacheSizeFormatted)
+                                            .font(.system(size: 14, design: .monospaced))
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 14)
+                                    
+                                    if llmService.isDownloadingLocalModel {
+                                        Divider().padding(.leading, 56).opacity(0.3)
+                                        
+                                        VStack(alignment: .leading, spacing: 8) {
+                                            HStack {
+                                                Text("Downloading local model...")
+                                                    .font(.system(size: 14, weight: .medium))
+                                                    .foregroundStyle(.secondary)
+                                                Spacer()
+                                                Text("\(Int(llmService.localModelDownloadProgress * 100))%")
+                                                    .font(.system(size: 14, design: .monospaced))
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                            ProgressView(value: llmService.localModelDownloadProgress)
+                                                .tint(.orange)
+                                        }
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 14)
+                                    } else if llmService.localModelCacheSizeFormatted != "0 MB" {
+                                        Divider().padding(.leading, 56).opacity(0.3)
+                                        
+                                        Button(role: .destructive) {
+                                            llmService.clearLocalModelCache()
+                                        } label: {
+                                            Label("Delete Local Model", systemImage: "trash.fill")
+                                                .font(.system(size: 16, weight: .medium))
+                                                .foregroundStyle(.red)
+                                        }
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 14)
+                                    }
+                                }
                             }
                             
                             // MARK: - Canvas & Graphics
