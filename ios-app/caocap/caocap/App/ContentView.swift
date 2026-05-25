@@ -15,6 +15,7 @@ struct ContentView: View {
     @State private var showingPurchaseSheet = false
     @State private var showingSignIn = false
     @State private var showingSettings = false
+    @State private var showingSnapshotBrowser = false
     @State private var showingProfile = false
     @State private var showingProjectExplorer = false
     @State private var currentScale: CGFloat = 1.0
@@ -158,6 +159,11 @@ struct ContentView: View {
         .sheet(isPresented: $showingSettings) {
             SettingsView()
                 .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showingSnapshotBrowser) {
+            SnapshotBrowserView(store: router.activeStore)
+                .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showExportSheet) {
@@ -348,6 +354,9 @@ struct ContentView: View {
             },
             openProjectExplorer: {
                 showingProjectExplorer = true
+            },
+            openSnapshotBrowser: {
+                showingSnapshotBrowser = true
             },
             moveNode: { args in
                 guard let idString = args["nodeId"], let uuid = UUID(uuidString: idString),
