@@ -131,12 +131,22 @@ public final class LLMService {
 
     public func updateHFToken(_ token: String) {
         let trimmed = token.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        let fileManager = FileManager.default
+        let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let tokenURL = documentsURL.appendingPathComponent("huggingface/token")
+        
+        // Ensure parent directory exists
+        try? fileManager.createDirectory(at: tokenURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+        
         if !trimmed.isEmpty {
             setenv("HF_TOKEN", trimmed, 1)
-            logger.info("Hugging Face environment token updated.")
+            try? trimmed.write(to: tokenURL, atomically: true, encoding: .utf8)
+            logger.info("Hugging Face environment token and token file updated.")
         } else {
             unsetenv("HF_TOKEN")
-            logger.info("Hugging Face environment token cleared.")
+            try? fileManager.removeItem(at: tokenURL)
+            logger.info("Hugging Face environment token and token file cleared.")
         }
     }
 
@@ -171,13 +181,35 @@ public final class LLMService {
     /// Preloads the local model asynchronously on launch if it is selected as the preferred model.
     public func preloadLocalModelIfNeeded() {
         guard preferredModelName == "gemma-4-local" else { return }
+        // Only preload if the model is already fully cached
+        guard isLocalModelCached else {
+            logger.info("Local model is not fully cached; skipping automatic preloading on launch.")
+            return
+        }
         Task {
             do {
-                logger.info("Preloading local MLX model on launch...")
+                logger.info("Preloading local MLX model...")
                 _ = try await getMLXSession(scope: .project)
                 logger.info("Local MLX model preloaded successfully.")
             } catch {
-                logger.error("Failed to preload local MLX model on launch: \(error.localizedDescription, privacy: .public)")
+                logger.error("Failed to preload local MLX model: \(error.localizedDescription, privacy: .public)")
+            }
+        }
+    }
+
+    /// Explicitly triggers the download and caching of the local model.
+    public func downloadLocalModel() {
+        isDownloadingLocalModel = true
+        localModelDownloadProgress = 0.0
+        localModelError = nil
+        
+        Task {
+            do {
+                logger.info("Starting explicit local model download...")
+                _ = try await getMLXSession(scope: .project)
+                logger.info("Local model downloaded and loaded successfully.")
+            } catch {
+                logger.error("Failed to download local model: \(error.localizedDescription, privacy: .public)")
             }
         }
     }
@@ -199,10 +231,24 @@ public final class LLMService {
             let isCached = cachedSize > 50 * 1024 * 1024
             let token = UserDefaults.standard.string(forKey: "cocaptain.hfToken") ?? ""
             
-            if !isCached && token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                let errorMsg = "Hugging Face Access Token is required to download this gated model. Please configure it in Settings."
-                localModelError = errorMsg
-                throw NSError(domain: "LLMService", code: -2, userInfo: [NSLocalizedDescriptionKey: errorMsg])
+            if !isCached {
+                if token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    let errorMsg = "Hugging Face Access Token is required to download this gated model. Please configure it in Settings."
+                    localModelError = errorMsg
+                    throw NSError(domain: "LLMService", code: -2, userInfo: [NSLocalizedDescriptionKey: errorMsg])
+                }
+                
+                // Validate token via whoami() before attempting to download
+                do {
+                    logger.info("Validating Hugging Face token...")
+                    _ = try await HubClient.default.whoami()
+                    logger.info("Hugging Face token validated successfully.")
+                } catch {
+                    isDownloadingLocalModel = false
+                    let errorMsg = "Invalid Hugging Face token: \(error.localizedDescription)"
+                    localModelError = errorMsg
+                    throw error
+                }
             }
             
             logger.info("Loading local MLX model: \(modelId, privacy: .public)")

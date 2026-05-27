@@ -186,7 +186,7 @@ struct SettingsView: View {
                                         } else {
                                             VStack(alignment: .leading, spacing: 8) {
                                                 Button {
-                                                    llmService.preloadLocalModelIfNeeded()
+                                                    llmService.downloadLocalModel()
                                                 } label: {
                                                     Label(llmService.localModelError != nil ? "Retry Download" : "Download Local Model", 
                                                           systemImage: llmService.localModelError != nil ? "arrow.clockwise" : "arrow.down.circle")
