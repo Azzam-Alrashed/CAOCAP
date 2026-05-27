@@ -68,4 +68,21 @@ struct SearchTests {
         #expect(viewport.offset.height == -300 * 1.2)
         #expect(viewport.scale == 1.2)
     }
+
+    @Test func viewportFitToCalculatesCorrectBoundsAndOffset() throws {
+        let viewport = ViewportState()
+        let nodes = [
+            SpatialNode(id: UUID(), type: .code, position: CGPoint(x: 100, y: 100), title: "Node 1"),
+            SpatialNode(id: UUID(), type: .code, position: CGPoint(x: 500, y: 400), title: "Node 2")
+        ]
+        
+        let containerSize = CGSize(width: 800, height: 600)
+        let padding: CGFloat = 100
+        
+        viewport.fitTo(nodes: nodes, containerSize: containerSize, padding: padding)
+        
+        #expect(viewport.scale == 1.2)
+        #expect(viewport.offset.width == -360)
+        #expect(viewport.offset.height == -300)
+    }
 }
