@@ -31,7 +31,7 @@ struct PurchaseView: View {
 
             GeometryReader { proxy in
                 let contentWidth = min(max(proxy.size.width - 32, 0), 460)
-
+                
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 48) {
                         // MARK: - Header
@@ -45,7 +45,7 @@ struct PurchaseView: View {
                                     .scaleEffect(appearAnimation ? 1.2 : 0.8)
                                     .opacity(0.4)
                                     .animation(.easeInOut(duration: 3).repeatForever(autoreverses: true), value: appearAnimation)
-
+                                
                                 Image(systemName: "crown.fill")
                                     .font(.system(size: 48, weight: .black))
                                     .foregroundStyle(
@@ -59,7 +59,7 @@ struct PurchaseView: View {
                                     .scaleEffect(appearAnimation ? 1.0 : 0.5)
                                     .rotationEffect(.degrees(appearAnimation ? 0 : -20))
                             }
-
+                            
                             VStack(spacing: 8) {
                                 Text(LocalizedStringKey("subscription.paywallBadge"))
                                     .font(.system(size: 14, weight: .black))
@@ -71,13 +71,13 @@ struct PurchaseView: View {
                                             endPoint: .trailing
                                         )
                                     )
-
+                                
                                 Text("Unlimited Creativity")
                                     .font(.system(size: 34, weight: .bold, design: .rounded))
                                     .foregroundStyle(.primary)
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.72)
-
+                                
                                 Text("The ultimate toolkit for spatial designers and vibecoders.")
                                     .font(.system(size: 17))
                                     .foregroundStyle(.secondary)
@@ -89,7 +89,7 @@ struct PurchaseView: View {
                             .offset(y: appearAnimation ? 0 : 20)
                         }
                         .padding(.top, 60)
-
+                        
                         // MARK: - Features
                         VStack(alignment: .leading, spacing: 24) {
                             ForEach(Array(features.enumerated()), id: \.offset) { index, feature in
@@ -99,7 +99,7 @@ struct PurchaseView: View {
                                     .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(Double(index) * 0.1), value: appearAnimation)
                             }
                         }
-
+                        
                         // MARK: - Plans
                         VStack(spacing: 16) {
                             if manager.isLoading && manager.products.isEmpty {
@@ -117,7 +117,7 @@ struct PurchaseView: View {
                                     isLoading: manager.isLoading,
                                     action: { withAnimation(.spring()) { selectedProductID = "CAOCAP_Pro_Monthly" } }
                                 )
-
+                                
                                 PlanCard(
                                     id: "CAOCAP_Pro_Yearly",
                                     title: "CAOCAP Pro Yearly",
@@ -134,7 +134,7 @@ struct PurchaseView: View {
                         .opacity(appearAnimation ? 1 : 0)
                         .offset(y: appearAnimation ? 0 : 30)
                         .animation(.spring().delay(0.5), value: appearAnimation)
-
+                        
                         // MARK: - Action
                         VStack(spacing: 20) {
                             Button(action: purchaseAction) {
@@ -149,7 +149,7 @@ struct PurchaseView: View {
                                         )
                                         .frame(height: 64)
                                         .shadow(color: Color(hex: "7C3AED").opacity(0.4), radius: 20, x: 0, y: 10)
-
+                                    
                                     if isPurchasing {
                                         ProgressView()
                                             .tint(.white)
@@ -167,7 +167,7 @@ struct PurchaseView: View {
                             .scaleEffect(isPurchasing ? 0.95 : 1.0)
                             .disabled(isPurchasing || (manager.isLoading && !manager.isSubscribed))
                             .animation(.spring(), value: isPurchasing)
-
+                            
                             // Footer Links
                             ViewThatFits(in: .horizontal) {
                                 HStack(spacing: 20) {
@@ -179,12 +179,12 @@ struct PurchaseView: View {
                                     Circle().frame(width: 3, height: 3)
                                     Link("Privacy Policy", destination: URL(string: "https://www.azzam.ai/caocap/privacy")!)
                                 }
-
+                                
                                 VStack(spacing: 10) {
                                     Button("Restore Purchases") {
                                         Task { await restorePurchases() }
                                     }
-
+                                    
                                     HStack(spacing: 16) {
                                         Link("Terms of Use (EULA)", destination: URL(string: "https://www.azzam.ai/caocap/terms")!)
                                         Circle().frame(width: 3, height: 3)
@@ -194,7 +194,7 @@ struct PurchaseView: View {
                             }
                             .font(.system(size: 13, weight: .medium))
                             .foregroundStyle(.secondary)
-
+                            
                             // Mandatory Disclosure
                             VStack(spacing: 8) {
                                 Text("Subscription automatically renews unless auto-renew is turned off at least 24-hours before the end of the current period. Payment will be charged to your iTunes Account at confirmation of purchase. Account will be charged for renewal within 24-hours prior to the end of the current period. Subscriptions may be managed and auto-renewal may be turned off by going to your Account Settings after purchase.")
@@ -213,10 +213,10 @@ struct PurchaseView: View {
                         .opacity(appearAnimation ? 1 : 0)
                         .animation(.easeIn.delay(0.7), value: appearAnimation)
                     }
-                    .frame(width: contentWidth)
-                    .frame(width: proxy.size.width)
+                    .frame(width: contentWidth - 20)
                 }
             }
+            
 
             // Success Overlay
             if showSuccess {

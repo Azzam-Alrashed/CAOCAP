@@ -21,7 +21,6 @@ public struct NodeSearchIndex {
         guard !trimmed.isEmpty else { return [] }
 
         return nodes
-            .filter { $0.role != .livePreview } // Usually best to fly to source code, not the output itself
             .compactMap { node -> NodeSearchResult? in
                 var score = 0
                 let titleLower = node.title.lowercased()

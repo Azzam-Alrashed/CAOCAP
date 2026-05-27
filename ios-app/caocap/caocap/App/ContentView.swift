@@ -27,6 +27,8 @@ struct ContentView: View {
     @State private var appUpdateService = AppUpdateService.shared
     @State private var viewport = ViewportState()
     @State private var showingNodeCreationMenu = false
+    @State private var nodeFrames: [UUID: NodeFrameData] = [:]
+    @State private var containerSize: CGSize = .zero
     
     // Export State
     @State private var isExporting = false
@@ -34,7 +36,8 @@ struct ContentView: View {
     @State private var showExportSheet = false
 
     var body: some View {
-        ZStack {
+        GeometryReader { geometry in
+            ZStack {
             switch router.currentWorkspace {
             case .home:
                 InfiniteCanvasView(
@@ -253,7 +256,17 @@ struct ContentView: View {
             undoManager?.redo()
             router.activeStore.undoStackChanged += 1
         }
+        .onPreferenceChange(NodeFramePreferenceKey.self) { value in
+            nodeFrames = value
+        }
+        .onAppear {
+            containerSize = geometry.size
+        }
+        .onChange(of: geometry.size) { _, newSize in
+            containerSize = newSize
+        }
     }
+}
     
     private var currentColorScheme: ColorScheme? {
         switch selectedTheme {
@@ -405,11 +418,17 @@ struct ContentView: View {
         }
         commandPalette.onFlyToNode = { nodeId in
             guard let node = router.activeStore.nodes.first(where: { $0.id == nodeId }) else { return }
+            
+            var targetScale: CGFloat = 1.0
+            if let frameData = nodeFrames[nodeId], containerSize != .zero {
+                let paddingFactor: CGFloat = 0.8
+                let scaleX = (containerSize.width * paddingFactor) / frameData.size.width
+                let scaleY = (containerSize.height * paddingFactor) / frameData.size.height
+                targetScale = min(min(scaleX, scaleY), 1.2)
+            }
+            
             withAnimation(.spring(response: 0.6, dampingFraction: 0.85)) {
-                // GeometryReader size isn't easily available here, but flyTo math
-                // uses containerSize to find center. Since node.position is relative 
-                // to center already, we can pass .zero and it works.
-                viewport.flyTo(nodePosition: node.position, containerSize: .zero)
+                viewport.flyTo(nodePosition: node.position, containerSize: containerSize, targetScale: targetScale)
             }
         }
         commandPalette.onSubmitPrompt = { prompt in

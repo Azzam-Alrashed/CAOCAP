@@ -3,6 +3,7 @@ import SwiftUI
 struct NodeFrameData: Equatable {
     let nodeId: UUID
     let frame: CGRect
+    let size: CGSize
 
     var center: CGPoint {
         CGPoint(x: frame.midX, y: frame.midY)
