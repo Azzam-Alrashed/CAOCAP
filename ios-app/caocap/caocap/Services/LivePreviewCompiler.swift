@@ -20,6 +20,7 @@ public struct LivePreviewCompiler {
         if let codeNode = nodes.first(where: { $0.role == .code }) {
             var compiledHTML = codeNode.textContent ?? ""
             injectFirebaseHead(from: nodes, into: &compiledHTML)
+            injectViewportMeta(into: &compiledHTML)
             if hasFirebaseNode {
                 injectFirebasePreviewDiagnostics(into: &compiledHTML)
             }
@@ -47,7 +48,31 @@ public struct LivePreviewCompiler {
             injectFirebasePreviewDiagnostics(into: &compiledHTML)
         }
 
+        injectViewportMeta(into: &compiledHTML)
+
         return LivePreviewCompilation(webViewNodeID: webViewNode.id, html: compiledHTML)
+    }
+
+    private func injectViewportMeta(into html: inout String) {
+        if html.localizedCaseInsensitiveContains("name=\"viewport\"") || html.localizedCaseInsensitiveContains("name='viewport'") {
+            return
+        }
+        
+        let metaTag = "\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"
+        if let headStart = html.range(of: "<head", options: .caseInsensitive),
+           let headOpenEnd = html.range(of: ">", range: headStart.upperBound..<html.endIndex) {
+            html.insert(contentsOf: metaTag, at: headOpenEnd.upperBound)
+        } else if let htmlStart = html.range(of: "<html", options: .caseInsensitive),
+                  let htmlOpenEnd = html.range(of: ">", range: htmlStart.upperBound..<html.endIndex) {
+            html.insert(contentsOf: "<head>\(metaTag)</head>", at: htmlOpenEnd.upperBound)
+        } else {
+            html = """
+            <!DOCTYPE html>
+            <html><head>\(metaTag)</head><body>
+            \(html)
+            </body></html>
+            """
+        }
     }
 
     private func injectFirebaseHead(from nodes: [SpatialNode], into html: inout String) {

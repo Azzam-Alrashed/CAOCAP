@@ -306,6 +306,54 @@ struct CoCaptainAgentTests {
         #expect(compilation.html.hasSuffix("\n<script>\nwindow.ready = true;\n</script>\n"))
     }
 
+    @Test func livePreviewCompilerInjectsViewportMetaWhenMissing() throws {
+        let compiler = LivePreviewCompiler()
+        
+        // Scenario 1: Already has viewport tag (double quotes)
+        let hasViewportDouble = [
+            SpatialNode(type: .webView, position: .zero, title: "Live Preview"),
+            SpatialNode(type: .code, position: .zero, title: "Code", textContent: "<html><head><meta name=\"viewport\" content=\"width=device-width\"></head><body></body></html>")
+        ]
+        let compilationDouble = try #require(compiler.compile(nodes: hasViewportDouble))
+        #expect(compilationDouble.html.components(separatedBy: "viewport").count == 2)
+        
+        // Scenario 2: Already has viewport tag (single quotes)
+        let hasViewportSingle = [
+            SpatialNode(type: .webView, position: .zero, title: "Live Preview"),
+            SpatialNode(type: .code, position: .zero, title: "Code", textContent: "<html><head><meta name='viewport' content='width=device-width'></head><body></body></html>")
+        ]
+        let compilationSingle = try #require(compiler.compile(nodes: hasViewportSingle))
+        #expect(compilationSingle.html.components(separatedBy: "viewport").count == 2)
+        
+        // Scenario 3: Has <head>, missing viewport
+        let missingViewportWithHead = [
+            SpatialNode(type: .webView, position: .zero, title: "Live Preview"),
+            SpatialNode(type: .code, position: .zero, title: "Code", textContent: "<html><head><title>Test</title></head><body><h1>Hello</h1></body></html>")
+        ]
+        let compilationWithHead = try #require(compiler.compile(nodes: missingViewportWithHead))
+        #expect(compilationWithHead.html.contains("viewport"))
+        #expect(compilationWithHead.html.contains("<head>\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"))
+        
+        // Scenario 4: Has <html>, missing <head>
+        let missingViewportWithHtml = [
+            SpatialNode(type: .webView, position: .zero, title: "Live Preview"),
+            SpatialNode(type: .code, position: .zero, title: "Code", textContent: "<html><body><h1>Hello</h1></body></html>")
+        ]
+        let compilationWithHtml = try #require(compiler.compile(nodes: missingViewportWithHtml))
+        #expect(compilationWithHtml.html.contains("viewport"))
+        #expect(compilationWithHtml.html.contains("<head>\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n</head>"))
+        
+        // Scenario 5: Missing both <head> and <html>
+        let missingViewportFragment = [
+            SpatialNode(type: .webView, position: .zero, title: "Live Preview"),
+            SpatialNode(type: .code, position: .zero, title: "Code", textContent: "<h1>Hello World</h1>")
+        ]
+        let compilationFragment = try #require(compiler.compile(nodes: missingViewportFragment))
+        #expect(compilationFragment.html.contains("viewport"))
+        #expect(compilationFragment.html.contains("<!DOCTYPE html>"))
+        #expect(compilationFragment.html.contains("<html><head>"))
+    }
+
     @Test func livePreviewCompilerRequiresPreviewAndCodeOrHTMLNodes() {
         let compiler = LivePreviewCompiler()
         let codeOnly = [SpatialNode(type: .code, position: .zero, title: "Code", textContent: "<h1>Hello</h1>")]
