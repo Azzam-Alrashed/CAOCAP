@@ -650,6 +650,22 @@ public class ProjectStore {
     public func organizeNodes(isHome: Bool = false) {
         guard !nodes.isEmpty else { return }
         
+        let oldPositions = nodes.map { ($0.id, $0.position) }
+        
+        undoManager?.registerUndo(withTarget: self) { target in
+            MainActor.assumeIsolated {
+                withAnimation(.spring(response: 0.8, dampingFraction: 0.7)) {
+                    for (id, pos) in oldPositions {
+                        if let index = target.nodes.firstIndex(where: { $0.id == id }) {
+                            target.nodes[index].position = pos
+                        }
+                    }
+                }
+                target.requestSave()
+            }
+        }
+        undoStackChanged += 1
+        
         var nodePositions = [UUID: CGPoint]()
         
         if isHome {

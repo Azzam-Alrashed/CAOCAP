@@ -406,6 +406,9 @@ struct ContentView: View {
             },
             organizeNodes: {
                 router.activeStore.organizeNodes(isHome: router.currentWorkspace == .home)
+                withAnimation(.spring(response: 0.8, dampingFraction: 0.85)) {
+                    viewport.fitTo(nodes: router.activeStore.nodes, containerSize: containerSize)
+                }
             }
         )
     }

@@ -98,4 +98,31 @@ struct ProjectMutationTests {
         
         #expect(!store.isSaving)
     }
+
+    @Test func organizeNodesRegistersUndo() throws {
+        let node1Id = UUID()
+        let node2Id = UUID()
+        let node1 = SpatialNode(id: node1Id, type: .code, position: CGPoint(x: 10, y: 20), title: "Node 1")
+        let node2 = SpatialNode(id: node2Id, type: .code, position: CGPoint(x: 30, y: 40), title: "Node 2")
+        
+        let store = ProjectStore(fileName: "test_organize_undo.json", initialNodes: [node1, node2])
+        let undoManager = UndoManager()
+        store.undoManager = undoManager
+        
+        store.organizeNodes(isHome: false)
+        
+        let n1PosAfter = store.nodes.first(where: { $0.id == node1Id })?.position
+        let n2PosAfter = store.nodes.first(where: { $0.id == node2Id })?.position
+        
+        #expect(n1PosAfter != CGPoint(x: 10, y: 20) || n2PosAfter != CGPoint(x: 30, y: 40))
+        #expect(undoManager.canUndo)
+        
+        undoManager.undo()
+        
+        let n1PosRestored = store.nodes.first(where: { $0.id == node1Id })?.position
+        let n2PosRestored = store.nodes.first(where: { $0.id == node2Id })?.position
+        
+        #expect(n1PosRestored == CGPoint(x: 10, y: 20))
+        #expect(n2PosRestored == CGPoint(x: 30, y: 40))
+    }
 }

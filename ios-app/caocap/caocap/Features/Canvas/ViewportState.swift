@@ -94,4 +94,51 @@ public class ViewportState {
         self.offset = newOffset
         self.lastOffset = newOffset
     }
+
+    /// Fits all node positions into the viewport with padding.
+    /// Assumes containerSize represents the visible canvas container.
+    public func fitTo(nodes: [SpatialNode], containerSize: CGSize, padding: CGFloat = 80) {
+        guard !nodes.isEmpty else { return }
+        
+        var minX = nodes[0].position.x
+        var maxX = nodes[0].position.x
+        var minY = nodes[0].position.y
+        var maxY = nodes[0].position.y
+        
+        for node in nodes {
+            minX = min(minX, node.position.x)
+            maxX = max(maxX, node.position.x)
+            minY = min(minY, node.position.y)
+            maxY = max(maxY, node.position.y)
+        }
+        
+        let width = maxX - minX
+        let height = maxY - minY
+        
+        // Center of the bounding box
+        let centerX = minX + width / 2
+        let centerY = minY + height / 2
+        
+        // Target scale to fit the bounds into containerSize with padding
+        let availableWidth = containerSize.width - padding * 2
+        let availableHeight = containerSize.height - padding * 2
+        
+        let scaleX = width > 0 ? availableWidth / width : 1.0
+        let scaleY = height > 0 ? availableHeight / height : 1.0
+        
+        // Use the smaller scale factor, capped by max/min scale
+        let targetScale = min(min(scaleX, scaleY), 1.2) // Cap fitting zoom at 1.2x to prevent over-zooming
+        let clampedScale = min(max(targetScale, minScale), maxScale)
+        
+        // Target offset to center the bounding box center in the viewport
+        let newOffset = CGSize(
+            width: -centerX * clampedScale,
+            height: -centerY * clampedScale
+        )
+        
+        self.scale = clampedScale
+        self.lastScale = clampedScale
+        self.offset = newOffset
+        self.lastOffset = newOffset
+    }
 }
