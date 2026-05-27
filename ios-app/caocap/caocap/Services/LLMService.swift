@@ -145,9 +145,10 @@ public final class LLMService {
             logger.info("Loading local MLX model: \(modelId, privacy: .public)")
             let configuration = ModelConfiguration(id: modelId)
             
-            // Set downloading flag initially
+            // Set downloading flag initially and reset error
             isDownloadingLocalModel = true
             localModelDownloadProgress = 0.0
+            localModelError = nil
             
             do {
                 container = try await LLMModelFactory.shared.loadContainer(
