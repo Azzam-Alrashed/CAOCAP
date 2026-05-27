@@ -191,7 +191,7 @@ private struct NodePreviewContent: View {
                 case .webView:
                     if let html = node.htmlContent {
                         HTMLWebView(htmlContent: html)
-                            .frame(height: 200)
+                            .frame(width: 240, height: 427)
                             .background(Color.white.opacity(0.1))
                             .cornerRadius(12)
                             .padding(.top, 12)

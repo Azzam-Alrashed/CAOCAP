@@ -740,17 +740,12 @@ public class ProjectStore {
                 clusters.append(currentCluster)
             }
             
-            // 2. Lay out each cluster hierarchically
-            let columnWidth: CGFloat = 800
-            let rowHeight: CGFloat = 600
-            let horizontalSpacing: CGFloat = 350
-            let verticalSpacing: CGFloat = 200
+            // 2. Lay out each cluster hierarchically relative to (0,0)
+            let horizontalSpacing: CGFloat = 400
+            var localPositions = [UUID: CGPoint]()
+            var clusterSizes = [Int: (width: CGFloat, height: CGFloat, localCenter: CGPoint)]()
             
             for (clusterIndex, clusterIds) in clusters.enumerated() {
-                let col = clusterIndex % 2
-                let row = clusterIndex / 2
-                let clusterCenter = CGPoint(x: CGFloat(col) * columnWidth, y: CGFloat(row) * rowHeight)
-                
                 // Let's compute topological levels/ranks within this cluster
                 var ranks = [UUID: Int]()
                 for id in clusterIds {
@@ -760,14 +755,12 @@ public class ProjectStore {
                 let clusterNodeSet = Set(clusterIds)
                 
                 // Run Bellman-Ford style relaxation loop to find DAG depths
-                // Loop is limited to clusterIds.count to handle cycles gracefully
                 for _ in 0..<clusterIds.count {
                     var changed = false
                     for id in clusterIds {
                         guard let node = nodes.first(where: { $0.id == id }) else { continue }
                         let currentRank = ranks[id] ?? 0
                         
-                        // If node A flows into node B (id), then rank[id] = max(rank[id], rank[A] + 1)
                         let inputs = nodes.filter { A in
                             clusterNodeSet.contains(A.id) && (
                                 (node.inputNodeIds ?? []).contains(A.id) ||
@@ -794,30 +787,78 @@ public class ProjectStore {
                     nodesByRank[rank, default: []].append(id)
                 }
                 
-                // Sort ranks to lay them out from left to right
                 let sortedRanks = nodesByRank.keys.sorted()
                 
-                // Center the entire cluster horizontally around clusterCenter
-                let totalClusterWidth = CGFloat(sortedRanks.count - 1) * horizontalSpacing
-                let startX = clusterCenter.x - totalClusterWidth / 2
-                
+                // Lay out relative to (0,0) center
                 for (rankIdx, rank) in sortedRanks.enumerated() {
                     let rankNodes = nodesByRank[rank] ?? []
-                    let x = startX + CGFloat(rankIdx) * horizontalSpacing
+                    let x = CGFloat(rankIdx) * horizontalSpacing
                     
-                    // Center vertically
+                    // Determine vertical spacing dynamically
+                    let hasLargeNodes = rankNodes.contains { id in
+                        if let node = nodes.first(where: { $0.id == id }) {
+                            return [.webView, .chart, .table, .firebase].contains(node.type)
+                        }
+                        return false
+                    }
+                    let verticalSpacing = hasLargeNodes ? CGFloat(300) : CGFloat(220)
+                    
+                    // Center vertically around y=0
                     let totalHeight = CGFloat(rankNodes.count - 1) * verticalSpacing
-                    let startY = clusterCenter.y - totalHeight / 2
+                    let startY = -totalHeight / 2
                     
                     for (i, id) in rankNodes.enumerated() {
                         let y = startY + CGFloat(i) * verticalSpacing
-                        nodePositions[id] = CGPoint(x: x, y: y)
+                        localPositions[id] = CGPoint(x: x, y: y)
                     }
                 }
+                
+                // Compute local cluster bounds
+                let clusterLocals = clusterIds.compactMap { localPositions[$0] }
+                let localXValues = clusterLocals.map(\.x)
+                let localYValues = clusterLocals.map(\.y)
+                
+                let minX = localXValues.min() ?? 0
+                let maxX = localXValues.max() ?? 0
+                let minY = localYValues.min() ?? 0
+                let maxY = localYValues.max() ?? 0
+                
+                let width = (maxX - minX) + 320
+                let height = (maxY - minY) + 240
+                let localCenter = CGPoint(x: (minX + maxX) / 2, y: (minY + maxY) / 2)
+                
+                clusterSizes[clusterIndex] = (width, height, localCenter)
+            }
+            
+            // 3. Stack clusters globally in 2 columns
+            var columnHeights: [CGFloat] = [0.0, 0.0]
+            let columnSpacing: CGFloat = 900
+            let clusterGap: CGFloat = 100
+            
+            for (clusterIndex, clusterIds) in clusters.enumerated() {
+                let col = clusterIndex % 2
+                let cSize = clusterSizes[clusterIndex]!
+                
+                let clusterCenter = CGPoint(
+                    x: CGFloat(col) * columnSpacing,
+                    y: columnHeights[col] + cSize.height / 2
+                )
+                
+                for id in clusterIds {
+                    if let localPos = localPositions[id] {
+                        let globalPos = CGPoint(
+                            x: localPos.x - cSize.localCenter.x + clusterCenter.x,
+                            y: localPos.y - cSize.localCenter.y + clusterCenter.y
+                        )
+                        nodePositions[id] = globalPos
+                    }
+                }
+                
+                columnHeights[col] += cSize.height + clusterGap
             }
         }
         
-        // 3. Apply changes with undo/redo using the new helper
+        // 4. Apply changes with undo/redo using the new helper
         updateNodePositions(nodePositions, animated: true)
         HapticsManager.shared.notification(.success)
     }

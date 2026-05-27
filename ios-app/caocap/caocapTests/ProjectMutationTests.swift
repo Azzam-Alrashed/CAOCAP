@@ -162,4 +162,34 @@ struct ProjectMutationTests {
         
         #expect(pos1.x < pos2.x)
     }
+
+    @Test func organizeNodesAppliesLargerVerticalSpacingForWebViews() throws {
+        let node1Id = UUID()
+        let node2Id = UUID()
+        let node1 = SpatialNode(id: node1Id, type: .webView, position: CGPoint(x: 0, y: 0), title: "WebView 1")
+        let node2 = SpatialNode(id: node2Id, type: .webView, position: CGPoint(x: 100, y: 100), title: "WebView 2")
+        
+        let store = ProjectStore(fileName: "test_webview_spacing.json", initialNodes: [node1, node2])
+        store.organizeNodes(isHome: false)
+        
+        let pos1 = store.nodes.first(where: { $0.id == node1Id })!.position
+        let pos2 = store.nodes.first(where: { $0.id == node2Id })!.position
+        
+        let distanceY = abs(pos1.y - pos2.y)
+        #expect(distanceY == 300)
+    }
+
+    @Test func organizeNodesAvoidsClusterOverlap() throws {
+        let node1 = SpatialNode(id: UUID(), type: .code, position: CGPoint(x: 0, y: 0), title: "Cluster 1 Node")
+        let node2 = SpatialNode(id: UUID(), type: .code, position: CGPoint(x: 100, y: 100), title: "Cluster 2 Node")
+        
+        let store = ProjectStore(fileName: "test_cluster_stacking.json", initialNodes: [node1, node2])
+        store.organizeNodes(isHome: false)
+        
+        let pos1 = store.nodes[0].position
+        let pos2 = store.nodes[1].position
+        
+        #expect(pos1.x == 0)
+        #expect(pos2.x == 900)
+    }
 }
