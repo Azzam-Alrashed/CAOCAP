@@ -191,7 +191,7 @@ struct SettingsView: View {
                                                     Label(llmService.localModelError != nil ? "Retry Download" : "Download Local Model", 
                                                           systemImage: llmService.localModelError != nil ? "arrow.clockwise" : "arrow.down.circle")
                                                         .font(.system(size: 16, weight: .semibold))
-                                                        .foregroundStyle(hfToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .secondary : .orange)
+                                                        .foregroundStyle(hfToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.secondary : Color.orange)
                                                 }
                                                 .disabled(hfToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                                                 
