@@ -11,6 +11,7 @@ struct SettingsView: View {
     @AppStorage("connection_style") private var connectionStyle = "Dashed"
     @AppStorage("spatial_glow_enabled") private var spatialGlowEnabled = true
     @AppStorage("cocaptain.modelName") private var modelName = "gemini-3-flash-preview"
+    @AppStorage("cocaptain.hfToken") private var hfToken = ""
 
     @State private var llmService = LLMService.shared
 
@@ -73,6 +74,43 @@ struct SettingsView: View {
                                 SettingsPickerRow(icon: "cpu", title: "Active Model", selection: modelSelectionBinding, options: modelOptions, color: .orange)
                                 
                                 if modelName == "gemma-4-local" {
+                                    Divider().padding(.leading, 56).opacity(0.3)
+                                    
+                                    HStack {
+                                        Label("Hugging Face Token", systemImage: "key.fill")
+                                            .font(.system(size: 16, weight: .medium))
+                                        Spacer()
+                                        SecureField("hf_...", text: $hfToken)
+                                            .textFieldStyle(.plain)
+                                            .multilineTextAlignment(.trailing)
+                                            .font(.system(size: 14, design: .monospaced))
+                                            .foregroundStyle(.primary)
+                                            .frame(maxWidth: 180)
+                                            .autocorrectionDisabled()
+                                            .textInputAutocapitalization(.never)
+                                            .onChange(of: hfToken) { _, newValue in
+                                                llmService.updateHFToken(newValue)
+                                            }
+                                    }
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 14)
+                                    
+                                    Divider().padding(.leading, 56).opacity(0.3)
+                                    
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        Text("Gemma 4 is a gated model. To download it, you must:")
+                                            .font(.system(size: 11, weight: .bold))
+                                            .foregroundStyle(.secondary)
+                                        Text("• Accept the license at huggingface.co/google/gemma-4-E2B-it")
+                                            .font(.system(size: 11))
+                                            .foregroundStyle(.secondary)
+                                        Text("• Create a Read token at huggingface.co/settings/tokens")
+                                            .font(.system(size: 11))
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    .padding(.horizontal, 16)
+                                    .padding(.bottom, 8)
+                                    
                                     Divider().padding(.leading, 56).opacity(0.3)
                                     
                                     HStack {

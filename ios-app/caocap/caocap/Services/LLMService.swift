@@ -106,7 +106,53 @@ public final class LLMService {
         }
     }
 
-    private init() {}
+    private init() {
+        // Configure Hugging Face home directory in Documents
+        let fileManager = FileManager.default
+        let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let huggingFaceURL = documentsURL.appendingPathComponent("huggingface")
+        
+        // Ensure directory exists
+        try? fileManager.createDirectory(at: huggingFaceURL, withIntermediateDirectories: true)
+        
+        // Set HF_HOME environment variable to route cache and token files there
+        setenv("HF_HOME", huggingFaceURL.path, 1)
+        logger.info("Hugging Face home directory set to \(huggingFaceURL.path, privacy: .public)")
+        
+        // Load stored Hugging Face token if available
+        let token = UserDefaults.standard.string(forKey: "cocaptain.hfToken") ?? ""
+        updateHFToken(token)
+    }
+
+    public func updateHFToken(_ token: String) {
+        let trimmed = token.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty {
+            setenv("HF_TOKEN", trimmed, 1)
+            logger.info("Hugging Face environment token updated.")
+        } else {
+            unsetenv("HF_TOKEN")
+            logger.info("Hugging Face environment token cleared.")
+        }
+    }
+
+    private func getCachedModelFolderSize() -> Int64 {
+        let fileManager = FileManager.default
+        let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let modelFolder = documentsURL.appendingPathComponent("huggingface/hub/models--mlx-community--gemma-4-e2b-it-4bit")
+        
+        guard let enumerator = fileManager.enumerator(at: modelFolder, includingPropertiesForKeys: [.fileSizeKey], options: []) else {
+            return 0
+        }
+        
+        var totalSize: Int64 = 0
+        for case let fileURL as URL in enumerator {
+            if let resourceValues = try? fileURL.resourceValues(forKeys: [.fileSizeKey]),
+               let fileSize = resourceValues.fileSize {
+                totalSize += Int64(fileSize)
+            }
+        }
+        return totalSize
+    }
 
     // MARK: - API
 
@@ -142,6 +188,18 @@ public final class LLMService {
         } else {
             // MLX quantized Gemma 4 model optimized for Edge devices
             let modelId = "mlx-community/gemma-4-e2b-it-4bit"
+            
+            // Check if model is cached or if we have a token
+            let cachedSize = getCachedModelFolderSize()
+            let isCached = cachedSize > 50 * 1024 * 1024
+            let token = UserDefaults.standard.string(forKey: "cocaptain.hfToken") ?? ""
+            
+            if !isCached && token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                let errorMsg = "Hugging Face Access Token is required to download this gated model. Please configure it in Settings."
+                localModelError = errorMsg
+                throw NSError(domain: "LLMService", code: -2, userInfo: [NSLocalizedDescriptionKey: errorMsg])
+            }
+            
             logger.info("Loading local MLX model: \(modelId, privacy: .public)")
             let configuration = ModelConfiguration(id: modelId)
             
