@@ -178,6 +178,9 @@
         }
       }
     },
+    "Access Token is required to download." : {
+
+    },
     "Access your projects from any device" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1116,6 +1119,9 @@
     "Download Error" : {
 
     },
+    "Download Local Model" : {
+
+    },
     "Downloading Local Gemma 4 Model..." : {
 
     },
@@ -1555,6 +1561,9 @@
       }
     },
     "Local Cache Size" : {
+
+    },
+    "Local Model Ready" : {
 
     },
     "Made for the spatial era." : {
