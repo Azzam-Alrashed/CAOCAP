@@ -33,7 +33,10 @@ struct SettingsView: View {
             set: { newValue in
                 if newValue == "Gemma 4 (Local)" {
                     modelName = "gemma-4-local"
-                    llmService.preloadLocalModelIfNeeded()
+                    let hasToken = !hfToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    if llmService.isLocalModelCached || hasToken {
+                        llmService.preloadLocalModelIfNeeded()
+                    }
                 } else {
                     modelName = "gemini-3-flash-preview"
                 }
@@ -145,29 +148,30 @@ struct SettingsView: View {
                                     } else {
                                         if let error = llmService.localModelError {
                                             Divider().padding(.leading, 56).opacity(0.3)
-                                            VStack(alignment: .leading, spacing: 10) {
-                                                VStack(alignment: .leading, spacing: 4) {
-                                                    Label("Download Error", systemImage: "exclamationmark.triangle.fill")
-                                                        .font(.system(size: 14, weight: .semibold))
-                                                        .foregroundStyle(.red)
-                                                    Text(error)
-                                                        .font(.system(size: 12))
-                                                        .foregroundStyle(.secondary)
-                                                }
-                                                
-                                                Button {
-                                                    llmService.preloadLocalModelIfNeeded()
-                                                } label: {
-                                                    Label("Retry Download", systemImage: "arrow.clockwise")
-                                                        .font(.system(size: 14, weight: .medium))
-                                                        .foregroundStyle(.orange)
-                                                }
+                                            VStack(alignment: .leading, spacing: 6) {
+                                                Label("Download Error", systemImage: "exclamationmark.triangle.fill")
+                                                    .font(.system(size: 14, weight: .semibold))
+                                                    .foregroundStyle(.red)
+                                                Text(error)
+                                                    .font(.system(size: 12))
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                            .padding(.horizontal, 16)
+                                            .padding(.vertical, 10)
+                                        }
+                                        
+                                        Divider().padding(.leading, 56).opacity(0.3)
+                                        
+                                        if llmService.isLocalModelCached {
+                                            HStack {
+                                                Label("Local Model Ready", systemImage: "checkmark.circle.fill")
+                                                    .font(.system(size: 16, weight: .semibold))
+                                                    .foregroundStyle(.green)
+                                                Spacer()
                                             }
                                             .padding(.horizontal, 16)
                                             .padding(.vertical, 14)
-                                        }
-                                        
-                                        if llmService.localModelCacheSizeFormatted != "0 MB" {
+                                            
                                             Divider().padding(.leading, 56).opacity(0.3)
                                             
                                             Button(role: .destructive) {
@@ -176,6 +180,26 @@ struct SettingsView: View {
                                                 Label("Delete Local Model", systemImage: "trash.fill")
                                                     .font(.system(size: 16, weight: .medium))
                                                     .foregroundStyle(.red)
+                                            }
+                                            .padding(.horizontal, 16)
+                                            .padding(.vertical, 14)
+                                        } else {
+                                            VStack(alignment: .leading, spacing: 8) {
+                                                Button {
+                                                    llmService.preloadLocalModelIfNeeded()
+                                                } label: {
+                                                    Label(llmService.localModelError != nil ? "Retry Download" : "Download Local Model", 
+                                                          systemImage: llmService.localModelError != nil ? "arrow.clockwise" : "arrow.down.circle")
+                                                        .font(.system(size: 16, weight: .semibold))
+                                                        .foregroundStyle(hfToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .secondary : .orange)
+                                                }
+                                                .disabled(hfToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                                                
+                                                if hfToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                                    Label("Access Token is required to download.", systemImage: "info.circle")
+                                                        .font(.system(size: 11))
+                                                        .foregroundStyle(.orange)
+                                                }
                                             }
                                             .padding(.horizontal, 16)
                                             .padding(.vertical, 14)

@@ -57,6 +57,11 @@ public final class LLMService {
     public var localModelDownloadProgress: Double = 0.0
     public var localModelError: String?
 
+    public var isLocalModelCached: Bool {
+        let cachedSize = getCachedModelFolderSize()
+        return cachedSize > 50 * 1024 * 1024
+    }
+
     /// Formatted cache size for local MLX model storage
     public var localModelCacheSizeFormatted: String {
         let fileManager = FileManager.default
