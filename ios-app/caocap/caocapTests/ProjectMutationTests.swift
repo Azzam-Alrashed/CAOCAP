@@ -81,4 +81,21 @@ struct ProjectMutationTests {
         #expect(restoredSource.nextNodeId == targetId)
         #expect(restoredSource.connectedNodeIds == [targetId])
     }
+
+    @Test func requestSaveRespectsShowIndicatorFlag() async throws {
+        let store = ProjectStore(fileName: "test_save_indicator.json")
+        
+        // 1. Silent save should not trigger visual indicator
+        store.requestSave(showIndicator: false)
+        #expect(!store.isSaving)
+        
+        // 2. Visual save should trigger visual indicator
+        store.requestSave(showIndicator: true)
+        #expect(store.isSaving)
+        
+        // Wait for debounce (500ms) and actual background save to finish
+        try? await Task.sleep(nanoseconds: 700_000_000)
+        
+        #expect(!store.isSaving)
+    }
 }
