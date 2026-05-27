@@ -130,6 +130,12 @@
         }
       }
     },
+    "• Accept the license at huggingface.co/google/gemma-4-E2B-it" : {
+
+    },
+    "• Create a Read token at huggingface.co/settings/tokens" : {
+
+    },
     "+ %lld more rows..." : {
       "localizations" : {
         "ar" : {
@@ -1255,6 +1261,9 @@
         }
       }
     },
+    "Gemma 4 is a gated model. To download it, you must:" : {
+
+    },
     "German" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1365,6 +1374,9 @@
         }
       }
     },
+    "hf_..." : {
+
+    },
     "History Timeline" : {
 
     },
@@ -1378,6 +1390,9 @@
           }
         }
       }
+    },
+    "Hugging Face Token" : {
+
     },
     "I can do that. Review the action below, then tap Apply." : {
       "extractionState" : "manual",
