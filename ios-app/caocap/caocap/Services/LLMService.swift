@@ -141,7 +141,7 @@ public final class LLMService {
             container = existingContainer
         } else {
             // MLX quantized Gemma 4 model optimized for Edge devices
-            let modelId = "mlx-community/gemma-4-e2b-it-OptiQ-4bit"
+            let modelId = "mlx-community/gemma-4-e2b-it-4bit"
             logger.info("Loading local MLX model: \(modelId, privacy: .public)")
             let configuration = ModelConfiguration(id: modelId)
             
@@ -153,8 +153,7 @@ public final class LLMService {
                 container = try await LLMModelFactory.shared.loadContainer(
                     from: #hubDownloader(),
                     using: #huggingFaceTokenizerLoader(),
-                    configuration: configuration,
-                    useLatest: false
+                    configuration: configuration
                 ) { progress in
                     Task { @MainActor in
                         self.localModelDownloadProgress = progress.fractionCompleted
@@ -240,7 +239,7 @@ public final class LLMService {
                         logger.debug("Starting local MLX stream.")
                         
                         let session = try await self.getMLXSession(scope: scope)
-                        let stream = try await session.streamResponse(to: prompt)
+                        let stream = session.streamResponse(to: prompt)
                         
                         for try await chunk in stream {
                             responseText += chunk
