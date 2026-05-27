@@ -33,187 +33,16 @@ struct PurchaseView: View {
                 let contentWidth = min(max(proxy.size.width - 32, 0), 460)
                 
                 ScrollView(showsIndicators: false) {
-                    VStack(spacing: 48) {
-                        // MARK: - Header
-                        VStack(spacing: 20) {
-                            ZStack {
-                                // Pulsing Glow
-                                Circle()
-                                    .fill(LinearGradient(colors: [Color(hex: "7C3AED"), Color(hex: "3B82F6")], startPoint: .topLeading, endPoint: .bottomTrailing))
-                                    .frame(width: 100, height: 100)
-                                    .blur(radius: appearAnimation ? 30 : 10)
-                                    .scaleEffect(appearAnimation ? 1.2 : 0.8)
-                                    .opacity(0.4)
-                                    .animation(.easeInOut(duration: 3).repeatForever(autoreverses: true), value: appearAnimation)
-                                
-                                Image(systemName: "crown.fill")
-                                    .font(.system(size: 48, weight: .black))
-                                    .foregroundStyle(
-                                        LinearGradient(
-                                            colors: [.white, .white.opacity(0.7)],
-                                            startPoint: .top,
-                                            endPoint: .bottom
-                                        )
-                                    )
-                                    .shadow(color: .black.opacity(0.2), radius: 5, x: 0, y: 5)
-                                    .scaleEffect(appearAnimation ? 1.0 : 0.5)
-                                    .rotationEffect(.degrees(appearAnimation ? 0 : -20))
-                            }
-                            
-                            VStack(spacing: 8) {
-                                Text(LocalizedStringKey("subscription.paywallBadge"))
-                                    .font(.system(size: 14, weight: .black))
-                                    .kerning(4)
-                                    .foregroundStyle(
-                                        LinearGradient(
-                                            colors: [Color(hex: "A855F7"), Color(hex: "3B82F6")],
-                                            startPoint: .leading,
-                                            endPoint: .trailing
-                                        )
-                                    )
-                                
-                                Text("Unlimited Creativity")
-                                    .font(.system(size: 34, weight: .bold, design: .rounded))
-                                    .foregroundStyle(.primary)
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.72)
-                                
-                                Text("The ultimate toolkit for spatial designers and vibecoders.")
-                                    .font(.system(size: 17))
-                                    .foregroundStyle(.secondary)
-                                    .multilineTextAlignment(.center)
-                                    .lineLimit(nil)
-                                    .padding(.horizontal, 20)
-                            }
-                            .opacity(appearAnimation ? 1 : 0)
-                            .offset(y: appearAnimation ? 0 : 20)
+                    VStack(spacing: 0) {
+                        if manager.isSubscribed {
+                            subscribedDashboardView
+                        } else {
+                            paywallView
                         }
-                        .padding(.top, 60)
-                        
-                        // MARK: - Features
-                        VStack(alignment: .leading, spacing: 24) {
-                            ForEach(Array(features.enumerated()), id: \.offset) { index, feature in
-                                FeatureRow(feature: feature)
-                                    .opacity(appearAnimation ? 1 : 0)
-                                    .offset(x: appearAnimation ? 0 : -20)
-                                    .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(Double(index) * 0.1), value: appearAnimation)
-                            }
-                        }
-                        
-                        // MARK: - Plans
-                        VStack(spacing: 16) {
-                            if manager.isLoading && manager.products.isEmpty {
-                                ProgressView()
-                                    .tint(.white)
-                                    .padding()
-                            } else {
-                                PlanCard(
-                                    id: "CAOCAP_Pro_Monthly",
-                                    title: "CAOCAP Pro Monthly",
-                                    price: productPrice(for: "CAOCAP_Pro_Monthly"),
-                                    subtitle: "Billed monthly",
-                                    trialPeriod: "7 DAYS FREE",
-                                    isSelected: selectedProductID == "CAOCAP_Pro_Monthly",
-                                    isLoading: manager.isLoading,
-                                    action: { withAnimation(.spring()) { selectedProductID = "CAOCAP_Pro_Monthly" } }
-                                )
-                                
-                                PlanCard(
-                                    id: "CAOCAP_Pro_Yearly",
-                                    title: "CAOCAP Pro Yearly",
-                                    price: productPrice(for: "CAOCAP_Pro_Yearly"),
-                                    subtitle: "Billed annually",
-                                    trialPeriod: "14 DAYS FREE",
-                                    isSelected: selectedProductID == "CAOCAP_Pro_Yearly",
-                                    isBestValue: true,
-                                    isLoading: manager.isLoading,
-                                    action: { withAnimation(.spring()) { selectedProductID = "CAOCAP_Pro_Yearly" } }
-                                )
-                            }
-                        }
-                        .opacity(appearAnimation ? 1 : 0)
-                        .offset(y: appearAnimation ? 0 : 30)
-                        .animation(.spring().delay(0.5), value: appearAnimation)
-                        
-                        // MARK: - Action
-                        VStack(spacing: 20) {
-                            Button(action: purchaseAction) {
-                                ZStack {
-                                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                        .fill(
-                                            LinearGradient(
-                                                colors: [Color(hex: "7C3AED"), Color(hex: "3B82F6")],
-                                                startPoint: .leading,
-                                                endPoint: .trailing
-                                            )
-                                        )
-                                        .frame(height: 64)
-                                        .shadow(color: Color(hex: "7C3AED").opacity(0.4), radius: 20, x: 0, y: 10)
-                                    
-                                    if isPurchasing {
-                                        ProgressView()
-                                            .tint(.white)
-                                    } else {
-                                        HStack {
-                                            Text(actionButtonTitle)
-                                                .font(.system(size: 18, weight: .bold))
-                                            Image(systemName: manager.isSubscribed ? "gearshape.fill" : "sparkles")
-                                                .font(.system(size: 18, weight: .bold))
-                                        }
-                                        .foregroundStyle(.white)
-                                    }
-                                }
-                            }
-                            .scaleEffect(isPurchasing ? 0.95 : 1.0)
-                            .disabled(isPurchasing || (manager.isLoading && !manager.isSubscribed))
-                            .animation(.spring(), value: isPurchasing)
-                            
-                            // Footer Links
-                            ViewThatFits(in: .horizontal) {
-                                HStack(spacing: 20) {
-                                    Button("Restore Purchases") {
-                                        Task { await restorePurchases() }
-                                    }
-                                    Circle().frame(width: 3, height: 3)
-                                    Link("Terms of Use (EULA)", destination: URL(string: "https://www.azzam.ai/caocap/terms")!)
-                                    Circle().frame(width: 3, height: 3)
-                                    Link("Privacy Policy", destination: URL(string: "https://www.azzam.ai/caocap/privacy")!)
-                                }
-                                
-                                VStack(spacing: 10) {
-                                    Button("Restore Purchases") {
-                                        Task { await restorePurchases() }
-                                    }
-                                    
-                                    HStack(spacing: 16) {
-                                        Link("Terms of Use (EULA)", destination: URL(string: "https://www.azzam.ai/caocap/terms")!)
-                                        Circle().frame(width: 3, height: 3)
-                                        Link("Privacy Policy", destination: URL(string: "https://www.azzam.ai/caocap/privacy")!)
-                                    }
-                                }
-                            }
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(.secondary)
-                            
-                            // Mandatory Disclosure
-                            VStack(spacing: 8) {
-                                Text("Subscription automatically renews unless auto-renew is turned off at least 24-hours before the end of the current period. Payment will be charged to your iTunes Account at confirmation of purchase. Account will be charged for renewal within 24-hours prior to the end of the current period. Subscriptions may be managed and auto-renewal may be turned off by going to your Account Settings after purchase.")
-                                    .multilineTextAlignment(.center)
-                                    .font(.system(size: 11))
-                                    .foregroundStyle(.secondary)
-                                    .padding(16)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 16)
-                                            .fill(Color.primary.opacity(0.03))
-                                    )
-                            }
-                            .padding(.top, 10)
-                        }
-                        .padding(.bottom, 60)
-                        .opacity(appearAnimation ? 1 : 0)
-                        .animation(.easeIn.delay(0.7), value: appearAnimation)
                     }
-                    .frame(width: contentWidth - 20)
+                    .padding(.horizontal, 50)
+                    .frame(width: contentWidth)
+                    .frame(maxWidth: .infinity, alignment: .center)
                 }
             }
             
@@ -252,6 +81,8 @@ struct PurchaseView: View {
                 Spacer()
             }
         }
+        .padding(.horizontal, 60)
+        
         .onAppear {
             withAnimation(.spring(response: 0.8, dampingFraction: 0.7)) {
                 appearAnimation = true
@@ -340,12 +171,337 @@ struct PurchaseView: View {
     private func restorePurchases() async {
         do {
             try await manager.restorePurchases()
-            purchaseError = manager.isSubscribed
-                ? LocalizationManager.shared.localizedString("Purchases restored.")
-                : LocalizationManager.shared.localizedString("No active CAOCAP Pro subscription was found for this Apple ID.")
         } catch {
-            logger.error("Restore purchases failed: \(error)")
+            logger.error("Restore failed: \(error)")
             purchaseError = error.localizedDescription
+        }
+    }
+
+    // MARK: - Paywall View
+    @ViewBuilder
+    private var paywallView: some View {
+        VStack(spacing: 48) {
+            // MARK: - Header
+            VStack(spacing: 20) {
+                ZStack {
+                    // Pulsing Glow
+                    Circle()
+                        .fill(LinearGradient(colors: [Color(hex: "7C3AED"), Color(hex: "3B82F6")], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .frame(width: 100, height: 100)
+                        .blur(radius: appearAnimation ? 30 : 10)
+                        .scaleEffect(appearAnimation ? 1.2 : 0.8)
+                        .opacity(0.4)
+                        .animation(.easeInOut(duration: 3).repeatForever(autoreverses: true), value: appearAnimation)
+                    
+                    Image(systemName: "crown.fill")
+                        .font(.system(size: 48, weight: .black))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [.white, .white.opacity(0.7)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .shadow(color: .black.opacity(0.2), radius: 5, x: 0, y: 5)
+                        .scaleEffect(appearAnimation ? 1.0 : 0.5)
+                        .rotationEffect(.degrees(appearAnimation ? 0 : -20))
+                }
+                
+                VStack(spacing: 8) {
+                    Text(LocalizedStringKey("subscription.paywallBadge"))
+                        .font(.system(size: 14, weight: .black))
+                        .kerning(4)
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [Color(hex: "A855F7"), Color(hex: "3B82F6")],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                    
+                    Text("Unlimited Creativity")
+                        .font(.system(size: 34, weight: .bold, design: .rounded))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.72)
+                    
+                    Text("The ultimate toolkit for spatial designers and vibecoders.")
+                        .font(.system(size: 17))
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(nil)
+                        .padding(.horizontal, 20)
+                }
+                .opacity(appearAnimation ? 1 : 0)
+                .offset(y: appearAnimation ? 0 : 20)
+            }
+            .padding(.top, 60)
+            
+            // MARK: - Features
+            VStack(alignment: .leading, spacing: 24) {
+                ForEach(Array(features.enumerated()), id: \.offset) { index, feature in
+                    FeatureRow(feature: feature)
+                        .opacity(appearAnimation ? 1 : 0)
+                        .offset(x: appearAnimation ? 0 : -20)
+                        .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(Double(index) * 0.1), value: appearAnimation)
+                }
+            }
+            
+            // MARK: - Plans
+            VStack(spacing: 16) {
+                if manager.isLoading && manager.products.isEmpty {
+                    ProgressView()
+                        .tint(.white)
+                        .padding()
+                } else {
+                    PlanCard(
+                        id: "CAOCAP_Pro_Monthly",
+                        title: "CAOCAP Pro Monthly",
+                        price: productPrice(for: "CAOCAP_Pro_Monthly"),
+                        subtitle: "Billed monthly",
+                        trialPeriod: "7 DAYS FREE",
+                        isSelected: selectedProductID == "CAOCAP_Pro_Monthly",
+                        isLoading: manager.isLoading,
+                        action: { withAnimation(.spring()) { selectedProductID = "CAOCAP_Pro_Monthly" } }
+                    )
+                    
+                    PlanCard(
+                        id: "CAOCAP_Pro_Yearly",
+                        title: "CAOCAP Pro Yearly",
+                        price: productPrice(for: "CAOCAP_Pro_Yearly"),
+                        subtitle: "Billed annually",
+                        trialPeriod: "14 DAYS FREE",
+                        isSelected: selectedProductID == "CAOCAP_Pro_Yearly",
+                        isBestValue: true,
+                        isLoading: manager.isLoading,
+                        action: { withAnimation(.spring()) { selectedProductID = "CAOCAP_Pro_Yearly" } }
+                    )
+                }
+            }
+            .opacity(appearAnimation ? 1 : 0)
+            .offset(y: appearAnimation ? 0 : 30)
+            .animation(.spring().delay(0.5), value: appearAnimation)
+            
+            // MARK: - Action
+            VStack(spacing: 20) {
+                Button(action: purchaseAction) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color(hex: "7C3AED"), Color(hex: "3B82F6")],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .frame(height: 64)
+                            .shadow(color: Color(hex: "7C3AED").opacity(0.4), radius: 20, x: 0, y: 10)
+                        
+                        if isPurchasing {
+                            ProgressView()
+                                .tint(.white)
+                        } else {
+                            HStack {
+                                Text(actionButtonTitle)
+                                    .font(.system(size: 18, weight: .bold))
+                                Image(systemName: manager.isSubscribed ? "gearshape.fill" : "sparkles")
+                                    .font(.system(size: 18, weight: .bold))
+                            }
+                            .foregroundStyle(.white)
+                        }
+                    }
+                }
+                .scaleEffect(isPurchasing ? 0.95 : 1.0)
+                .disabled(isPurchasing || (manager.isLoading && !manager.isSubscribed))
+                .animation(.spring(), value: isPurchasing)
+                
+                // Footer Links
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 20) {
+                        Button("Restore Purchases") {
+                            Task { await restorePurchases() }
+                        }
+                        Circle().frame(width: 3, height: 3)
+                        Link("Terms of Use (EULA)", destination: URL(string: "https://www.azzam.ai/caocap/terms")!)
+                        Circle().frame(width: 3, height: 3)
+                        Link("Privacy Policy", destination: URL(string: "https://www.azzam.ai/caocap/privacy")!)
+                    }
+                    
+                    VStack(spacing: 10) {
+                        Button("Restore Purchases") {
+                            Task { await restorePurchases() }
+                        }
+                        
+                        HStack(spacing: 16) {
+                            Link("Terms of Use (EULA)", destination: URL(string: "https://www.azzam.ai/caocap/terms")!)
+                            Circle().frame(width: 3, height: 3)
+                            Link("Privacy Policy", destination: URL(string: "https://www.azzam.ai/caocap/privacy")!)
+                        }
+                    }
+                }
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.secondary)
+                
+                // Mandatory Disclosure
+                VStack(spacing: 8) {
+                    Text("Subscription automatically renews unless auto-renew is turned off at least 24-hours before the end of the current period. Payment will be charged to your iTunes Account at confirmation of purchase. Account will be charged for renewal within 24-hours prior to the end of the current period. Subscriptions may be managed and auto-renewal may be turned off by going to your Account Settings after purchase.")
+                        .multilineTextAlignment(.center)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .padding(16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color.primary.opacity(0.03))
+                        )
+                }
+                .padding(.top, 10)
+            }
+            .padding(.bottom, 60)
+            .opacity(appearAnimation ? 1 : 0)
+            .animation(.easeIn.delay(0.7), value: appearAnimation)
+        }
+    }
+
+    // MARK: - Subscribed Dashboard View
+    @ViewBuilder
+    private var subscribedDashboardView: some View {
+        VStack(spacing: 40) {
+            // Header
+            VStack(spacing: 20) {
+                ZStack {
+                    // Pulsing Gold/Yellow Glow
+                    Circle()
+                        .fill(LinearGradient(colors: [Color.yellow, Color.orange], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .frame(width: 100, height: 100)
+                        .blur(radius: appearAnimation ? 35 : 15)
+                        .scaleEffect(appearAnimation ? 1.25 : 0.8)
+                        .opacity(0.5)
+                        .animation(.easeInOut(duration: 2.5).repeatForever(autoreverses: true), value: appearAnimation)
+                    
+                    Image(systemName: "crown.fill")
+                        .font(.system(size: 52, weight: .black))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [Color(hex: "FCD34D"), Color(hex: "F59E0B")],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .shadow(color: .orange.opacity(0.5), radius: 10, x: 0, y: 5)
+                        .scaleEffect(appearAnimation ? 1.05 : 0.5)
+                }
+                
+                VStack(spacing: 8) {
+                    Text(LocalizedStringKey("CAOCAP Pro"))
+                        .font(.system(size: 14, weight: .black))
+                        .kerning(4)
+                        .foregroundStyle(Color.yellow)
+                    
+                    Text("Membership Active")
+                        .font(.system(size: 30, weight: .bold, design: .rounded))
+                        .foregroundStyle(.primary)
+                    
+                    Text("Thank you for supporting independent spatial tools!")
+                        .font(.system(size: 16))
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
+                }
+            }
+            .padding(.top, 40)
+            
+            // Unlocked Status Card
+            VStack(alignment: .leading, spacing: 20) {
+                HStack(spacing: 16) {
+                    Image(systemName: "checkmark.seal.fill")
+                        .font(.system(size: 28))
+                        .foregroundColor(.green)
+                        .shadow(color: .green.opacity(0.3), radius: 5)
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("All Features Unlocked")
+                            .font(.system(size: 17, weight: .bold))
+                        Text("Your Pro license is active on this device.")
+                            .font(.system(size: 14))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .padding(.horizontal, 4)
+                
+                Divider()
+                    .background(Color.primary.opacity(0.1))
+                
+                VStack(alignment: .leading, spacing: 16) {
+                    BulletRow(icon: "sparkles", text: "AI CoCaptain has no estimated-token caps.")
+                    BulletRow(icon: "checkmark.circle.fill", text: "Portable Exports and HTML bundles are fully enabled.")
+                    BulletRow(icon: "arrow.triangle.2.circlepath", text: "Local live preview compiler compiles instantly.")
+                }
+            }
+            .padding(24)
+            .background(
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(Color.primary.opacity(0.04))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            .stroke(Color.yellow.opacity(0.2), lineWidth: 1)
+                    )
+            )
+            
+            // Action Button
+            VStack(spacing: 20) {
+                Button(action: purchaseAction) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color.yellow, Color.orange],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .frame(height: 60)
+                            .shadow(color: Color.orange.opacity(0.3), radius: 15, x: 0, y: 8)
+                        
+                        HStack {
+                            Text("Manage Subscription")
+                                .font(.system(size: 17, weight: .bold))
+                                .foregroundColor(.black)
+                            Image(systemName: "arrow.up.forward.app.fill")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(.black)
+                        }
+                    }
+                }
+                
+                Button("Restore Purchases") {
+                    Task { await restorePurchases() }
+                }
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.secondary)
+            }
+            .padding(.top, 16)
+        }
+    }
+}
+
+// MARK: - Helper Views
+
+struct BulletRow: View {
+    let icon: String
+    let text: String
+    
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 14, weight: .bold))
+                .foregroundColor(.yellow)
+                .padding(.top, 2)
+            
+            Text(text)
+                .font(.system(size: 14))
+                .foregroundColor(.primary.opacity(0.8))
+                .lineLimit(nil)
+                .multilineTextAlignment(.leading)
         }
     }
 }
