@@ -456,11 +456,18 @@ struct ContentView: View {
             isProject = false
         }
         
+        let isHome = router.currentWorkspace == .home
+        
         // Filter out redundant navigation and node creation actions when on the Home screen.
-        let forbiddenOnHome: Set<AppActionID> = [.goHome, .goBack, .createNode, .createTextNode, .createCalculationNode, .createDisplayNode, .createAiAgentNode, .createNumberNode, .createTableNode, .createChartNode, .createFirebaseNode]
+        // shareProject is not allowed on Home. snapshotBrowser and organizeNodes are allowed on Home.
+        let forbiddenOnHome: Set<AppActionID> = [
+            .goHome, .goBack, .createNode, .createTextNode, .createCalculationNode,
+            .createDisplayNode, .createAiAgentNode, .createNumberNode, .createTableNode,
+            .createChartNode, .createFirebaseNode, .shareProject
+        ]
         
         commandPalette.actions = actionDispatcher.availableActions.filter { action in
-            if router.currentWorkspace == .home {
+            if isHome {
                 return !forbiddenOnHome.contains(action.id)
             }
             if action.id == .shareProject {

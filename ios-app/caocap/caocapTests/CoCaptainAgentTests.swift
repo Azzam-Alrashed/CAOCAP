@@ -441,6 +441,51 @@ struct CoCaptainAgentTests {
         #expect(submittedPrompt == nil)
     }
 
+    @MainActor
+    @Test func commandPaletteIncludesCoCaptainPromptInNavigableIndices() {
+        let viewModel = CommandPaletteViewModel()
+        viewModel.actions = TestActionDispatcher().availableActions
+        
+        // With a non-empty query, even if there are match options, CoCaptain prompt is included as final index.
+        viewModel.query = "settings"
+        
+        let actionsCount = viewModel.filteredActions.count
+        let totalCount = actionsCount + viewModel.nodeResults.count + 1
+        
+        // Move selection down to the last item (CoCaptain Prompt)
+        for _ in 0..<actionsCount {
+            viewModel.moveSelection(direction: .down)
+        }
+        
+        #expect(viewModel.selectedIndex == actionsCount)
+        
+        var submittedPrompt: String?
+        viewModel.onSubmitPrompt = { submittedPrompt = $0 }
+        viewModel.confirmSelection()
+        
+        #expect(submittedPrompt == "settings")
+    }
+
+    @MainActor
+    @Test func commandPaletteArrowNavigationWraparound() {
+        let viewModel = CommandPaletteViewModel()
+        viewModel.actions = TestActionDispatcher().availableActions
+        viewModel.query = "settings"
+        
+        let expectedCount = viewModel.filteredActions.count + viewModel.nodeResults.count + 1
+        
+        // Initially at 0
+        #expect(viewModel.selectedIndex == 0)
+        
+        // Move up -> wraps to last index
+        viewModel.moveSelection(direction: .up)
+        #expect(viewModel.selectedIndex == expectedCount - 1)
+        
+        // Move down -> wraps to 0
+        viewModel.moveSelection(direction: .down)
+        #expect(viewModel.selectedIndex == 0)
+    }
+
     @Test func parserExtractsTrailingStructuredBlock() throws {
         let parser = CoCaptainAgentParser()
         let response =
