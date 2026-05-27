@@ -75,8 +75,9 @@ struct NodeView: View {
                 }
                 .frame(maxWidth: 240, alignment: .leading)
             }
+            .frame(width: node.type == .webView ? 240 : nil, alignment: .leading)
             .environment(\.layoutDirection, LocalizationManager.shared.layoutDirection(for: selectedLanguage))
-            .padding(.bottom, node.type == .webView ? 16 : 0)
+            .padding(.bottom, node.type == .webView ? 12 : 0)
             
             NodePreviewContent(
                 node: node,
@@ -87,8 +88,8 @@ struct NodeView: View {
                 onUpdateChartY: onUpdateChartY
             )
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 20)
+        .padding(.horizontal, node.type == .webView ? 12 : 20)
+        .padding(.vertical, node.type == .webView ? 12 : 20)
         .background(backgroundStack)
         .overlay(borderOverlay)
         .overlay(statusOverlay)
@@ -196,7 +197,6 @@ private struct NodePreviewContent: View {
                             .frame(width: 240, height: 427)
                             .background(Color.white.opacity(0.1))
                             .cornerRadius(12)
-                            .padding(.top, 12)
                     }
                     
                 case .number:
