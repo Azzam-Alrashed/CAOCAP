@@ -1,4 +1,6 @@
 import SwiftUI
+import UniformTypeIdentifiers
+import OSLog
 
 extension Notification.Name {
     static let openCommandPalette = Notification.Name("openCommandPalette")
@@ -14,6 +16,7 @@ struct ContentView: View {
     @State private var router = AppRouter()
     @AppStorage("grid_opacity") private var gridOpacity: Double = 0.1
     @AppStorage("last_grid_opacity") private var lastGridOpacity: Double = 0.1
+    @State private var showingFileImporter = false
     @State private var showingPurchaseSheet = false
     @State private var showingSignIn = false
     @State private var showingSettings = false
@@ -272,6 +275,13 @@ struct ContentView: View {
         .onChange(of: geometry.size) { _, newSize in
             containerSize = newSize
         }
+        .fileImporter(
+            isPresented: $showingFileImporter,
+            allowedContentTypes: [.json, UTType(filenameExtension: "caocap")].compactMap { $0 },
+            allowsMultipleSelection: false
+        ) { result in
+            handleFileImport(result: result)
+        }
     }
 }
     
@@ -351,6 +361,9 @@ struct ContentView: View {
             summonCoCaptain: {
                 coCaptain.configureProjectSession(store: router.activeStore, dispatcher: actionDispatcher)
                 coCaptain.setPresented(true)
+            },
+            openFile: {
+                showingFileImporter = true
             },
             toggleGrid: {
                 if gridOpacity > 0.0 {
@@ -455,6 +468,50 @@ struct ContentView: View {
             coCaptain.configureProjectSession(store: router.activeStore, dispatcher: actionDispatcher)
             coCaptain.setPresented(true)
             coCaptain.sendMessage(prompt)
+        }
+    }
+
+    private func handleFileImport(result: Result<[URL], Error>) {
+        let logger = Logger(subsystem: "com.caocap.app", category: "FileImport")
+        switch result {
+        case .success(let urls):
+            guard let selectedURL = urls.first else { return }
+            
+            guard selectedURL.startAccessingSecurityScopedResource() else {
+                logger.error("Failed to start accessing security scoped resource.")
+                return
+            }
+            
+            defer {
+                selectedURL.stopAccessingSecurityScopedResource()
+            }
+            
+            do {
+                let data = try Data(contentsOf: selectedURL)
+                let decoder = JSONDecoder()
+                
+                // Validate that the file is indeed a valid ProjectSnapshot
+                _ = try decoder.decode(ProjectSnapshot.self, from: data)
+                
+                // Copy or save it under a new project file name
+                let persistence = ProjectPersistenceService()
+                let newFileName = "project_\(UUID().uuidString).json"
+                let targetURL = persistence.fileURL(for: newFileName)
+                
+                try data.write(to: targetURL, options: .atomic)
+                
+                logger.info("Successfully imported project to: \(newFileName)")
+                
+                // Navigate to the newly imported project
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                    router.navigate(to: .project(newFileName))
+                }
+            } catch {
+                logger.error("Import failed: \(error.localizedDescription)")
+            }
+            
+        case .failure(let error):
+            logger.error("Document picker failed: \(error.localizedDescription)")
         }
     }
 
