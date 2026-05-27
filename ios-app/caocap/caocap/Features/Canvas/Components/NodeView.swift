@@ -29,7 +29,7 @@ struct NodeView: View {
                 
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
-                        Text(node.displayTitle)
+                        Text(nodeTitle)
                             .font(.system(size: 18, weight: .bold, design: .rounded))
                             .foregroundColor(.primary)
                             
@@ -48,7 +48,7 @@ struct NodeView: View {
                         }
                     }
                     
-                    if let subtitle = node.displaySubtitle {
+                    if let subtitle = nodeSubtitle {
                         Text(subtitle)
                             .font(.system(size: 14, weight: .medium, design: .default))
                             .foregroundColor(.secondary)
@@ -111,7 +111,24 @@ struct NodeView: View {
     }
     
     private var themeColor: Color {
-        node.theme.color
+        if node.action == .proSubscription && SubscriptionManager.shared.isSubscribed {
+            return .yellow
+        }
+        return node.theme.color
+    }
+
+    private var nodeTitle: String {
+        if node.action == .proSubscription && SubscriptionManager.shared.isSubscribed {
+            return LocalizationManager.shared.localizedString("CAOCAP Pro")
+        }
+        return node.displayTitle
+    }
+    
+    private var nodeSubtitle: String? {
+        if node.action == .proSubscription && SubscriptionManager.shared.isSubscribed {
+            return LocalizationManager.shared.localizedString("Manage Subscription")
+        }
+        return node.displaySubtitle
     }
 
     private var backgroundStack: some View {
