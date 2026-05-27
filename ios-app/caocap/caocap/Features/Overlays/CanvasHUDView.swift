@@ -50,16 +50,15 @@ struct CanvasHUDView: View {
 
                     // Save Status
                     HStack(spacing: 6) {
-                        if store.isSaving {
+                        ZStack {
+                            // Saving indicator dot
                             Circle()
                                 .fill(Color.orange)
                                 .frame(width: 6, height: 6)
                                 .shadow(color: .orange.opacity(0.5), radius: 3)
-                            Text("SAVING")
-                                .font(.system(size: 10, weight: .black))
-                                .foregroundStyle(.orange)
-                                .fixedSize(horizontal: true, vertical: false)
-                        } else {
+                                .opacity(store.isSaving ? 1 : 0)
+                            
+                            // LIVE indicator dot (with pulsing ring)
                             ZStack {
                                 Circle()
                                     .fill(Color.green.opacity(0.35))
@@ -71,11 +70,13 @@ struct CanvasHUDView: View {
                                     .frame(width: 6, height: 6)
                             }
                             .shadow(color: .green.opacity(0.6), radius: 4)
-                            Text("LIVE")
-                                .font(.system(size: 10, weight: .black))
-                                .foregroundStyle(.green)
-                                .fixedSize(horizontal: true, vertical: false)
+                            .opacity(store.isSaving ? 0 : 1)
                         }
+                        
+                        Text(store.isSaving ? "SAVING" : "LIVE")
+                            .font(.system(size: 10, weight: .black))
+                            .foregroundStyle(store.isSaving ? Color.orange : Color.green)
+                            .fixedSize(horizontal: true, vertical: false)
                     }
                     .animation(.spring(), value: store.isSaving)
                 }

@@ -37,6 +37,9 @@ public class ProjectStore {
     private var saveTask: Task<Void, Never>?
     private var agentTriggerTasks: [UUID: Task<Void, Never>] = [:]
     
+    // Internal counter for active visual save tasks to prevent overlapping writes from resetting the indicator prematurely
+    private var activeVisualSavesCount: Int = 0
+    
     /// Tracks active background agents working on specific nodes.
     public var activeAgentStates: [UUID: AgentExecutionState] = [:]
     
@@ -107,7 +110,12 @@ public class ProjectStore {
     
     /// Persists a snapshot of the current project state using a temporary file
     /// and atomic replacement so interrupted writes do not corrupt the main file.
-    public func save() {
+    public func save(showIndicator: Bool = true) {
+        if showIndicator {
+            activeVisualSavesCount += 1
+            isSaving = true
+        }
+
         let snapshot = ProjectSnapshot(
             schemaVersion: Self.currentSchemaVersion,
             projectName: projectName,
@@ -127,24 +135,37 @@ public class ProjectStore {
             } catch {
                 log.error("Failed to save project: \(error.localizedDescription)")
             }
-            await MainActor.run { self?.isSaving = false }
+            
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                if showIndicator {
+                    self.activeVisualSavesCount = max(0, self.activeVisualSavesCount - 1)
+                    if self.activeVisualSavesCount == 0 {
+                        self.isSaving = false
+                    }
+                }
+            }
         }
     }
     
     /// Schedules a save operation to run after a short delay (500ms).
     /// If another save is requested before the delay expires, the previous request is cancelled.
-    public func requestSave() {
+    public func requestSave(showIndicator: Bool = true) {
         saveTask?.cancel()
-        isSaving = true
+        
+        if showIndicator {
+            isSaving = true
+        }
+        
+        let shouldShowIndicatorOnSave = showIndicator || isSaving
         
         saveTask = Task {
             try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
             
             if !Task.isCancelled {
                 compileLivePreview()
-                save()
+                save(showIndicator: shouldShowIndicatorOnSave)
                 saveTask = nil
-                isSaving = false
             }
         }
     }
@@ -612,7 +633,7 @@ public class ProjectStore {
         self.viewportOffset = offset
         self.viewportScale = scale
         if persist {
-            requestSave()
+            requestSave(showIndicator: false)
         }
     }
     
