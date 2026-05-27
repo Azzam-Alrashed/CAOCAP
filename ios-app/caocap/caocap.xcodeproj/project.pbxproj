@@ -58,7 +58,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		EC997C9D2F96179000C19E5E /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+		EC997C9D2F96179000C19E5E /* Exceptions for "caocap" folder in "caocap" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				App/Info.plist,
@@ -76,7 +76,7 @@
 		EC997C792F96178E00C19E5E /* caocap */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				EC997C9D2F96179000C19E5E /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
+				EC997C9D2F96179000C19E5E /* Exceptions for "caocap" folder in "caocap" target */,
 			);
 			path = caocap;
 			sourceTree = "<group>";
@@ -383,7 +383,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = caocap/App/caocap.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_ASSET_PATHS = "\"caocap/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -414,7 +414,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = caocap/App/caocap.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_ASSET_PATHS = "\"caocap/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
