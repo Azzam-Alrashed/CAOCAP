@@ -96,7 +96,11 @@ struct NodeView: View {
             GeometryReader { geometry in
                 Color.clear.preference(
                     key: NodeFramePreferenceKey.self,
-                    value: [node.id: NodeFrameData(nodeId: node.id, frame: geometry.frame(in: .named("canvas")))]
+                    value: [node.id: NodeFrameData(
+                        nodeId: node.id,
+                        frame: geometry.frame(in: .named("canvas")),
+                        size: geometry.size
+                    )]
                 )
             }
         )
