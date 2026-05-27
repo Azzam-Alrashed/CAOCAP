@@ -268,6 +268,23 @@ public class ProjectStore {
         }
     }
 
+    /// Deletes a historical checkpoint from disk and local state.
+    public func deleteCheckpoint(metadata: SnapshotMetadata) {
+        let fileName = self.fileName
+        let persistence = self.persistence
+        
+        Task(priority: .background) { [weak self] in
+            do {
+                try persistence.deleteSnapshot(metadata: metadata, for: fileName)
+                await MainActor.run {
+                    self?.history.removeAll(where: { $0.id == metadata.id })
+                }
+            } catch {
+                self?.logger.error("Failed to delete checkpoint: \(error.localizedDescription)")
+            }
+        }
+    }
+
     private func currentSnapshot() -> ProjectSnapshot {
         ProjectSnapshot(
             schemaVersion: Self.currentSchemaVersion,

@@ -13,192 +13,211 @@ struct PurchaseView: View {
     @State private var appearAnimation = false
     @State private var purchaseError: String?
     @State private var showSuccess = false
-    
+
     let features = [
         FeatureItem(icon: "sparkles", title: "AI CoCaptain", subtitle: "Project-aware assistance for SRS and code review", color: Color(hex: "A855F7")),
         FeatureItem(icon: "checklist", title: "Review Bundles", subtitle: "Inspect proposed changes before they touch your work", color: Color(hex: "10B981")),
         FeatureItem(icon: "square.and.arrow.up", title: "Portable Exports", subtitle: "Share runnable web bundles with project context", color: Color(hex: "F59E0B")),
     ]
-    
+
     var body: some View {
         ZStack {
             // MARK: - Background
             Color(uiColor: .systemBackground).ignoresSafeArea()
-            
+
             // Animated Mesh Background
             MeshBackgroundView()
                 .opacity(0.6)
-            
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 48) {
-                    // MARK: - Header
-                    VStack(spacing: 20) {
-                        ZStack {
-                            // Pulsing Glow
-                            Circle()
-                                .fill(LinearGradient(colors: [Color(hex: "7C3AED"), Color(hex: "3B82F6")], startPoint: .topLeading, endPoint: .bottomTrailing))
-                                .frame(width: 100, height: 100)
-                                .blur(radius: appearAnimation ? 30 : 10)
-                                .scaleEffect(appearAnimation ? 1.2 : 0.8)
-                                .opacity(0.4)
-                                .animation(.easeInOut(duration: 3).repeatForever(autoreverses: true), value: appearAnimation)
-                            
-                            Image(systemName: "crown.fill")
-                                .font(.system(size: 48, weight: .black))
-                                .foregroundStyle(
-                                    LinearGradient(
-                                        colors: [.white, .white.opacity(0.7)],
-                                        startPoint: .top,
-                                        endPoint: .bottom
-                                    )
-                                )
-                                .shadow(color: .black.opacity(0.2), radius: 5, x: 0, y: 5)
-                                .scaleEffect(appearAnimation ? 1.0 : 0.5)
-                                .rotationEffect(.degrees(appearAnimation ? 0 : -20))
-                        }
-                        
-                        VStack(spacing: 8) {
-                            Text(LocalizedStringKey("subscription.paywallBadge"))
-                                .font(.system(size: 14, weight: .black))
-                                .kerning(4)
-                                .foregroundStyle(
-                                    LinearGradient(
-                                        colors: [Color(hex: "A855F7"), Color(hex: "3B82F6")],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-                            
-                            Text("Unlimited Creativity")
-                                .font(.system(size: 34, weight: .bold, design: .rounded))
-                                .foregroundStyle(.primary)
-                            
-                            Text("The ultimate toolkit for spatial designers and vibecoders.")
-                                .font(.system(size: 17))
-                                .foregroundStyle(.secondary)
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal, 40)
-                        }
-                        .opacity(appearAnimation ? 1 : 0)
-                        .offset(y: appearAnimation ? 0 : 20)
-                    }
-                    .padding(.top, 60)
-                    
-                    // MARK: - Features
-                    VStack(alignment: .leading, spacing: 24) {
-                        ForEach(Array(features.enumerated()), id: \.offset) { index, feature in
-                            FeatureRow(feature: feature)
-                                .opacity(appearAnimation ? 1 : 0)
-                                .offset(x: appearAnimation ? 0 : -20)
-                                .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(Double(index) * 0.1), value: appearAnimation)
-                        }
-                    }
-                    
-                    // MARK: - Plans
-                    VStack(spacing: 16) {
-                        if manager.isLoading && manager.products.isEmpty {
-                            ProgressView()
-                                .tint(.white)
-                                .padding()
-                        } else {
-                            PlanCard(
-                                id: "CAOCAP_Pro_Monthly",
-                                title: "CAOCAP Pro Monthly",
-                                price: productPrice(for: "CAOCAP_Pro_Monthly"),
-                                subtitle: "Billed monthly",
-                                trialPeriod: "7 DAYS FREE",
-                                isSelected: selectedProductID == "CAOCAP_Pro_Monthly",
-                                isLoading: manager.isLoading,
-                                action: { withAnimation(.spring()) { selectedProductID = "CAOCAP_Pro_Monthly" } }
-                            )
-                            
-                            PlanCard(
-                                id: "CAOCAP_Pro_Yearly",
-                                title: "CAOCAP Pro Yearly",
-                                price: productPrice(for: "CAOCAP_Pro_Yearly"),
-                                subtitle: "Billed annually",
-                                trialPeriod: "14 DAYS FREE",
-                                isSelected: selectedProductID == "CAOCAP_Pro_Yearly",
-                                isBestValue: true,
-                                isLoading: manager.isLoading,
-                                action: { withAnimation(.spring()) { selectedProductID = "CAOCAP_Pro_Yearly" } }
-                            )
-                        }
-                    }
-                    .padding(.horizontal, 50)
-                    .opacity(appearAnimation ? 1 : 0)
-                    .offset(y: appearAnimation ? 0 : 30)
-                    .animation(.spring().delay(0.5), value: appearAnimation)
-                    
-                    // MARK: - Action
-                    VStack(spacing: 20) {
-                        Button(action: purchaseAction) {
+
+            GeometryReader { proxy in
+                let contentWidth = min(max(proxy.size.width - 32, 0), 460)
+
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 48) {
+                        // MARK: - Header
+                        VStack(spacing: 20) {
                             ZStack {
-                                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                    .fill(
+                                // Pulsing Glow
+                                Circle()
+                                    .fill(LinearGradient(colors: [Color(hex: "7C3AED"), Color(hex: "3B82F6")], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                    .frame(width: 100, height: 100)
+                                    .blur(radius: appearAnimation ? 30 : 10)
+                                    .scaleEffect(appearAnimation ? 1.2 : 0.8)
+                                    .opacity(0.4)
+                                    .animation(.easeInOut(duration: 3).repeatForever(autoreverses: true), value: appearAnimation)
+
+                                Image(systemName: "crown.fill")
+                                    .font(.system(size: 48, weight: .black))
+                                    .foregroundStyle(
                                         LinearGradient(
-                                            colors: [Color(hex: "7C3AED"), Color(hex: "3B82F6")],
+                                            colors: [.white, .white.opacity(0.7)],
+                                            startPoint: .top,
+                                            endPoint: .bottom
+                                        )
+                                    )
+                                    .shadow(color: .black.opacity(0.2), radius: 5, x: 0, y: 5)
+                                    .scaleEffect(appearAnimation ? 1.0 : 0.5)
+                                    .rotationEffect(.degrees(appearAnimation ? 0 : -20))
+                            }
+
+                            VStack(spacing: 8) {
+                                Text(LocalizedStringKey("subscription.paywallBadge"))
+                                    .font(.system(size: 14, weight: .black))
+                                    .kerning(4)
+                                    .foregroundStyle(
+                                        LinearGradient(
+                                            colors: [Color(hex: "A855F7"), Color(hex: "3B82F6")],
                                             startPoint: .leading,
                                             endPoint: .trailing
                                         )
                                     )
-                                    .frame(height: 64)
-                                    .shadow(color: Color(hex: "7C3AED").opacity(0.4), radius: 20, x: 0, y: 10)
-                                
-                                if isPurchasing {
-                                    ProgressView()
-                                        .tint(.white)
-                                } else {
-                                    HStack {
-                                        Text(actionButtonTitle)
-                                            .font(.system(size: 18, weight: .bold))
-                                        Image(systemName: manager.isSubscribed ? "gearshape.fill" : "sparkles")
-                                            .font(.system(size: 18, weight: .bold))
+
+                                Text("Unlimited Creativity")
+                                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                                    .foregroundStyle(.primary)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.72)
+
+                                Text("The ultimate toolkit for spatial designers and vibecoders.")
+                                    .font(.system(size: 17))
+                                    .foregroundStyle(.secondary)
+                                    .multilineTextAlignment(.center)
+                                    .lineLimit(nil)
+                                    .padding(.horizontal, 20)
+                            }
+                            .opacity(appearAnimation ? 1 : 0)
+                            .offset(y: appearAnimation ? 0 : 20)
+                        }
+                        .padding(.top, 60)
+
+                        // MARK: - Features
+                        VStack(alignment: .leading, spacing: 24) {
+                            ForEach(Array(features.enumerated()), id: \.offset) { index, feature in
+                                FeatureRow(feature: feature)
+                                    .opacity(appearAnimation ? 1 : 0)
+                                    .offset(x: appearAnimation ? 0 : -20)
+                                    .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(Double(index) * 0.1), value: appearAnimation)
+                            }
+                        }
+
+                        // MARK: - Plans
+                        VStack(spacing: 16) {
+                            if manager.isLoading && manager.products.isEmpty {
+                                ProgressView()
+                                    .tint(.white)
+                                    .padding()
+                            } else {
+                                PlanCard(
+                                    id: "CAOCAP_Pro_Monthly",
+                                    title: "CAOCAP Pro Monthly",
+                                    price: productPrice(for: "CAOCAP_Pro_Monthly"),
+                                    subtitle: "Billed monthly",
+                                    trialPeriod: "7 DAYS FREE",
+                                    isSelected: selectedProductID == "CAOCAP_Pro_Monthly",
+                                    isLoading: manager.isLoading,
+                                    action: { withAnimation(.spring()) { selectedProductID = "CAOCAP_Pro_Monthly" } }
+                                )
+
+                                PlanCard(
+                                    id: "CAOCAP_Pro_Yearly",
+                                    title: "CAOCAP Pro Yearly",
+                                    price: productPrice(for: "CAOCAP_Pro_Yearly"),
+                                    subtitle: "Billed annually",
+                                    trialPeriod: "14 DAYS FREE",
+                                    isSelected: selectedProductID == "CAOCAP_Pro_Yearly",
+                                    isBestValue: true,
+                                    isLoading: manager.isLoading,
+                                    action: { withAnimation(.spring()) { selectedProductID = "CAOCAP_Pro_Yearly" } }
+                                )
+                            }
+                        }
+                        .opacity(appearAnimation ? 1 : 0)
+                        .offset(y: appearAnimation ? 0 : 30)
+                        .animation(.spring().delay(0.5), value: appearAnimation)
+
+                        // MARK: - Action
+                        VStack(spacing: 20) {
+                            Button(action: purchaseAction) {
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [Color(hex: "7C3AED"), Color(hex: "3B82F6")],
+                                                startPoint: .leading,
+                                                endPoint: .trailing
+                                            )
+                                        )
+                                        .frame(height: 64)
+                                        .shadow(color: Color(hex: "7C3AED").opacity(0.4), radius: 20, x: 0, y: 10)
+
+                                    if isPurchasing {
+                                        ProgressView()
+                                            .tint(.white)
+                                    } else {
+                                        HStack {
+                                            Text(actionButtonTitle)
+                                                .font(.system(size: 18, weight: .bold))
+                                            Image(systemName: manager.isSubscribed ? "gearshape.fill" : "sparkles")
+                                                .font(.system(size: 18, weight: .bold))
+                                        }
+                                        .foregroundStyle(.white)
                                     }
-                                    .foregroundStyle(.white)
                                 }
                             }
-                        }
-                        .padding(.horizontal, 50)
-                        .scaleEffect(isPurchasing ? 0.95 : 1.0)
-                        .disabled(isPurchasing || (manager.isLoading && !manager.isSubscribed))
-                        .animation(.spring(), value: isPurchasing)
-                        
-                        // Footer Links
-                        HStack(spacing: 20) {
-                            Button("Restore Purchases") {
-                                Task { await restorePurchases() }
+                            .scaleEffect(isPurchasing ? 0.95 : 1.0)
+                            .disabled(isPurchasing || (manager.isLoading && !manager.isSubscribed))
+                            .animation(.spring(), value: isPurchasing)
+
+                            // Footer Links
+                            ViewThatFits(in: .horizontal) {
+                                HStack(spacing: 20) {
+                                    Button("Restore Purchases") {
+                                        Task { await restorePurchases() }
+                                    }
+                                    Circle().frame(width: 3, height: 3)
+                                    Link("Terms of Use (EULA)", destination: URL(string: "https://www.azzam.ai/caocap/terms")!)
+                                    Circle().frame(width: 3, height: 3)
+                                    Link("Privacy Policy", destination: URL(string: "https://www.azzam.ai/caocap/privacy")!)
+                                }
+
+                                VStack(spacing: 10) {
+                                    Button("Restore Purchases") {
+                                        Task { await restorePurchases() }
+                                    }
+
+                                    HStack(spacing: 16) {
+                                        Link("Terms of Use (EULA)", destination: URL(string: "https://www.azzam.ai/caocap/terms")!)
+                                        Circle().frame(width: 3, height: 3)
+                                        Link("Privacy Policy", destination: URL(string: "https://www.azzam.ai/caocap/privacy")!)
+                                    }
+                                }
                             }
-                            Circle().frame(width: 3, height: 3)
-                            Link("Terms of Use (EULA)", destination: URL(string: "https://www.azzam.ai/caocap/terms")!)
-                            Circle().frame(width: 3, height: 3)
-                            Link("Privacy Policy", destination: URL(string: "https://www.azzam.ai/caocap/privacy")!)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(.secondary)
+
+                            // Mandatory Disclosure
+                            VStack(spacing: 8) {
+                                Text("Subscription automatically renews unless auto-renew is turned off at least 24-hours before the end of the current period. Payment will be charged to your iTunes Account at confirmation of purchase. Account will be charged for renewal within 24-hours prior to the end of the current period. Subscriptions may be managed and auto-renewal may be turned off by going to your Account Settings after purchase.")
+                                    .multilineTextAlignment(.center)
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(.secondary)
+                                    .padding(16)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 16)
+                                            .fill(Color.primary.opacity(0.03))
+                                    )
+                            }
+                            .padding(.top, 10)
                         }
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(.secondary)
-                        
-                        // Mandatory Disclosure
-                        VStack(spacing: 8) {
-                            Text("Subscription automatically renews unless auto-renew is turned off at least 24-hours before the end of the current period. Payment will be charged to your iTunes Account at confirmation of purchase. Account will be charged for renewal within 24-hours prior to the end of the current period. Subscriptions may be managed and auto-renewal may be turned off by going to your Account Settings after purchase.")
-                                .multilineTextAlignment(.center)
-                                .font(.system(size: 11))
-                                .foregroundStyle(.secondary)
-                                .padding(16)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 16)
-                                        .fill(Color.primary.opacity(0.03))
-                                )
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.top, 10)
+                        .padding(.bottom, 60)
+                        .opacity(appearAnimation ? 1 : 0)
+                        .animation(.easeIn.delay(0.7), value: appearAnimation)
                     }
-                    .padding(.bottom, 60)
-                    .opacity(appearAnimation ? 1 : 0)
-                    .animation(.easeIn.delay(0.7), value: appearAnimation)
+                    .frame(width: contentWidth)
+                    .frame(width: proxy.size.width)
                 }
             }
-            .padding(.horizontal, 20)
-            
+
             // Success Overlay
             if showSuccess {
                 Color.black.opacity(0.8).ignoresSafeArea()
@@ -212,7 +231,7 @@ struct PurchaseView: View {
                 }
                 .transition(.scale.combined(with: .opacity))
             }
-            
+
             // Close Button
             VStack {
                 HStack {
@@ -249,7 +268,7 @@ struct PurchaseView: View {
             }
         }
     }
-    
+
     /// Uses StoreKit's localized price when available, with launch-copy
     /// fallbacks so the paywall remains readable while products load.
     private func productPrice(for id: String) -> String {
@@ -266,7 +285,7 @@ struct PurchaseView: View {
             : "Start 7-Day Free Trial"
         return LocalizationManager.shared.localizedString(key)
     }
-    
+
     /// Routes subscribed users to Apple's subscription management page and
     /// starts a StoreKit purchase for non-subscribed users.
     private func purchaseAction() {
@@ -277,21 +296,21 @@ struct PurchaseView: View {
             }
             return
         }
-        
+
         let generator = UIImpactFeedbackGenerator(style: .medium)
         generator.impactOccurred()
-        
+
         guard let product = manager.products.first(where: { $0.id == selectedProductID }) else {
             purchaseError = LocalizationManager.shared.localizedString("Product not found. Please try again later.")
             return
         }
-        
+
         isPurchasing = true
         Task {
             do {
                 let transaction = try await manager.purchase(product)
                 isPurchasing = false
-                
+
                 if transaction != nil {
                     // A verified transaction is the only successful purchase path.
                     UINotificationFeedbackGenerator().notificationOccurred(.success)
@@ -304,14 +323,14 @@ struct PurchaseView: View {
                 }
             } catch {
                 isPurchasing = false
-                
+
                 // Ignore cancellation errors from throwing
                 let errorString = error.localizedDescription.lowercased()
                 if errorString.contains("cancel") || errorString.contains("usercancelled") {
                     logger.info("Purchase cancelled by user.")
                     return
                 }
-                
+
                 logger.error("Purchase failed: \(error)")
                 purchaseError = error.localizedDescription
             }

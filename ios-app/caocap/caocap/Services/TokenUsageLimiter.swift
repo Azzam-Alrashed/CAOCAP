@@ -8,33 +8,6 @@ public struct TokenUsageStatus: Equatable {
     public var remainingTokens: Int {
         max(0, limitTokens - usedTokens)
     }
-
-    public var usageFraction: Double {
-        guard limitTokens > 0 else { return 1 }
-        return min(1, Double(usedTokens) / Double(limitTokens))
-    }
-
-    public var isNearLimit: Bool {
-        usageFraction >= 0.8
-    }
-
-    public var formattedUsedTokens: String {
-        Self.format(tokens: usedTokens)
-    }
-
-    public var formattedLimitTokens: String {
-        Self.format(tokens: limitTokens)
-    }
-
-    private static func format(tokens: Int) -> String {
-        if tokens >= 1_000 {
-            let value = Double(tokens) / 1_000
-            return value.truncatingRemainder(dividingBy: 1) == 0
-                ? "\(Int(value))k"
-                : String(format: "%.1fk", value)
-        }
-        return "\(tokens)"
-    }
 }
 
 public struct TokenUsageLimitError: LocalizedError, Equatable {
@@ -43,7 +16,7 @@ public struct TokenUsageLimitError: LocalizedError, Equatable {
     public let requestedTokens: Int
 
     public var errorDescription: String? {
-        "Free CoCaptain usage is capped at \(limitTokens.formatted()) estimated tokens per month. You have \(max(0, limitTokens - usedTokens).formatted()) estimated tokens remaining. Upgrade to Pro for unlimited CoCaptain usage."
+        "You've reached this month's free CoCaptain usage. Upgrade to Pro to continue, or try again next month."
     }
 }
 

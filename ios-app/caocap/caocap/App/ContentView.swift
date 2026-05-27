@@ -15,6 +15,7 @@ struct ContentView: View {
     @State private var showingPurchaseSheet = false
     @State private var showingSignIn = false
     @State private var showingSettings = false
+    @State private var showingSnapshotBrowser = false
     @State private var showingProfile = false
     @State private var showingProjectExplorer = false
     @State private var currentScale: CGFloat = 1.0
@@ -158,6 +159,11 @@ struct ContentView: View {
         .sheet(isPresented: $showingSettings) {
             SettingsView()
                 .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showingSnapshotBrowser) {
+            SnapshotBrowserView(store: router.activeStore)
+                .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showExportSheet) {
@@ -335,7 +341,24 @@ struct ContentView: View {
                 }
             },
             proSubscription: {
-                showingPurchaseSheet = true
+                if coCaptain.isPresented {
+                    coCaptain.setPresented(false)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        showingPurchaseSheet = true
+                    }
+                } else if showingProfile {
+                    showingProfile = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        showingPurchaseSheet = true
+                    }
+                } else if showingSettings {
+                    showingSettings = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        showingPurchaseSheet = true
+                    }
+                } else {
+                    showingPurchaseSheet = true
+                }
             },
             signIn: {
                 showingSignIn = true
@@ -348,6 +371,9 @@ struct ContentView: View {
             },
             openProjectExplorer: {
                 showingProjectExplorer = true
+            },
+            openSnapshotBrowser: {
+                showingSnapshotBrowser = true
             },
             moveNode: { args in
                 guard let idString = args["nodeId"], let uuid = UUID(uuidString: idString),

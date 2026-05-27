@@ -1135,7 +1135,7 @@ struct CoCaptainAgentTests {
             return bubble
         }.last
 
-        let upgradeBundleItem = vm.items.first { item in
+        let proReviewBundleItem = vm.items.first { item in
             guard case .reviewBundle(let bundle) = item.content else { return false }
             return bundle.items.contains { reviewItem in
                 if case .appAction(.proSubscription, nil) = reviewItem.source {
@@ -1144,21 +1144,26 @@ struct CoCaptainAgentTests {
                 return false
             }
         }
+        let productCTAItem = vm.items.compactMap { item -> CoCaptainProductCTAItem? in
+            guard case .productCTA(let cta) = item.content else { return nil }
+            return cta
+        }.first
 
-        #expect(assistantMessage?.text.contains("Free CoCaptain usage is capped") == true)
-        #expect(upgradeBundleItem != nil)
+        #expect(assistantMessage?.text.contains("You've reached this month's free CoCaptain usage") == true)
+        #expect(proReviewBundleItem == nil)
+        #expect(productCTAItem?.title == "Free CoCaptain usage reached")
+        #expect(productCTAItem?.primaryButtonTitle == "View Pro")
+        #expect(productCTAItem?.actionID == .proSubscription)
 
-        guard let upgradeBundleItem,
-              case .reviewBundle(let bundle) = upgradeBundleItem.content,
-              let reviewItem = bundle.items.first else {
-            Issue.record("Expected upgrade review item.")
+        guard let productCTAItem else {
+            Issue.record("Expected limit-reached product CTA.")
             return
         }
 
-        vm.applyReviewItem(bundleID: upgradeBundleItem.id, itemID: reviewItem.id)
+        vm.performProductCTA(productCTAItem)
 
         #expect(dispatcher.executedActionIDs.contains(.proSubscription))
-        #expect(dispatcher.executedSources.last == .agentApproved)
+        #expect(dispatcher.executedSources.last == .user)
     }
 
     @MainActor
