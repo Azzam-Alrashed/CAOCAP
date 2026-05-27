@@ -12,6 +12,8 @@ struct ContentView: View {
     @State var coCaptain = CoCaptainViewModel()
     @State private var actionDispatcher = AppActionDispatcher()
     @State private var router = AppRouter()
+    @AppStorage("grid_opacity") private var gridOpacity: Double = 0.1
+    @AppStorage("last_grid_opacity") private var lastGridOpacity: Double = 0.1
     @State private var showingPurchaseSheet = false
     @State private var showingSignIn = false
     @State private var showingSettings = false
@@ -349,6 +351,14 @@ struct ContentView: View {
             summonCoCaptain: {
                 coCaptain.configureProjectSession(store: router.activeStore, dispatcher: actionDispatcher)
                 coCaptain.setPresented(true)
+            },
+            toggleGrid: {
+                if gridOpacity > 0.0 {
+                    lastGridOpacity = gridOpacity
+                    gridOpacity = 0.0
+                } else {
+                    gridOpacity = lastGridOpacity > 0.0 ? lastGridOpacity : 0.1
+                }
             },
             shareProject: {
                 if let url = ExportService.export(from: router.activeStore, format: .webBundle(includeProjectContext: true)) {
