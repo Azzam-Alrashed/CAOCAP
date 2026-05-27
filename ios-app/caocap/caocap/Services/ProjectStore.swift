@@ -690,7 +690,8 @@ public class ProjectStore {
                 .openProjectExplorer: CGPoint(x: 250, y: -150),
                 .openSettings: CGPoint(x: -250, y: 150),
                 .retryOnboarding: CGPoint(x: 250, y: 150),
-                .resumeLastProject: CGPoint(x: 0, y: 300)
+                .resumeLastProject: CGPoint(x: 0, y: 300),
+                .proSubscription: CGPoint(x: 0, y: -300)
             ]
             
             for node in nodes {

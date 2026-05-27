@@ -10,6 +10,7 @@ public enum NodeAction: String, Codable, Equatable {
     case openProjectExplorer
     case resumeLastProject
     case summonCoCaptain
+    case proSubscription
 }
 
 public enum NodeType: String, Codable, Equatable, Hashable, CaseIterable {

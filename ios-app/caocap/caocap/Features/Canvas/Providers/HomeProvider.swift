@@ -16,6 +16,17 @@ public struct HomeProvider {
                 action: .createNewProject
             ),
             
+            // Premium Node
+            SpatialNode(
+                id: UUID(),
+                position: CGPoint(x: 0, y: -300),
+                title: "Pro Subscription",
+                subtitle: "Unlock CoCaptain & Premium Features",
+                icon: "crown.fill",
+                theme: .indigo,
+                action: .proSubscription
+            ),
+            
             // Orbiting Constellation
             SpatialNode(
                 id: UUID(),

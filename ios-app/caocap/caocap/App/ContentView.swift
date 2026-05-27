@@ -301,6 +301,8 @@ struct ContentView: View {
             router.resumeLastProject()
         case .summonCoCaptain:
             _ = actionDispatcher.perform(.summonCoCaptain, source: .user)
+        case .proSubscription:
+            _ = actionDispatcher.perform(.proSubscription, source: .user)
         }
     }
 

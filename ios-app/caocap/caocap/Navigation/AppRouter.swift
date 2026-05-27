@@ -46,6 +46,22 @@ public class AppRouter {
     public init() {
         let hasCompletedOnboarding = UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
         self.currentWorkspace = hasCompletedOnboarding ? .home : .onboarding
+        reconcileHomeStore()
+    }
+    
+    private func reconcileHomeStore() {
+        self.homeStore.nodes = self.homeStore.nodes.filter { $0.action != nil }
+        let existingActions = Set(self.homeStore.nodes.compactMap { $0.action })
+        var nodesChanged = false
+        for defaultNode in HomeProvider.homeNodes {
+            if let action = defaultNode.action, !existingActions.contains(action) {
+                self.homeStore.nodes.append(defaultNode)
+                nodesChanged = true
+            }
+        }
+        if nodesChanged {
+            self.homeStore.save()
+        }
     }
     
     /// Moves between workspaces and records onboarding completion when the user
@@ -62,9 +78,9 @@ public class AppRouter {
             self.currentWorkspace = workspace
             
             // Clean Home Store: Remove any accidental content nodes (text, calc, etc) 
-            // that don't belong on the navigation dashboard.
+            // that don't belong on the navigation dashboard, and add missing action nodes.
             if workspace == .home {
-                self.homeStore.nodes = self.homeStore.nodes.filter { $0.action != nil }
+                self.reconcileHomeStore()
             }
             
             // Update UserDefaults if we navigate to home from onboarding
