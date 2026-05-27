@@ -99,30 +99,67 @@ struct ProjectMutationTests {
         #expect(!store.isSaving)
     }
 
-    @Test func organizeNodesRegistersUndo() throws {
+    @Test func organizeNodesRegistersUndoAndRedo() throws {
         let node1Id = UUID()
         let node2Id = UUID()
         let node1 = SpatialNode(id: node1Id, type: .code, position: CGPoint(x: 10, y: 20), title: "Node 1")
         let node2 = SpatialNode(id: node2Id, type: .code, position: CGPoint(x: 30, y: 40), title: "Node 2")
         
-        let store = ProjectStore(fileName: "test_organize_undo.json", initialNodes: [node1, node2])
+        let store = ProjectStore(fileName: "test_organize_undo_redo.json", initialNodes: [node1, node2])
         let undoManager = UndoManager()
         store.undoManager = undoManager
         
         store.organizeNodes(isHome: false)
         
-        let n1PosAfter = store.nodes.first(where: { $0.id == node1Id })?.position
-        let n2PosAfter = store.nodes.first(where: { $0.id == node2Id })?.position
+        let n1PosAfter = store.nodes.first(where: { $0.id == node1Id })!.position
+        let n2PosAfter = store.nodes.first(where: { $0.id == node2Id })!.position
         
         #expect(n1PosAfter != CGPoint(x: 10, y: 20) || n2PosAfter != CGPoint(x: 30, y: 40))
         #expect(undoManager.canUndo)
         
+        // 1. Undo
         undoManager.undo()
         
-        let n1PosRestored = store.nodes.first(where: { $0.id == node1Id })?.position
-        let n2PosRestored = store.nodes.first(where: { $0.id == node2Id })?.position
+        let n1PosRestored = store.nodes.first(where: { $0.id == node1Id })!.position
+        let n2PosRestored = store.nodes.first(where: { $0.id == node2Id })!.position
         
         #expect(n1PosRestored == CGPoint(x: 10, y: 20))
         #expect(n2PosRestored == CGPoint(x: 30, y: 40))
+        #expect(undoManager.canRedo)
+        
+        // 2. Redo
+        undoManager.redo()
+        
+        let n1PosRedone = store.nodes.first(where: { $0.id == node1Id })!.position
+        let n2PosRedone = store.nodes.first(where: { $0.id == node2Id })!.position
+        
+        #expect(n1PosRedone == n1PosAfter)
+        #expect(n2PosRedone == n2PosAfter)
+    }
+
+    @Test func organizeNodesResetsHomeNodesToDefaults() throws {
+        let node = SpatialNode(id: UUID(), type: .standard, position: CGPoint(x: 999, y: 999), title: "Home Node", action: .createNewProject)
+        let store = ProjectStore(fileName: "test_home_reset.json", initialNodes: [node])
+        
+        store.organizeNodes(isHome: true)
+        
+        let nodePos = store.nodes[0].position
+        #expect(nodePos == CGPoint(x: 0, y: 0))
+    }
+
+    @Test func organizeNodesProducesHierarchicalFlow() throws {
+        let node1Id = UUID()
+        let node2Id = UUID()
+        let node1 = SpatialNode(id: node1Id, type: .code, position: CGPoint(x: 100, y: 100), title: "Source")
+        var node2 = SpatialNode(id: node2Id, type: .code, position: CGPoint(x: 0, y: 0), title: "Target")
+        node2.inputNodeIds = [node1Id]
+        
+        let store = ProjectStore(fileName: "test_flow.json", initialNodes: [node1, node2])
+        store.organizeNodes(isHome: false)
+        
+        let pos1 = store.nodes.first(where: { $0.id == node1Id })!.position
+        let pos2 = store.nodes.first(where: { $0.id == node2Id })!.position
+        
+        #expect(pos1.x < pos2.x)
     }
 }

@@ -646,47 +646,63 @@ public class ProjectStore {
         requestSave()
     }
 
-    /// Automatically organizes all nodes into a context-aware layout.
-    public func organizeNodes(isHome: Bool = false) {
-        guard !nodes.isEmpty else { return }
-        
-        let oldPositions = nodes.map { ($0.id, $0.position) }
+    /// Updates positions for multiple nodes at once, registering undo/redo.
+    public func updateNodePositions(_ positions: [UUID: CGPoint], animated: Bool = true) {
+        let oldPositions = Dictionary(uniqueKeysWithValues: nodes.map { ($0.id, $0.position) })
         
         undoManager?.registerUndo(withTarget: self) { target in
             MainActor.assumeIsolated {
-                withAnimation(.spring(response: 0.8, dampingFraction: 0.7)) {
-                    for (id, pos) in oldPositions {
-                        if let index = target.nodes.firstIndex(where: { $0.id == id }) {
-                            target.nodes[index].position = pos
-                        }
-                    }
-                }
-                target.requestSave()
+                target.updateNodePositions(oldPositions, animated: animated)
             }
         }
         undoStackChanged += 1
         
+        let applyPositions = {
+            for (id, pos) in positions {
+                if let index = self.nodes.firstIndex(where: { $0.id == id }) {
+                    self.nodes[index].position = pos
+                }
+            }
+        }
+        
+        if animated {
+            withAnimation(.spring(response: 0.8, dampingFraction: 0.7)) {
+                applyPositions()
+            }
+        } else {
+            applyPositions()
+        }
+        
+        requestSave()
+    }
+
+    /// Automatically organizes all nodes into a context-aware layout.
+    public func organizeNodes(isHome: Bool = false) {
+        guard !nodes.isEmpty else { return }
+        
         var nodePositions = [UUID: CGPoint]()
         
         if isHome {
-            // HEXAGON / HONEYCOMB LAYOUT (Home)
-            let hexRadius: CGFloat = 220
+            // Reset main nodes on the Home Screen to their default places
+            let defaultHomePositions: [NodeAction: CGPoint] = [
+                .createNewProject: CGPoint(x: 0, y: 0),
+                .openProfile: CGPoint(x: -250, y: -150),
+                .openProjectExplorer: CGPoint(x: 250, y: -150),
+                .openSettings: CGPoint(x: -250, y: 150),
+                .retryOnboarding: CGPoint(x: 250, y: 150),
+                .resumeLastProject: CGPoint(x: 0, y: 300)
+            ]
             
-            for (index, node) in nodes.enumerated() {
-                // Find nearest spiral index or ring-based hex position
-                // For a simple hex grid:
-                let q = Int(round(sqrt(Double(index)) * cos(Double(index)))) // Simplified spiral
-                let r = Int(round(sqrt(Double(index)) * sin(Double(index))))
-                
-                // Real hex to pixel formula
-                let x = hexRadius * 3/2 * CGFloat(q)
-                let y = hexRadius * sqrt(3) * (CGFloat(r) + CGFloat(q)/2)
-                
-                nodePositions[node.id] = CGPoint(x: x, y: y)
+            for node in nodes {
+                if let action = node.action, let defaultPos = defaultHomePositions[action] {
+                    nodePositions[node.id] = defaultPos
+                } else {
+                    nodePositions[node.id] = node.position
+                }
             }
         } else {
-            // CENTRALITY & GROUPED LAYOUT (Project)
-            // 1. Group nodes by connectivity (Clusters)
+            // HIERARCHICAL DAG & GROUPED LAYOUT (Project)
+            // 1. Group nodes by connectivity (Clusters) discovering all incoming/outgoing link types
             var clusters: [[UUID]] = []
             var unvisited = Set(nodes.map { $0.id })
             
@@ -699,9 +715,21 @@ public class ProjectStore {
                     let id = queue.removeFirst()
                     currentCluster.append(id)
                     
-                    let node = nodes.first { $0.id == id }
-                    let relatedIds = (node?.inputNodeIds ?? []) + nodes.filter { ($0.inputNodeIds ?? []).contains(id) }.map { $0.id }
+                    guard let node = nodes.first(where: { $0.id == id }) else { continue }
                     
+                    // Outgoing connections
+                    var outgoing = node.inputNodeIds ?? []
+                    if let next = node.nextNodeId { outgoing.append(next) }
+                    if let connected = node.connectedNodeIds { outgoing.append(contentsOf: connected) }
+                    
+                    // Incoming connections
+                    let incoming = nodes.filter { target in
+                        (target.inputNodeIds ?? []).contains(id) ||
+                        target.nextNodeId == id ||
+                        (target.connectedNodeIds ?? []).contains(id)
+                    }.map { $0.id }
+                    
+                    let relatedIds = outgoing + incoming
                     for relatedId in relatedIds {
                         if unvisited.contains(relatedId) {
                             unvisited.remove(relatedId)
@@ -712,49 +740,85 @@ public class ProjectStore {
                 clusters.append(currentCluster)
             }
             
-            // 2. Lay out each cluster
+            // 2. Lay out each cluster hierarchically
             let columnWidth: CGFloat = 800
             let rowHeight: CGFloat = 600
+            let horizontalSpacing: CGFloat = 350
+            let verticalSpacing: CGFloat = 200
             
             for (clusterIndex, clusterIds) in clusters.enumerated() {
                 let col = clusterIndex % 2
                 let row = clusterIndex / 2
                 let clusterCenter = CGPoint(x: CGFloat(col) * columnWidth, y: CGFloat(row) * rowHeight)
                 
-                // Find highly connected node (The Hub)
-                let sortedByConnectivity = clusterIds.sorted { idA, idB in
-                    let countA = (nodes.first { $0.id == idA }?.inputNodeIds?.count ?? 0) + nodes.filter { ($0.inputNodeIds ?? []).contains(idA) }.count
-                    let countB = (nodes.first { $0.id == idB }?.inputNodeIds?.count ?? 0) + nodes.filter { ($0.inputNodeIds ?? []).contains(idB) }.count
-                    return countA > countB
+                // Let's compute topological levels/ranks within this cluster
+                var ranks = [UUID: Int]()
+                for id in clusterIds {
+                    ranks[id] = 0
                 }
                 
-                // Place Hub at center, others around it
-                if let hubId = sortedByConnectivity.first {
-                    nodePositions[hubId] = clusterCenter
+                let clusterNodeSet = Set(clusterIds)
+                
+                // Run Bellman-Ford style relaxation loop to find DAG depths
+                // Loop is limited to clusterIds.count to handle cycles gracefully
+                for _ in 0..<clusterIds.count {
+                    var changed = false
+                    for id in clusterIds {
+                        guard let node = nodes.first(where: { $0.id == id }) else { continue }
+                        let currentRank = ranks[id] ?? 0
+                        
+                        // If node A flows into node B (id), then rank[id] = max(rank[id], rank[A] + 1)
+                        let inputs = nodes.filter { A in
+                            clusterNodeSet.contains(A.id) && (
+                                (node.inputNodeIds ?? []).contains(A.id) ||
+                                A.nextNodeId == id ||
+                                (A.connectedNodeIds ?? []).contains(id)
+                            )
+                        }
+                        
+                        for A in inputs {
+                            let rankA = ranks[A.id] ?? 0
+                            if rankA + 1 > currentRank {
+                                ranks[id] = rankA + 1
+                                changed = true
+                            }
+                        }
+                    }
+                    if !changed { break }
+                }
+                
+                // Group cluster nodes by rank
+                var nodesByRank = [Int: [UUID]]()
+                for id in clusterIds {
+                    let rank = ranks[id] ?? 0
+                    nodesByRank[rank, default: []].append(id)
+                }
+                
+                // Sort ranks to lay them out from left to right
+                let sortedRanks = nodesByRank.keys.sorted()
+                
+                // Center the entire cluster horizontally around clusterCenter
+                let totalClusterWidth = CGFloat(sortedRanks.count - 1) * horizontalSpacing
+                let startX = clusterCenter.x - totalClusterWidth / 2
+                
+                for (rankIdx, rank) in sortedRanks.enumerated() {
+                    let rankNodes = nodesByRank[rank] ?? []
+                    let x = startX + CGFloat(rankIdx) * horizontalSpacing
                     
-                    let others = sortedByConnectivity.dropFirst()
-                    let radius: CGFloat = 300
-                    for (i, otherId) in others.enumerated() {
-                        let angle = (Double(i) / Double(others.count)) * 2.0 * .pi
-                        nodePositions[otherId] = CGPoint(
-                            x: clusterCenter.x + radius * cos(angle),
-                            y: clusterCenter.y + radius * sin(angle)
-                        )
+                    // Center vertically
+                    let totalHeight = CGFloat(rankNodes.count - 1) * verticalSpacing
+                    let startY = clusterCenter.y - totalHeight / 2
+                    
+                    for (i, id) in rankNodes.enumerated() {
+                        let y = startY + CGFloat(i) * verticalSpacing
+                        nodePositions[id] = CGPoint(x: x, y: y)
                     }
                 }
             }
         }
         
-        // 3. Apply with animation
-        withAnimation(.spring(response: 0.8, dampingFraction: 0.7)) {
-            for (id, pos) in nodePositions {
-                if let index = nodes.firstIndex(where: { $0.id == id }) {
-                    nodes[index].position = pos
-                }
-            }
-        }
-        
-        requestSave()
+        // 3. Apply changes with undo/redo using the new helper
+        updateNodePositions(nodePositions, animated: true)
         HapticsManager.shared.notification(.success)
     }
     
