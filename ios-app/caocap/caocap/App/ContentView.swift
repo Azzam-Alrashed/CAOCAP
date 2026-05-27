@@ -198,7 +198,12 @@ struct ContentView: View {
             configureActionDispatcher()
             setupCommandHandlers()
 
-            currentScale = router.activeStore.viewportScale
+            let isOnboarding = router.currentWorkspace == .onboarding
+            viewport = ViewportState(
+                offset: isOnboarding ? .zero : router.activeStore.viewportOffset,
+                scale: isOnboarding ? 1.0 : router.activeStore.viewportScale
+            )
+            currentScale = viewport.scale
             router.activeStore.undoManager = undoManager
             router.homeStore.undoManager = undoManager
             router.onboardingStore.undoManager = undoManager
