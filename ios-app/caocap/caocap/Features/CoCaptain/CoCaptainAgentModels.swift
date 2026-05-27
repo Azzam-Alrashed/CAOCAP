@@ -145,6 +145,28 @@ public struct ExecutionStatusItem: Identifiable, Hashable {
     }
 }
 
+public struct CoCaptainProductCTAItem: Identifiable, Hashable {
+    public let id: UUID
+    public let title: String
+    public let message: String
+    public let primaryButtonTitle: String
+    public let actionID: AppActionID
+
+    public init(
+        id: UUID = UUID(),
+        title: String,
+        message: String,
+        primaryButtonTitle: String,
+        actionID: AppActionID
+    ) {
+        self.id = id
+        self.title = title
+        self.message = message
+        self.primaryButtonTitle = primaryButtonTitle
+        self.actionID = actionID
+    }
+}
+
 public enum PendingReviewSource: Hashable {
     case appAction(AppActionID, [String: String]? = nil)
     case nodeEdit(role: NodeRole, operations: [NodePatchOperation], baseText: String)
@@ -233,6 +255,7 @@ public struct ChatBubbleItem: Identifiable, Hashable {
 public enum CoCaptainTimelineContent: Hashable {
     case message(ChatBubbleItem)
     case execution(ExecutionStatusItem)
+    case productCTA(CoCaptainProductCTAItem)
     case reviewBundle(ReviewBundleItem)
 }
 

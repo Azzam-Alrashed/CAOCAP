@@ -218,6 +218,17 @@ public struct CommandIntentResolver {
                 "نظم العقد",
                 "ترتيب"
             ]
+        case .openSnapshotBrowser:
+            return [
+                "open snapshot browser",
+                "snapshot browser",
+                "browse checkpoints",
+                "checkpoints",
+                "show checkpoints",
+                "نقاط الاستعادة",
+                "سجل التغييرات",
+                "عرض نقاط الاستعادة"
+            ]
         }
     }
 

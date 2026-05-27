@@ -28,8 +28,12 @@ final class AppConfiguration {
     func configure(authManager: AuthenticationManager) {
         configureFirebase()
         configureGoogleSignIn()
+        // Preload local Gemma 4 model if selected as preferred
+        Task { @MainActor in
+            LLMService.shared.preloadLocalModelIfNeeded()
+        }
         // `start()` is @MainActor-isolated. Firebase is configured synchronously above;
-        // the auth listener starts on the next main actor run loop tick.
+        // the auth listener starts on the next main actor run loop loop tick.
         Task { @MainActor in
             authManager.start()
         }

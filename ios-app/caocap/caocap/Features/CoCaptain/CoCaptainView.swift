@@ -21,14 +21,11 @@ struct CoCaptainView: View {
                     store: viewModel.store,
                     isThinking: viewModel.isThinking,
                     analysisItems: viewModel.analysisItems,
-                    usageStatus: viewModel.usageStatus,
-                    isSubscribed: viewModel.isSubscribed,
                     onSend: sendCurrentMessage,
                     onStop: viewModel.stopStreaming,
                     onQuickPrompt: sendQuickPrompt,
                     onApplySuggestion: viewModel.applySuggestion,
-                    onDismissSuggestion: viewModel.dismissSuggestion,
-                    onUpgrade: viewModel.openProSubscription
+                    onDismissSuggestion: viewModel.dismissSuggestion
                 )
             }
             .navigationTitle("Co-Captain")
