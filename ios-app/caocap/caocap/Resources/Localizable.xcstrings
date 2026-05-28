@@ -483,6 +483,17 @@
         }
       }
     },
+    "Ask CoCaptain or type a command..." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اسأل المساعد أو اكتب أمراً..."
+          }
+        }
+      }
+    },
     "Auth Error" : {
       "localizations" : {
         "ar" : {
@@ -2398,9 +2409,6 @@
           }
         }
       }
-    },
-    "Search" : {
-
     },
     "Search commands..." : {
       "extractionState" : "manual",
