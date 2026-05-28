@@ -2399,6 +2399,9 @@
         }
       }
     },
+    "Search" : {
+
+    },
     "Search commands..." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2475,6 +2478,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "حاد"
+          }
+        }
+      }
+    },
+    "Show Actions List" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "عرض قائمة الإجراءات"
           }
         }
       }
