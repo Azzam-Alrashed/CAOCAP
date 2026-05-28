@@ -2,7 +2,7 @@ import Foundation
 import CoreGraphics
 
 public enum NodeAction: String, Codable, Equatable {
-    case navigateHome
+    case navigateRoot
     case createNewProject
     case openSettings
     case openProfile

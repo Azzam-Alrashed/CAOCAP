@@ -7,7 +7,7 @@ public enum AppActionCategory: String, Hashable {
 }
 
 public enum AppActionID: String, CaseIterable, Identifiable, Codable, Hashable {
-    case goHome = "go_home"
+    case goRoot = "go_root"
     case goBack = "go_back"
     case newProject = "new_project"
     case createNode = "create_node"
@@ -108,8 +108,8 @@ public protocol AppActionPerforming: AnyObject {
 public final class AppActionDispatcher: AppActionPerforming {
     public private(set) var availableActions: [AppActionDefinition] = [
         AppActionDefinition(
-            id: .goHome,
-            title: "Go to Home",
+            id: .goRoot,
+            title: "Go to Root",
             icon: "house.fill",
             category: .navigation,
             isMutating: false,
@@ -333,7 +333,7 @@ public final class AppActionDispatcher: AppActionPerforming {
         )
     ]
 
-    private var goHomeHandler: (() -> Void)?
+    private var goRootHandler: (() -> Void)?
     private var goBackHandler: (() -> Void)?
     private var newProjectHandler: (() -> Void)?
     private var createNodeHandler: (() -> Void)?
@@ -367,7 +367,7 @@ public final class AppActionDispatcher: AppActionPerforming {
     /// Injects handlers from the app shell. Definitions stay stable while the
     /// concrete closures can depend on the currently mounted views/services.
     public func configure(
-        goHome: @escaping () -> Void,
+        goRoot: @escaping () -> Void,
         goBack: @escaping () -> Void,
         newProject: @escaping () -> Void,
         createNode: @escaping () -> Void,
@@ -396,7 +396,7 @@ public final class AppActionDispatcher: AppActionPerforming {
         organizeNodes: (() -> Void)? = nil,
         toggleHUD: (() -> Void)? = nil
     ) {
-        self.goHomeHandler = goHome
+        self.goRootHandler = goRoot
         self.goBackHandler = goBack
         self.newProjectHandler = newProject
         self.createNodeHandler = createNode
@@ -456,8 +456,8 @@ public final class AppActionDispatcher: AppActionPerforming {
 
         let handler: (() -> Void)?
         switch id {
-        case .goHome:
-            handler = goHomeHandler
+        case .goRoot:
+            handler = goRootHandler
         case .goBack:
             handler = goBackHandler
         case .newProject:

@@ -104,8 +104,8 @@ public class LocalizationManager {
     }
 
     public func localizedProjectName(_ name: String, fileName: String? = nil, language: String? = nil) -> String {
-        if fileName == "home_v2.json" || name == "Home" {
-            return localizedString("Home", language: language)
+        if fileName == "root_v6.json" || fileName == "home_v6.json" || fileName == "home_v2.json" || name == "Root" || name == "Home" {
+            return localizedString("Root", language: language)
         }
 
 

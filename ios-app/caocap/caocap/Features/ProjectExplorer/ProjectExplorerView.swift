@@ -216,7 +216,7 @@ private struct EmptyStateView: View {
             Text("No Projects Found")
                 .font(.headline)
             
-            Text("Start a new project from the Home workspace to see it here.")
+            Text("Start a new project from the Root workspace to see it here.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)

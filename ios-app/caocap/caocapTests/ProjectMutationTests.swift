@@ -109,7 +109,7 @@ struct ProjectMutationTests {
         let undoManager = UndoManager()
         store.undoManager = undoManager
         
-        store.organizeNodes(isHome: false)
+        store.organizeNodes(isRoot: false)
         
         let n1PosAfter = store.nodes.first(where: { $0.id == node1Id })!.position
         let n2PosAfter = store.nodes.first(where: { $0.id == node2Id })!.position
@@ -137,11 +137,11 @@ struct ProjectMutationTests {
         #expect(n2PosRedone == n2PosAfter)
     }
 
-    @Test func organizeNodesResetsHomeNodesToDefaults() throws {
-        let node = SpatialNode(id: UUID(), type: .standard, position: CGPoint(x: 999, y: 999), title: "Home Node", action: .createNewProject)
-        let store = ProjectStore(fileName: "test_home_reset.json", initialNodes: [node])
+    @Test func organizeNodesResetsRootNodesToDefaults() throws {
+        let node = SpatialNode(id: UUID(), type: .standard, position: CGPoint(x: 999, y: 999), title: "Root Node", action: .createNewProject)
+        let store = ProjectStore(fileName: "test_root_reset.json", initialNodes: [node])
         
-        store.organizeNodes(isHome: true)
+        store.organizeNodes(isRoot: true)
         
         let nodePos = store.nodes[0].position
         #expect(nodePos == CGPoint(x: 0, y: 0))
@@ -155,7 +155,7 @@ struct ProjectMutationTests {
         node2.inputNodeIds = [node1Id]
         
         let store = ProjectStore(fileName: "test_flow.json", initialNodes: [node1, node2])
-        store.organizeNodes(isHome: false)
+        store.organizeNodes(isRoot: false)
         
         let pos1 = store.nodes.first(where: { $0.id == node1Id })!.position
         let pos2 = store.nodes.first(where: { $0.id == node2Id })!.position
@@ -170,7 +170,7 @@ struct ProjectMutationTests {
         let node2 = SpatialNode(id: node2Id, type: .webView, position: CGPoint(x: 100, y: 100), title: "WebView 2")
         
         let store = ProjectStore(fileName: "test_webview_spacing.json", initialNodes: [node1, node2])
-        store.organizeNodes(isHome: false)
+        store.organizeNodes(isRoot: false)
         
         let pos1 = store.nodes.first(where: { $0.id == node1Id })!.position
         let pos2 = store.nodes.first(where: { $0.id == node2Id })!.position
@@ -184,7 +184,7 @@ struct ProjectMutationTests {
         let node2 = SpatialNode(id: UUID(), type: .code, position: CGPoint(x: 100, y: 100), title: "Cluster 2 Node")
         
         let store = ProjectStore(fileName: "test_cluster_stacking.json", initialNodes: [node1, node2])
-        store.organizeNodes(isHome: false)
+        store.organizeNodes(isRoot: false)
         
         let pos1 = store.nodes[0].position
         let pos2 = store.nodes[1].position

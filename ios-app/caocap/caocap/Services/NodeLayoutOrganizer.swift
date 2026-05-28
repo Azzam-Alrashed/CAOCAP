@@ -12,16 +12,16 @@ public struct NodeLayoutOrganizer: Sendable {
     /// Computes the visual layout for the given nodes.
     /// - Parameters:
     ///   - nodes: The current list of nodes on the canvas.
-    ///   - isHome: Whether the layout is being calculated for the Home Screen workspace.
+    ///   - isRoot: Whether the layout is being calculated for the Root Screen workspace.
     /// - Returns: A dictionary mapping node IDs to their calculated target positions.
-    public func organize(nodes: [SpatialNode], isHome: Bool) -> [UUID: CGPoint] {
+    public func organize(nodes: [SpatialNode], isRoot: Bool) -> [UUID: CGPoint] {
         guard !nodes.isEmpty else { return [:] }
         
         var nodePositions = [UUID: CGPoint]()
         
-        if isHome {
-            // Reset main nodes on the Home Screen to their default places
-            let defaultHomePositions: [NodeAction: CGPoint] = [
+        if isRoot {
+            // Reset main nodes on the Root Screen to their default places
+            let defaultRootPositions: [NodeAction: CGPoint] = [
                 .createNewProject: CGPoint(x: 0, y: 0),
                 .openProfile: CGPoint(x: -250, y: -150),
                 .openProjectExplorer: CGPoint(x: 250, y: -150),
@@ -31,7 +31,7 @@ public struct NodeLayoutOrganizer: Sendable {
             ]
             
             for node in nodes {
-                if let action = node.action, let defaultPos = defaultHomePositions[action] {
+                if let action = node.action, let defaultPos = defaultRootPositions[action] {
                     nodePositions[node.id] = defaultPos
                 } else {
                     nodePositions[node.id] = node.position

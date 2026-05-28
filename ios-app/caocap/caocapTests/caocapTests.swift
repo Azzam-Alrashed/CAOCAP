@@ -71,7 +71,7 @@ struct caocapTests {
         var createdTextNode = false
 
         dispatcher.configure(
-            goHome: {},
+            goRoot: {},
             goBack: {},
             newProject: {},
             createNode: {},
@@ -96,7 +96,7 @@ struct caocapTests {
         var createdProject = false
 
         dispatcher.configure(
-            goHome: {},
+            goRoot: {},
             goBack: {},
             newProject: { createdProject = true },
             createNode: {},

@@ -262,7 +262,7 @@ public final class CoCaptainAgentCoordinator {
             "show",
             "navigate",
             "settings",
-            "home"
+            "root"
         ]
 
         return triggers.contains { lowercased.contains($0) }

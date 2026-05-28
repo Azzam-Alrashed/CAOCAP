@@ -37,7 +37,7 @@ struct ProjectMigrationTests {
         #expect(result.didMigrate)
         #expect(result.snapshot.projectName == "Legacy Project")
         #expect(result.snapshot.nodes.count == 1)
-        #expect(result.snapshot.nodes.first?.action == .navigateHome, "Action should be migrated from title")
+        #expect(result.snapshot.nodes.first?.action == .navigateRoot, "Action should be migrated from title")
     }
 
     @MainActor
