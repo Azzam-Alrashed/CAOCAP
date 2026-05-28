@@ -18,7 +18,6 @@ public class LocalizationManager {
         "Projects",
         "Settings",
         "New Project",
-        "Retry Onboarding",
         "Software Requirements (SRS)",
         "HTML",
         "CSS",
@@ -37,7 +36,6 @@ public class LocalizationManager {
         "View and organize your work.",
         "App configuration and tools.",
         "Start a fresh spatial journey.",
-        "Revisit the guided tour and app manifesto.",
         "Your mini-game will render here.",
         "Define the core logic and rules here.",
         "Document structure.",
@@ -110,9 +108,7 @@ public class LocalizationManager {
             return localizedString("Home", language: language)
         }
 
-        if (fileName?.contains("onboarding") == true) || name == "Onboarding" {
-            return localizedString("Onboarding", language: language)
-        }
+
 
         if name == "Untitled Project" {
             return localizedString("Untitled Project", language: language)

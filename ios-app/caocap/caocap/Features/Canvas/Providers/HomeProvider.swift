@@ -55,15 +55,6 @@ public struct HomeProvider {
                 theme: .orange,
                 action: .openSettings
             ),
-            SpatialNode(
-                id: UUID(),
-                position: CGPoint(x: 250, y: 150),
-                title: "Onboarding",
-                subtitle: "Guided Manifesto",
-                icon: "graduationcap.fill",
-                theme: .blue,
-                action: .retryOnboarding
-            ),
             
             // Daily Flow Shortcut
             SpatialNode(

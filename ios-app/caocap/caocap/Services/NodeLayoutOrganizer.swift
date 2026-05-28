@@ -26,7 +26,6 @@ public struct NodeLayoutOrganizer: Sendable {
                 .openProfile: CGPoint(x: -250, y: -150),
                 .openProjectExplorer: CGPoint(x: 250, y: -150),
                 .openSettings: CGPoint(x: -250, y: 150),
-                .retryOnboarding: CGPoint(x: 250, y: 150),
                 .resumeLastProject: CGPoint(x: 0, y: 300),
                 .proSubscription: CGPoint(x: 0, y: -300)
             ]

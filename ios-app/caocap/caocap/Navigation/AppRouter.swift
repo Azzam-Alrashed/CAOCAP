@@ -3,13 +3,12 @@ import Observation
 import SwiftUI
 
 public enum WorkspaceState: Equatable {
-    case onboarding
     case home
     case project(String) // filename
 }
 
 /// Coordinates top-level workspace navigation and owns the active stores for
-/// onboarding, home, and user-created projects.
+/// home and user-created projects.
 @MainActor
 @Observable
 public class AppRouter {
@@ -17,19 +16,12 @@ public class AppRouter {
     public var projects: [String: ProjectStore] = [:]
     private var navigationStack: [WorkspaceState] = []
     
-    public let onboardingStore = ProjectStore(
-        fileName: "onboarding_v4.json",
-        projectName: OnboardingProvider.projectName,
-        initialNodes: OnboardingProvider.manifestoNodes,
-        initialViewportScale: OnboardingProvider.initialViewportScale
-    )
     public let homeStore = ProjectStore(fileName: "home_v6.json", projectName: "Home", initialNodes: HomeProvider.homeNodes, initialViewportScale: 0.5)
     
     /// Returns the store for the current workspace, lazily creating project
     /// stores on cold boot when navigation restores a project filename.
     public var activeStore: ProjectStore {
         switch currentWorkspace {
-        case .onboarding: return onboardingStore
         case .home: return homeStore
         case .project(let fileName):
             if let store = projects[fileName] {
@@ -44,8 +36,7 @@ public class AppRouter {
     }
     
     public init() {
-        let hasCompletedOnboarding = UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
-        self.currentWorkspace = hasCompletedOnboarding ? .home : .onboarding
+        self.currentWorkspace = .home
         reconcileHomeStore()
     }
     
@@ -81,11 +72,6 @@ public class AppRouter {
             // that don't belong on the navigation dashboard, and add missing action nodes.
             if workspace == .home {
                 self.reconcileHomeStore()
-            }
-            
-            // Update UserDefaults if we navigate to home from onboarding
-            if workspace == .home {
-                UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
             }
             
             // Track last project for the Resume shortcut

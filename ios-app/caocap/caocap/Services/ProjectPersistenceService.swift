@@ -242,7 +242,6 @@ public struct ProjectPersistenceService: Sendable {
         for i in 0..<migrated.count {
             if migrated[i].action == nil {
                 switch migrated[i].title {
-                case "Retry Onboarding": migrated[i].action = .retryOnboarding
                 case "Go to the Home workspace": migrated[i].action = .navigateHome
                 case "New Project": migrated[i].action = .createNewProject
                 case "Settings": migrated[i].action = .openSettings

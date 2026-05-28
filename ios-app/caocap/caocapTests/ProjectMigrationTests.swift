@@ -21,7 +21,7 @@ struct ProjectMigrationTests {
                     "id": "A1B2C3D4-E5F6-4A5B-8C9D-0E1F2A3B4C5D",
                     "type": "srs",
                     "position": {"x": 0, "y": 0},
-                    "title": "Retry Onboarding",
+                    "title": "Go to the Home workspace",
                     "theme": "purple",
                     "textContent": "Sample"
                 }
@@ -37,7 +37,7 @@ struct ProjectMigrationTests {
         #expect(result.didMigrate)
         #expect(result.snapshot.projectName == "Legacy Project")
         #expect(result.snapshot.nodes.count == 1)
-        #expect(result.snapshot.nodes.first?.action == .retryOnboarding, "Action should be migrated from title")
+        #expect(result.snapshot.nodes.first?.action == .navigateHome, "Action should be migrated from title")
     }
 
     @MainActor

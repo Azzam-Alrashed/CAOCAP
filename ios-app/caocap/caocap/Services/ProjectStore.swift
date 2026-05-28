@@ -68,7 +68,7 @@ public class ProjectStore {
     public func load(initialNodes: [SpatialNode]? = nil, initialViewportScale: CGFloat = 1.0) {
         if !persistence.projectExists(fileName: fileName) {
             logger.info("No saved project found for \(self.fileName). Initializing with defaults.")
-            self.nodes = initialNodes ?? OnboardingProvider.manifestoNodes
+            self.nodes = initialNodes ?? []
             self.viewportScale = initialViewportScale
             
             // Ensure Live Preview is compiled immediately for new projects
@@ -93,12 +93,12 @@ public class ProjectStore {
         } catch ProjectPersistenceError.unsupportedFutureVersion(let version, let current) {
             logger.error("Project version \(version) is newer than app version \(current). Aborting load to prevent data loss.")
             // Fallback to defaults to prevent a crash, but log heavily.
-            self.nodes = initialNodes ?? OnboardingProvider.manifestoNodes
+            self.nodes = initialNodes ?? []
             return
         } catch {
             logger.error("Failed to load project: \(error.localizedDescription)")
             // Fallback to initial nodes if data is corrupted or missing
-            self.nodes = initialNodes ?? OnboardingProvider.manifestoNodes
+            self.nodes = initialNodes ?? []
         }
         
         // Ensure the Live Preview is synced with the code nodes on startup
