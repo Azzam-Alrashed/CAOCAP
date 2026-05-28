@@ -34,6 +34,7 @@ public enum AppActionID: String, CaseIterable, Identifiable, Codable, Hashable {
     case help = "help"
     case organizeNodes = "organize_nodes"
     case openSnapshotBrowser = "open_snapshot_browser"
+    case toggleHUD = "toggle_hud"
 
     public var id: String { rawValue }
 }
@@ -321,6 +322,14 @@ public final class AppActionDispatcher: AppActionPerforming {
             category: .project,
             isMutating: false,
             allowsAutonomousExecution: true
+        ),
+        AppActionDefinition(
+            id: .toggleHUD,
+            title: "Toggle HUD",
+            icon: "menubar.rectangle",
+            category: .navigation,
+            isMutating: false,
+            allowsAutonomousExecution: true
         )
     ]
 
@@ -351,6 +360,7 @@ public final class AppActionDispatcher: AppActionPerforming {
     private var transformNodeHandler: (([String: String]) -> Void)?
     private var organizeNodesHandler: (() -> Void)?
     private var openSnapshotBrowserHandler: (() -> Void)?
+    private var toggleHUDHandler: (() -> Void)?
 
     public init() {}
 
@@ -383,7 +393,8 @@ public final class AppActionDispatcher: AppActionPerforming {
         moveNode: (([String: String]) -> Void)? = nil,
         themeNode: (([String: String]) -> Void)? = nil,
         transformNode: (([String: String]) -> Void)? = nil,
-        organizeNodes: (() -> Void)? = nil
+        organizeNodes: (() -> Void)? = nil,
+        toggleHUD: (() -> Void)? = nil
     ) {
         self.goHomeHandler = goHome
         self.goBackHandler = goBack
@@ -412,6 +423,7 @@ public final class AppActionDispatcher: AppActionPerforming {
         self.themeNodeHandler = themeNode
         self.transformNodeHandler = transformNode
         self.organizeNodesHandler = organizeNodes
+        self.toggleHUDHandler = toggleHUD
     }
 
     public func definition(for id: AppActionID) -> AppActionDefinition? {
@@ -510,6 +522,8 @@ public final class AppActionDispatcher: AppActionPerforming {
             handler = organizeNodesHandler
         case .openSnapshotBrowser:
             handler = openSnapshotBrowserHandler
+        case .toggleHUD:
+            handler = toggleHUDHandler
         }
 
         guard let handler else {
