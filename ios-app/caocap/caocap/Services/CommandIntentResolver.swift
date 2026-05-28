@@ -229,6 +229,16 @@ public struct CommandIntentResolver {
                 "سجل التغييرات",
                 "عرض نقاط الاستعادة"
             ]
+        case .toggleHUD:
+            return [
+                "toggle hud",
+                "show hud",
+                "hide hud",
+                "اظهر الواجهة",
+                "اخف الواجهة",
+                "الواجهة",
+                "تبديل الواجهة"
+            ]
         }
     }
 

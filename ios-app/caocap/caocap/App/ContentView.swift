@@ -16,6 +16,7 @@ struct ContentView: View {
     @State private var router = AppRouter()
     @AppStorage("grid_opacity") private var gridOpacity: Double = 0.1
     @AppStorage("last_grid_opacity") private var lastGridOpacity: Double = 0.1
+    @AppStorage("showing_hud") private var showingHUD: Bool = false
     @State private var showingFileImporter = false
     @State private var showingPurchaseSheet = false
     @State private var showingSignIn = false
@@ -66,12 +67,14 @@ struct ContentView: View {
                 .id("project_canvas_\(fileName)")
             }
 
-            CanvasHUDView(
-                store: router.activeStore,
-                viewportScale: currentScale,
-                isHome: router.currentWorkspace == .home,
-                onSignInTapped: { showingSignIn = true }
-            )
+            if showingHUD {
+                CanvasHUDView(
+                    store: router.activeStore,
+                    viewportScale: currentScale,
+                    isHome: router.currentWorkspace == .home,
+                    onSignInTapped: { showingSignIn = true }
+                )
+            }
 
             FloatingCommandButton(
                 onTap: {
@@ -419,6 +422,9 @@ struct ContentView: View {
                 withAnimation(.spring(response: 0.8, dampingFraction: 0.85)) {
                     viewport.fitTo(nodes: router.activeStore.nodes, containerSize: containerSize)
                 }
+            },
+            toggleHUD: {
+                showingHUD.toggle()
             }
         )
     }
