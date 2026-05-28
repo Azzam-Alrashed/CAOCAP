@@ -223,7 +223,8 @@ struct CommandPaletteView: View {
         .animation(Animation.spring(response: 0.3, dampingFraction: 0.8), value: viewModel.isPresented)
         .onChange(of: viewModel.isPresented) { oldPresented, newPresented in
             if newPresented {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                Task {
+                    try? await Task.sleep(for: .seconds(0.1))
                     isFocused = true
                 }
             }

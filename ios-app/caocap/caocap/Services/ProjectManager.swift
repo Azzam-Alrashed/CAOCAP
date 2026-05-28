@@ -9,7 +9,7 @@ public struct ProjectMetadata: Identifiable {
     public let sizeString: String
 }
 
-public class ProjectManager {
+public actor ProjectManager {
     public static let shared = ProjectManager()
     private let logger = Logger(subsystem: "com.caocap.app", category: "ProjectManager")
     

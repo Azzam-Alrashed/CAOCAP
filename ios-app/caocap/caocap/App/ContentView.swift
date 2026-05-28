@@ -374,29 +374,34 @@ struct ContentView: View {
                 }
             },
             shareProject: {
-                if let url = ExportService.export(from: router.activeStore, format: .webBundle(includeProjectContext: true)) {
-                    exportURL = url
-                    showExportSheet = true
-                } else if let url = ExportService.export(from: router.activeStore, format: .caocap) {
-                    // Fallback to raw CAOCAP bundle
-                    exportURL = url
-                    showExportSheet = true
+                Task {
+                    if let url = await ExportService.export(from: router.activeStore, format: .webBundle(includeProjectContext: true)) {
+                        exportURL = url
+                        showExportSheet = true
+                    } else if let url = await ExportService.export(from: router.activeStore, format: .caocap) {
+                        // Fallback to raw CAOCAP bundle
+                        exportURL = url
+                        showExportSheet = true
+                    }
                 }
             },
             proSubscription: {
                 if coCaptain.isPresented {
                     coCaptain.setPresented(false)
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    Task {
+                        try? await Task.sleep(for: .seconds(0.3))
                         showingPurchaseSheet = true
                     }
                 } else if showingProfile {
                     showingProfile = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    Task {
+                        try? await Task.sleep(for: .seconds(0.3))
                         showingPurchaseSheet = true
                     }
                 } else if showingSettings {
                     showingSettings = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    Task {
+                        try? await Task.sleep(for: .seconds(0.3))
                         showingPurchaseSheet = true
                     }
                 } else {
@@ -482,32 +487,37 @@ struct ContentView: View {
                 return
             }
             
-            defer {
-                selectedURL.stopAccessingSecurityScopedResource()
-            }
-            
-            do {
-                let data = try Data(contentsOf: selectedURL)
-                let decoder = JSONDecoder()
-                
-                // Validate that the file is indeed a valid ProjectSnapshot
-                _ = try decoder.decode(ProjectSnapshot.self, from: data)
-                
-                // Copy or save it under a new project file name
-                let persistence = ProjectPersistenceService()
-                let newFileName = "project_\(UUID().uuidString).json"
-                let targetURL = persistence.fileURL(for: newFileName)
-                
-                try data.write(to: targetURL, options: .atomic)
-                
-                logger.info("Successfully imported project to: \(newFileName)")
-                
-                // Navigate to the newly imported project
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                    router.navigate(to: .project(newFileName))
+            Task {
+                defer {
+                    selectedURL.stopAccessingSecurityScopedResource()
                 }
-            } catch {
-                logger.error("Import failed: \(error.localizedDescription)")
+                
+                do {
+                    let newFileName = try await Task.detached(priority: .userInitiated) { () -> String in
+                        let data = try Data(contentsOf: selectedURL)
+                        let decoder = JSONDecoder()
+                        
+                        // Validate that the file is indeed a valid ProjectSnapshot
+                        _ = try decoder.decode(ProjectSnapshot.self, from: data)
+                        
+                        // Copy or save it under a new project file name
+                        let persistence = ProjectPersistenceService()
+                        let newFileName = "project_\(UUID().uuidString).json"
+                        let targetURL = persistence.fileURL(for: newFileName)
+                        
+                        try data.write(to: targetURL, options: .atomic)
+                        return newFileName
+                    }.value
+                    
+                    logger.info("Successfully imported project to: \(newFileName)")
+                    
+                    // Navigate to the newly imported project
+                    withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                        router.navigate(to: .project(newFileName))
+                    }
+                } catch {
+                    logger.error("Import failed: \(error.localizedDescription)")
+                }
             }
             
         case .failure(let error):

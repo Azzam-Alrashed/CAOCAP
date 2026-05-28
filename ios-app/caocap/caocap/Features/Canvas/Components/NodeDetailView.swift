@@ -1,4 +1,7 @@
 import SwiftUI
+import OSLog
+
+private let logger = Logger(subsystem: "com.caocap.app", category: "NodeDetailView")
 
 /// Routes a selected node to the correct full-screen inspector/editor. Adding a
 /// node type should usually update this router and the matching store/context
@@ -267,7 +270,7 @@ struct NodeDetailView: View {
                                             }
                                         }
                                     } catch {
-                                        print("File import failed: \(error)")
+                                        logger.error("File import failed: \(error.localizedDescription, privacy: .public)")
                                     }
                                 }
                             } else if currentNode.type == .calculation {
