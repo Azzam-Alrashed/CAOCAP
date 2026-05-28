@@ -250,6 +250,24 @@ public struct CommandIntentResolver {
                 "عرض قائمة الإجراءات",
                 "عرض قائمة الاجراءات"
             ]
+        case .createSubCanvas:
+            return [
+                "create sub canvas",
+                "create subcanvas",
+                "new sub canvas",
+                "new subcanvas",
+                "add sub canvas",
+                "add subcanvas",
+                "create nested canvas",
+                "new nested canvas",
+                "انشاء مساحة فرعية",
+                "مساحة فرعية جديدة",
+                "أضف مساحة فرعية",
+                "اضف مساحة فرعية",
+                "سوي مساحة فرعية",
+                "انشاء لوحة فرعية",
+                "لوحة فرعية جديدة"
+            ]
         }
     }
 
