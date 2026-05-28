@@ -11,6 +11,7 @@ struct SettingsView: View {
     @AppStorage("connection_style") private var connectionStyle = "Dashed"
     @AppStorage("spatial_glow_enabled") private var spatialGlowEnabled = true
     @AppStorage("cocaptain.modelName") private var modelName = "gemini-3-flash-preview"
+    @AppStorage("cocaptain.hfToken") private var hfToken = ""
 
     @State private var llmService = LLMService.shared
 
@@ -32,7 +33,10 @@ struct SettingsView: View {
             set: { newValue in
                 if newValue == "Gemma 4 (Local)" {
                     modelName = "gemma-4-local"
-                    llmService.preloadLocalModelIfNeeded()
+                    let hasToken = !hfToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    if llmService.isLocalModelCached || hasToken {
+                        llmService.preloadLocalModelIfNeeded()
+                    }
                 } else {
                     modelName = "gemini-3-flash-preview"
                 }
@@ -76,6 +80,43 @@ struct SettingsView: View {
                                     Divider().padding(.leading, 56).opacity(0.3)
                                     
                                     HStack {
+                                        Label("Hugging Face Token", systemImage: "key.fill")
+                                            .font(.system(size: 16, weight: .medium))
+                                        Spacer()
+                                        SecureField("hf_...", text: $hfToken)
+                                            .textFieldStyle(.plain)
+                                            .multilineTextAlignment(.trailing)
+                                            .font(.system(size: 14, design: .monospaced))
+                                            .foregroundStyle(.primary)
+                                            .frame(maxWidth: 180)
+                                            .autocorrectionDisabled()
+                                            .textInputAutocapitalization(.never)
+                                            .onChange(of: hfToken) { _, newValue in
+                                                llmService.updateHFToken(newValue)
+                                            }
+                                    }
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 14)
+                                    
+                                    Divider().padding(.leading, 56).opacity(0.3)
+                                    
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        Text("Gemma 4 is a gated model. To download it, you must:")
+                                            .font(.system(size: 11, weight: .bold))
+                                            .foregroundStyle(.secondary)
+                                        Text("• Accept the license at huggingface.co/google/gemma-4-E2B-it")
+                                            .font(.system(size: 11))
+                                            .foregroundStyle(.secondary)
+                                        Text("• Create a Read token at huggingface.co/settings/tokens")
+                                            .font(.system(size: 11))
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    .padding(.horizontal, 16)
+                                    .padding(.bottom, 8)
+                                    
+                                    Divider().padding(.leading, 56).opacity(0.3)
+                                    
+                                    HStack {
                                         Label("Local Cache Size", systemImage: "internaldrive")
                                             .font(.system(size: 16, weight: .medium))
                                         Spacer()
@@ -107,29 +148,30 @@ struct SettingsView: View {
                                     } else {
                                         if let error = llmService.localModelError {
                                             Divider().padding(.leading, 56).opacity(0.3)
-                                            VStack(alignment: .leading, spacing: 10) {
-                                                VStack(alignment: .leading, spacing: 4) {
-                                                    Label("Download Error", systemImage: "exclamationmark.triangle.fill")
-                                                        .font(.system(size: 14, weight: .semibold))
-                                                        .foregroundStyle(.red)
-                                                    Text(error)
-                                                        .font(.system(size: 12))
-                                                        .foregroundStyle(.secondary)
-                                                }
-                                                
-                                                Button {
-                                                    llmService.preloadLocalModelIfNeeded()
-                                                } label: {
-                                                    Label("Retry Download", systemImage: "arrow.clockwise")
-                                                        .font(.system(size: 14, weight: .medium))
-                                                        .foregroundStyle(.orange)
-                                                }
+                                            VStack(alignment: .leading, spacing: 6) {
+                                                Label("Download Error", systemImage: "exclamationmark.triangle.fill")
+                                                    .font(.system(size: 14, weight: .semibold))
+                                                    .foregroundStyle(.red)
+                                                Text(error)
+                                                    .font(.system(size: 12))
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                            .padding(.horizontal, 16)
+                                            .padding(.vertical, 10)
+                                        }
+                                        
+                                        Divider().padding(.leading, 56).opacity(0.3)
+                                        
+                                        if llmService.isLocalModelCached {
+                                            HStack {
+                                                Label("Local Model Ready", systemImage: "checkmark.circle.fill")
+                                                    .font(.system(size: 16, weight: .semibold))
+                                                    .foregroundStyle(.green)
+                                                Spacer()
                                             }
                                             .padding(.horizontal, 16)
                                             .padding(.vertical, 14)
-                                        }
-                                        
-                                        if llmService.localModelCacheSizeFormatted != "0 MB" {
+                                            
                                             Divider().padding(.leading, 56).opacity(0.3)
                                             
                                             Button(role: .destructive) {
@@ -138,6 +180,26 @@ struct SettingsView: View {
                                                 Label("Delete Local Model", systemImage: "trash.fill")
                                                     .font(.system(size: 16, weight: .medium))
                                                     .foregroundStyle(.red)
+                                            }
+                                            .padding(.horizontal, 16)
+                                            .padding(.vertical, 14)
+                                        } else {
+                                            VStack(alignment: .leading, spacing: 8) {
+                                                Button {
+                                                    llmService.downloadLocalModel()
+                                                } label: {
+                                                    Label(llmService.localModelError != nil ? "Retry Download" : "Download Local Model", 
+                                                          systemImage: llmService.localModelError != nil ? "arrow.clockwise" : "arrow.down.circle")
+                                                        .font(.system(size: 16, weight: .semibold))
+                                                        .foregroundStyle(hfToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.secondary : Color.orange)
+                                                }
+                                                .disabled(hfToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                                                
+                                                if hfToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                                    Label("Access Token is required to download.", systemImage: "info.circle")
+                                                        .font(.system(size: 11))
+                                                        .foregroundStyle(.orange)
+                                                }
                                             }
                                             .padding(.horizontal, 16)
                                             .padding(.vertical, 14)
