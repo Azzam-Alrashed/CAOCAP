@@ -98,7 +98,8 @@ public struct LaunchScreenView: View {
             }
             
             // Haptic bump when it lands
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+            Task {
+                try? await Task.sleep(for: .seconds(1.2))
                 let generator = UIImpactFeedbackGenerator(style: .soft)
                 generator.impactOccurred()
             }

@@ -1,7 +1,7 @@
 import SwiftUI
 
 extension NodeRole {
-    var icon: String {
+    public var icon: String {
         switch self {
         case .srs: return "doc.text.fill"
         case .code: return "chevron.left.slash.chevron.right"
@@ -19,7 +19,7 @@ extension NodeRole {
         }
     }
     
-    var themeColor: Color {
+    public var themeColor: Color {
         switch self {
         case .srs: return .blue
         case .code: return .orange

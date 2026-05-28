@@ -57,38 +57,10 @@ public final class LLMService {
     public var localModelDownloadProgress: Double = 0.0
     public var localModelError: String?
 
-    public var isLocalModelCached: Bool {
-        let cachedSize = getCachedModelFolderSize()
-        return cachedSize > 50 * 1024 * 1024
-    }
+    public private(set) var isLocalModelCached: Bool = false
 
     /// Formatted cache size for local MLX model storage
-    public var localModelCacheSizeFormatted: String {
-        let fileManager = FileManager.default
-        let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
-        let huggingFaceCacheURL = documentsURL.appendingPathComponent("huggingface")
-        
-        guard let enumerator = fileManager.enumerator(at: huggingFaceCacheURL, includingPropertiesForKeys: [.fileSizeKey], options: []) else {
-            return "0 MB"
-        }
-        
-        var totalSize: Int64 = 0
-        for case let fileURL as URL in enumerator {
-            if let resourceValues = try? fileURL.resourceValues(forKeys: [.fileSizeKey]),
-               let fileSize = resourceValues.fileSize {
-                totalSize += Int64(fileSize)
-            }
-        }
-        
-        if totalSize == 0 {
-            return "0 MB"
-        }
-        
-        let formatter = ByteCountFormatter()
-        formatter.allowedUnits = [.useGB, .useMB]
-        formatter.countStyle = .file
-        return formatter.string(fromByteCount: totalSize)
-    }
+    public private(set) var localModelCacheSizeFormatted: String = "0 MB"
 
     /// Clears the local model storage files to free up device space.
     public func clearLocalModelCache() {
@@ -106,8 +78,10 @@ public final class LLMService {
             mlxSessions.removeAll()
             isDownloadingLocalModel = false
             localModelDownloadProgress = 0.0
+            refreshCacheSize()
         } catch {
             logger.error("Failed to clear local model cache: \(error.localizedDescription, privacy: .public)")
+            refreshCacheSize()
         }
     }
 
@@ -127,6 +101,7 @@ public final class LLMService {
         // Load stored Hugging Face token if available
         let token = UserDefaults.standard.string(forKey: "cocaptain.hfToken") ?? ""
         updateHFToken(token)
+        refreshCacheSize()
     }
 
     public func updateHFToken(_ token: String) {
@@ -136,37 +111,71 @@ public final class LLMService {
         let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
         let tokenURL = documentsURL.appendingPathComponent("huggingface/token")
         
-        // Ensure parent directory exists
-        try? fileManager.createDirectory(at: tokenURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-        
         if !trimmed.isEmpty {
             setenv("HF_TOKEN", trimmed, 1)
-            try? trimmed.write(to: tokenURL, atomically: true, encoding: .utf8)
+            Task.detached(priority: .background) {
+                // Ensure parent directory exists
+                try? fileManager.createDirectory(at: tokenURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try? trimmed.write(to: tokenURL, atomically: true, encoding: .utf8)
+            }
             logger.info("Hugging Face environment token and token file updated.")
         } else {
             unsetenv("HF_TOKEN")
-            try? fileManager.removeItem(at: tokenURL)
+            Task.detached(priority: .background) {
+                try? fileManager.removeItem(at: tokenURL)
+            }
             logger.info("Hugging Face environment token and token file cleared.")
         }
     }
 
-    private func getCachedModelFolderSize() -> Int64 {
+    public func refreshCacheSize() {
+        Task {
+            let (isCached, sizeFormatted) = await calculateCacheSizeInBackground()
+            self.isLocalModelCached = isCached
+            self.localModelCacheSizeFormatted = sizeFormatted
+        }
+    }
+
+    nonisolated private func calculateCacheSizeInBackground() async -> (isCached: Bool, sizeFormatted: String) {
         let fileManager = FileManager.default
-        let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
-        let modelFolder = documentsURL.appendingPathComponent("huggingface/hub/models--mlx-community--gemma-4-e2b-it-4bit")
-        
-        guard let enumerator = fileManager.enumerator(at: modelFolder, includingPropertiesForKeys: [.fileSizeKey], options: []) else {
-            return 0
+        guard let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            return (false, "0 MB")
         }
         
-        var totalSize: Int64 = 0
-        for case let fileURL as URL in enumerator {
-            if let resourceValues = try? fileURL.resourceValues(forKeys: [.fileSizeKey]),
-               let fileSize = resourceValues.fileSize {
-                totalSize += Int64(fileSize)
+        let modelFolder = documentsURL.appendingPathComponent("huggingface/hub/models--mlx-community--gemma-4-e2b-it-4bit")
+        var modelFolderSize: Int64 = 0
+        if let enumerator = fileManager.enumerator(at: modelFolder, includingPropertiesForKeys: [.fileSizeKey], options: []) {
+            for case let fileURL as URL in enumerator {
+                if let resourceValues = try? fileURL.resourceValues(forKeys: [.fileSizeKey]),
+                   let fileSize = resourceValues.fileSize {
+                    modelFolderSize += Int64(fileSize)
+                }
             }
         }
-        return totalSize
+        let isCached = modelFolderSize > 50 * 1024 * 1024
+        
+        let huggingFaceCacheURL = documentsURL.appendingPathComponent("huggingface")
+        var totalSize: Int64 = 0
+        if let enumerator = fileManager.enumerator(at: huggingFaceCacheURL, includingPropertiesForKeys: [.fileSizeKey], options: []) {
+            for case let fileURL as URL in enumerator {
+                if let resourceValues = try? fileURL.resourceValues(forKeys: [.fileSizeKey]),
+                   let fileSize = resourceValues.fileSize {
+                    totalSize += Int64(fileSize)
+                }
+            }
+        }
+        
+        let sizeFormatted: String
+        if totalSize == 0 {
+            sizeFormatted = "0 MB"
+        } else {
+            let formatter = ByteCountFormatter()
+            formatter.allowedUnits = [.useGB, .useMB]
+            formatter.countStyle = .file
+            sizeFormatted = formatter.string(fromByteCount: totalSize)
+        }
+        
+        return (isCached, sizeFormatted)
     }
 
     // MARK: - API
@@ -208,8 +217,10 @@ public final class LLMService {
                 logger.info("Starting explicit local model download...")
                 _ = try await getMLXSession(scope: .project)
                 logger.info("Local model downloaded and loaded successfully.")
+                refreshCacheSize()
             } catch {
                 logger.error("Failed to download local model: \(error.localizedDescription, privacy: .public)")
+                refreshCacheSize()
             }
         }
     }
@@ -227,8 +238,7 @@ public final class LLMService {
             let modelId = "mlx-community/gemma-4-e2b-it-4bit"
             
             // Check if model is cached or if we have a token
-            let cachedSize = getCachedModelFolderSize()
-            let isCached = cachedSize > 50 * 1024 * 1024
+            let isCached = self.isLocalModelCached
             let token = UserDefaults.standard.string(forKey: "cocaptain.hfToken") ?? ""
             
             if !isCached {
@@ -272,9 +282,11 @@ public final class LLMService {
                 }
                 isDownloadingLocalModel = false
                 mlxModelContainer = container
+                refreshCacheSize()
             } catch {
                 isDownloadingLocalModel = false
                 localModelError = error.localizedDescription
+                refreshCacheSize()
                 throw error
             }
         }
