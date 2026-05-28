@@ -1,8 +1,11 @@
 import SwiftUI
+import OSLog
 
 struct ProjectExplorerView: View {
     @Environment(\.dismiss) private var dismiss
     var onSelect: (String) -> Void
+    
+    private let logger = Logger(subsystem: "com.caocap.app", category: "ProjectExplorerView")
     
     @State private var projects: [ProjectMetadata] = []
     @State private var isLoading = true
@@ -113,53 +116,90 @@ struct ProjectExplorerView: View {
     }
     
     private func loadProjects() {
-        projects = ProjectManager.shared.listProjects()
-        isLoading = false
+        isLoading = true
+        Task {
+            let list = await ProjectManager.shared.listProjects()
+            self.projects = list
+            self.isLoading = false
+        }
     }
     
     private func createProject(name: String) {
-        do {
-            let newFileName = try ProjectManager.shared.createNewProject(name: name)
-            // Navigate directly to the new project and close explorer
-            onSelect(newFileName)
-            dismiss()
-        } catch {
-            // Silently fail or log error
+        isLoading = true
+        Task {
+            do {
+                let newFileName = try await ProjectManager.shared.createNewProject(name: name)
+                onSelect(newFileName)
+                dismiss()
+            } catch {
+                logger.error("Failed to create project: \(error.localizedDescription, privacy: .public)")
+                isLoading = false
+            }
         }
     }
     
     private func deleteProject(_ project: ProjectMetadata) {
-        ProjectManager.shared.deleteProject(fileName: project.id)
-        loadProjects()
+        isLoading = true
+        Task {
+            await ProjectManager.shared.deleteProject(fileName: project.id)
+            loadProjects()
+        }
     }
     
     private func duplicateProject(_ project: ProjectMetadata) {
-        do {
-            let copyName = "\(project.name) Copy"
-            _ = try ProjectManager.shared.duplicateProject(fileName: project.id, newName: copyName)
-            loadProjects()
-        } catch {
-            // Silently fail or log error
+        isLoading = true
+        Task {
+            do {
+                let copyName = "\(project.name) Copy"
+                _ = try await ProjectManager.shared.duplicateProject(fileName: project.id, newName: copyName)
+                loadProjects()
+            } catch {
+                logger.error("Failed to duplicate project: \(error.localizedDescription, privacy: .public)")
+                isLoading = false
+            }
         }
     }
     
     private func renameProject(_ project: ProjectMetadata, to newName: String) {
-        do {
-            try ProjectManager.shared.renameProject(fileName: project.id, newName: newName)
-            loadProjects()
-        } catch {
-            // Silently fail or log error
+        isLoading = true
+        Task {
+            do {
+                try await ProjectManager.shared.renameProject(fileName: project.id, newName: newName)
+                loadProjects()
+            } catch {
+                logger.error("Failed to rename project: \(error.localizedDescription, privacy: .public)")
+                isLoading = false
+            }
         }
     }
     
     private func exportProject(_ project: ProjectMetadata) {
-        let tempStore = ProjectStore(fileName: project.id)
-        if let url = ExportService.export(from: tempStore, format: .webBundle(includeProjectContext: true)) {
-            self.exportURL = url
-            self.showingExportSheet = true
-        } else if let url = ExportService.export(from: tempStore, format: .caocap) {
-            self.exportURL = url
-            self.showingExportSheet = true
+        isLoading = true
+        Task {
+            let persistence = ProjectPersistenceService()
+            let snapshotResult = await Task.detached(priority: .userInitiated) { () -> ProjectLoadResult? in
+                try? persistence.load(fileName: project.id)
+            }.value
+            
+            guard let snapshot = snapshotResult?.snapshot else {
+                logger.error("Failed to load project snapshot for export.")
+                isLoading = false
+                return
+            }
+            
+            let url = await ExportService.export(
+                projectName: snapshot.projectName ?? "Untitled Project",
+                fileName: project.id,
+                nodes: snapshot.nodes,
+                srsText: snapshot.nodes.first(where: { $0.role == .srs })?.textContent?.trimmingCharacters(in: .whitespacesAndNewlines),
+                format: .webBundle(includeProjectContext: true)
+            )
+            
+            isLoading = false
+            if let url {
+                self.exportURL = url
+                self.showingExportSheet = true
+            }
         }
     }
 }

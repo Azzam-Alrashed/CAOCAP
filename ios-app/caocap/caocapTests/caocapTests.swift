@@ -115,14 +115,14 @@ struct caocapTests {
     }
 
     @MainActor
-    @Test func webBundleExportIncludesRunnableIndexAndSRSReadme() throws {
+    @Test func webBundleExportIncludesRunnableIndexAndSRSReadme() async throws {
         let store = ProjectStore(
             fileName: "onboarding-export-test-\(UUID().uuidString).json",
             projectName: "Export Test",
             initialNodes: ProjectTemplateProvider.defaultNodes
         )
 
-        let exportURL = try #require(ExportService.export(from: store, format: .webBundle(includeProjectContext: true)))
+        let exportURL = try await #require(ExportService.export(from: store, format: .webBundle(includeProjectContext: true)))
         defer { try? FileManager.default.removeItem(at: exportURL) }
 
         var isDirectory: ObjCBool = false

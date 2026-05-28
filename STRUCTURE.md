@@ -80,9 +80,10 @@ Pure domain data. No UI, no persistence, no side effects. These structs define t
 | File | Responsibility |
 |---|---|
 | `SpatialNode.swift` | The core canvas primitive. Holds `id`, `type` (`.standard`, `.webView`, `.srs`, `.code`, `.art`, `.text`, `.number`, `.table`, `.calculation`, `.display`, `.aiAgent`, `.chart`), `position`, content fields, drawing data, relationships, agent metadata, chart configuration, and theme. |
-| `NodeTheme.swift` | Color tokens for the six node themes (blue, purple, green, orange, red, gray). |
+| `NodeTheme.swift` | Pure enum for color tokens for the six node themes (blue, purple, green, orange, red, gray). |
 | `NodeRole.swift` | Canonical role inference for SRS, Code, Live Preview, custom nodes, and legacy HTML/CSS/JavaScript nodes. |
 | `SRSReadinessState.swift` | Domain state for whether an SRS node is empty, structured, drafted, or ready. |
+| `SRSScaffold.swift` | Definition of Software Requirements Specification (SRS) templates and check helpers. |
 
 ---
 
@@ -94,7 +95,7 @@ Infrastructure and heavy-lifting. These are long-lived objects that outlive indi
 | `ProjectStore.swift` | Observable project state owner. Manages `[SpatialNode]`, viewport state, undo wiring, debounced save requests, and Live Preview refresh. |
 | `ProjectPersistenceService.swift` | Project file URLs, JSON schema decoding/encoding, migrations, and atomic writes. |
 | `LivePreviewCompiler.swift` | Pure compiler that renders the Code node into a WebView payload, with legacy HTML/CSS/JavaScript merging support for older projects. |
-| `ProjectManager.swift` | Lists and deletes saved local project files for the project explorer. |
+| `ProjectManager.swift` | Actor listing and managing saved local project files asynchronously. |
 | `AuthenticationManager.swift` | Wraps Firebase Auth. Handles anonymous login, account linking, and social provider flows. |
 | `LLMService.swift` | Interface for the Firebase AI Logic SDK. Manages streaming sessions with the Gemini backend. |
 | `NodeLayoutOrganizer.swift` | Decoupled node positioning and spatial layout organizer. |
@@ -107,8 +108,11 @@ Infrastructure and heavy-lifting. These are long-lived objects that outlive indi
 | `ProjectContextBuilder.swift` | Logic to "harvest" the spatial graph and serialize it into a grounded prompt context for the LLM. |
 | `NodePatchEngine.swift` | A precision editing engine that applies partial patches (replace/insert/append) to SRS and Code nodes, while still supporting legacy HTML/CSS/JS roles. |
 | `SRSReadinessEvaluator.swift` | Evaluates SRS text completeness and acceptance-check readiness. |
-| `ExportService.swift` | Generates shareable exports from the active project, currently HTML preview output with a `.caocap` project-file fallback. |
+| `ExportService.swift` | Generates shareable exports asynchronously on a background thread. |
 | `SubscriptionManager.swift` | StoreKit 2 integration. Manages Pro subscription state, purchase flow, and transaction verification. |
+| `FirebasePreviewBootstrap.swift` | Handles preview HTML injection and bootstrap configurations for Firebase nodes. |
+| `NodeSearchIndex.swift` | Text indexing and ranking provider for workspace search (used by Command Palette). |
+| `ProjectAnalyzer.swift` | Inspects spatial nodes and links to make contextual recommendations. |
 
 `ProjectStore` and `ProjectPersistenceService` also maintain checkpoint metadata and saved project snapshots. The infrastructure is used to protect work before significant AI or mutation flows; a full user-facing snapshot browser remains roadmap work.
 
@@ -120,6 +124,8 @@ Lightweight, reusable Swift and framework extensions. No dependencies on app-spe
 | File | Responsibility |
 |---|---|
 | `Color+Hex.swift` | Hex string → `SwiftUI.Color` conversion utility. |
+| `NodeRole+UI.swift` | View layer mapping for node icons and theme colors. |
+| `NodeTheme+UI.swift` | Computed SwiftUI Color mapping for pure NodeTheme model. |
 
 ---
 
@@ -134,6 +140,8 @@ Identity management and account security.
 | File | Responsibility |
 |---|---|
 | `SignInView.swift` | Multi-provider sign-in sheet with Apple, Google, and GitHub options. Supports "Save Work" account linking for anonymous users. |
+| `AppleSignInCoordinator.swift` | Runs Apple ID OAuth flows and exchanges credentials with Firebase. |
+| `GoogleSignInCoordinator.swift` | Runs Google Sign-in flows and exchanges credentials with Firebase. |
 
 ---
 
@@ -160,6 +168,8 @@ The spatial runtime — the heart of CAOCAP.
 | `HTMLWebView.swift` | Thin `UIViewRepresentable` wrapping `WKWebView`. Receives compiled HTML payloads and renders them. Scroll disabled for canvas embedding. |
 | `ArtEditorView.swift` | PencilKit-backed editor for `.art` nodes and freehand visual annotations. |
 | `DottedBackground.swift` | The infinite dotted grid. Renders efficiently using `Canvas` and adapts to the current viewport transform. |
+| `FirebaseConfigNodeEditorView.swift` | Sub-view panel for setting up configuration keys for Firebase integrations. |
+| `NodeCreationMenuView.swift` | Selection menu showing all available nodes to construct on the canvas. |
 
 **`Providers/`** — Static node graph factories:
 
@@ -169,10 +179,23 @@ The spatial runtime — the heart of CAOCAP.
 | `OnboardingProvider.swift` | Loads the manifest-backed guided node sequence for first-run onboarding, with a hardcoded fallback. |
 | `ProjectTemplateProvider.swift` | Generates the default interconnected node graph for new projects. |
 
+**`Onboarding/`** — Canvas-specific guided walkthrough overlays:
+
+| File | Responsibility |
+|---|---|
+| `FocusRingOverlay.swift` | Focus visual overlay that guides user interaction during onboarding step changes. |
+| `OnboardingCoordinator.swift` | Manages the active state and routing of the onboarding tutorial steps. |
+| `OnboardingStep.swift` | Value object modeling a single guided onboarding step content and expected completion target. |
+
 ---
 
 #### `Omnibox/`
 The `Cmd+K` intent-driven command palette. A floating Spotlight-style UI that surfaces project actions, navigation, and AI commands.
+
+| File | Responsibility |
+|---|---|
+| `CommandPaletteView.swift` | Floating Spot-light style command palette input overlay. |
+| `CommandPaletteViewModel.swift` | Holds query state, matches keywords, and executes palette action routing. |
 
 ---
 
@@ -193,6 +216,8 @@ The agentic AI companion. A native sheet interface for real-time collaboration.
 | `CoCaptainAgentOutputAdapter.swift` | Source-agnostic adapter layer that converts Firebase function calls and fenced JSON into directives for validation and execution. |
 | `CoCaptainAgentParser.swift` | Logic to parse raw LLM text into structured `CoCaptainAgentPayload` objects. |
 | `CoCaptainAgentValidator.swift` | Validates parsed agent payloads before any app action execution or review bundle generation. |
+| `CoCaptainAnalysisView.swift` | Lists structural parser warnings and recommendations from the analyzer. |
+| `NodeAgentChatView.swift` | Embedded node chat interface for running quick agent context requests. |
 
 ---
 
@@ -216,18 +241,42 @@ Persistent floating HUD elements — the project header bar, zoom indicator, and
 
 ---
 
+#### `SnapshotBrowser/`
+Browses and restores project checkpoints from saved snapshots directory.
+
+| File | Responsibility |
+|---|---|
+| `SnapshotBrowserView.swift` | Renders a timeline of available project snapshots with recovery and deletion controls. |
+
+---
+
 #### `ProjectExplorer/`
 Saved-project browsing and selection UI backed by `ProjectManager`.
+
+| File | Responsibility |
+|---|---|
+| `ProjectExplorerView.swift` | Saved projects list showing peeks, statistics, and renaming controls. |
 
 ---
 
 #### `Settings/`
 Profile, app settings, support, legal, account, and preference screens.
 
+| File | Responsibility |
+|---|---|
+| `SettingsView.swift` | Global app options, gated models configuration, and clear cache panels. |
+| `ProfileView.swift` | Firebase authentication state details, account deletion, and linking. |
+| `SettingsComponents.swift` | Visual sections and utility controls for configuration rows. |
+
 ---
 
 #### `Subscription/`
 The Pro monetization UI. Contains the glassmorphic purchase sheet, plan comparison, and StoreKit 2 purchase flow presentation.
+
+| File | Responsibility |
+|---|---|
+| `PurchaseView.swift` | Crown features, subscription cards, and purchase action buttons. |
+| `PurchaseComponents.swift` | Pricing grid layout and glassmorphic card wrappers. |
 
 ---
 

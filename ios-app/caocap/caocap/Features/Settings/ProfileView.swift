@@ -101,7 +101,8 @@ struct ProfileView: View {
                                 if authManager.isAnonymous {
                                     SettingsRow(icon: "person.badge.key.fill", title: "Link Account", subtitle: "Save your work permanently", color: .orange) {
                                         dismiss()
-                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                        Task {
+                                            try? await Task.sleep(for: .seconds(0.3))
                                             onSignIn?()
                                         }
                                     }
@@ -122,7 +123,8 @@ struct ProfileView: View {
                             SettingsSection("Monetization") {
                                 SettingsRow(icon: "crown.fill", title: "CAOCAP Pro", subtitle: "Manage your subscription", color: .yellow) {
                                     dismiss()
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                    Task {
+                                        try? await Task.sleep(for: .seconds(0.3))
                                         onPro?()
                                     }
                                 }
