@@ -15,6 +15,7 @@ extension NodeRole {
         case .aiAgent: return "brain.head.profile.fill"
         case .chart: return "chart.line.uptrend.xyaxis"
         case .firebase: return "flame.fill"
+        case .subCanvas: return "folder.fill"
         case .custom: return "square.grid.2x2.fill"
         }
     }
@@ -33,6 +34,7 @@ extension NodeRole {
         case .aiAgent: return .indigo
         case .chart: return .purple
         case .firebase: return .orange
+        case .subCanvas: return .cyan
         case .custom: return .purple
         }
     }

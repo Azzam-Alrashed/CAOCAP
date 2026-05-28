@@ -502,6 +502,10 @@ public class ProjectStore {
                 if nodes[index].textContent?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false {
                     nodes[index].textContent = FirebasePreviewBootstrap.placeholderConfigJSON()
                 }
+            case .subCanvas:
+                if nodes[index].linkedCanvasFileName == nil {
+                    nodes[index].linkedCanvasFileName = "project_\(UUID().uuidString.prefix(8)).json"
+                }
             }
             
             if persist {
