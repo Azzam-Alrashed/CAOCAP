@@ -226,6 +226,9 @@ public struct ProjectContextBuilder {
         case .firebase:
             let summary = FirebasePreviewBootstrap.canvasSummaryLine(for: node)
             return selected ? (node.textContent ?? summary) : summary
+        case .subCanvas:
+            let fileName = node.linkedCanvasFileName ?? "[None]"
+            return "Sub-Canvas node linking to file: \(fileName)"
         }
     }
 
