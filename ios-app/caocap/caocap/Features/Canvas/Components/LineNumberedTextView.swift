@@ -135,6 +135,20 @@ class CodeEditorContainer: UIView, UITextViewDelegate {
         gutterView.text = numbers
     }
     
+    // MARK: - Regex Cache
+    private struct RegexCache {
+        static let multiLineComment = try? NSRegularExpression(pattern: "/\\*[\\s\\S]*?\\*/")
+        static let singleLineComment = try? NSRegularExpression(pattern: "//.*")
+        static let htmlTag = try? NSRegularExpression(pattern: "</?[a-zA-Z0-9]+[^>]*>")
+        static let stringLiteral = try? NSRegularExpression(pattern: "(\"[^\"]*\")|('[^']*')")
+        static let keyword: NSRegularExpression? = {
+            let keywords = ["const", "let", "var", "function", "return", "if", "else", "for", "while", "class", "import", "export", "true", "false", "new", "document", "window", "=>"]
+            let keywordPattern = "\\b(\(keywords.joined(separator: "|")))\\b"
+            return try? NSRegularExpression(pattern: keywordPattern)
+        }()
+        static let cssProperty = try? NSRegularExpression(pattern: "\\b[a-zA-Z-]+:")
+    }
+    
     // MARK: - Syntax Highlighting
     private func highlightSyntax() {
         let textStorage = textView.textStorage
@@ -150,39 +164,37 @@ class CodeEditorContainer: UIView, UITextViewDelegate {
         ], range: fullRange)
         
         // Multi-line Comments: /* ... */
-        if let regex = try? NSRegularExpression(pattern: "/\\*[\\s\\S]*?\\*/") {
+        if let regex = RegexCache.multiLineComment {
             let matches = regex.matches(in: string, range: fullRange)
             for match in matches { textStorage.addAttribute(.foregroundColor, value: UIColor.systemGreen, range: match.range) }
         }
         
         // Single-line Comments: // ...
-        if let regex = try? NSRegularExpression(pattern: "//.*") {
+        if let regex = RegexCache.singleLineComment {
             let matches = regex.matches(in: string, range: fullRange)
             for match in matches { textStorage.addAttribute(.foregroundColor, value: UIColor.systemGreen, range: match.range) }
         }
         
         // HTML Tags: <...>
-        if let regex = try? NSRegularExpression(pattern: "</?[a-zA-Z0-9]+[^>]*>") {
+        if let regex = RegexCache.htmlTag {
             let matches = regex.matches(in: string, range: fullRange)
             for match in matches { textStorage.addAttribute(.foregroundColor, value: UIColor(red: 0.34, green: 0.61, blue: 0.84, alpha: 1.0), range: match.range) }
         }
         
         // Strings: "..." or '...'
-        if let regex = try? NSRegularExpression(pattern: "(\"[^\"]*\")|('[^']*')") {
+        if let regex = RegexCache.stringLiteral {
             let matches = regex.matches(in: string, range: fullRange)
             for match in matches { textStorage.addAttribute(.foregroundColor, value: UIColor(red: 0.81, green: 0.57, blue: 0.40, alpha: 1.0), range: match.range) }
         }
         
         // Keywords
-        let keywords = ["const", "let", "var", "function", "return", "if", "else", "for", "while", "class", "import", "export", "true", "false", "new", "document", "window", "=>"]
-        let keywordPattern = "\\b(\(keywords.joined(separator: "|")))\\b"
-        if let regex = try? NSRegularExpression(pattern: keywordPattern) {
+        if let regex = RegexCache.keyword {
             let matches = regex.matches(in: string, range: fullRange)
             for match in matches { textStorage.addAttribute(.foregroundColor, value: UIColor(red: 0.77, green: 0.52, blue: 0.75, alpha: 1.0), range: match.range) }
         }
         
         // CSS Properties (e.g. background-color:, margin:)
-        if let regex = try? NSRegularExpression(pattern: "\\b[a-zA-Z-]+:") {
+        if let regex = RegexCache.cssProperty {
             let matches = regex.matches(in: string, range: fullRange)
             for match in matches { textStorage.addAttribute(.foregroundColor, value: UIColor(red: 0.61, green: 0.86, blue: 0.99, alpha: 1.0), range: match.range) }
         }
