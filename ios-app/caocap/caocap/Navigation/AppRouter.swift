@@ -41,16 +41,8 @@ public class AppRouter {
     }
     
     private func reconcileHomeStore() {
-        self.homeStore.nodes = self.homeStore.nodes.filter { $0.action != nil }
-        let existingActions = Set(self.homeStore.nodes.compactMap { $0.action })
-        var nodesChanged = false
-        for defaultNode in HomeProvider.homeNodes {
-            if let action = defaultNode.action, !existingActions.contains(action) {
-                self.homeStore.nodes.append(defaultNode)
-                nodesChanged = true
-            }
-        }
-        if nodesChanged {
+        if !self.homeStore.nodes.isEmpty {
+            self.homeStore.nodes = []
             self.homeStore.save()
         }
     }
