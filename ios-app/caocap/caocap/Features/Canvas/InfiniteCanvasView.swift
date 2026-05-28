@@ -20,17 +20,13 @@ struct InfiniteCanvasView: View {
     /// presence also marks the canvas as non-persistent onboarding mode.
     var onNodeAction: ((NodeAction) -> Void)? = nil
     
-    /// Optional coordinator for guided onboarding steps.
-    var onboardingCoordinator: OnboardingCoordinator? = nil
-    
     /// Flag to determine if this is the Home workspace for specific layout logic.
     var isHome: Bool = false
     
-    init(store: ProjectStore, viewport: Binding<ViewportState>, currentScale: Binding<CGFloat>, onboardingCoordinator: OnboardingCoordinator? = nil, onNodeAction: ((NodeAction) -> Void)? = nil, isHome: Bool = false) {
+    init(store: ProjectStore, viewport: Binding<ViewportState>, currentScale: Binding<CGFloat>, onNodeAction: ((NodeAction) -> Void)? = nil, isHome: Bool = false) {
         self.store = store
         self._viewport = viewport
         self._currentScale = currentScale
-        self.onboardingCoordinator = onboardingCoordinator
         self.onNodeAction = onNodeAction
         self.isHome = isHome
     }
@@ -105,19 +101,12 @@ struct InfiniteCanvasView: View {
                                 } else {
                                     selectedNode = node
                                 }
-                                
-                                // ONBOARDING: Check for tapNode gate
-                                if let step = onboardingCoordinator?.currentStep, 
-                                   step.gate == .tapNode, 
-                                   step.spotlightNodeId == node.id {
-                                    onboardingCoordinator?.advance()
-                                }
                             }
                             .contextMenu(menuItems: {
                                 if !node.isProtected {
                                     Button(role: .destructive) {
                                         HapticsManager.shared.notification(.warning)
-                                        store.deleteNode(id: node.id, persist: !isOnboardingCanvas)
+                                        store.deleteNode(id: node.id, persist: true)
                                     } label: {
                                         Label("Delete Node", systemImage: "trash")
                                     }
@@ -149,7 +138,7 @@ struct InfiniteCanvasView: View {
                                             store.updateNodePosition(
                                                 id: node.id,
                                                 position: CGPoint(x: finalX, y: finalY),
-                                                persist: !isOnboardingCanvas
+                                                persist: true
                                             )
                                             
                                             nodeDragOffsets[node.id] = nil
@@ -176,11 +165,6 @@ struct InfiniteCanvasView: View {
                         guard !isDraggingNode else { return }
                         viewport.handleDragEnded()
                         persistViewportIfNeeded()
-                        
-                        // ONBOARDING: Check for pan gate
-                        if let step = onboardingCoordinator?.currentStep, step.gate == .pan {
-                            onboardingCoordinator?.advance()
-                        }
                     }
                 )
             )
@@ -213,36 +197,10 @@ struct InfiniteCanvasView: View {
                         viewport.handleMagnificationEnded()
                         currentScale = viewport.scale
                         persistViewportIfNeeded()
-                        
-                        // ONBOARDING: Check for zoom gate
-                        if let step = onboardingCoordinator?.currentStep, step.gate == .zoom {
-                            onboardingCoordinator?.advance()
-                        }
                     }
             )
             .onPreferenceChange(NodeFramePreferenceKey.self) { value in
                 nodeFrames = value
-            }
-            .environment(\.layoutDirection, .leftToRight)
-            .overlay {
-                // Layer 4: Onboarding Focus Ring
-                if let step = onboardingCoordinator?.currentStep {
-                    let spotlightPos: CGPoint = {
-                        if let nodeId = step.spotlightNodeId, 
-                           let node = store.nodes.first(where: { $0.id == nodeId }) {
-                            // Node position is in canvas space (offset from center).
-                            // Screen pos = center + viewportOffset + (nodePos * viewportScale)
-                            return CGPoint(
-                                x: center.x + viewport.offset.width + (node.position.x * viewport.scale),
-                                y: center.y + viewport.offset.height + (node.position.y * viewport.scale)
-                            )
-                        }
-                        return center // Fallback to screen center
-                    }()
-                    
-                    FocusRingOverlay(step: step, screenPosition: spotlightPos)
-                        .allowsHitTesting(false)
-                }
             }
         }
         .background(backgroundColor)
@@ -252,23 +210,6 @@ struct InfiniteCanvasView: View {
         }
         .onAppear {
             currentScale = viewport.scale
-            
-            // ONBOARDING: Handle .none gate (auto-advance)
-            checkAutoAdvance()
-        }
-        .onChange(of: onboardingCoordinator?.currentStepIndex) {
-            checkAutoAdvance()
-        }
-    }
-    
-    private func checkAutoAdvance() {
-        if let step = onboardingCoordinator?.currentStep, step.gate == .none {
-            Task {
-                try? await Task.sleep(for: .seconds(2))
-                if onboardingCoordinator?.currentStep?.id == step.id {
-                    onboardingCoordinator?.advance()
-                }
-            }
         }
     }
     
@@ -277,17 +218,11 @@ struct InfiniteCanvasView: View {
     }
 
     private func persistViewportIfNeeded() {
-        // Persist viewport only for real projects. Onboarding should remain a
-        // stable authored path on every run.
         store.updateViewport(
             offset: viewport.offset,
             scale: viewport.scale,
-            persist: !isOnboardingCanvas
+            persist: true
         )
-    }
-
-    private var isOnboardingCanvas: Bool {
-        onNodeAction != nil && store.fileName.contains("onboarding")
     }
 }
 

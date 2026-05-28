@@ -28,7 +28,6 @@ struct ContentView: View {
     @Environment(\.colorScheme) var colorScheme
     @State private var selectedTheme = "System"
     @State private var isLaunching = true
-    @State private var onboardingCoordinator = OnboardingCoordinator()
     @State private var appUpdateService = AppUpdateService.shared
     @State private var viewport = ViewportState()
     @State private var showingNodeCreationMenu = false
@@ -55,17 +54,6 @@ struct ContentView: View {
                     isHome: true
                 )
                 .id("home_canvas")
-            case .onboarding:
-                InfiniteCanvasView(
-                    store: router.onboardingStore,
-                    viewport: $viewport,
-                    currentScale: $currentScale,
-                    onboardingCoordinator: onboardingCoordinator,
-                    onNodeAction: { action in
-                        handleNodeAction(action)
-                    }
-                )
-                .id("onboarding_canvas")
             case .project(let fileName):
                 InfiniteCanvasView(
                     store: router.activeStore,
@@ -203,19 +191,15 @@ struct ContentView: View {
             configureActionDispatcher()
             setupCommandHandlers()
 
-            let isOnboarding = router.currentWorkspace == .onboarding
             viewport = ViewportState(
-                offset: isOnboarding ? .zero : router.activeStore.viewportOffset,
-                scale: isOnboarding ? 1.0 : router.activeStore.viewportScale
+                offset: router.activeStore.viewportOffset,
+                scale: router.activeStore.viewportScale
             )
             currentScale = viewport.scale
             router.activeStore.undoManager = undoManager
             router.homeStore.undoManager = undoManager
-            router.onboardingStore.undoManager = undoManager
 
             coCaptain.configureProjectSession(store: router.activeStore, dispatcher: actionDispatcher)
-
-            onboardingCoordinator.load(steps: OnboardingProvider.steps)
 
             // Dismiss launch screen after animation
             Task {
@@ -228,11 +212,6 @@ struct ContentView: View {
         .task {
             await appUpdateService.checkForUpdate()
         }
-        .onChange(of: onboardingCoordinator.isComplete) { _, isComplete in
-            if isComplete {
-                handleNodeAction(.navigateHome)
-            }
-        }
         .onChange(of: router.currentWorkspace) {
             router.activeStore.undoManager = undoManager
             coCaptain.configureProjectSession(store: router.activeStore, dispatcher: actionDispatcher)
@@ -240,10 +219,9 @@ struct ContentView: View {
             commandPalette.nodes = router.activeStore.nodes
             
             // Sync viewport with new store
-            let isOnboarding = router.currentWorkspace == .onboarding
             viewport = ViewportState(
-                offset: isOnboarding ? .zero : router.activeStore.viewportOffset,
-                scale: isOnboarding ? 1.0 : router.activeStore.viewportScale
+                offset: router.activeStore.viewportOffset,
+                scale: router.activeStore.viewportScale
             )
         }
         .onReceive(NotificationCenter.default.publisher(for: .NSUndoManagerDidUndoChange)) { _ in
@@ -297,9 +275,6 @@ struct ContentView: View {
         switch action {
         case .navigateHome:
             router.navigate(to: .home, animated: true)
-            currentScale = 1.0
-        case .retryOnboarding:
-            router.navigate(to: .onboarding, animated: true)
             currentScale = 1.0
         case .createNewProject:
             router.createNewProject()

@@ -3,7 +3,6 @@ import CoreGraphics
 
 public enum NodeAction: String, Codable, Equatable {
     case navigateHome
-    case retryOnboarding
     case createNewProject
     case openSettings
     case openProfile

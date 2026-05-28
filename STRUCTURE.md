@@ -59,7 +59,7 @@ The application shell and lifecycle management. The thinnest layer possible — 
 | File | Responsibility |
 |---|---|
 | `caocapApp.swift` | `@main` entry point. Initializes Firebase and injects `AppRouter` as an environment object. |
-| `ContentView.swift` | Root view. Observes `AppRouter` and switches between Onboarding, Home, and Project workspaces while presenting global sheets. |
+| `ContentView.swift` | Root view. Observes `AppRouter` and switches between Home and Project workspaces while presenting global sheets. |
 | `AppConfiguration.swift` | Static configuration for Firebase Function names and environment keys. |
 | `Info.plist` | System-level permissions and metadata. |
 
@@ -70,7 +70,7 @@ Centralized, type-safe routing. All workspace transitions flow through here — 
 
 | File | Responsibility |
 |---|---|
-| `AppRouter.swift` | `@Observable` class managing `WorkspaceState` (`.onboarding`, `.home`, `.project`). Owns all `ProjectStore` instances and project creation/resume routing. |
+| `AppRouter.swift` | `@Observable` class managing `WorkspaceState` (`.home`, `.project`). Owns all `ProjectStore` instances and project creation/resume routing. |
 
 ---
 
@@ -176,16 +176,7 @@ The spatial runtime — the heart of CAOCAP.
 | File | Responsibility |
 |---|---|
 | `HomeProvider.swift` | Generates the default node graph for the Home workspace. |
-| `OnboardingProvider.swift` | Loads the manifest-backed guided node sequence for first-run onboarding, with a hardcoded fallback. |
 | `ProjectTemplateProvider.swift` | Generates the default interconnected node graph for new projects. |
-
-**`Onboarding/`** — Canvas-specific guided walkthrough overlays:
-
-| File | Responsibility |
-|---|---|
-| `FocusRingOverlay.swift` | Focus visual overlay that guides user interaction during onboarding step changes. |
-| `OnboardingCoordinator.swift` | Manages the active state and routing of the onboarding tutorial steps. |
-| `OnboardingStep.swift` | Value object modeling a single guided onboarding step content and expected completion target. |
 
 ---
 
@@ -281,7 +272,7 @@ The Pro monetization UI. Contains the glassmorphic purchase sheet, plan comparis
 ---
 
 ### `Resources/`
-Asset catalogs, app icons, localization files, and bundled product manifests such as `tutorial.json`.
+Asset catalogs, app icons, and localization files.
 
 ### `Preview Content/`
 Assets used exclusively by Xcode Previews. Not included in production builds.

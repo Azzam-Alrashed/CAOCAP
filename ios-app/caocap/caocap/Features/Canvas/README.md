@@ -9,7 +9,7 @@ The Canvas feature is CAOCAP's spatial runtime. It renders the infinite workspac
 - `ViewportState` owns pan and zoom math. Keep gesture calculations here instead of spreading geometry math through views.
 - `NodeView` renders one node. It should stay presentational.
 - `NodeDetailView` routes a tapped node to the correct sheet-level editor.
-- Providers under `Providers/` create static node graphs for home and onboarding.
+- Providers under `Providers/` create static node graphs for home.
 
 ## Data Flow
 
@@ -31,15 +31,7 @@ Views should call store methods rather than mutating `store.nodes` directly.
 
 When changing gestures or connection rendering, test pan, zoom, drag, and arrow placement together.
 
-## Onboarding Mode
 
-`InfiniteCanvasView` treats onboarding specially when `onNodeAction` is present and the store filename contains `onboarding`:
-
-- viewport starts fresh instead of loading persisted viewport state;
-- node drag and viewport changes do not persist;
-- action nodes can drive navigation through the callback.
-
-`OnboardingProvider` loads the authored tutorial graph from `Resources/tutorial.json`, with a Swift fallback for bundle or decode failures. Preserve the non-persistent onboarding distinction unless replacing the guided flow end to end.
 
 ## Editing Guidance
 
@@ -56,7 +48,7 @@ When changing gestures or connection rendering, test pan, zoom, drag, and arrow 
 - Edit the Code node and confirm the Live Preview updates.
 - Open the WebView node full-screen and confirm the same compiled payload renders.
 - Check connection arrows while dragging nodes and at multiple zoom levels.
-- Run onboarding and confirm action nodes navigate without persisting onboarding canvas edits.
+- Verify action nodes on the Home screen navigate to correct destinations.
 
 ## Test Targets
 
@@ -65,4 +57,4 @@ Useful test coverage for this feature:
 - `ViewportState` pan and zoom math.
 - `ProjectStore` live preview compilation.
 - save/load of node positions, links, and viewport state.
-- provider output for required onboarding/home action nodes.
+- provider output for required home action nodes.
