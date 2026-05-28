@@ -390,7 +390,7 @@ struct CoCaptainAgentTests {
         #expect(resolver.resolve("please create a project", availableActions: actions) == .newProject)
         #expect(resolver.resolve("new project", availableActions: actions) == .newProject)
         #expect(resolver.resolve("open settings", availableActions: actions) == .openSettings)
-        #expect(resolver.resolve("make a home page", availableActions: actions) == nil)
+        #expect(resolver.resolve("make a root page", availableActions: actions) == nil)
         #expect(resolver.resolve("do not create a project", availableActions: actions) == nil)
     }
 
@@ -495,7 +495,7 @@ struct CoCaptainAgentTests {
             <cocaptain_actions>
               <assistant_message>I can make that update.</assistant_message>
               <safe_actions>
-                <action id="go_home" />
+                <action id="go_root" />
               </safe_actions>
               <pending_actions></pending_actions>
               <node_edits></node_edits>
@@ -507,7 +507,7 @@ struct CoCaptainAgentTests {
         #expect(parsed.preamble == "I can make that update.")
         #expect(parsed.visibleText == "I can make that update.")
         #expect(parsed.payload?.safeActions.count == 1)
-        #expect(parsed.payload?.safeActions.first?.actionID == "go_home")
+        #expect(parsed.payload?.safeActions.first?.actionID == "go_root")
     }
 
     @Test func parserDetectsLoosePayloadWithoutWhitespace() throws {
@@ -636,7 +636,7 @@ struct CoCaptainAgentTests {
 
             <cocaptain_actions>
               <assistant_message>Done.</assistant_message>
-              <safe_actions><action id="go_home"/></safe_actions>
+              <safe_actions><action id="go_root"/></safe_actions>
               <pending_actions></pending_actions>
               <node_edits></node_edits>
             </cocaptain_actions>
@@ -646,7 +646,7 @@ struct CoCaptainAgentTests {
 
         #expect(directive.preamble == "Done.")
         #expect(directive.visibleText == "Done.")
-        #expect(directive.payload?.safeActions.first?.actionID == "go_home")
+        #expect(directive.payload?.safeActions.first?.actionID == "go_root")
         #expect(directive.diagnostics.isEmpty)
         #expect(directive.source == .xml)
     }
@@ -657,11 +657,11 @@ struct CoCaptainAgentTests {
         let directive = adapter.directive(from: [
             CoCaptainAgentFunctionCall(
                 name: CoCaptainFunctionCallAgentAdapter.requestAppActionName,
-                arguments: ["actionId": "go_home", "executionMode": "safe"]
+                arguments: ["actionId": "go_root", "executionMode": "safe"]
             )
         ])
 
-        #expect(directive.payload?.safeActions.first?.actionID == "go_home")
+        #expect(directive.payload?.safeActions.first?.actionID == "go_root")
         #expect(directive.payload?.pendingActions.isEmpty == true)
         #expect(directive.diagnostics.isEmpty)
         #expect(directive.source == .functionCall)
@@ -692,7 +692,7 @@ struct CoCaptainAgentTests {
             )
         ])
         let unknownFunction = adapter.directive(from: [
-            CoCaptainAgentFunctionCall(name: "unknown_function", arguments: ["actionId": "go_home"])
+            CoCaptainAgentFunctionCall(name: "unknown_function", arguments: ["actionId": "go_root"])
         ])
 
         #expect(missingAction.payload == nil)
@@ -724,12 +724,12 @@ struct CoCaptainAgentTests {
             functionCalls: [
                 CoCaptainAgentFunctionCall(
                     name: CoCaptainFunctionCallAgentAdapter.requestAppActionName,
-                    arguments: ["actionId": "go_home", "executionMode": "safe"]
+                    arguments: ["actionId": "go_root", "executionMode": "safe"]
                 )
             ]
         )
 
-        #expect(directive.payload?.safeActions.first?.actionID == "go_home")
+        #expect(directive.payload?.safeActions.first?.actionID == "go_root")
         #expect(directive.payload?.nodeEdits.first?.role == .code)
         #expect(directive.source == .combined)
     }
@@ -820,11 +820,11 @@ struct CoCaptainAgentTests {
         let llm = TestLLMClient(
             response:
                 """
-                I moved us home and prepared a code update.
+                I moved us to root and prepared a code update.
 
                 <cocaptain_actions>
-                  <assistant_message>I moved us home and prepared a code update.</assistant_message>
-                  <safe_actions><action id="go_home"/></safe_actions>
+                  <assistant_message>I moved us to root and prepared a code update.</assistant_message>
+                  <safe_actions><action id="go_root"/></safe_actions>
                   <pending_actions><action id="create_node"/></pending_actions>
                   <node_edits>
                     <node_edit role="code" summary="Update the headline.">
@@ -846,8 +846,8 @@ struct CoCaptainAgentTests {
             dispatcher: dispatcher
         ) { _ in }
 
-        #expect(dispatcher.executedActionIDs == [.goHome])
-        #expect(result.executionSummary?.summary.contains("Go to Home") == true)
+        #expect(dispatcher.executedActionIDs == [.goRoot])
+        #expect(result.executionSummary?.summary.contains("Go to Root") == true)
         #expect(result.reviewBundle?.items.count == 2)
     }
 
@@ -1378,8 +1378,8 @@ private final class TestLLMClient: CoCaptainLLMClient {
 private final class TestActionDispatcher: AppActionPerforming {
     let availableActions: [AppActionDefinition] = [
         AppActionDefinition(
-            id: .goHome,
-            title: "Go to Home",
+            id: .goRoot,
+            title: "Go to Root",
             icon: "house.fill",
             category: .navigation,
             isMutating: false,

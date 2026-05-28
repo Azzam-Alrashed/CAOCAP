@@ -3,7 +3,7 @@ import Observation
 import SwiftUI
 
 public enum WorkspaceState: Equatable {
-    case home
+    case root
     case project(String) // filename
 }
 
@@ -16,13 +16,13 @@ public class AppRouter {
     public var projects: [String: ProjectStore] = [:]
     private var navigationStack: [WorkspaceState] = []
     
-    public let homeStore = ProjectStore(fileName: "home_v6.json", projectName: "Home", initialNodes: HomeProvider.homeNodes, initialViewportScale: 0.5)
+    public let rootStore = ProjectStore(fileName: "root_v6.json", projectName: "Root", initialNodes: RootProvider.rootNodes, initialViewportScale: 0.5)
     
     /// Returns the store for the current workspace, lazily creating project
     /// stores on cold boot when navigation restores a project filename.
     public var activeStore: ProjectStore {
         switch currentWorkspace {
-        case .home: return homeStore
+        case .root: return rootStore
         case .project(let fileName):
             if let store = projects[fileName] {
                 return store
@@ -36,14 +36,14 @@ public class AppRouter {
     }
     
     public init() {
-        self.currentWorkspace = .home
-        reconcileHomeStore()
+        self.currentWorkspace = .root
+        reconcileRootStore()
     }
     
-    private func reconcileHomeStore() {
-        if !self.homeStore.nodes.isEmpty {
-            self.homeStore.nodes = []
-            self.homeStore.save()
+    private func reconcileRootStore() {
+        if !self.rootStore.nodes.isEmpty {
+            self.rootStore.nodes = []
+            self.rootStore.save()
         }
     }
     
@@ -60,10 +60,10 @@ public class AppRouter {
             }
             self.currentWorkspace = workspace
             
-            // Clean Home Store: Remove any accidental content nodes (text, calc, etc) 
+            // Clean Root Store: Remove any accidental content nodes (text, calc, etc) 
             // that don't belong on the navigation dashboard, and add missing action nodes.
-            if workspace == .home {
-                self.reconcileHomeStore()
+            if workspace == .root {
+                self.reconcileRootStore()
             }
             
             // Track last project for the Resume shortcut
@@ -86,8 +86,8 @@ public class AppRouter {
         navigate(to: previous, addToStack: false, animated: true)
     }
     
-    public func goHome() {
-        navigate(to: .home, animated: true)
+    public func goRoot() {
+        navigate(to: .root, animated: true)
     }
     
     public func createNewProject() {

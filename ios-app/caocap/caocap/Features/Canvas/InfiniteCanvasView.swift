@@ -20,15 +20,15 @@ struct InfiniteCanvasView: View {
     /// presence also marks the canvas as non-persistent onboarding mode.
     var onNodeAction: ((NodeAction) -> Void)? = nil
     
-    /// Flag to determine if this is the Home workspace for specific layout logic.
-    var isHome: Bool = false
+    /// Flag to determine if this is the Root workspace for specific layout logic.
+    var isRoot: Bool = false
     
-    init(store: ProjectStore, viewport: Binding<ViewportState>, currentScale: Binding<CGFloat>, onNodeAction: ((NodeAction) -> Void)? = nil, isHome: Bool = false) {
+    init(store: ProjectStore, viewport: Binding<ViewportState>, currentScale: Binding<CGFloat>, onNodeAction: ((NodeAction) -> Void)? = nil, isRoot: Bool = false) {
         self.store = store
         self._viewport = viewport
         self._currentScale = currentScale
         self.onNodeAction = onNodeAction
-        self.isHome = isHome
+        self.isRoot = isRoot
     }
     
     // Drag offsets stay local until the drag ends so links and nodes can track

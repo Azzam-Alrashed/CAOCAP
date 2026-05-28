@@ -677,11 +677,11 @@ public class ProjectStore {
     }
 
     /// Automatically organizes all nodes into a context-aware layout.
-    public func organizeNodes(isHome: Bool = false) {
+    public func organizeNodes(isRoot: Bool = false) {
         guard !nodes.isEmpty else { return }
         
         let organizer = NodeLayoutOrganizer()
-        let nodePositions = organizer.organize(nodes: nodes, isHome: isHome)
+        let nodePositions = organizer.organize(nodes: nodes, isRoot: isRoot)
         
         // Apply changes with undo/redo using the helper
         updateNodePositions(nodePositions, animated: true)

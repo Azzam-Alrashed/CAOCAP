@@ -44,17 +44,17 @@ struct ContentView: View {
         GeometryReader { geometry in
             ZStack {
             switch router.currentWorkspace {
-            case .home:
+            case .root:
                 InfiniteCanvasView(
-                    store: router.homeStore,
+                    store: router.rootStore,
                     viewport: $viewport,
                     currentScale: $currentScale,
                     onNodeAction: { action in
                         handleNodeAction(action)
                     },
-                    isHome: true
+                    isRoot: true
                 )
-                .id("home_canvas")
+                .id("root_canvas")
             case .project(let fileName):
                 InfiniteCanvasView(
                     store: router.activeStore,
@@ -71,7 +71,7 @@ struct ContentView: View {
                 CanvasHUDView(
                     store: router.activeStore,
                     viewportScale: currentScale,
-                    isHome: router.currentWorkspace == .home,
+                    isRoot: router.currentWorkspace == .root,
                     onSignInTapped: { showingSignIn = true }
                 )
             }
@@ -200,7 +200,7 @@ struct ContentView: View {
             )
             currentScale = viewport.scale
             router.activeStore.undoManager = undoManager
-            router.homeStore.undoManager = undoManager
+            router.rootStore.undoManager = undoManager
 
             coCaptain.configureProjectSession(store: router.activeStore, dispatcher: actionDispatcher)
 
@@ -276,8 +276,8 @@ struct ContentView: View {
 
     private func handleNodeAction(_ action: NodeAction) {
         switch action {
-        case .navigateHome:
-            router.navigate(to: .home, animated: true)
+        case .navigateRoot:
+            router.navigate(to: .root, animated: true)
             currentScale = 1.0
         case .createNewProject:
             router.createNewProject()
@@ -298,8 +298,8 @@ struct ContentView: View {
 
     private func configureActionDispatcher() {
         actionDispatcher.configure(
-            goHome: {
-                router.goHome()
+            goRoot: {
+                router.goRoot()
                 currentScale = 1.0
             },
             goBack: {
@@ -309,7 +309,7 @@ struct ContentView: View {
                 router.createNewProject()
             },
             createNode: {
-                guard router.currentWorkspace != .home else { return }
+                guard router.currentWorkspace != .root else { return }
                 showingNodeCreationMenu = true
             },
             onCreateTextNode: {
@@ -418,7 +418,7 @@ struct ContentView: View {
                 router.activeStore.updateNodeType(id: uuid, type: type)
             },
             organizeNodes: {
-                router.activeStore.organizeNodes(isHome: router.currentWorkspace == .home)
+                router.activeStore.organizeNodes(isRoot: router.currentWorkspace == .root)
                 withAnimation(.spring(response: 0.8, dampingFraction: 0.85)) {
                     viewport.fitTo(nodes: router.activeStore.nodes, containerSize: containerSize)
                 }
@@ -514,19 +514,19 @@ struct ContentView: View {
             isProject = false
         }
         
-        let isHome = router.currentWorkspace == .home
+        let isRoot = router.currentWorkspace == .root
         
-        // Filter out redundant navigation and node creation actions when on the Home screen.
-        // shareProject is not allowed on Home. snapshotBrowser and organizeNodes are allowed on Home.
-        let forbiddenOnHome: Set<AppActionID> = [
-            .goHome, .goBack, .createNode, .createTextNode, .createCalculationNode,
+        // Filter out redundant navigation and node creation actions when on the Root screen.
+        // shareProject is not allowed on Root. snapshotBrowser and organizeNodes are allowed on Root.
+        let forbiddenOnRoot: Set<AppActionID> = [
+            .goRoot, .goBack, .createNode, .createTextNode, .createCalculationNode,
             .createDisplayNode, .createAiAgentNode, .createNumberNode, .createTableNode,
             .createChartNode, .createFirebaseNode, .shareProject
         ]
         
         commandPalette.actions = actionDispatcher.availableActions.filter { action in
-            if isHome {
-                return !forbiddenOnHome.contains(action.id)
+            if isRoot {
+                return !forbiddenOnRoot.contains(action.id)
             }
             if action.id == .shareProject {
                 return isProject
