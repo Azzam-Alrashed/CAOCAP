@@ -677,11 +677,11 @@ public class ProjectStore {
     }
 
     /// Automatically organizes all nodes into a context-aware layout.
-    public func organizeNodes(isRoot: Bool = false) {
+    public func organizeNodes() {
         guard !nodes.isEmpty else { return }
         
         let organizer = NodeLayoutOrganizer()
-        let nodePositions = organizer.organize(nodes: nodes, isRoot: isRoot)
+        let nodePositions = organizer.organize(nodes: nodes)
         
         // Apply changes with undo/redo using the helper
         updateNodePositions(nodePositions, animated: true)
@@ -702,10 +702,15 @@ public class ProjectStore {
         case .firebase:
             subtitle = "Project settings → Your apps → Web app config"
             initialText = FirebasePreviewBootstrap.placeholderConfigJSON()
+        case .subCanvas:
+            subtitle = "Tap to open this canvas"
+            initialText = nil
         default:
             subtitle = nil
             initialText = nil
         }
+
+        let linkedFileName: String? = type == .subCanvas ? "project_\(UUID().uuidString.prefix(8)).json" : nil
 
         let newNode = SpatialNode(
             id: UUID(),
@@ -716,7 +721,8 @@ public class ProjectStore {
             icon: nodeIcon(for: type),
             theme: nodeTheme(for: type),
             textContent: initialText,
-            chartStyle: type == .chart ? .bar : nil
+            chartStyle: type == .chart ? .bar : nil,
+            linkedCanvasFileName: linkedFileName
         )
         
         // Register Undo
@@ -749,6 +755,7 @@ public class ProjectStore {
         case .aiAgent: return "brain.head.profile.fill"
         case .chart: return "chart.line.uptrend.xyaxis"
         case .firebase: return "flame.fill"
+        case .subCanvas: return "folder.fill"
         }
     }
 
@@ -762,6 +769,7 @@ public class ProjectStore {
         case .aiAgent: return .indigo
         case .chart: return .purple
         case .firebase: return .orange
+        case .subCanvas: return .cyan
         default: return .blue
         }
     }

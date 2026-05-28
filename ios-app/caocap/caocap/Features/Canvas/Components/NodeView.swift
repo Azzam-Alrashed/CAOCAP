@@ -305,6 +305,23 @@ private struct NodePreviewContent: View {
                         onUpdateY: onUpdateChartY
                     )
                     
+                case .subCanvas:
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label("SUB-CANVAS", systemImage: "folder.fill")
+                            .font(.system(size: 10, weight: .black))
+                            .opacity(0.4)
+                        
+                        HStack(spacing: 8) {
+                            Image(systemName: "arrow.right.circle.fill")
+                                .font(.system(size: 16))
+                                .foregroundColor(themeColor)
+                            Text("Tap to open")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .padding(.top, 12)
+
                 default:
                     EmptyView()
                 }
