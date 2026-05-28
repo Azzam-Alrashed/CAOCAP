@@ -35,6 +35,7 @@ public enum AppActionID: String, CaseIterable, Identifiable, Codable, Hashable {
     case organizeNodes = "organize_nodes"
     case openSnapshotBrowser = "open_snapshot_browser"
     case toggleHUD = "toggle_hud"
+    case showActionsList = "show_actions_list"
 
     public var id: String { rawValue }
 }
@@ -330,6 +331,14 @@ public final class AppActionDispatcher: AppActionPerforming {
             category: .navigation,
             isMutating: false,
             allowsAutonomousExecution: true
+        ),
+        AppActionDefinition(
+            id: .showActionsList,
+            title: "Show Actions List",
+            icon: "list.bullet.rectangle.portrait",
+            category: .navigation,
+            isMutating: false,
+            allowsAutonomousExecution: true
         )
     ]
 
@@ -361,6 +370,7 @@ public final class AppActionDispatcher: AppActionPerforming {
     private var organizeNodesHandler: (() -> Void)?
     private var openSnapshotBrowserHandler: (() -> Void)?
     private var toggleHUDHandler: (() -> Void)?
+    private var showActionsListHandler: (() -> Void)?
 
     public init() {}
 
@@ -394,7 +404,8 @@ public final class AppActionDispatcher: AppActionPerforming {
         themeNode: (([String: String]) -> Void)? = nil,
         transformNode: (([String: String]) -> Void)? = nil,
         organizeNodes: (() -> Void)? = nil,
-        toggleHUD: (() -> Void)? = nil
+        toggleHUD: (() -> Void)? = nil,
+        showActionsList: (() -> Void)? = nil
     ) {
         self.goRootHandler = goRoot
         self.goBackHandler = goBack
@@ -424,6 +435,7 @@ public final class AppActionDispatcher: AppActionPerforming {
         self.transformNodeHandler = transformNode
         self.organizeNodesHandler = organizeNodes
         self.toggleHUDHandler = toggleHUD
+        self.showActionsListHandler = showActionsList
     }
 
     public func definition(for id: AppActionID) -> AppActionDefinition? {
@@ -524,6 +536,8 @@ public final class AppActionDispatcher: AppActionPerforming {
             handler = openSnapshotBrowserHandler
         case .toggleHUD:
             handler = toggleHUDHandler
+        case .showActionsList:
+            handler = showActionsListHandler
         }
 
         guard let handler else {

@@ -425,6 +425,9 @@ struct ContentView: View {
             },
             toggleHUD: {
                 showingHUD.toggle()
+            },
+            showActionsList: {
+                commandPalette.setPresented(true, mode: .actionsList)
             }
         )
     }

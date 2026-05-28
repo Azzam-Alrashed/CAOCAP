@@ -6,6 +6,11 @@ import OSLog
 /// values so action execution remains centralized in `AppActionDispatcher`.
 @Observable
 public class CommandPaletteViewModel {
+    public enum CommandPaletteMode {
+        case search
+        case actionsList
+    }
+    
     private let logger = Logger(subsystem: "CAOCAP", category: "CommandPalette")
     
     public var query: String = "" {
@@ -19,6 +24,7 @@ public class CommandPaletteViewModel {
     public var selectedIndex: Int = 0
     public var actions: [AppActionDefinition] = []
     public var nodes: [SpatialNode] = []
+    public var mode: CommandPaletteMode = .search
     
     /// Filters against localized and canonical titles so command search works
     /// in the UI language while still matching stable English action names.
@@ -55,7 +61,8 @@ public class CommandPaletteViewModel {
     
     /// Closes back to a clean state so each palette open starts from the full
     /// command list.
-    public func setPresented(_ presented: Bool) {
+    public func setPresented(_ presented: Bool, mode: CommandPaletteMode = .search) {
+        self.mode = mode
         isPresented = presented
         if !presented {
             query = ""
