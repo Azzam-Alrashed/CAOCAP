@@ -46,13 +46,17 @@ public struct LaunchScreenView: View {
                 .ignoresSafeArea()
             
             // Subtle spatial sketch background
-            Image("SpaceSketchBG")
-                .resizable()
-                .scaledToFill()
-                .opacity(colorScheme == .dark ? 0.3 : 0.15)
-                .blendMode(colorScheme == .dark ? .screen : .multiply)
-                .scaleEffect(continuousScale * 1.1) // Moves slightly faster than the text for parallax
-                .ignoresSafeArea()
+            GeometryReader { geometry in
+                Image("SpaceSketchBG")
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                    .clipped()
+            }
+            .ignoresSafeArea()
+            .opacity(colorScheme == .dark ? 0.3 : 0.15)
+            .blendMode(colorScheme == .dark ? .screen : .multiply)
+            .scaleEffect(continuousScale * 1.1) // Moves slightly faster than the text for parallax
             
             // Subtle center glow
             RadialGradient(
