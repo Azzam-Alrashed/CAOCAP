@@ -52,7 +52,9 @@ struct ContentView: View {
                     onNodeAction: { action in
                         handleNodeAction(action)
                     },
-                    isRoot: true
+                    onNavigateToSubCanvas: { fileName in
+                        router.navigateToSubCanvas(fileName: fileName)
+                    }
                 )
                 .id("root_canvas")
             case .project(let fileName):
@@ -62,6 +64,9 @@ struct ContentView: View {
                     currentScale: $currentScale,
                     onNodeAction: { action in
                         handleNodeAction(action)
+                    },
+                    onNavigateToSubCanvas: { fileName in
+                        router.navigateToSubCanvas(fileName: fileName)
                     }
                 )
                 .id("project_canvas_\(fileName)")
@@ -71,7 +76,6 @@ struct ContentView: View {
                 CanvasHUDView(
                     store: router.activeStore,
                     viewportScale: currentScale,
-                    isRoot: router.currentWorkspace == .root,
                     onSignInTapped: { showingSignIn = true }
                 )
             }
@@ -309,7 +313,6 @@ struct ContentView: View {
                 router.createNewProject()
             },
             createNode: {
-                guard router.currentWorkspace != .root else { return }
                 showingNodeCreationMenu = true
             },
             onCreateTextNode: {
@@ -418,7 +421,7 @@ struct ContentView: View {
                 router.activeStore.updateNodeType(id: uuid, type: type)
             },
             organizeNodes: {
-                router.activeStore.organizeNodes(isRoot: router.currentWorkspace == .root)
+                router.activeStore.organizeNodes()
                 withAnimation(.spring(response: 0.8, dampingFraction: 0.85)) {
                     viewport.fitTo(nodes: router.activeStore.nodes, containerSize: containerSize)
                 }
@@ -428,6 +431,9 @@ struct ContentView: View {
             },
             showActionsList: {
                 commandPalette.setPresented(true, mode: .actionsList)
+            },
+            createSubCanvas: {
+                router.activeStore.addNode(type: .subCanvas)
             }
         )
     }
@@ -519,21 +525,11 @@ struct ContentView: View {
         
         let isRoot = router.currentWorkspace == .root
         
-        // Filter out redundant navigation and node creation actions when on the Root screen.
-        // shareProject is not allowed on Root. snapshotBrowser and organizeNodes are allowed on Root.
-        let forbiddenOnRoot: Set<AppActionID> = [
-            .goRoot, .goBack, .createNode, .createTextNode, .createCalculationNode,
-            .createDisplayNode, .createAiAgentNode, .createNumberNode, .createTableNode,
-            .createChartNode, .createFirebaseNode, .shareProject
-        ]
-        
         commandPalette.actions = actionDispatcher.availableActions.filter { action in
-            if isRoot {
-                return !forbiddenOnRoot.contains(action.id)
-            }
-            if action.id == .shareProject {
-                return isProject
-            }
+            // Don't show "Go to Root" when already on root
+            if isRoot && action.id == .goRoot { return false }
+            // Don't show "Go Back" when already on root (nothing to go back to)
+            if isRoot && action.id == .goBack { return false }
             return true
         }
     }

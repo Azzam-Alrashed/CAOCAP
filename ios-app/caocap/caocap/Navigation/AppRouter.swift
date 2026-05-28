@@ -16,7 +16,7 @@ public class AppRouter {
     public var projects: [String: ProjectStore] = [:]
     private var navigationStack: [WorkspaceState] = []
     
-    public let rootStore = ProjectStore(fileName: "root_v6.json", projectName: "Root", initialNodes: RootProvider.rootNodes, initialViewportScale: 0.5)
+    public let rootStore = ProjectStore(fileName: "root_v6.json", projectName: "Root", initialViewportScale: 0.5)
     
     /// Returns the store for the current workspace, lazily creating project
     /// stores on cold boot when navigation restores a project filename.
@@ -37,14 +37,6 @@ public class AppRouter {
     
     public init() {
         self.currentWorkspace = .root
-        reconcileRootStore()
-    }
-    
-    private func reconcileRootStore() {
-        if !self.rootStore.nodes.isEmpty {
-            self.rootStore.nodes = []
-            self.rootStore.save()
-        }
     }
     
     /// Moves between workspaces and records onboarding completion when the user
@@ -59,12 +51,6 @@ public class AppRouter {
                 }
             }
             self.currentWorkspace = workspace
-            
-            // Clean Root Store: Remove any accidental content nodes (text, calc, etc) 
-            // that don't belong on the navigation dashboard, and add missing action nodes.
-            if workspace == .root {
-                self.reconcileRootStore()
-            }
             
             // Track last project for the Resume shortcut
             if case .project(let fileName) = workspace {
@@ -104,5 +90,9 @@ public class AppRouter {
         if let lastFileName = UserDefaults.standard.string(forKey: "lastProjectFileName") {
             navigate(to: .project(lastFileName), animated: true)
         }
+    }
+    
+    public func navigateToSubCanvas(fileName: String) {
+        navigate(to: .project(fileName), animated: true)
     }
 }

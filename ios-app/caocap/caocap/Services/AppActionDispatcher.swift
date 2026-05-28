@@ -36,6 +36,7 @@ public enum AppActionID: String, CaseIterable, Identifiable, Codable, Hashable {
     case openSnapshotBrowser = "open_snapshot_browser"
     case toggleHUD = "toggle_hud"
     case showActionsList = "show_actions_list"
+    case createSubCanvas = "create_sub_canvas"
 
     public var id: String { rawValue }
 }
@@ -339,6 +340,14 @@ public final class AppActionDispatcher: AppActionPerforming {
             category: .navigation,
             isMutating: false,
             allowsAutonomousExecution: true
+        ),
+        AppActionDefinition(
+            id: .createSubCanvas,
+            title: "New Sub-Canvas",
+            icon: "folder.fill.badge.plus",
+            category: .project,
+            isMutating: true,
+            allowsAutonomousExecution: false
         )
     ]
 
@@ -371,6 +380,7 @@ public final class AppActionDispatcher: AppActionPerforming {
     private var openSnapshotBrowserHandler: (() -> Void)?
     private var toggleHUDHandler: (() -> Void)?
     private var showActionsListHandler: (() -> Void)?
+    private var createSubCanvasHandler: (() -> Void)?
 
     public init() {}
 
@@ -405,7 +415,8 @@ public final class AppActionDispatcher: AppActionPerforming {
         transformNode: (([String: String]) -> Void)? = nil,
         organizeNodes: (() -> Void)? = nil,
         toggleHUD: (() -> Void)? = nil,
-        showActionsList: (() -> Void)? = nil
+        showActionsList: (() -> Void)? = nil,
+        createSubCanvas: (() -> Void)? = nil
     ) {
         self.goRootHandler = goRoot
         self.goBackHandler = goBack
@@ -436,6 +447,7 @@ public final class AppActionDispatcher: AppActionPerforming {
         self.organizeNodesHandler = organizeNodes
         self.toggleHUDHandler = toggleHUD
         self.showActionsListHandler = showActionsList
+        self.createSubCanvasHandler = createSubCanvas
     }
 
     public func definition(for id: AppActionID) -> AppActionDefinition? {
@@ -538,6 +550,8 @@ public final class AppActionDispatcher: AppActionPerforming {
             handler = toggleHUDHandler
         case .showActionsList:
             handler = showActionsListHandler
+        case .createSubCanvas:
+            handler = createSubCanvasHandler
         }
 
         guard let handler else {

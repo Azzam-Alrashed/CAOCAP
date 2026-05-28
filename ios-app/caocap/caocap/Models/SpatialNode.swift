@@ -26,6 +26,7 @@ public enum NodeType: String, Codable, Equatable, Hashable, CaseIterable {
     case aiAgent
     case chart
     case firebase
+    case subCanvas
     
     public var displayName: String {
         switch self {
@@ -42,6 +43,7 @@ public enum NodeType: String, Codable, Equatable, Hashable, CaseIterable {
         case .aiAgent: return "AI Agent"
         case .chart: return "Chart"
         case .firebase: return "Firebase"
+        case .subCanvas: return "Sub-Canvas"
         }
     }
 }
@@ -195,7 +197,10 @@ public struct SpatialNode: Identifiable, Codable, Equatable {
     /// Optional default Firestore path for preview JS (`window.__caocapFirestoreDefaultPath`).
     public var firebaseFirestorePath: String?
     
-    public init(id: UUID = UUID(), type: NodeType = .standard, position: CGPoint, title: String, subtitle: String? = nil, icon: String? = nil, theme: NodeTheme = .blue, nextNodeId: UUID? = nil, connectedNodeIds: [UUID]? = nil, action: NodeAction? = nil, htmlContent: String? = nil, textContent: String? = nil, srsReadinessState: SRSReadinessState? = nil, drawingData: Data? = nil, agentState: NodeAgentState = NodeAgentState(), agentProfile: AgentProfile = AgentProfile(), operation: ArithmeticOperation? = nil, displayStyle: DisplayStyle? = nil, outputValue: Double? = nil, aiResponse: String? = nil, promptTemplate: String? = nil, chartStyle: ChartStyle? = nil, chartXColumnIndex: Int? = nil, chartYColumnIndex: Int? = nil, chartHasHeaderRow: Bool? = nil, inputNodeIds: [UUID]? = nil, firebaseFirestorePath: String? = nil) {
+    /// The filename of the linked canvas for `.subCanvas` nodes.
+    public var linkedCanvasFileName: String?
+    
+    public init(id: UUID = UUID(), type: NodeType = .standard, position: CGPoint, title: String, subtitle: String? = nil, icon: String? = nil, theme: NodeTheme = .blue, nextNodeId: UUID? = nil, connectedNodeIds: [UUID]? = nil, action: NodeAction? = nil, htmlContent: String? = nil, textContent: String? = nil, srsReadinessState: SRSReadinessState? = nil, drawingData: Data? = nil, agentState: NodeAgentState = NodeAgentState(), agentProfile: AgentProfile = AgentProfile(), operation: ArithmeticOperation? = nil, displayStyle: DisplayStyle? = nil, outputValue: Double? = nil, aiResponse: String? = nil, promptTemplate: String? = nil, chartStyle: ChartStyle? = nil, chartXColumnIndex: Int? = nil, chartYColumnIndex: Int? = nil, chartHasHeaderRow: Bool? = nil, inputNodeIds: [UUID]? = nil, firebaseFirestorePath: String? = nil, linkedCanvasFileName: String? = nil) {
         self.id = id
         self.type = type
         self.position = position
@@ -223,6 +228,7 @@ public struct SpatialNode: Identifiable, Codable, Equatable {
         self.chartHasHeaderRow = chartHasHeaderRow
         self.inputNodeIds = inputNodeIds
         self.firebaseFirestorePath = firebaseFirestorePath
+        self.linkedCanvasFileName = linkedCanvasFileName
     }
 
     public var displayTitle: String {
@@ -261,6 +267,7 @@ public struct SpatialNode: Identifiable, Codable, Equatable {
         case chartHasHeaderRow
         case inputNodeIds
         case firebaseFirestorePath
+        case linkedCanvasFileName
     }
 
     public init(from decoder: Decoder) throws {
@@ -292,5 +299,6 @@ public struct SpatialNode: Identifiable, Codable, Equatable {
         self.chartHasHeaderRow = try container.decodeIfPresent(Bool.self, forKey: .chartHasHeaderRow)
         self.inputNodeIds = try container.decodeIfPresent([UUID].self, forKey: .inputNodeIds)
         self.firebaseFirestorePath = try container.decodeIfPresent(String.self, forKey: .firebaseFirestorePath)
+        self.linkedCanvasFileName = try container.decodeIfPresent(String.self, forKey: .linkedCanvasFileName)
     }
 }

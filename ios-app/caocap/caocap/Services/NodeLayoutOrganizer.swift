@@ -10,35 +10,14 @@ public struct NodeLayoutOrganizer: Sendable {
     public init() {}
     
     /// Computes the visual layout for the given nodes.
-    /// - Parameters:
-    ///   - nodes: The current list of nodes on the canvas.
-    ///   - isRoot: Whether the layout is being calculated for the Root Screen workspace.
+    /// - Parameter nodes: The current list of nodes on the canvas.
     /// - Returns: A dictionary mapping node IDs to their calculated target positions.
-    public func organize(nodes: [SpatialNode], isRoot: Bool) -> [UUID: CGPoint] {
+    public func organize(nodes: [SpatialNode]) -> [UUID: CGPoint] {
         guard !nodes.isEmpty else { return [:] }
         
         var nodePositions = [UUID: CGPoint]()
         
-        if isRoot {
-            // Reset main nodes on the Root Screen to their default places
-            let defaultRootPositions: [NodeAction: CGPoint] = [
-                .createNewProject: CGPoint(x: 0, y: 0),
-                .openProfile: CGPoint(x: -250, y: -150),
-                .openProjectExplorer: CGPoint(x: 250, y: -150),
-                .openSettings: CGPoint(x: -250, y: 150),
-                .resumeLastProject: CGPoint(x: 0, y: 300),
-                .proSubscription: CGPoint(x: 0, y: -300)
-            ]
-            
-            for node in nodes {
-                if let action = node.action, let defaultPos = defaultRootPositions[action] {
-                    nodePositions[node.id] = defaultPos
-                } else {
-                    nodePositions[node.id] = node.position
-                }
-            }
-        } else {
-            // HIERARCHICAL DAG & GROUPED LAYOUT (Project)
+            // HIERARCHICAL DAG & GROUPED LAYOUT
             // 1. Group nodes by connectivity (Clusters) discovering all incoming/outgoing link types
             // Discovered in the order they appear in the nodes list to ensure deterministic output
             var clusters: [[UUID]] = []
@@ -197,7 +176,6 @@ public struct NodeLayoutOrganizer: Sendable {
                 
                 columnHeights[col] += cSize.height + clusterGap
             }
-        }
         
         return nodePositions
     }

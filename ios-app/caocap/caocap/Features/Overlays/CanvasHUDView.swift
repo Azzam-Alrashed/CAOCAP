@@ -3,7 +3,6 @@ import SwiftUI
 struct CanvasHUDView: View {
     let store: ProjectStore
     let viewportScale: CGFloat
-    var isRoot: Bool = false
     var onSignInTapped: (() -> Void)? = nil
 
     @Environment(AuthenticationManager.self) private var authManager
