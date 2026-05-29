@@ -1,6 +1,66 @@
 import Foundation
+import CoreGraphics
+
+public enum ProjectTemplate: String, CaseIterable, Identifiable, Codable {
+    case helloWorld = "hello_world"
+    case reactiveCalculator = "reactive_calculator"
+    case businessAnalytics = "business_analytics"
+    case aiPoet = "ai_poet"
+    
+    public var id: String { rawValue }
+    
+    public var displayName: String {
+        switch self {
+        case .helloWorld: return "Hello World"
+        case .reactiveCalculator: return "Reactive Calculator"
+        case .businessAnalytics: return "Business Analytics"
+        case .aiPoet: return "AI Creative Agent"
+        }
+    }
+    
+    public var description: String {
+        switch self {
+        case .helloWorld: return "A simple HTML WebView preview with click interactions and PM/Engineer agents."
+        case .reactiveCalculator: return "Number nodes flowing reactive inputs into calculation and gauge display nodes."
+        case .businessAnalytics: return "A CSV data table node feeding values directly into a custom chart node."
+        case .aiPoet: return "Text prompt input feeding into a generative AI Agent node for structured responses."
+        }
+    }
+    
+    public var icon: String {
+        switch self {
+        case .helloWorld: return "play.circle.fill"
+        case .reactiveCalculator: return "plus.forwardslash.minus"
+        case .businessAnalytics: return "chart.bar.fill"
+        case .aiPoet: return "brain.head.profile.fill"
+        }
+    }
+    
+    public var theme: NodeTheme {
+        switch self {
+        case .helloWorld: return .blue
+        case .reactiveCalculator: return .orange
+        case .businessAnalytics: return .purple
+        case .aiPoet: return .indigo
+        }
+    }
+}
 
 public struct ProjectTemplateProvider {
+
+    /// Returns the nodes configuration for the given template.
+    public static func nodes(for template: ProjectTemplate) -> [SpatialNode] {
+        switch template {
+        case .helloWorld:
+            return defaultNodes
+        case .reactiveCalculator:
+            return calculatorNodes
+        case .businessAnalytics:
+            return analyticsNodes
+        case .aiPoet:
+            return aiPoetNodes
+        }
+    }
 
     /// Returns a new set of interconnected nodes for the default project template.
     public static var defaultNodes: [SpatialNode] {
@@ -50,6 +110,133 @@ public struct ProjectTemplateProvider {
                     roleName: "Engineer Agent",
                     isAutoTriggerEnabled: false
                 )
+            )
+        ]
+    }
+
+    public static var calculatorNodes: [SpatialNode] {
+        let revId = UUID()
+        let costId = UUID()
+        let calcId = UUID()
+        let dispId = UUID()
+        
+        return [
+            SpatialNode(
+                id: revId,
+                type: .number,
+                position: CGPoint(x: -300, y: -100),
+                title: "Revenue",
+                subtitle: "Reactive input value",
+                theme: .blue,
+                nextNodeId: calcId,
+                textContent: "1200"
+            ),
+            SpatialNode(
+                id: costId,
+                type: .number,
+                position: CGPoint(x: -300, y: 100),
+                title: "Costs",
+                subtitle: "Reactive input value",
+                theme: .blue,
+                nextNodeId: calcId,
+                textContent: "800"
+            ),
+            SpatialNode(
+                id: calcId,
+                type: .calculation,
+                position: CGPoint(x: 0, y: 0),
+                title: "Net Profit",
+                subtitle: "Subtracts inputs in real-time",
+                theme: .orange,
+                nextNodeId: dispId,
+                inputNodeIds: [revId, costId],
+                operation: .subtract,
+                outputValue: 400.0
+            ),
+            SpatialNode(
+                id: dispId,
+                type: .display,
+                position: CGPoint(x: 300, y: 0),
+                title: "Profit Gauge",
+                subtitle: "Shows output visually",
+                theme: .green,
+                displayStyle: .gauge,
+                outputValue: 400.0,
+                inputNodeIds: [calcId]
+            )
+        ]
+    }
+    
+    public static var analyticsNodes: [SpatialNode] {
+        let tableId = UUID()
+        let chartId = UUID()
+        
+        let csvContent = """
+        Month,Sales,Expenses
+        January,1200,800
+        February,1500,950
+        March,1800,1100
+        April,2200,1300
+        May,2500,1450
+        June,3000,1800
+        """
+        
+        return [
+            SpatialNode(
+                id: tableId,
+                type: .table,
+                position: CGPoint(x: -200, y: 0),
+                title: "Monthly Sales",
+                subtitle: "Monthly CSV ledger",
+                theme: .cyan,
+                nextNodeId: chartId,
+                textContent: csvContent
+            ),
+            SpatialNode(
+                id: chartId,
+                type: .chart,
+                position: CGPoint(x: 200, y: 0),
+                title: "Sales Performance",
+                subtitle: "Visual analytics trend",
+                theme: .purple,
+                chartStyle: .bar,
+                chartXColumnIndex: 0,
+                chartYColumnIndex: 1,
+                chartHasHeaderRow: true,
+                inputNodeIds: [tableId]
+            )
+        ]
+    }
+    
+    public static var aiPoetNodes: [SpatialNode] {
+        let inputId = UUID()
+        let agentId = UUID()
+        
+        return [
+            SpatialNode(
+                id: inputId,
+                type: .text,
+                position: CGPoint(x: -220, y: 0),
+                title: "Topic Input",
+                subtitle: "Poem subject matter",
+                theme: .blue,
+                nextNodeId: agentId,
+                textContent: "Space travel and the loneliness of Mars"
+            ),
+            SpatialNode(
+                id: agentId,
+                type: .aiAgent,
+                position: CGPoint(x: 180, y: 0),
+                title: "Poem Generator",
+                subtitle: "Generative AI writing task",
+                theme: .indigo,
+                agentProfile: AgentProfile(
+                    systemPrompt: "You are a creative poet. Write a beautiful 4-line poem based on the topic input.",
+                    roleName: "Creative Poet",
+                    isAutoTriggerEnabled: false
+                ),
+                promptTemplate: "Write a short, beautiful 4-line poem about the topic: {{Topic Input}}",
+                inputNodeIds: [inputId]
             )
         ]
     }
