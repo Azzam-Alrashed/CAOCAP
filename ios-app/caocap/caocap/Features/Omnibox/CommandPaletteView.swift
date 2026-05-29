@@ -1,4 +1,5 @@
 import SwiftUI
+import Popovers
 
 /// Spotlight-style command surface. Rendering stays here while filtering,
 /// selection, and execution callbacks live in `CommandPaletteViewModel`.
@@ -6,6 +7,10 @@ struct CommandPaletteView: View {
     @Bindable var viewModel: CommandPaletteViewModel
     @FocusState private var isFocused: Bool
     @Environment(\.colorScheme) var colorScheme
+    
+    @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
+    @State private var onboardingGlowScale: CGFloat = 1.0
+    @State private var onboardingGlowOpacity: CGFloat = 0.8
     
     struct ActionCategorySection {
         let category: AppActionCategory
@@ -77,6 +82,69 @@ struct CommandPaletteView: View {
                                 }
                         }
                         .padding(16)
+                        .overlay {
+                            if let onboarding, onboarding.currentStep == .searchBarCoCaptain && onboarding.showPopover {
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .stroke(
+                                        LinearGradient(
+                                            colors: [Color(hex: "6C5CE7"), Color(hex: "0984E3")],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        ),
+                                        lineWidth: 2
+                                    )
+                                    .scaleEffect(onboardingGlowScale)
+                                    .opacity(onboardingGlowOpacity)
+                                    .onAppear {
+                                        withAnimation(
+                                            .easeInOut(duration: 1.5)
+                                                .repeatForever(autoreverses: false)
+                                        ) {
+                                            onboardingGlowScale = 1.05
+                                            onboardingGlowOpacity = 0.0
+                                        }
+                                    }
+                            }
+                        }
+                        .popover(
+                            present: Binding(
+                                get: {
+                                    guard let onboarding else { return false }
+                                    return onboarding.currentStep == .searchBarCoCaptain && onboarding.showPopover
+                                },
+                                set: { newValue in
+                                    onboarding?.showPopover = newValue
+                                }
+                            ),
+                            attributes: { attributes in
+                                attributes.position = .absolute(
+                                    originAnchor: .bottom,
+                                    popoverAnchor: .top
+                                )
+                                attributes.dismissal.mode = .none
+                                attributes.rubberBandingMode = .none
+                                attributes.blocksBackgroundTouches = false
+                                attributes.presentation.animation = .spring(response: 0.4, dampingFraction: 0.8)
+                                attributes.presentation.transition = .asymmetric(
+                                    insertion: .scale(scale: 0.85).combined(with: .opacity),
+                                    removal: .scale(scale: 0.9).combined(with: .opacity)
+                                )
+                                attributes.dismissal.animation = .spring(response: 0.3, dampingFraction: 0.8)
+                                attributes.dismissal.transition = .asymmetric(
+                                    insertion: .scale(scale: 0.85).combined(with: .opacity),
+                                    removal: .scale(scale: 0.9).combined(with: .opacity)
+                                )
+                                attributes.sourceFrameInset = UIEdgeInsets(top: 8, left: 0, bottom: 0, right: 0)
+                            }
+                        ) {
+                            if let step = onboarding?.currentStep {
+                                OnboardingPopoverCard(step: step, arrowPlacement: .top) {
+                                    onboarding?.skip()
+                                }
+                            } else {
+                                EmptyView()
+                            }
+                        }
                         
                         Divider()
                             .background(Color.white.opacity(0.1))
@@ -379,6 +447,69 @@ struct CommandPaletteView: View {
                                 )
                         )
                         .shadow(color: .black.opacity(0.3), radius: 15, y: 5)
+                        .overlay {
+                            if let onboarding, onboarding.currentStep == .searchBarCoCaptain && onboarding.showPopover {
+                                Capsule()
+                                    .stroke(
+                                        LinearGradient(
+                                            colors: [Color(hex: "6C5CE7"), Color(hex: "0984E3")],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        ),
+                                        lineWidth: 2
+                                    )
+                                    .scaleEffect(onboardingGlowScale)
+                                    .opacity(onboardingGlowOpacity)
+                                    .onAppear {
+                                        withAnimation(
+                                            .easeInOut(duration: 1.5)
+                                                .repeatForever(autoreverses: false)
+                                        ) {
+                                            onboardingGlowScale = 1.05
+                                            onboardingGlowOpacity = 0.0
+                                        }
+                                    }
+                            }
+                        }
+                        .popover(
+                            present: Binding(
+                                get: {
+                                    guard let onboarding else { return false }
+                                    return onboarding.currentStep == .searchBarCoCaptain && onboarding.showPopover
+                                },
+                                set: { newValue in
+                                    onboarding?.showPopover = newValue
+                                }
+                            ),
+                            attributes: { attributes in
+                                attributes.position = .absolute(
+                                    originAnchor: .top,
+                                    popoverAnchor: .bottom
+                                )
+                                attributes.dismissal.mode = .none
+                                attributes.rubberBandingMode = .none
+                                attributes.blocksBackgroundTouches = false
+                                attributes.presentation.animation = .spring(response: 0.4, dampingFraction: 0.8)
+                                attributes.presentation.transition = .asymmetric(
+                                    insertion: .scale(scale: 0.85).combined(with: .opacity),
+                                    removal: .scale(scale: 0.9).combined(with: .opacity)
+                                )
+                                attributes.dismissal.animation = .spring(response: 0.3, dampingFraction: 0.8)
+                                attributes.dismissal.transition = .asymmetric(
+                                    insertion: .scale(scale: 0.85).combined(with: .opacity),
+                                    removal: .scale(scale: 0.9).combined(with: .opacity)
+                                )
+                                attributes.sourceFrameInset = UIEdgeInsets(top: -8, left: 0, bottom: 0, right: 0)
+                            }
+                        ) {
+                            if let step = onboarding?.currentStep {
+                                OnboardingPopoverCard(step: step, arrowPlacement: .bottom) {
+                                    onboarding?.skip()
+                                }
+                            } else {
+                                EmptyView()
+                            }
+                        }
                     }
                     .frame(width: min(500, UIScreen.main.bounds.width - 32))
                     .padding(.horizontal, 16)

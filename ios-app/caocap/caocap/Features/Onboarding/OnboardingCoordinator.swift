@@ -10,10 +10,11 @@ public class OnboardingCoordinator {
     // MARK: - Step Definition
 
     public enum Step: Int, CaseIterable, Comparable {
-        case tapFAB = 0        // "Tap to open the command palette"
-        case longPressFAB      // "Hold to reveal quick actions"
-        case dragToCoCaptain   // "Drag to the sparkles to summon CoCaptain"
-        case chatCoCaptain     // "Say hi to your AI co-pilot"
+        case tapFAB = 0
+        case searchBarCoCaptain
+        case chatCoCaptain
+        case dismissCoCaptain
+        case longPressFAB
 
         public static func < (lhs: Step, rhs: Step) -> Bool {
             lhs.rawValue < rhs.rawValue
@@ -21,10 +22,11 @@ public class OnboardingCoordinator {
 
         var title: String {
             switch self {
-            case .tapFAB:          return "Your Command Center"
-            case .longPressFAB:    return "Quick Actions"
-            case .dragToCoCaptain: return "Summon CoCaptain"
-            case .chatCoCaptain:   return "Say Hello"
+            case .tapFAB:             return "Your Command Center"
+            case .searchBarCoCaptain: return "Ask CoCaptain"
+            case .chatCoCaptain:      return "Meet Your Co-pilot"
+            case .dismissCoCaptain:   return "Back to Canvas"
+            case .longPressFAB:       return "Quick Shortcuts"
             }
         }
 
@@ -32,21 +34,24 @@ public class OnboardingCoordinator {
             switch self {
             case .tapFAB:
                 return "Tap this button to open the command palette — your gateway to every action in CAOCAP."
-            case .longPressFAB:
-                return "Press and hold to reveal quick actions like undo, redo, and your AI co-pilot."
-            case .dragToCoCaptain:
-                return "While holding, drag to the sparkles ✦ to summon CoCaptain — your AI coding partner."
+            case .searchBarCoCaptain:
+                return "Type a message like 'hi' here and press return to send it to your AI pilot."
             case .chatCoCaptain:
-                return "Type a message to CoCaptain. Ask anything — from \"build me a login page\" to \"explain this code.\""
+                return "CoCaptain is here! Type a message here to build, refine, or explain code."
+            case .dismissCoCaptain:
+                return "Tap 'Done' or drag the panel down to close CoCaptain and return to the canvas."
+            case .longPressFAB:
+                return "Press and hold this button to reveal quick actions, or drag to the sparkles ✦ to quickly summon CoCaptain."
             }
         }
 
         var icon: String {
             switch self {
-            case .tapFAB:          return "hand.tap"
-            case .longPressFAB:    return "hand.tap.fill"
-            case .dragToCoCaptain: return "sparkles"
-            case .chatCoCaptain:   return "bubble.left.and.text.bubble.right"
+            case .tapFAB:             return "hand.tap"
+            case .searchBarCoCaptain: return "keyboard"
+            case .chatCoCaptain:      return "bubble.left.and.text.bubble.right"
+            case .dismissCoCaptain:   return "arrow.down"
+            case .longPressFAB:       return "hand.tap.fill"
             }
         }
 
