@@ -56,7 +56,8 @@ public struct NodePatchEngine {
         if let nodeID {
             guard let node = store.nodes.first(where: { $0.id == nodeID }),
                   node.type != .webView,
-                  node.type != .art else {
+                  node.type != .art,
+                  node.type != .console else {
                 return nil
             }
             return node
