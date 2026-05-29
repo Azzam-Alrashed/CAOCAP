@@ -13,7 +13,7 @@ struct SettingsView: View {
     @AppStorage("cocaptain.modelName") private var modelName = "gemini-3-flash-preview"
     @AppStorage("cocaptain.hfToken") private var hfToken = ""
 
-    @State private var llmService = LLMService.shared
+    @State private var localModelManager = LocalMLXModelManager.shared
 
     let languages = LocalizationManager.supportedLanguages
     let themes = ["System", "Light", "Dark"]
@@ -34,8 +34,8 @@ struct SettingsView: View {
                 if newValue == "Gemma 4 (Local)" {
                     modelName = "gemma-4-local"
                     let hasToken = !hfToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                    if llmService.isLocalModelCached || hasToken {
-                        llmService.preloadLocalModelIfNeeded()
+                    if localModelManager.isLocalModelCached || hasToken {
+                        localModelManager.preloadLocalModelIfNeeded()
                     }
                 } else {
                     modelName = "gemini-3-flash-preview"
@@ -92,7 +92,7 @@ struct SettingsView: View {
                                             .autocorrectionDisabled()
                                             .textInputAutocapitalization(.never)
                                             .onChange(of: hfToken) { _, newValue in
-                                                llmService.updateHFToken(newValue)
+                                                localModelManager.updateHFToken(newValue)
                                             }
                                     }
                                     .padding(.horizontal, 16)
@@ -120,14 +120,14 @@ struct SettingsView: View {
                                         Label("Local Cache Size", systemImage: "internaldrive")
                                             .font(.system(size: 16, weight: .medium))
                                         Spacer()
-                                        Text(llmService.localModelCacheSizeFormatted)
+                                        Text(localModelManager.localModelCacheSizeFormatted)
                                             .font(.system(size: 14, design: .monospaced))
                                             .foregroundStyle(.secondary)
                                     }
                                     .padding(.horizontal, 16)
                                     .padding(.vertical, 14)
                                     
-                                    if llmService.isDownloadingLocalModel {
+                                    if localModelManager.isDownloadingLocalModel {
                                         Divider().padding(.leading, 56).opacity(0.3)
                                         
                                         VStack(alignment: .leading, spacing: 8) {
@@ -136,17 +136,17 @@ struct SettingsView: View {
                                                     .font(.system(size: 14, weight: .medium))
                                                     .foregroundStyle(.secondary)
                                                 Spacer()
-                                                Text("\(Int(llmService.localModelDownloadProgress * 100))%")
+                                                Text("\(Int(localModelManager.localModelDownloadProgress * 100))%")
                                                     .font(.system(size: 14, design: .monospaced))
                                                     .foregroundStyle(.secondary)
                                             }
-                                            ProgressView(value: llmService.localModelDownloadProgress)
+                                            ProgressView(value: localModelManager.localModelDownloadProgress)
                                                 .tint(.orange)
                                         }
                                         .padding(.horizontal, 16)
                                         .padding(.vertical, 14)
                                     } else {
-                                        if let error = llmService.localModelError {
+                                        if let error = localModelManager.localModelError {
                                             Divider().padding(.leading, 56).opacity(0.3)
                                             VStack(alignment: .leading, spacing: 6) {
                                                 Label("Download Error", systemImage: "exclamationmark.triangle.fill")
@@ -162,7 +162,7 @@ struct SettingsView: View {
                                         
                                         Divider().padding(.leading, 56).opacity(0.3)
                                         
-                                        if llmService.isLocalModelCached {
+                                        if localModelManager.isLocalModelCached {
                                             HStack {
                                                 Label("Local Model Ready", systemImage: "checkmark.circle.fill")
                                                     .font(.system(size: 16, weight: .semibold))
@@ -175,7 +175,7 @@ struct SettingsView: View {
                                             Divider().padding(.leading, 56).opacity(0.3)
                                             
                                             Button(role: .destructive) {
-                                                llmService.clearLocalModelCache()
+                                                localModelManager.clearLocalModelCache()
                                             } label: {
                                                 Label("Delete Local Model", systemImage: "trash.fill")
                                                     .font(.system(size: 16, weight: .medium))
@@ -186,10 +186,10 @@ struct SettingsView: View {
                                         } else {
                                             VStack(alignment: .leading, spacing: 8) {
                                                 Button {
-                                                    llmService.downloadLocalModel()
+                                                    localModelManager.downloadLocalModel()
                                                 } label: {
-                                                    Label(llmService.localModelError != nil ? "Retry Download" : "Download Local Model", 
-                                                          systemImage: llmService.localModelError != nil ? "arrow.clockwise" : "arrow.down.circle")
+                                                    Label(localModelManager.localModelError != nil ? "Retry Download" : "Download Local Model", 
+                                                          systemImage: localModelManager.localModelError != nil ? "arrow.clockwise" : "arrow.down.circle")
                                                         .font(.system(size: 16, weight: .semibold))
                                                         .foregroundStyle(hfToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.secondary : Color.orange)
                                                 }

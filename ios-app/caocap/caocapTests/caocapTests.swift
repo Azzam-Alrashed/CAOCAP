@@ -116,4 +116,31 @@ struct caocapTests {
         #expect(readme.contains("## Software Requirements"))
         #expect(readme.contains("# Intent"))
     }
+
+    @MainActor
+    @Test func llmServiceLocalStreamingDelegatesToLocalMLXModelManager() async throws {
+        let originalModelName = UserDefaults.standard.string(forKey: "cocaptain.modelName")
+        UserDefaults.standard.set("gemma-4-local", forKey: "cocaptain.modelName")
+        
+        let llmService = LLMService.shared
+        
+        let events = llmService.streamAgentEvents(for: "test", context: nil, expectsStructuredResponse: false, availableActions: [])
+        
+        var threwExpectedError = false
+        do {
+            for try await _ in events {
+                // Expect an error because of missing/invalid local token/cache
+            }
+        } catch {
+            let errorDescription = error.localizedDescription
+            if errorDescription.contains("Access Token") || errorDescription.contains("LocalMLXModelManager") || errorDescription.contains("token") {
+                threwExpectedError = true
+            }
+        }
+        
+        #expect(threwExpectedError)
+        
+        // Restore original
+        UserDefaults.standard.set(originalModelName, forKey: "cocaptain.modelName")
+    }
 }
