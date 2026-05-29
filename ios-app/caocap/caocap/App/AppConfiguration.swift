@@ -30,7 +30,7 @@ final class AppConfiguration {
         configureGoogleSignIn()
         // Preload local Gemma 4 model if selected as preferred
         Task { @MainActor in
-            LLMService.shared.preloadLocalModelIfNeeded()
+            LocalMLXModelManager.shared.preloadLocalModelIfNeeded()
         }
         // `start()` is @MainActor-isolated. Firebase is configured synchronously above;
         // the auth listener starts on the next main actor run loop loop tick.
