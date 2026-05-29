@@ -10,6 +10,7 @@ struct CommandPaletteView: View {
     
     @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
     @State private var isBreathing: Bool = false
+    @State private var showRowPopoverDelay: Bool = false
     
     private var isShowPopoverActive: Bool {
         guard let onboarding else { return false }
@@ -220,7 +221,7 @@ struct CommandPaletteView: View {
                                         .id("cocaptain-prompt")
                                         .popover(
                                             present: Binding(
-                                                get: { isCoCaptainRowOnboardingActive },
+                                                get: { showRowPopoverDelay },
                                                 set: { newValue in onboarding?.showPopover = newValue }
                                             ),
                                             attributes: { attributes in
@@ -377,7 +378,7 @@ struct CommandPaletteView: View {
                                                 .id("cocaptain-prompt")
                                                 .popover(
                                                     present: Binding(
-                                                        get: { isCoCaptainRowOnboardingActive },
+                                                        get: { showRowPopoverDelay },
                                                         set: { newValue in onboarding?.showPopover = newValue }
                                                     ),
                                                     attributes: { attributes in
@@ -589,6 +590,14 @@ struct CommandPaletteView: View {
                     isBreathing = true
                 }
             }
+            if isCoCaptainRowOnboardingActive {
+                Task {
+                    try? await Task.sleep(for: .milliseconds(150))
+                    if isCoCaptainRowOnboardingActive {
+                        showRowPopoverDelay = true
+                    }
+                }
+            }
         }
         .onChange(of: isShowPopoverActive) { _, newValue in
             if newValue {
@@ -602,6 +611,18 @@ struct CommandPaletteView: View {
                 withAnimation(.easeInOut(duration: 0.3)) {
                     isBreathing = false
                 }
+            }
+        }
+        .onChange(of: isCoCaptainRowOnboardingActive) { _, newValue in
+            if newValue {
+                Task {
+                    try? await Task.sleep(for: .milliseconds(150))
+                    if isCoCaptainRowOnboardingActive {
+                        showRowPopoverDelay = true
+                    }
+                }
+            } else {
+                showRowPopoverDelay = false
             }
         }
     }
