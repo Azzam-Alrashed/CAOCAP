@@ -62,8 +62,39 @@ public class ProjectStore {
         self.persistence = persistence
         self.saveController = ProjectSaveController(persistence: persistence)
         self.checkpointManager = CheckpointManager(persistence: persistence)
+        wireMutationEngineCallbacks()
         load(initialNodes: initialNodes, initialViewportScale: initialViewportScale)
     }
+
+    /// Wires the NodeMutationEngine's side-effect callbacks back into ProjectStore.
+    /// Must be called once after all stored properties are initialized.
+    private func wireMutationEngineCallbacks() {
+        mutationEngine.onRequestSave = { [weak self] showIndicator in
+            self?.requestSave(showIndicator: showIndicator)
+        }
+        mutationEngine.onCompileLivePreview = { [weak self] nodes in
+            guard let self else { return }
+            _ = self.livePreviewOrchestrator.compile(nodes: &self.nodes)
+        }
+        mutationEngine.onRecalculateGraph = { [weak self] _ in
+            guard let self else { return }
+            _ = self.reactiveGraphEngine.recalculate(nodes: &self.nodes)
+        }
+        mutationEngine.onTriggerDownstreamAgents = { [weak self] id in
+            self?.triggerDownstreamAgents(from: id)
+        }
+        mutationEngine.onViewportChange = { [weak self] in
+            self?.viewportOffset ?? .zero
+        }
+        // This is the critical callback: allows undo closures in NodeMutationEngine
+        // to mutate ProjectStore.nodes and trigger saves.
+        mutationEngine.onPerformUndoMutation = { [weak self] mutation in
+            guard let self else { return }
+            mutation(&self.nodes)
+            self.undoStackChanged += 1
+        }
+    }
+
     
     /// Loads the project data from disk. If no file is found, initializes with default nodes.
     public func load(initialNodes: [SpatialNode]? = nil, initialViewportScale: CGFloat = 1.0) {
@@ -77,7 +108,7 @@ public class ProjectStore {
             
             // Only perform an initial save for permanent project files.
             if !self.fileName.contains("onboarding") {
-                save()
+                requestSave(showIndicator: false)
             }
             return
         }
@@ -89,7 +120,7 @@ public class ProjectStore {
             
             // If we migrated, schedule a save to modernize the file
             if result.didMigrate {
-                save()
+                requestSave(showIndicator: false)
             }
         } catch ProjectPersistenceError.unsupportedFutureVersion(let version, let current) {
             logger.error("Project version \(version) is newer than app version \(current). Aborting load to prevent data loss.")
@@ -184,7 +215,9 @@ public class ProjectStore {
     }
     
     /// A reference to the system UndoManager, injected by the view layer.
-    public var undoManager: UndoManager? = nil
+    public var undoManager: UndoManager? = nil {
+        didSet { mutationEngine.undoManager = undoManager }
+    }
     
     /// Incremented whenever the undo stack changes to force UI updates.
     public var undoStackChanged: Int = 0
