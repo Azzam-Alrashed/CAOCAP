@@ -18,11 +18,11 @@ struct CommandPaletteView: View {
     }
     
     private var isSearchBarOnboardingActive: Bool {
-        isShowPopoverActive && viewModel.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        isShowPopoverActive && !viewModel.canSubmitPrompt
     }
     
     private var isCoCaptainRowOnboardingActive: Bool {
-        isShowPopoverActive && !viewModel.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        isShowPopoverActive && viewModel.canSubmitPrompt
     }
     
     struct ActionCategorySection {

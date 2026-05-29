@@ -122,6 +122,17 @@ public class OnboardingCoordinator {
         }
     }
 
+    /// Move directly to a specific step (e.g. when resetting back to Step 1).
+    public func moveToStep(_ step: Step) {
+        showPopover = false
+        currentStep = step
+        UserDefaults.standard.set(step.rawValue, forKey: Self.stepKey)
+        Task {
+            try? await Task.sleep(for: .seconds(interStepDelay))
+            showPopover = true
+        }
+    }
+
     /// Skip the entire onboarding.
     public func skip() {
         showPopover = false
