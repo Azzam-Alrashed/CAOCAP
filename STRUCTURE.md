@@ -97,22 +97,28 @@ Infrastructure and heavy-lifting. These are long-lived objects that outlive indi
 | `LivePreviewCompiler.swift` | Pure compiler that renders the Code node into a WebView payload, with legacy HTML/CSS/JavaScript merging support for older projects. |
 | `ProjectManager.swift` | Actor listing and managing saved local project files asynchronously. |
 | `AuthenticationManager.swift` | Wraps Firebase Auth. Handles anonymous login, account linking, and social provider flows. |
-| `LLMService.swift` | Interface for the Firebase AI Logic SDK. Manages streaming sessions with the Gemini backend. |
 | `NodeLayoutOrganizer.swift` | Decoupled node positioning and spatial layout organizer. |
-| `TokenUsageLimiter.swift` | Local estimated-token quota tracker for free CoCaptain and AI node usage; Pro entitlements bypass the free monthly cap. |
 | `AppActionDispatcher.swift` | Centralized action registry. Allows the app and the AI agent to trigger high-level navigation and project mutations. |
-| `CommandIntentResolver.swift` | Maps plain-language command palette and CoCaptain prompts to available app actions. |
 | `HapticsManager.swift` | Central haptic feedback helper that honors app haptics settings. |
 | `LocalizationManager.swift` | Runtime language selection, localized strings, localized project/node labels, and date formatting. |
 | `AppUpdateService.swift` | Firebase Remote Config minimum-version gate for required App Store update prompts. |
-| `ProjectContextBuilder.swift` | Logic to "harvest" the spatial graph and serialize it into a grounded prompt context for the LLM. |
-| `NodePatchEngine.swift` | A precision editing engine that applies partial patches (replace/insert/append) to SRS and Code nodes, while still supporting legacy HTML/CSS/JS roles. |
 | `SRSReadinessEvaluator.swift` | Evaluates SRS text completeness and acceptance-check readiness. |
 | `ExportService.swift` | Generates shareable exports asynchronously on a background thread. |
 | `SubscriptionManager.swift` | StoreKit 2 integration. Manages Pro subscription state, purchase flow, and transaction verification. |
 | `FirebasePreviewBootstrap.swift` | Handles preview HTML injection and bootstrap configurations for Firebase nodes. |
 | `NodeSearchIndex.swift` | Text indexing and ranking provider for workspace search (used by Command Palette). |
 | `ProjectAnalyzer.swift` | Inspects spatial nodes and links to make contextual recommendations. |
+
+#### `Services/CoCaptain/`
+Decoupled backend engines and API clients specific to the CoCaptain agentic flow.
+
+| File | Responsibility |
+|---|---|
+| `LLMService.swift` | Interface for the Firebase AI Logic SDK. Manages streaming sessions with the Gemini backend. Also coordinates local on-device MLX model download and inference. |
+| `TokenUsageLimiter.swift` | Local estimated-token quota tracker for free CoCaptain and AI node usage; Pro entitlements bypass the free monthly cap. |
+| `CommandIntentResolver.swift` | Maps plain-language command palette and CoCaptain prompts to available app actions. |
+| `ProjectContextBuilder.swift` | Logic to "harvest" the spatial graph and serialize it into a grounded prompt context for the LLM. |
+| `NodePatchEngine.swift` | A precision editing engine that applies partial patches (replace/insert/append) to SRS and Code nodes. |
 
 `ProjectStore` and `ProjectPersistenceService` also maintain checkpoint metadata and saved project snapshots. The infrastructure is used to protect work before significant AI or mutation flows; a full user-facing snapshot browser remains roadmap work.
 
