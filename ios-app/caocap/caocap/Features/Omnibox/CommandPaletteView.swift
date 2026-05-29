@@ -11,6 +11,7 @@ struct CommandPaletteView: View {
     @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
     @State private var isBreathing: Bool = false
     @State private var showRowPopoverDelay: Bool = false
+    @State private var isCoCaptainRowVisible: Bool = false
     
     private var isShowPopoverActive: Bool {
         guard let onboarding else { return false }
@@ -18,11 +19,11 @@ struct CommandPaletteView: View {
     }
     
     private var isSearchBarOnboardingActive: Bool {
-        isShowPopoverActive && !viewModel.canSubmitPrompt
+        isShowPopoverActive && !isCoCaptainRowVisible
     }
     
     private var isCoCaptainRowOnboardingActive: Bool {
-        isShowPopoverActive && viewModel.canSubmitPrompt
+        isShowPopoverActive && isCoCaptainRowVisible
     }
     
     struct ActionCategorySection {
@@ -110,7 +111,13 @@ struct CommandPaletteView: View {
                             present: Binding(
                                 get: { isSearchBarOnboardingActive },
                                 set: { newValue in
-                                    onboarding?.showPopover = newValue
+                                    if !newValue {
+                                        if !isCoCaptainRowVisible && onboarding?.currentStep == .searchBarCoCaptain {
+                                            onboarding?.showPopover = false
+                                        }
+                                    } else {
+                                        onboarding?.showPopover = true
+                                    }
                                 }
                             ),
                             attributes: { attributes in
@@ -214,7 +221,8 @@ struct CommandPaletteView: View {
                                             prompt: viewModel.query,
                                             isSelected: offset == viewModel.selectedIndex,
                                             isGlowActive: isCoCaptainRowOnboardingActive,
-                                            isBreathing: isBreathing
+                                            isBreathing: isBreathing,
+                                            isVisible: $isCoCaptainRowVisible
                                         ) {
                                             viewModel.submitPromptIfNeeded()
                                         }
@@ -222,7 +230,15 @@ struct CommandPaletteView: View {
                                         .popover(
                                             present: Binding(
                                                 get: { showRowPopoverDelay },
-                                                set: { newValue in onboarding?.showPopover = newValue }
+                                                set: { newValue in
+                                                    if !newValue {
+                                                        if isCoCaptainRowVisible && onboarding?.currentStep == .searchBarCoCaptain {
+                                                            onboarding?.showPopover = false
+                                                        }
+                                                    } else {
+                                                        onboarding?.showPopover = true
+                                                    }
+                                                }
                                             ),
                                             attributes: { attributes in
                                                 attributes.position = .absolute(
@@ -371,45 +387,12 @@ struct CommandPaletteView: View {
                                                     prompt: viewModel.query,
                                                     isSelected: offset == viewModel.selectedIndex,
                                                     isGlowActive: isCoCaptainRowOnboardingActive,
-                                                    isBreathing: isBreathing
+                                                    isBreathing: isBreathing,
+                                                    isVisible: $isCoCaptainRowVisible
                                                 ) {
                                                     viewModel.submitPromptIfNeeded()
                                                 }
                                                 .id("cocaptain-prompt")
-                                                .popover(
-                                                    present: Binding(
-                                                        get: { showRowPopoverDelay },
-                                                        set: { newValue in onboarding?.showPopover = newValue }
-                                                    ),
-                                                    attributes: { attributes in
-                                                        attributes.position = .absolute(
-                                                            originAnchor: .top,
-                                                            popoverAnchor: .bottom
-                                                        )
-                                                        attributes.dismissal.mode = .none
-                                                        attributes.rubberBandingMode = .none
-                                                        attributes.blocksBackgroundTouches = false
-                                                        attributes.presentation.animation = .spring(response: 0.4, dampingFraction: 0.8)
-                                                        attributes.presentation.transition = .asymmetric(
-                                                            insertion: .scale(scale: 0.85).combined(with: .opacity),
-                                                            removal: .scale(scale: 0.9).combined(with: .opacity)
-                                                        )
-                                                        attributes.dismissal.animation = .spring(response: 0.3, dampingFraction: 0.8)
-                                                        attributes.dismissal.transition = .asymmetric(
-                                                            insertion: .scale(scale: 0.85).combined(with: .opacity),
-                                                            removal: .scale(scale: 0.9).combined(with: .opacity)
-                                                        )
-                                                        attributes.sourceFrameInset = UIEdgeInsets(top: -8, left: 0, bottom: 0, right: 0)
-                                                    }
-                                                ) {
-                                                    if let step = onboarding?.currentStep {
-                                                        OnboardingPopoverCard(step: step, isSubStep2_1: true, arrowPlacement: .bottom) {
-                                                            onboarding?.skip()
-                                                        }
-                                                    } else {
-                                                        EmptyView()
-                                                    }
-                                                }
                                             }
                                         }
                                         .padding(.vertical, 8)
@@ -452,6 +435,48 @@ struct CommandPaletteView: View {
                                     )
                             )
                             .shadow(color: .black.opacity(0.3), radius: 15, y: 5)
+                            .popover(
+                                present: Binding(
+                                    get: { showRowPopoverDelay },
+                                    set: { newValue in
+                                        if !newValue {
+                                            if isCoCaptainRowVisible && onboarding?.currentStep == .searchBarCoCaptain {
+                                                onboarding?.showPopover = false
+                                            }
+                                        } else {
+                                            onboarding?.showPopover = true
+                                        }
+                                    }
+                                ),
+                                attributes: { attributes in
+                                    attributes.position = .absolute(
+                                        originAnchor: .top,
+                                        popoverAnchor: .bottom
+                                    )
+                                    attributes.dismissal.mode = .none
+                                    attributes.rubberBandingMode = .none
+                                    attributes.blocksBackgroundTouches = false
+                                    attributes.presentation.animation = .spring(response: 0.4, dampingFraction: 0.8)
+                                    attributes.presentation.transition = .asymmetric(
+                                        insertion: .scale(scale: 0.85).combined(with: .opacity),
+                                        removal: .scale(scale: 0.9).combined(with: .opacity)
+                                    )
+                                    attributes.dismissal.animation = .spring(response: 0.3, dampingFraction: 0.8)
+                                    attributes.dismissal.transition = .asymmetric(
+                                        insertion: .scale(scale: 0.85).combined(with: .opacity),
+                                        removal: .scale(scale: 0.9).combined(with: .opacity)
+                                    )
+                                    attributes.sourceFrameInset = UIEdgeInsets(top: -8, left: 0, bottom: 0, right: 0)
+                                }
+                            ) {
+                                if let step = onboarding?.currentStep {
+                                    OnboardingPopoverCard(step: step, isSubStep2_1: true, arrowPlacement: .bottom) {
+                                        onboarding?.skip()
+                                    }
+                                } else {
+                                    EmptyView()
+                                }
+                            }
                             .transition(.asymmetric(
                                 insertion: .scale(scale: 0.95).combined(with: .opacity),
                                 removal: .scale(scale: 0.95).combined(with: .opacity)
@@ -526,7 +551,13 @@ struct CommandPaletteView: View {
                             present: Binding(
                                 get: { isSearchBarOnboardingActive },
                                 set: { newValue in
-                                    onboarding?.showPopover = newValue
+                                    if !newValue {
+                                        if !isCoCaptainRowVisible && onboarding?.currentStep == .searchBarCoCaptain {
+                                            onboarding?.showPopover = false
+                                        }
+                                    } else {
+                                        onboarding?.showPopover = true
+                                    }
                                 }
                             ),
                             attributes: { attributes in
@@ -720,6 +751,7 @@ struct CoCaptainPromptRow: View {
     let isSelected: Bool
     var isGlowActive: Bool = false
     var isBreathing: Bool = false
+    var isVisible: Binding<Bool>? = nil
     let onSelect: () -> Void
 
     private var trimmedPrompt: String {
@@ -774,6 +806,12 @@ struct CoCaptainPromptRow: View {
             x: 0,
             y: isGlowActive ? (isBreathing ? 4 : 5) : 0
         )
+        .onAppear {
+            isVisible?.wrappedValue = true
+        }
+        .onDisappear {
+            isVisible?.wrappedValue = false
+        }
     }
 }
 
