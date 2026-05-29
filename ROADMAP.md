@@ -57,10 +57,10 @@ This document tracks the current product milestones for CAOCAP. The near-term pr
 ## Phase 2: The Code Runtime *(Next)*
 *Focus: Making the spatial canvas a true execution environment.*
 
-- [/] **Omnibox Canvas Search**: Search-to-fly functionality.
+- [x] **Omnibox Canvas Search**: Search-to-fly functionality.
     - [x] **Search Index**: Rank node matches by title and text content.
     - [x] **Flight Engine**: Fly the viewport to a selected node from command palette search.
-    - [ ] **Focus Zoom**: Automatically adjust zoom level to fit the targeted node perfectly.
+    - [x] **Focus Zoom**: Automatically adjust zoom level to fit the targeted node perfectly.
 - [ ] **Spatial Debugger**: Visualize variable flow, console output, and execution state as canvas overlays.
 - [x] **Console Node**: A dedicated node type that captures `console.log` output from the WebView in real-time.
 - [ ] **Project Templates**: A public library of starter templates (games, landing pages, tools) selectable from the Omnibox.

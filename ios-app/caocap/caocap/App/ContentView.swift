@@ -548,10 +548,23 @@ struct ContentView: View {
             guard let node = router.activeStore.nodes.first(where: { $0.id == nodeId }) else { return }
             
             var targetScale: CGFloat = 1.0
-            if let frameData = nodeFrames[nodeId], containerSize != .zero {
+            if containerSize != .zero {
+                let size: CGSize
+                if let frameData = nodeFrames[nodeId] {
+                    size = frameData.size
+                } else {
+                    switch node.type {
+                    case .webView:
+                        size = CGSize(width: 375, height: 667)
+                    case .console:
+                        size = CGSize(width: 360, height: 300)
+                    default:
+                        size = CGSize(width: 280, height: 180)
+                    }
+                }
                 let paddingFactor: CGFloat = 0.8
-                let scaleX = (containerSize.width * paddingFactor) / frameData.size.width
-                let scaleY = (containerSize.height * paddingFactor) / frameData.size.height
+                let scaleX = (containerSize.width * paddingFactor) / size.width
+                let scaleY = (containerSize.height * paddingFactor) / size.height
                 targetScale = min(min(scaleX, scaleY), 1.2)
             }
             
