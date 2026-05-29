@@ -94,6 +94,19 @@ struct InfiniteCanvasView: View {
                                 x: node.position.x + currentOffset.width,
                                 y: node.position.y + currentOffset.height
                             )
+                            .onTapGesture(count: 2) {
+                                withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                                    var targetScale: CGFloat = 1.0
+                                    if let frameData = nodeFrames[node.id], geometry.size != .zero {
+                                        let paddingFactor: CGFloat = 0.8
+                                        let scaleX = (geometry.size.width * paddingFactor) / frameData.size.width
+                                        let scaleY = (geometry.size.height * paddingFactor) / frameData.size.height
+                                        targetScale = min(min(scaleX, scaleY), 1.2)
+                                    }
+                                    viewport.flyTo(nodePosition: node.position, containerSize: geometry.size, targetScale: targetScale)
+                                }
+                                HapticsManager.shared.impact(.medium)
+                            }
                             .onTapGesture {
                                 if let action = node.action {
                                     onNodeAction?(action)
@@ -156,6 +169,12 @@ struct InfiniteCanvasView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .contentShape(Rectangle()) // Ensure the entire area is gesture-sensitive.
+            .onTapGesture(count: 2) {
+                withAnimation(.spring(response: 0.6, dampingFraction: 0.85)) {
+                    viewport.fitTo(nodes: store.nodes, containerSize: geometry.size)
+                }
+                HapticsManager.shared.impact(.medium)
+            }
             .gesture(
                 TrackpadPanGesture(
                     onChanged: { translation in

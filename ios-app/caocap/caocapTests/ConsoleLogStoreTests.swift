@@ -34,4 +34,53 @@ final class ConsoleLogStoreTests: XCTestCase {
         store.clear()
         XCTAssertTrue(store.logs.isEmpty)
     }
+    
+    func testFilterByQuery() {
+        store.addLog(type: "log", message: "Fetching user profile")
+        store.addLog(type: "error", message: "Network connection lost")
+        store.addLog(type: "warn", message: "Deprecated API usage")
+        
+        // Match profile query
+        store.filterQuery = "profile"
+        XCTAssertEqual(store.filteredLogs.count, 1)
+        XCTAssertEqual(store.filteredLogs[0].message, "Fetching user profile")
+        
+        // Case-insensitivity match
+        store.filterQuery = "API"
+        XCTAssertEqual(store.filteredLogs.count, 1)
+        XCTAssertEqual(store.filteredLogs[0].message, "Deprecated API usage")
+    }
+    
+    func testFilterByType() {
+        store.addLog(type: "log", message: "Normal log message")
+        store.addLog(type: "error", message: "Network connection lost")
+        store.addLog(type: "warn", message: "Deprecated API usage")
+        
+        // Filter by error type
+        store.filterType = "error"
+        XCTAssertEqual(store.filteredLogs.count, 1)
+        XCTAssertEqual(store.filteredLogs[0].message, "Network connection lost")
+        
+        // Filter by warn type
+        store.filterType = "warn"
+        XCTAssertEqual(store.filteredLogs.count, 1)
+        XCTAssertEqual(store.filteredLogs[0].message, "Deprecated API usage")
+    }
+    
+    func testCombinedFilterAndReset() {
+        store.addLog(type: "log", message: "Fetching user profile")
+        store.addLog(type: "error", message: "Network connection profile failure")
+        store.addLog(type: "warn", message: "Deprecated API usage")
+        
+        // Match query + type
+        store.filterQuery = "profile"
+        store.filterType = "error"
+        XCTAssertEqual(store.filteredLogs.count, 1)
+        XCTAssertEqual(store.filteredLogs[0].message, "Network connection profile failure")
+        
+        // Reset query and type
+        store.filterQuery = ""
+        store.filterType = nil
+        XCTAssertEqual(store.filteredLogs.count, 3)
+    }
 }

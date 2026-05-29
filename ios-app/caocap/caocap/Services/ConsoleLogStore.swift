@@ -21,6 +21,25 @@ public final class ConsoleLogStore {
     public static let shared = ConsoleLogStore()
     
     public var logs: [ConsoleLogEntry] = []
+    public var filterQuery: String = ""
+    public var filterType: String? = nil
+    
+    public var filteredLogs: [ConsoleLogEntry] {
+        var results = logs
+        
+        if let filterType = filterType {
+            results = results.filter { $0.type == filterType }
+        }
+        
+        let query = filterQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !query.isEmpty {
+            results = results.filter {
+                $0.message.localizedCaseInsensitiveContains(query)
+            }
+        }
+        
+        return results
+    }
     
     private init() {}
     

@@ -4,6 +4,8 @@ struct CanvasHUDView: View {
     let store: ProjectStore
     let viewportScale: CGFloat
     var onSignInTapped: (() -> Void)? = nil
+    var onProjectExplorerTapped: (() -> Void)? = nil
+    var onCheckpointsTapped: (() -> Void)? = nil
 
     @Environment(AuthenticationManager.self) private var authManager
     @Environment(\.colorScheme) var colorScheme
@@ -13,25 +15,43 @@ struct CanvasHUDView: View {
     var body: some View {
         VStack {
             HStack(spacing: 0) {
-                // Info pill (non-interactive)
+                // Info pill (interactive components)
                 HStack(spacing: 16) {
-                    // Project Name
-                    HStack(spacing: 8) {
-                        Image(systemName: "folder.fill")
-                            .font(.system(size: 12))
-                            .foregroundStyle(.secondary)
-                            .frame(width: 14)
+                    // Project Name Button
+                    Button {
+                        onProjectExplorerTapped?()
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "folder.fill")
+                                .font(.system(size: 12))
+                                .foregroundStyle(.secondary)
+                                .frame(width: 14)
 
-                        Text(LocalizationManager.shared.localizedProjectName(store.projectName, fileName: store.fileName).uppercased())
-                            .font(.system(size: 12, weight: .bold, design: .rounded))
-                            .kerning(1)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                            .minimumScaleFactor(0.85)
+                            Text(LocalizationManager.shared.localizedProjectName(store.projectName, fileName: store.fileName).uppercased())
+                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                                .kerning(1)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                                .minimumScaleFactor(0.85)
+                                .foregroundStyle(.primary)
+                        }
                     }
+                    .buttonStyle(.plain)
                     .frame(maxWidth: 150, alignment: .center)
                     .clipped()
 
+                    Divider().frame(height: 16)
+
+                    // History Checkpoints Button
+                    Button {
+                        onCheckpointsTapped?()
+                    } label: {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    
                     Divider().frame(height: 16)
 
                     // Zoom Level
