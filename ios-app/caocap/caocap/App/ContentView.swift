@@ -177,6 +177,7 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showingSettings) {
             SettingsView()
+                .environment(onboarding)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }

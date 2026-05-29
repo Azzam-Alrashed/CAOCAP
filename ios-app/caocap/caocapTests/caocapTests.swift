@@ -134,4 +134,18 @@ struct caocapTests {
         let fileSize = attributes[.size] as? UInt64 ?? 0
         #expect(fileSize > 0)
     }
+    
+    @MainActor
+    @Test func onboardingCoordinatorResetAndStart() async throws {
+        let onboarding = OnboardingCoordinator()
+        onboarding.isCompleted = true
+        #expect(onboarding.isCompleted)
+        
+        onboarding.reset()
+        #expect(!onboarding.isCompleted)
+        #expect(onboarding.currentStep == nil)
+        
+        onboarding.startIfNeeded()
+        #expect(onboarding.currentStep == .tapFAB)
+    }
 }
