@@ -103,3 +103,18 @@ Only run tests or build verification when the user explicitly asks for it. When 
 - The product philosophy prioritizes developer experience, direct manipulation, and agentic assistance.
 - The app should remain polished enough for App Store/TestFlight work. Compliance, privacy links, account deletion, and subscription wording matter.
 - New features should improve the spatial workflow or launch readiness, not just add surface area.
+
+## Agent skills
+
+### Issue tracker
+
+Issues and PRDs live in this repository's GitHub Issues. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Triage roles are mapped to standard GitHub labels like `needs-triage` and `ready-for-agent`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+The project uses a single global context for domain documentation. See `docs/agents/domain.md`.
+
