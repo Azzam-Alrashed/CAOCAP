@@ -393,6 +393,48 @@ struct CommandPaletteView: View {
                                                     viewModel.submitPromptIfNeeded()
                                                 }
                                                 .id("cocaptain-prompt")
+                                                .popover(
+                                                    present: Binding(
+                                                        get: { showRowPopoverDelay },
+                                                        set: { newValue in
+                                                            if !newValue {
+                                                                if isCoCaptainRowVisible && onboarding?.currentStep == .searchBarCoCaptain {
+                                                                    onboarding?.showPopover = false
+                                                                }
+                                                            } else {
+                                                                onboarding?.showPopover = true
+                                                            }
+                                                        }
+                                                    ),
+                                                    attributes: { attributes in
+                                                        attributes.position = .absolute(
+                                                            originAnchor: .top,
+                                                            popoverAnchor: .bottom
+                                                        )
+                                                        attributes.dismissal.mode = .none
+                                                        attributes.rubberBandingMode = .none
+                                                        attributes.blocksBackgroundTouches = false
+                                                        attributes.presentation.animation = .spring(response: 0.4, dampingFraction: 0.8)
+                                                        attributes.presentation.transition = .asymmetric(
+                                                            insertion: .scale(scale: 0.85).combined(with: .opacity),
+                                                            removal: .scale(scale: 0.9).combined(with: .opacity)
+                                                        )
+                                                        attributes.dismissal.animation = .spring(response: 0.3, dampingFraction: 0.8)
+                                                        attributes.dismissal.transition = .asymmetric(
+                                                            insertion: .scale(scale: 0.85).combined(with: .opacity),
+                                                            removal: .scale(scale: 0.9).combined(with: .opacity)
+                                                        )
+                                                        attributes.sourceFrameInset = UIEdgeInsets(top: -8, left: 0, bottom: 0, right: 0)
+                                                    }
+                                                ) {
+                                                    if let step = onboarding?.currentStep {
+                                                        OnboardingPopoverCard(step: step, isSubStep2_1: true, arrowPlacement: .bottom) {
+                                                            onboarding?.skip()
+                                                        }
+                                                    } else {
+                                                        EmptyView()
+                                                    }
+                                                }
                                             }
                                         }
                                         .padding(.vertical, 8)
@@ -435,48 +477,6 @@ struct CommandPaletteView: View {
                                     )
                             )
                             .shadow(color: .black.opacity(0.3), radius: 15, y: 5)
-                            .popover(
-                                present: Binding(
-                                    get: { showRowPopoverDelay },
-                                    set: { newValue in
-                                        if !newValue {
-                                            if isCoCaptainRowVisible && onboarding?.currentStep == .searchBarCoCaptain {
-                                                onboarding?.showPopover = false
-                                            }
-                                        } else {
-                                            onboarding?.showPopover = true
-                                        }
-                                    }
-                                ),
-                                attributes: { attributes in
-                                    attributes.position = .absolute(
-                                        originAnchor: .top,
-                                        popoverAnchor: .bottom
-                                    )
-                                    attributes.dismissal.mode = .none
-                                    attributes.rubberBandingMode = .none
-                                    attributes.blocksBackgroundTouches = false
-                                    attributes.presentation.animation = .spring(response: 0.4, dampingFraction: 0.8)
-                                    attributes.presentation.transition = .asymmetric(
-                                        insertion: .scale(scale: 0.85).combined(with: .opacity),
-                                        removal: .scale(scale: 0.9).combined(with: .opacity)
-                                    )
-                                    attributes.dismissal.animation = .spring(response: 0.3, dampingFraction: 0.8)
-                                    attributes.dismissal.transition = .asymmetric(
-                                        insertion: .scale(scale: 0.85).combined(with: .opacity),
-                                        removal: .scale(scale: 0.9).combined(with: .opacity)
-                                    )
-                                    attributes.sourceFrameInset = UIEdgeInsets(top: -8, left: 0, bottom: 0, right: 0)
-                                }
-                            ) {
-                                if let step = onboarding?.currentStep {
-                                    OnboardingPopoverCard(step: step, isSubStep2_1: true, arrowPlacement: .bottom) {
-                                        onboarding?.skip()
-                                    }
-                                } else {
-                                    EmptyView()
-                                }
-                            }
                             .transition(.asymmetric(
                                 insertion: .scale(scale: 0.95).combined(with: .opacity),
                                 removal: .scale(scale: 0.95).combined(with: .opacity)
