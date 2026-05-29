@@ -29,9 +29,8 @@ struct FloatingCommandButton: View {
     var showOnboardingPopover: Binding<Bool> = .constant(false)
     var onboardingPopoverContent: ((CGFloat) -> AnyView)? = nil
     
-    // Onboarding glow animation states
-    @State private var onboardingGlowScale: CGFloat = 1.0
-    @State private var onboardingGlowOpacity: CGFloat = 0.8
+    // Onboarding breathing animation state
+    @State private var isBreathing: Bool = false
     
     // Padding from screen edges
     private let padding: CGFloat = 35
@@ -60,6 +59,39 @@ struct FloatingCommandButton: View {
                 return currentPos.x - cardCenter
             }()
             
+            // Breathing calculations for scale and glow
+            let buttonScale: CGFloat = {
+                if isDragging {
+                    return 1.15
+                } else if isExpanded {
+                    return 0.9
+                } else if showOnboardingPopover.wrappedValue {
+                    return isBreathing ? 1.04 : 1.0
+                } else {
+                    return 1.0
+                }
+            }()
+            
+            let shadowRadius: CGFloat = {
+                if isDragging || isExpanded {
+                    return 15
+                } else if showOnboardingPopover.wrappedValue {
+                    return isBreathing ? 24 : 10
+                } else {
+                    return 10
+                }
+            }()
+            
+            let shadowColor: Color = {
+                if isDragging || isExpanded {
+                    return Color.black.opacity(0.35)
+                } else if showOnboardingPopover.wrappedValue {
+                    return Color(hex: "0066FF").opacity(isBreathing ? 0.8 : 0.4)
+                } else {
+                    return Color.black.opacity(0.2)
+                }
+            }()
+            
             ZStack {
                 // Layer -1: Dismissal Layer (Only active when expanded)
                 if isExpanded {
@@ -77,48 +109,25 @@ struct FloatingCommandButton: View {
                 
                 // Layer 1: The Main Button
                 ZStack {
-                    // Pulsating glow ring for onboarding
-                    if showOnboardingPopover.wrappedValue {
-                        Circle()
-                            .stroke(
-                                LinearGradient(
-                                    colors: [Color(hex: "6C5CE7"), Color(hex: "0984E3")],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ),
-                                lineWidth: 2
-                            )
-                            .scaleEffect(onboardingGlowScale)
-                            .opacity(onboardingGlowOpacity)
-                            .frame(width: buttonSize + 12, height: buttonSize + 12)
-                            .onAppear {
-                                withAnimation(
-                                    .easeInOut(duration: 1.5)
-                                        .repeatForever(autoreverses: false)
-                                ) {
-                                    onboardingGlowScale = 1.3
-                                    onboardingGlowOpacity = 0.0
-                                }
-                            }
-                    }
-
                     Circle()
                         .fill(.ultraThinMaterial)
                         .overlay(
                             Circle()
                                 .stroke(Color.white.opacity(0.2), lineWidth: 0.5)
                         )
-                        .shadow(color: Color.black.opacity(isDragging || isExpanded ? 0.3 : 0.2), 
-                                radius: isDragging || isExpanded ? 15 : 10, 
-                                x: 0, 
-                                y: isDragging || isExpanded ? 8 : 5)
+                        .shadow(
+                            color: shadowColor,
+                            radius: shadowRadius,
+                            x: 0,
+                            y: (isDragging || isExpanded) ? 8 : (showOnboardingPopover.wrappedValue ? 4 : 5)
+                        )
                     
                     Image(systemName: isExpanded ? "xmark" : "command")
                         .font(.system(size: 24, weight: .semibold))
                         .rotationEffect(.degrees(isExpanded ? 90 : 0))
                 }
                 .frame(width: buttonSize, height: buttonSize)
-                .scaleEffect(isDragging ? 1.15 : (isExpanded ? 0.9 : 1.0))
+                .scaleEffect(buttonScale)
                 .popover(
                     present: showOnboardingPopover,
                     attributes: { attributes in
@@ -215,6 +224,28 @@ struct FloatingCommandButton: View {
             .onAppear {
                 if position == .zero {
                     position = initialPosition(in: size)
+                }
+                if showOnboardingPopover.wrappedValue {
+                    withAnimation(
+                        .easeInOut(duration: 1.8)
+                            .repeatForever(autoreverses: true)
+                    ) {
+                        isBreathing = true
+                    }
+                }
+            }
+            .onChange(of: showOnboardingPopover.wrappedValue) { _, newValue in
+                if newValue {
+                    withAnimation(
+                        .easeInOut(duration: 1.8)
+                            .repeatForever(autoreverses: true)
+                    ) {
+                        isBreathing = true
+                    }
+                } else {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        isBreathing = false
+                    }
                 }
             }
             .onChange(of: geometry.size) { oldSize, newSize in
