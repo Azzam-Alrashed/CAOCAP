@@ -101,6 +101,7 @@ struct UnifiedBubbleWithArrowShape: Shape {
 /// Matches CAOCAP's dark, material-blurred visual language.
 struct OnboardingPopoverCard: View {
     let step: OnboardingCoordinator.Step
+    var isSubStep2_1: Bool = false
     var arrowOffset: CGFloat = 0
     var arrowPlacement: UnifiedBubbleWithArrowShape.ArrowPlacement = .bottom
     let onSkip: () -> Void
@@ -114,12 +115,28 @@ struct OnboardingPopoverCard: View {
         endPoint: .bottomTrailing
     )
 
+    private var cardTitle: String {
+        isSubStep2_1 ? "Ask CoCaptain" : step.title
+    }
+    
+    private var cardIcon: String {
+        isSubStep2_1 ? "sparkles" : step.icon
+    }
+    
+    private var cardStepLabel: String {
+        step.stepLabel
+    }
+    
+    private var cardMessage: String {
+        isSubStep2_1 ? "Tap the 'Ask CoCaptain' action row or tap the return button on your keyboard to send your message." : step.message
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             // Header: icon + title + step counter
             HStack(spacing: 10) {
                 // Animated icon
-                Image(systemName: step.icon)
+                Image(systemName: cardIcon)
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(accentGradient)
                     .frame(width: 32, height: 32)
@@ -129,11 +146,11 @@ struct OnboardingPopoverCard: View {
                     )
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(step.title)
+                    Text(cardTitle)
                         .font(.system(size: 16, weight: .bold))
                         .foregroundColor(.primary)
 
-                    Text(step.stepLabel)
+                    Text(cardStepLabel)
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.secondary)
                 }
@@ -160,7 +177,7 @@ struct OnboardingPopoverCard: View {
             }
 
             // Message body
-            Text(step.message)
+            Text(cardMessage)
                 .font(.system(size: 14, weight: .regular))
                 .foregroundColor(.primary.opacity(0.85))
                 .lineSpacing(3)
