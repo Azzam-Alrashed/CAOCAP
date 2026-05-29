@@ -101,6 +101,34 @@ struct ContentView: View {
             .environment(\.layoutDirection, .leftToRight)
 
             CommandPaletteView(viewModel: commandPalette)
+            
+            // Hidden buttons to capture hardware keyboard shortcuts on iOS (where .commands is ignored on iPhone)
+            Group {
+                Button("") {
+                    commandPalette.setPresented(true)
+                }
+                .keyboardShortcut("k", modifiers: .command)
+                
+                Button("") {
+                    _ = actionDispatcher.perform(.summonCoCaptain, source: .user)
+                }
+                .keyboardShortcut("j", modifiers: .command)
+                
+                Button("") {
+                    undoManager?.undo()
+                    router.activeStore.undoStackChanged += 1
+                }
+                .keyboardShortcut("z", modifiers: .command)
+                
+                Button("") {
+                    undoManager?.redo()
+                    router.activeStore.undoStackChanged += 1
+                }
+                .keyboardShortcut("z", modifiers: [.command, .shift])
+            }
+            .opacity(0)
+            .allowsHitTesting(false)
+            .frame(width: 0, height: 0)
         }
         .background(Color.black.ignoresSafeArea())
         .overlay {
