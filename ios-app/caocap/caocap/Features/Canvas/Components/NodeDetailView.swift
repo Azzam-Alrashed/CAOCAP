@@ -468,6 +468,12 @@ struct NodeDetailView: View {
                                     Text("\(currentNode.inputNodeIds?.count ?? 0) active data streams")
                                         .font(.subheadline.bold())
                                         .foregroundColor(.secondary)
+                                } else if currentNode.type == .console {
+                                VStack(alignment: .leading, spacing: 16) {
+                                    ConsoleNodeView(node: currentNode, isScrollable: true)
+                                        .padding()
+                                        .background(.ultraThinMaterial)
+                                        .cornerRadius(20)
                                 }
                             }
 

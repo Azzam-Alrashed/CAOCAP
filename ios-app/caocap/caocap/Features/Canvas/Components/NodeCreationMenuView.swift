@@ -3,7 +3,7 @@ import SwiftUI
 struct NodeCreationMenuView: View {
     var onSelect: (NodeType) -> Void
     
-    let options: [NodeType] = [.subCanvas, .code, .srs, .art, .text, .number, .table, .calculation, .display, .chart, .aiAgent, .firebase]
+    let options: [NodeType] = [.subCanvas, .code, .srs, .art, .text, .number, .table, .calculation, .display, .chart, .aiAgent, .firebase, .console]
     
     var body: some View {
         VStack(spacing: 24) {
@@ -111,6 +111,7 @@ struct NodeCreationMenuView: View {
         case .aiAgent: return "Smart processing agent"
         case .firebase: return "Web app config for Live Preview"
         case .subCanvas: return "Nested canvas workspace"
+        case .console: return "Live logs and error reports"
         default: return "Standard node"
         }
     }
@@ -129,6 +130,7 @@ struct NodeCreationMenuView: View {
         case .aiAgent: return "brain.head.profile.fill"
         case .firebase: return "flame.fill"
         case .subCanvas: return "folder.fill"
+        case .console: return "terminal.fill"
         default: return "square.grid.2x2"
         }
     }
@@ -145,6 +147,7 @@ struct NodeCreationMenuView: View {
         case .aiAgent: return .indigo
         case .firebase: return .orange
         case .subCanvas: return .cyan
+        case .console: return .purple
         default: return .secondary
         }
     }

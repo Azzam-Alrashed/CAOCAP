@@ -321,6 +321,9 @@ private struct NodePreviewContent: View {
                         }
                     }
                     .padding(.top, 12)
+                    
+                case .console:
+                    ConsoleNodeView(node: node)
 
                 default:
                     EmptyView()

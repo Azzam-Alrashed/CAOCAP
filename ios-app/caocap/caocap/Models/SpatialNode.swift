@@ -27,6 +27,7 @@ public enum NodeType: String, Codable, Equatable, Hashable, CaseIterable {
     case chart
     case firebase
     case subCanvas
+    case console
     
     public var displayName: String {
         switch self {
@@ -44,6 +45,7 @@ public enum NodeType: String, Codable, Equatable, Hashable, CaseIterable {
         case .chart: return "Chart"
         case .firebase: return "Firebase"
         case .subCanvas: return "Sub-Canvas"
+        case .console: return "Console"
         }
     }
 }
