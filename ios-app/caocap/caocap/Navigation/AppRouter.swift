@@ -76,11 +76,11 @@ public class AppRouter {
         navigate(to: .root, animated: true)
     }
     
-    public func createNewProject() {
+    public func createNewProject(template: ProjectTemplate = .helloWorld) {
         let id = UUID().uuidString.prefix(8)
         let fileName = "project_\(id).json"
         
-        let newStore = ProjectStore(fileName: fileName, projectName: "Untitled", initialNodes: ProjectTemplateProvider.defaultNodes, initialViewportScale: 0.3)
+        let newStore = ProjectStore(fileName: fileName, projectName: "Untitled", initialNodes: ProjectTemplateProvider.nodes(for: template), initialViewportScale: 0.3)
         projects[fileName] = newStore
         
         navigate(to: .project(fileName), animated: true)
