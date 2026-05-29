@@ -1,4 +1,5 @@
 import SwiftUI
+import Popovers
 
 struct FloatingCommandButton: View {
     @State private var position: CGPoint = .zero
@@ -20,6 +21,18 @@ struct FloatingCommandButton: View {
     var canUndo: Bool = false
     var canRedo: Bool = false
     
+    // Onboarding lifecycle callbacks
+    var onExpand: (() -> Void)? = nil
+    var onDragSummon: (() -> Void)? = nil
+    
+    // Onboarding popover state
+    var showOnboardingPopover: Binding<Bool> = .constant(false)
+    var onboardingPopoverContent: ((CGFloat) -> AnyView)? = nil
+    
+    // Onboarding glow animation states
+    @State private var onboardingGlowScale: CGFloat = 1.0
+    @State private var onboardingGlowOpacity: CGFloat = 0.8
+    
     // Padding from screen edges
     private let padding: CGFloat = 35
     private let buttonSize: CGFloat = 64
@@ -29,6 +42,23 @@ struct FloatingCommandButton: View {
         GeometryReader { geometry in
             let size = geometry.size
             let currentPos = position == .zero ? initialPosition(in: size) : position
+            
+            // Calculate popover arrow offset dynamically relative to screen boundaries:
+            let arrowOffset: CGFloat = {
+                let cardWidth: CGFloat = 290
+                let safetyMargin: CGFloat = 16
+                let halfCard = cardWidth / 2
+                
+                let cardCenter: CGFloat
+                if currentPos.x - halfCard < safetyMargin {
+                    cardCenter = safetyMargin + halfCard
+                } else if currentPos.x + halfCard > size.width - safetyMargin {
+                    cardCenter = size.width - safetyMargin - halfCard
+                } else {
+                    cardCenter = currentPos.x
+                }
+                return currentPos.x - cardCenter
+            }()
             
             ZStack {
                 // Layer -1: Dismissal Layer (Only active when expanded)
@@ -47,6 +77,31 @@ struct FloatingCommandButton: View {
                 
                 // Layer 1: The Main Button
                 ZStack {
+                    // Pulsating glow ring for onboarding
+                    if showOnboardingPopover.wrappedValue {
+                        Circle()
+                            .stroke(
+                                LinearGradient(
+                                    colors: [Color(hex: "6C5CE7"), Color(hex: "0984E3")],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 2
+                            )
+                            .scaleEffect(onboardingGlowScale)
+                            .opacity(onboardingGlowOpacity)
+                            .frame(width: buttonSize + 12, height: buttonSize + 12)
+                            .onAppear {
+                                withAnimation(
+                                    .easeInOut(duration: 1.5)
+                                        .repeatForever(autoreverses: false)
+                                ) {
+                                    onboardingGlowScale = 1.3
+                                    onboardingGlowOpacity = 0.0
+                                }
+                            }
+                    }
+
                     Circle()
                         .fill(.ultraThinMaterial)
                         .overlay(
@@ -64,7 +119,35 @@ struct FloatingCommandButton: View {
                 }
                 .frame(width: buttonSize, height: buttonSize)
                 .scaleEffect(isDragging ? 1.15 : (isExpanded ? 0.9 : 1.0))
-                .position(currentPos)
+                .popover(
+                    present: showOnboardingPopover,
+                    attributes: { attributes in
+                        attributes.position = .absolute(
+                            originAnchor: .top,
+                            popoverAnchor: .bottom
+                        )
+                        attributes.dismissal.mode = .none
+                        attributes.rubberBandingMode = .none
+                        attributes.blocksBackgroundTouches = false
+                        attributes.presentation.animation = .spring(response: 0.4, dampingFraction: 0.8)
+                        attributes.presentation.transition = .asymmetric(
+                            insertion: .scale(scale: 0.85).combined(with: .opacity),
+                            removal: .scale(scale: 0.9).combined(with: .opacity)
+                        )
+                        attributes.dismissal.animation = .spring(response: 0.3, dampingFraction: 0.8)
+                        attributes.dismissal.transition = .asymmetric(
+                            insertion: .scale(scale: 0.85).combined(with: .opacity),
+                            removal: .scale(scale: 0.9).combined(with: .opacity)
+                        )
+                        attributes.sourceFrameInset = UIEdgeInsets(top: -8, left: 0, bottom: 0, right: 0)
+                    }
+                ) {
+                    if let content = onboardingPopoverContent {
+                        content(arrowOffset)
+                    } else {
+                        EmptyView()
+                    }
+                }
                 .simultaneousGesture(
                     LongPressGesture(minimumDuration: 0.25)
                         .onEnded { _ in
@@ -73,6 +156,7 @@ struct FloatingCommandButton: View {
                                 withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
                                     isExpanded = true
                                 }
+                                onExpand?()
                             }
                         }
                 )
@@ -125,6 +209,7 @@ struct FloatingCommandButton: View {
                             }
                         }
                 )
+                .position(currentPos)
             }
             .coordinateSpace(name: "floatingLayer")
             .onAppear {
@@ -245,7 +330,9 @@ struct FloatingCommandButton: View {
         triggerHapticFeedback(.medium)
         switch action {
         case .undo: onUndo()
-        case .summon: onSummonCoCaptain()
+        case .summon:
+            onSummonCoCaptain()
+            onDragSummon?()
         case .redo: onRedo()
         }
     }
