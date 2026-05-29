@@ -18,12 +18,18 @@ struct CommandPaletteView: View {
         return onboarding.currentStep == .searchBarCoCaptain && onboarding.showPopover
     }
     
+    private var isCoCaptainRowSelected: Bool {
+        guard isCoCaptainRowVisible else { return false }
+        let offset = viewModel.filteredActions.count + viewModel.nodeResults.count
+        return viewModel.selectedIndex == offset
+    }
+    
     private var isSearchBarOnboardingActive: Bool {
-        isShowPopoverActive && !isCoCaptainRowVisible
+        isShowPopoverActive && !isCoCaptainRowSelected
     }
     
     private var isCoCaptainRowOnboardingActive: Bool {
-        isShowPopoverActive && isCoCaptainRowVisible
+        isShowPopoverActive && isCoCaptainRowSelected
     }
     
     struct ActionCategorySection {
@@ -112,7 +118,7 @@ struct CommandPaletteView: View {
                                 get: { isSearchBarOnboardingActive },
                                 set: { newValue in
                                     if !newValue {
-                                        if !isCoCaptainRowVisible && onboarding?.currentStep == .searchBarCoCaptain {
+                                        if !isCoCaptainRowSelected && onboarding?.currentStep == .searchBarCoCaptain {
                                             onboarding?.showPopover = false
                                         }
                                     } else {
@@ -232,7 +238,7 @@ struct CommandPaletteView: View {
                                                 get: { showRowPopoverDelay },
                                                 set: { newValue in
                                                     if !newValue {
-                                                        if isCoCaptainRowVisible && onboarding?.currentStep == .searchBarCoCaptain {
+                                                        if isCoCaptainRowSelected && onboarding?.currentStep == .searchBarCoCaptain {
                                                             onboarding?.showPopover = false
                                                         }
                                                     } else {
@@ -398,7 +404,7 @@ struct CommandPaletteView: View {
                                                         get: { showRowPopoverDelay },
                                                         set: { newValue in
                                                             if !newValue {
-                                                                if isCoCaptainRowVisible && onboarding?.currentStep == .searchBarCoCaptain {
+                                                                if isCoCaptainRowSelected && onboarding?.currentStep == .searchBarCoCaptain {
                                                                     onboarding?.showPopover = false
                                                                 }
                                                             } else {
@@ -552,7 +558,7 @@ struct CommandPaletteView: View {
                                 get: { isSearchBarOnboardingActive },
                                 set: { newValue in
                                     if !newValue {
-                                        if !isCoCaptainRowVisible && onboarding?.currentStep == .searchBarCoCaptain {
+                                        if !isCoCaptainRowSelected && onboarding?.currentStep == .searchBarCoCaptain {
                                             onboarding?.showPopover = false
                                         }
                                     } else {
