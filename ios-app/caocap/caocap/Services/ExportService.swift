@@ -94,7 +94,29 @@ public struct ExportService {
                         )
                     }
                     
-                    return bundleURL
+                    // Natively zip the folder using NSFileCoordinator
+                    var coordinatorError: NSError?
+                    var zipURL: URL?
+                    let coordinator = NSFileCoordinator()
+                    coordinator.coordinate(readingItemAt: bundleURL, options: .forUploading, error: &coordinatorError) { coordinatedURL in
+                        let destinationURL = fileManager.temporaryDirectory.appendingPathComponent("\(safeName)-web-bundle.zip")
+                        try? fileManager.removeItem(at: destinationURL)
+                        do {
+                            try fileManager.copyItem(at: coordinatedURL, to: destinationURL)
+                            zipURL = destinationURL
+                        } catch {
+                            logger.error("Failed to copy coordinated zip: \(error.localizedDescription)")
+                        }
+                    }
+                    
+                    if let error = coordinatorError {
+                        logger.error("Coordinator failed to zip: \(error.localizedDescription)")
+                    }
+                    
+                    // Clean up the unzipped directory
+                    try? fileManager.removeItem(at: bundleURL)
+                    
+                    return zipURL
                 } catch {
                     logger.error("Failed to export web bundle: \(error.localizedDescription)")
                     return nil
