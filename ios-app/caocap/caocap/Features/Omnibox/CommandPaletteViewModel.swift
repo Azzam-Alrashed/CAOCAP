@@ -15,8 +15,10 @@ public class CommandPaletteViewModel {
     
     public var query: String = "" {
         didSet {
-            // Search results are rebuilt from the query, so keep keyboard
-            // selection pinned to the first visible command.
+            // Only reset keyboard selection when the query actually changed,
+            // so that pressing Enter (which can re-trigger didSet with the
+            // same value) doesn't clobber the arrow-key selection.
+            guard query != oldValue else { return }
             selectedIndex = 0
         }
     }
