@@ -1,10 +1,15 @@
 import SwiftUI
 
-/// A shape that outlines a rounded rectangle bubble with a triangle arrow pointing down.
+/// A shape that outlines a rounded rectangle bubble with a triangle arrow pointing down or up.
 struct UnifiedBubbleWithArrowShape: Shape {
+    enum ArrowPlacement {
+        case top, bottom
+    }
+    
     var cornerRadius: CGFloat = 16
     var arrowSize: CGSize = CGSize(width: 16, height: 8)
     var arrowOffset: CGFloat = 0 // Offset from center
+    var placement: ArrowPlacement = .bottom
     
     func path(in rect: CGRect) -> Path {
         var path = Path()
@@ -12,8 +17,9 @@ struct UnifiedBubbleWithArrowShape: Shape {
         let bubbleHeight = rect.height - arrowSize.height
         let minX = rect.minX
         let maxX = rect.maxX
-        let minY = rect.minY
-        let maxY = rect.minY + bubbleHeight
+        
+        let minY = placement == .top ? rect.minY + arrowSize.height : rect.minY
+        let maxY = placement == .top ? rect.maxY : rect.minY + bubbleHeight
         
         // Calculate arrow center and clamp to keep it within bubble bounds
         let baseMidX = rect.midX + arrowOffset
@@ -23,6 +29,13 @@ struct UnifiedBubbleWithArrowShape: Shape {
         
         // Start at top-left corner (after the radius)
         path.move(to: CGPoint(x: minX + cornerRadius, y: minY))
+        
+        // If arrow is at the top, draw it pointing up
+        if placement == .top {
+            path.addLine(to: CGPoint(x: midX - arrowSize.width / 2, y: minY))
+            path.addLine(to: CGPoint(x: midX, y: rect.minY))
+            path.addLine(to: CGPoint(x: midX + arrowSize.width / 2, y: minY))
+        }
         
         // Top edge
         path.addLine(to: CGPoint(x: maxX - cornerRadius, y: minY))
@@ -48,14 +61,14 @@ struct UnifiedBubbleWithArrowShape: Shape {
             clockwise: false
         )
         
-        // Bottom edge (right of arrow)
-        path.addLine(to: CGPoint(x: midX + arrowSize.width / 2, y: maxY))
+        // If arrow is at the bottom, draw it pointing down
+        if placement == .bottom {
+            path.addLine(to: CGPoint(x: midX + arrowSize.width / 2, y: maxY))
+            path.addLine(to: CGPoint(x: midX, y: rect.maxY))
+            path.addLine(to: CGPoint(x: midX - arrowSize.width / 2, y: maxY))
+        }
         
-        // Arrow pointing down
-        path.addLine(to: CGPoint(x: midX, y: rect.maxY))
-        path.addLine(to: CGPoint(x: midX - arrowSize.width / 2, y: maxY))
-        
-        // Bottom edge (left of arrow)
+        // Bottom edge (left of bottom arrow)
         path.addLine(to: CGPoint(x: minX + cornerRadius, y: maxY))
         
         // Bottom-left corner
@@ -89,6 +102,7 @@ struct UnifiedBubbleWithArrowShape: Shape {
 struct OnboardingPopoverCard: View {
     let step: OnboardingCoordinator.Step
     var arrowOffset: CGFloat = 0
+    var arrowPlacement: UnifiedBubbleWithArrowShape.ArrowPlacement = .bottom
     let onSkip: () -> Void
 
     @Environment(\.colorScheme) private var colorScheme
@@ -153,15 +167,15 @@ struct OnboardingPopoverCard: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.horizontal, 18)
-        .padding(.top, 18)
-        .padding(.bottom, 18 + 8) // 18 + arrow height (8)
+        .padding(.top, arrowPlacement == .top ? 18 + 8 : 18)
+        .padding(.bottom, arrowPlacement == .bottom ? 18 + 8 : 18)
         .frame(width: 290)
         .background(
-            UnifiedBubbleWithArrowShape(arrowOffset: arrowOffset)
+            UnifiedBubbleWithArrowShape(arrowOffset: arrowOffset, placement: arrowPlacement)
                 .fill(.ultraThinMaterial)
         )
         .overlay(
-            UnifiedBubbleWithArrowShape(arrowOffset: arrowOffset)
+            UnifiedBubbleWithArrowShape(arrowOffset: arrowOffset, placement: arrowPlacement)
                 .stroke(
                     LinearGradient(
                         colors: [

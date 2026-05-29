@@ -83,54 +83,7 @@ struct ContentView: View {
                 )
             }
 
-            FloatingCommandButton(
-                onTap: {
-                    commandPalette.setPresented(true)
-                },
-                onUndo: {
-                    undoManager?.undo()
-                    router.activeStore.undoStackChanged += 1
-                },
-                onSummonCoCaptain: {
-                    _ = actionDispatcher.perform(.summonCoCaptain, source: .user)
-                },
-                onRedo: {
-                    undoManager?.redo()
-                    router.activeStore.undoStackChanged += 1
-                },
-                canUndo: (router.activeStore.undoStackChanged >= 0) && (undoManager?.canUndo ?? false),
-                canRedo: (router.activeStore.undoStackChanged >= 0) && (undoManager?.canRedo ?? false),
-                onExpand: {
-                    if onboarding.currentStep == .longPressFAB {
-                        onboarding.completeCurrentStep()
-                    }
-                },
-                onDragSummon: {
-                    if onboarding.currentStep == .dragToCoCaptain {
-                        onboarding.completeCurrentStep()
-                    }
-                },
-                showOnboardingPopover: Binding(
-                    get: {
-                        guard let step = onboarding.currentStep else { return false }
-                        // Show popover on FAB for the first 3 steps
-                        return onboarding.showPopover && step != .chatCoCaptain
-                    },
-                    set: { newValue in
-                        onboarding.showPopover = newValue
-                    }
-                ),
-                onboardingPopoverContent: { offset in
-                    if let step = onboarding.currentStep, step != .chatCoCaptain {
-                        return AnyView(
-                            OnboardingPopoverCard(step: step, arrowOffset: offset) {
-                                onboarding.skip()
-                            }
-                        )
-                    }
-                    return AnyView(EmptyView())
-                }
-            )
+            floatingCommandButtonView
             .environment(\.layoutDirection, .leftToRight)
 
             CommandPaletteView(viewModel: commandPalette)
@@ -288,13 +241,13 @@ struct ContentView: View {
             }
         }
         .onChange(of: coCaptain.isPresented) { _, isPresented in
-            if isPresented && onboarding.currentStep == .chatCoCaptain {
-                // CoCaptain is open — complete onboarding once they see it
-                Task {
-                    try? await Task.sleep(for: .seconds(2.0))
-                    if coCaptain.isPresented {
-                        onboarding.completeCurrentStep()
-                    }
+            if isPresented {
+                if onboarding.currentStep == .searchBarCoCaptain {
+                    onboarding.completeCurrentStep()
+                }
+            } else {
+                if onboarding.currentStep == .dismissCoCaptain {
+                    onboarding.completeCurrentStep()
                 }
             }
         }
@@ -349,6 +302,56 @@ struct ContentView: View {
         .environment(onboarding)
     }
 }
+
+    private var floatingCommandButtonView: some View {
+        FloatingCommandButton(
+            onTap: {
+                commandPalette.setPresented(true)
+            },
+            onUndo: {
+                undoManager?.undo()
+                router.activeStore.undoStackChanged += 1
+            },
+            onSummonCoCaptain: {
+                _ = actionDispatcher.perform(.summonCoCaptain, source: .user)
+            },
+            onRedo: {
+                undoManager?.redo()
+                router.activeStore.undoStackChanged += 1
+            },
+            canUndo: (router.activeStore.undoStackChanged >= 0) && (undoManager?.canUndo ?? false),
+            canRedo: (router.activeStore.undoStackChanged >= 0) && (undoManager?.canRedo ?? false),
+            onExpand: {
+                if onboarding.currentStep == .longPressFAB {
+                    onboarding.completeCurrentStep()
+                }
+            },
+            onDragSummon: {
+                if onboarding.currentStep == .longPressFAB {
+                    onboarding.completeCurrentStep()
+                }
+            },
+            showOnboardingPopover: Binding(
+                get: {
+                    guard let step = onboarding.currentStep else { return false }
+                    return onboarding.showPopover && (step == .tapFAB || step == .longPressFAB)
+                },
+                set: { newValue in
+                    onboarding.showPopover = newValue
+                }
+            ),
+            onboardingPopoverContent: { offset in
+                if let step = onboarding.currentStep, (step == .tapFAB || step == .longPressFAB) {
+                    return AnyView(
+                        OnboardingPopoverCard(step: step, arrowOffset: offset) {
+                            onboarding.skip()
+                        }
+                    )
+                }
+                return AnyView(EmptyView())
+            }
+        )
+    }
     
     private var currentColorScheme: ColorScheme? {
         switch selectedTheme {
