@@ -9,8 +9,12 @@ struct CommandPaletteView: View {
     @Environment(\.colorScheme) var colorScheme
     
     @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
-    @State private var onboardingGlowScale: CGFloat = 1.0
-    @State private var onboardingGlowOpacity: CGFloat = 0.8
+    @State private var isBreathing: Bool = false
+    
+    private var isShowPopoverActive: Bool {
+        guard let onboarding else { return false }
+        return onboarding.currentStep == .searchBarCoCaptain && onboarding.showPopover
+    }
     
     struct ActionCategorySection {
         let category: AppActionCategory
@@ -82,36 +86,20 @@ struct CommandPaletteView: View {
                                 }
                         }
                         .padding(16)
-                        .overlay {
-                            if let onboarding, onboarding.currentStep == .searchBarCoCaptain && onboarding.showPopover {
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .stroke(
-                                        LinearGradient(
-                                            colors: [Color(hex: "6C5CE7"), Color(hex: "0984E3")],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        ),
-                                        lineWidth: 2
-                                    )
-                                    .scaleEffect(onboardingGlowScale)
-                                    .opacity(onboardingGlowOpacity)
-                                    .onAppear {
-                                        withAnimation(
-                                            .easeInOut(duration: 1.5)
-                                                .repeatForever(autoreverses: false)
-                                        ) {
-                                            onboardingGlowScale = 1.05
-                                            onboardingGlowOpacity = 0.0
-                                        }
-                                    }
-                            }
-                        }
+                        .scaleEffect(isShowPopoverActive ? (isBreathing ? 1.04 : 1.0) : 1.0)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(colorScheme == .dark ? Color.white.opacity(0.05) : Color.black.opacity(0.03))
+                                .shadow(
+                                    color: isShowPopoverActive ? Color(hex: "0066FF").opacity(isBreathing ? 0.8 : 0.4) : Color.clear,
+                                    radius: isShowPopoverActive ? (isBreathing ? 24 : 10) : 0,
+                                    x: 0,
+                                    y: isShowPopoverActive ? (isBreathing ? 4 : 5) : 0
+                                )
+                        )
                         .popover(
                             present: Binding(
-                                get: {
-                                    guard let onboarding else { return false }
-                                    return onboarding.currentStep == .searchBarCoCaptain && onboarding.showPopover
-                                },
+                                get: { isShowPopoverActive },
                                 set: { newValue in
                                     onboarding?.showPopover = newValue
                                 }
@@ -446,37 +434,16 @@ struct CommandPaletteView: View {
                                     lineWidth: 1
                                 )
                         )
-                        .shadow(color: .black.opacity(0.3), radius: 15, y: 5)
-                        .overlay {
-                            if let onboarding, onboarding.currentStep == .searchBarCoCaptain && onboarding.showPopover {
-                                Capsule()
-                                    .stroke(
-                                        LinearGradient(
-                                            colors: [Color(hex: "6C5CE7"), Color(hex: "0984E3")],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        ),
-                                        lineWidth: 2
-                                    )
-                                    .scaleEffect(onboardingGlowScale)
-                                    .opacity(onboardingGlowOpacity)
-                                    .onAppear {
-                                        withAnimation(
-                                            .easeInOut(duration: 1.5)
-                                                .repeatForever(autoreverses: false)
-                                        ) {
-                                            onboardingGlowScale = 1.05
-                                            onboardingGlowOpacity = 0.0
-                                        }
-                                    }
-                            }
-                        }
+                        .scaleEffect(isShowPopoverActive ? (isBreathing ? 1.04 : 1.0) : 1.0)
+                        .shadow(
+                            color: isShowPopoverActive ? Color(hex: "0066FF").opacity(isBreathing ? 0.8 : 0.4) : Color.black.opacity(0.3),
+                            radius: isShowPopoverActive ? (isBreathing ? 24 : 10) : 15,
+                            x: 0,
+                            y: isShowPopoverActive ? (isBreathing ? 4 : 5) : 5
+                        )
                         .popover(
                             present: Binding(
-                                get: {
-                                    guard let onboarding else { return false }
-                                    return onboarding.currentStep == .searchBarCoCaptain && onboarding.showPopover
-                                },
+                                get: { isShowPopoverActive },
                                 set: { newValue in
                                     onboarding?.showPopover = newValue
                                 }
@@ -530,6 +497,30 @@ struct CommandPaletteView: View {
                 Task {
                     try? await Task.sleep(for: .seconds(0.1))
                     isFocused = true
+                }
+            }
+        }
+        .onAppear {
+            if isShowPopoverActive {
+                withAnimation(
+                    .easeInOut(duration: 1.8)
+                        .repeatForever(autoreverses: true)
+                ) {
+                    isBreathing = true
+                }
+            }
+        }
+        .onChange(of: isShowPopoverActive) { _, newValue in
+            if newValue {
+                withAnimation(
+                    .easeInOut(duration: 1.8)
+                        .repeatForever(autoreverses: true)
+                ) {
+                    isBreathing = true
+                }
+            } else {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    isBreathing = false
                 }
             }
         }
