@@ -39,6 +39,9 @@ struct ContentView: View {
     @State private var isExporting = false
     @State private var exportURL: URL?
     @State private var showExportSheet = false
+    
+    // Onboarding
+    @State private var onboarding = OnboardingCoordinator()
 
     var body: some View {
         GeometryReader { geometry in
@@ -96,7 +99,37 @@ struct ContentView: View {
                     router.activeStore.undoStackChanged += 1
                 },
                 canUndo: (router.activeStore.undoStackChanged >= 0) && (undoManager?.canUndo ?? false),
-                canRedo: (router.activeStore.undoStackChanged >= 0) && (undoManager?.canRedo ?? false)
+                canRedo: (router.activeStore.undoStackChanged >= 0) && (undoManager?.canRedo ?? false),
+                onExpand: {
+                    if onboarding.currentStep == .longPressFAB {
+                        onboarding.completeCurrentStep()
+                    }
+                },
+                onDragSummon: {
+                    if onboarding.currentStep == .dragToCoCaptain {
+                        onboarding.completeCurrentStep()
+                    }
+                },
+                showOnboardingPopover: Binding(
+                    get: {
+                        guard let step = onboarding.currentStep else { return false }
+                        // Show popover on FAB for the first 3 steps
+                        return onboarding.showPopover && step != .chatCoCaptain
+                    },
+                    set: { newValue in
+                        onboarding.showPopover = newValue
+                    }
+                ),
+                onboardingPopoverContent: { offset in
+                    if let step = onboarding.currentStep, step != .chatCoCaptain {
+                        return AnyView(
+                            OnboardingPopoverCard(step: step, arrowOffset: offset) {
+                                onboarding.skip()
+                            }
+                        )
+                    }
+                    return AnyView(EmptyView())
+                }
             )
             .environment(\.layoutDirection, .leftToRight)
 
@@ -242,10 +275,28 @@ struct ContentView: View {
                 withAnimation(.easeInOut(duration: 0.5)) {
                     isLaunching = false
                 }
+                // Start onboarding after launch screen fades
+                onboarding.startIfNeeded()
             }
         }
         .task {
             await appUpdateService.checkForUpdate()
+        }
+        .onChange(of: commandPalette.isPresented) { _, isPresented in
+            if isPresented && onboarding.currentStep == .tapFAB {
+                onboarding.completeCurrentStep()
+            }
+        }
+        .onChange(of: coCaptain.isPresented) { _, isPresented in
+            if isPresented && onboarding.currentStep == .chatCoCaptain {
+                // CoCaptain is open — complete onboarding once they see it
+                Task {
+                    try? await Task.sleep(for: .seconds(2.0))
+                    if coCaptain.isPresented {
+                        onboarding.completeCurrentStep()
+                    }
+                }
+            }
         }
         .onChange(of: router.currentWorkspace) {
             router.activeStore.undoManager = undoManager
@@ -295,6 +346,7 @@ struct ContentView: View {
         ) { result in
             handleFileImport(result: result)
         }
+        .environment(onboarding)
     }
 }
     
