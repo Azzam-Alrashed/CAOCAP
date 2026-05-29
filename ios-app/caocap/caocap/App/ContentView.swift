@@ -236,18 +236,32 @@ struct ContentView: View {
             await appUpdateService.checkForUpdate()
         }
         .onChange(of: commandPalette.isPresented) { _, isPresented in
-            if isPresented && onboarding.currentStep == .tapFAB {
-                onboarding.completeCurrentStep()
+            if isPresented {
+                if onboarding.currentStep == .tapFAB {
+                    onboarding.completeCurrentStep()
+                }
+            } else {
+                if onboarding.currentStep == .searchBarCoCaptain {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        if onboarding.currentStep == .searchBarCoCaptain && !coCaptain.isPresented {
+                            onboarding.moveToStep(.tapFAB)
+                        }
+                    }
+                }
             }
         }
         .onChange(of: coCaptain.isPresented) { _, isPresented in
             if isPresented {
                 if onboarding.currentStep == .searchBarCoCaptain {
                     onboarding.completeCurrentStep()
+                } else if onboarding.currentStep == .tapFAB {
+                    onboarding.moveToStep(.chatCoCaptain)
                 }
             } else {
                 if onboarding.currentStep == .dismissCoCaptain {
                     onboarding.completeCurrentStep()
+                } else if onboarding.currentStep == .chatCoCaptain {
+                    onboarding.moveToStep(.tapFAB)
                 }
             }
         }
