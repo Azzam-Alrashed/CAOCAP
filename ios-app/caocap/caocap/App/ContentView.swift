@@ -79,7 +79,9 @@ struct ContentView: View {
                 CanvasHUDView(
                     store: router.activeStore,
                     viewportScale: currentScale,
-                    onSignInTapped: { showingSignIn = true }
+                    onSignInTapped: { showingSignIn = true },
+                    onProjectExplorerTapped: { showingProjectExplorer = true },
+                    onCheckpointsTapped: { showingSnapshotBrowser = true }
                 )
             }
 

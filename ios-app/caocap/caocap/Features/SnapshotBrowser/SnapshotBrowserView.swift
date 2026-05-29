@@ -7,6 +7,7 @@ struct SnapshotBrowserView: View {
     @State private var customLabel: String = ""
     @State private var snapshotToRestore: SnapshotMetadata? = nil
     @State private var snapshotToDelete: SnapshotMetadata? = nil
+    @State private var previewTexts: [UUID: String] = [:]
     
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -210,6 +211,24 @@ struct SnapshotBrowserView: View {
                 Text(dateFormatter.string(from: checkpoint.date))
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
+                
+                if let previewText = previewTexts[checkpoint.id] {
+                    Text(previewText)
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundStyle(.blue.opacity(0.8))
+                        .lineLimit(1)
+                        .padding(.top, 2)
+                } else {
+                    HStack(spacing: 4) {
+                        ProgressView()
+                            .scaleEffect(0.6)
+                            .frame(width: 12, height: 12)
+                        Text("Loading preview...")
+                            .font(.system(size: 11, weight: .regular))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(.top, 2)
+                }
             }
             
             Spacer()
@@ -242,6 +261,27 @@ struct SnapshotBrowserView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
+        .task {
+            guard previewTexts[checkpoint.id] == nil else { return }
+            
+            if let snapshot = await store.loadSnapshot(metadata: checkpoint) {
+                let count = snapshot.nodes.count
+                if count == 0 {
+                    previewTexts[checkpoint.id] = "Empty Canvas"
+                } else {
+                    var typeCounts: [String: Int] = [:]
+                    for node in snapshot.nodes {
+                        let name = node.type.displayName
+                        typeCounts[name, default: 0] += 1
+                    }
+                    let sortedKeys = typeCounts.keys.sorted()
+                    let summary = sortedKeys.map { "\(typeCounts[$0]!) \($0)" }.joined(separator: ", ")
+                    previewTexts[checkpoint.id] = "\(count) node\(count == 1 ? "" : "s") (\(summary))"
+                }
+            } else {
+                previewTexts[checkpoint.id] = "Preview unavailable"
+            }
+        }
     }
     
     private func checkpointColor(for label: String) -> Color {

@@ -196,6 +196,14 @@ public class ProjectStore {
         checkpointManager.deleteCheckpoint(metadata: metadata, fileName: fileName)
     }
 
+    /// Non-blocking, thread-safe snapshot loader.
+    nonisolated public func loadSnapshot(metadata: SnapshotMetadata) async -> ProjectSnapshot? {
+        let fileName = self.fileName
+        let persistence = self.persistence
+        return await Task.detached(priority: .userInitiated) {
+            try? persistence.loadSnapshot(metadata: metadata, for: fileName)
+        }.value
+    }
 
     private func currentSnapshot() -> ProjectSnapshot {
         ProjectSnapshot(

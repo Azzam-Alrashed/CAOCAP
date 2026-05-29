@@ -57,4 +57,22 @@ struct SnapshotTests {
         // Should be limited to 20
         #expect(store.history.count == 20)
     }
+
+    @MainActor
+    @Test func loadSnapshotAsync() async throws {
+        let store = ProjectStore(fileName: "test_load_async.json", projectName: "Load Async Test")
+        store.nodes = [SpatialNode(id: UUID(), position: .zero, title: "Original Node")]
+        
+        store.createCheckpoint(label: "Async Saved State")
+        
+        try? await Task.sleep(nanoseconds: 200_000_000)
+        #expect(store.history.count == 1)
+        
+        let metadata = store.history[0]
+        
+        // Use nonisolated method to load
+        let snapshot = await store.loadSnapshot(metadata: metadata)
+        #expect(snapshot != nil)
+        #expect(snapshot?.nodes.first?.title == "Original Node")
+    }
 }

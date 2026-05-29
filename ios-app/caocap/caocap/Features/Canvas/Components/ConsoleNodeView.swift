@@ -4,14 +4,20 @@ struct ConsoleNodeView: View {
     let node: SpatialNode
     var isScrollable: Bool = false
     
+    @State private var store = ConsoleLogStore.shared
+    
     @MainActor
     private var logs: [ConsoleLogEntry] {
-        ConsoleLogStore.shared.logs
+        store.filteredLogs
     }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             headerRow
+            
+            if isScrollable {
+                filterBar
+            }
             
             if logs.isEmpty {
                 emptyState
@@ -27,6 +33,12 @@ struct ConsoleNodeView: View {
             }
         }
         .padding(.top, 12)
+        .onDisappear {
+            if isScrollable {
+                store.filterQuery = ""
+                store.filterType = nil
+            }
+        }
     }
     
     private var headerRow: some View {
@@ -128,5 +140,66 @@ struct ConsoleNodeView: View {
         case "info": return Color.blue.opacity(0.08)
         default: return Color.primary.opacity(0.03)
         }
+    }
+    
+    private var filterBar: some View {
+        VStack(spacing: 10) {
+            // Search field
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.secondary)
+                
+                TextField("Search logs...", text: $store.filterQuery)
+                    .font(.system(size: 14))
+                    .textFieldStyle(.plain)
+                
+                if !store.filterQuery.isEmpty {
+                    Button {
+                        store.filterQuery = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 14))
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(Color.primary.opacity(0.04))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            
+            // Level filters
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    filterChip(title: "All", type: nil)
+                    filterChip(title: "Logs", type: "log")
+                    filterChip(title: "Info", type: "info")
+                    filterChip(title: "Warnings", type: "warn")
+                    filterChip(title: "Errors", type: "error")
+                }
+                .padding(.horizontal, 2)
+            }
+        }
+        .padding(.bottom, 8)
+    }
+    
+    private func filterChip(title: String, type: String?) -> some View {
+        let isSelected = store.filterType == type
+        return Button {
+            withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+                store.filterType = type
+            }
+        } label: {
+            Text(title)
+                .font(.system(size: 12, weight: isSelected ? .bold : .medium))
+                .foregroundStyle(isSelected ? .white : .primary.opacity(0.7))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(isSelected ? Color.blue : Color.primary.opacity(0.04))
+                .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
     }
 }
