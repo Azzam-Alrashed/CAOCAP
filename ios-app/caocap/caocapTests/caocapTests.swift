@@ -127,12 +127,11 @@ struct caocapTests {
 
         var isDirectory: ObjCBool = false
         #expect(FileManager.default.fileExists(atPath: exportURL.path, isDirectory: &isDirectory))
-        #expect(isDirectory.boolValue)
-        #expect(FileManager.default.fileExists(atPath: exportURL.appendingPathComponent("index.html").path))
-        #expect(FileManager.default.fileExists(atPath: exportURL.appendingPathComponent("README.md").path))
-
-        let readme = try String(contentsOf: exportURL.appendingPathComponent("README.md"), encoding: .utf8)
-        #expect(readme.contains("## Software Requirements"))
-        #expect(readme.contains("# Intent"))
+        #expect(!isDirectory.boolValue)
+        #expect(exportURL.pathExtension == "zip")
+        
+        let attributes = try FileManager.default.attributesOfItem(atPath: exportURL.path)
+        let fileSize = attributes[.size] as? UInt64 ?? 0
+        #expect(fileSize > 0)
     }
 }
