@@ -398,141 +398,142 @@ struct ContentView: View {
     }
 
     private func configureActionDispatcher() {
-        actionDispatcher.configure(
-            goRoot: {
-                router.goRoot()
-                currentScale = 1.0
-            },
-            goBack: {
-                router.goBack()
-            },
-            newProject: {
-                router.createNewProject()
-            },
-            createNode: {
-                showingNodeCreationMenu = true
-            },
-            onCreateTextNode: {
-                router.activeStore.addNode(type: .text)
-            },
-            onCreateCalculationNode: {
-                router.activeStore.addNode(type: .calculation)
-            },
-            onCreateDisplayNode: {
-                router.activeStore.addNode(type: .display)
-            },
-            onCreateNumberNode: {
-                router.activeStore.addNode(type: .number)
-            },
-            onCreateTableNode: {
-                router.activeStore.addNode(type: .table)
-            },
-            onCreateChartNode: {
-                router.activeStore.addNode(type: .chart)
-            },
-            onCreateFirebaseNode: {
-                router.activeStore.addNode(type: .firebase)
-            },
-            onCreateAiAgentNode: {
-                router.activeStore.addNode(type: .aiAgent)
-            },
-            summonCoCaptain: {
-                coCaptain.configureProjectSession(store: router.activeStore, dispatcher: actionDispatcher)
-                coCaptain.setPresented(true)
-            },
-            openFile: {
-                showingFileImporter = true
-            },
-            toggleGrid: {
-                if gridOpacity > 0.0 {
-                    lastGridOpacity = gridOpacity
-                    gridOpacity = 0.0
-                } else {
-                    gridOpacity = lastGridOpacity > 0.0 ? lastGridOpacity : 0.1
+        actionDispatcher.register(.goRoot) {
+            router.goRoot()
+            currentScale = 1.0
+        }
+        actionDispatcher.register(.goBack) {
+            router.goBack()
+        }
+        actionDispatcher.register(.newProject) {
+            router.createNewProject()
+        }
+        actionDispatcher.register(.createNode) {
+            showingNodeCreationMenu = true
+        }
+        actionDispatcher.register(.createTextNode) {
+            router.activeStore.addNode(type: .text)
+        }
+        actionDispatcher.register(.createCalculationNode) {
+            router.activeStore.addNode(type: .calculation)
+        }
+        actionDispatcher.register(.createDisplayNode) {
+            router.activeStore.addNode(type: .display)
+        }
+        actionDispatcher.register(.createNumberNode) {
+            router.activeStore.addNode(type: .number)
+        }
+        actionDispatcher.register(.createTableNode) {
+            router.activeStore.addNode(type: .table)
+        }
+        actionDispatcher.register(.createChartNode) {
+            router.activeStore.addNode(type: .chart)
+        }
+        actionDispatcher.register(.createFirebaseNode) {
+            router.activeStore.addNode(type: .firebase)
+        }
+        actionDispatcher.register(.createAiAgentNode) {
+            router.activeStore.addNode(type: .aiAgent)
+        }
+        actionDispatcher.register(.summonCoCaptain) {
+            coCaptain.configureProjectSession(store: router.activeStore, dispatcher: actionDispatcher)
+            coCaptain.setPresented(true)
+        }
+        actionDispatcher.register(.openFile) {
+            showingFileImporter = true
+        }
+        actionDispatcher.register(.toggleGrid) {
+            if gridOpacity > 0.0 {
+                lastGridOpacity = gridOpacity
+                gridOpacity = 0.0
+            } else {
+                gridOpacity = lastGridOpacity > 0.0 ? lastGridOpacity : 0.1
+            }
+        }
+        actionDispatcher.register(.shareProject) {
+            Task {
+                if let url = await ExportService.export(from: router.activeStore, format: .webBundle(includeProjectContext: true)) {
+                    exportURL = url
+                    showExportSheet = true
+                } else if let url = await ExportService.export(from: router.activeStore, format: .caocap) {
+                    // Fallback to raw CAOCAP bundle
+                    exportURL = url
+                    showExportSheet = true
                 }
-            },
-            shareProject: {
+            }
+        }
+        actionDispatcher.register(.proSubscription) {
+            if coCaptain.isPresented {
+                coCaptain.setPresented(false)
                 Task {
-                    if let url = await ExportService.export(from: router.activeStore, format: .webBundle(includeProjectContext: true)) {
-                        exportURL = url
-                        showExportSheet = true
-                    } else if let url = await ExportService.export(from: router.activeStore, format: .caocap) {
-                        // Fallback to raw CAOCAP bundle
-                        exportURL = url
-                        showExportSheet = true
-                    }
-                }
-            },
-            proSubscription: {
-                if coCaptain.isPresented {
-                    coCaptain.setPresented(false)
-                    Task {
-                        try? await Task.sleep(for: .seconds(0.3))
-                        showingPurchaseSheet = true
-                    }
-                } else if showingProfile {
-                    showingProfile = false
-                    Task {
-                        try? await Task.sleep(for: .seconds(0.3))
-                        showingPurchaseSheet = true
-                    }
-                } else if showingSettings {
-                    showingSettings = false
-                    Task {
-                        try? await Task.sleep(for: .seconds(0.3))
-                        showingPurchaseSheet = true
-                    }
-                } else {
+                    try? await Task.sleep(for: .seconds(0.3))
                     showingPurchaseSheet = true
                 }
-            },
-            signIn: {
-                showingSignIn = true
-            },
-            openSettings: {
-                showingSettings = true
-            },
-            openProfile: {
-                showingProfile = true
-            },
-            openProjectExplorer: {
-                showingProjectExplorer = true
-            },
-            openSnapshotBrowser: {
-                showingSnapshotBrowser = true
-            },
-            moveNode: { args in
-                guard let idString = args["nodeId"], let uuid = UUID(uuidString: idString),
-                      let xStr = args["x"], let x = Double(xStr),
-                      let yStr = args["y"], let y = Double(yStr) else { return }
-                router.activeStore.updateNodePosition(id: uuid, position: CGPoint(x: x, y: y))
-            },
-            themeNode: { args in
-                guard let idString = args["nodeId"], let uuid = UUID(uuidString: idString),
-                      let themeStr = args["theme"], let theme = NodeTheme(rawValue: themeStr) else { return }
-                router.activeStore.updateNodeTheme(id: uuid, theme: theme)
-            },
-            transformNode: { args in
-                guard let idString = args["nodeId"], let uuid = UUID(uuidString: idString),
-                      let typeStr = args["type"], let type = NodeType(rawValue: typeStr) else { return }
-                router.activeStore.updateNodeType(id: uuid, type: type)
-            },
-            organizeNodes: {
-                router.activeStore.organizeNodes()
-                withAnimation(.spring(response: 0.8, dampingFraction: 0.85)) {
-                    viewport.fitTo(nodes: router.activeStore.nodes, containerSize: containerSize)
+            } else if showingProfile {
+                showingProfile = false
+                Task {
+                    try? await Task.sleep(for: .seconds(0.3))
+                    showingPurchaseSheet = true
                 }
-            },
-            toggleHUD: {
-                showingHUD.toggle()
-            },
-            showActionsList: {
-                commandPalette.setPresented(true, mode: .actionsList)
-            },
-            createSubCanvas: {
-                router.activeStore.addNode(type: .subCanvas)
+            } else if showingSettings {
+                showingSettings = false
+                Task {
+                    try? await Task.sleep(for: .seconds(0.3))
+                    showingPurchaseSheet = true
+                }
+            } else {
+                showingPurchaseSheet = true
             }
-        )
+        }
+        actionDispatcher.register(.signIn) {
+            showingSignIn = true
+        }
+        actionDispatcher.register(.openSettings) {
+            showingSettings = true
+        }
+        actionDispatcher.register(.openProfile) {
+            showingProfile = true
+        }
+        actionDispatcher.register(.openProjectExplorer) {
+            showingProjectExplorer = true
+        }
+        actionDispatcher.register(.openSnapshotBrowser) {
+            showingSnapshotBrowser = true
+        }
+        actionDispatcher.register(.moveNode) { args in
+            guard let args,
+                  let idString = args["nodeId"], let uuid = UUID(uuidString: idString),
+                  let xStr = args["x"], let x = Double(xStr),
+                  let yStr = args["y"], let y = Double(yStr) else { return }
+            router.activeStore.updateNodePosition(id: uuid, position: CGPoint(x: x, y: y))
+        }
+        actionDispatcher.register(.themeNode) { args in
+            guard let args,
+                  let idString = args["nodeId"], let uuid = UUID(uuidString: idString),
+                  let themeStr = args["theme"], let theme = NodeTheme(rawValue: themeStr) else { return }
+            router.activeStore.updateNodeTheme(id: uuid, theme: theme)
+        }
+        actionDispatcher.register(.transformNode) { args in
+            guard let args,
+                  let idString = args["nodeId"], let uuid = UUID(uuidString: idString),
+                  let typeStr = args["type"], let type = NodeType(rawValue: typeStr) else { return }
+            router.activeStore.updateNodeType(id: uuid, type: type)
+        }
+        actionDispatcher.register(.organizeNodes) {
+            router.activeStore.organizeNodes()
+            withAnimation(.spring(response: 0.8, dampingFraction: 0.85)) {
+                viewport.fitTo(nodes: router.activeStore.nodes, containerSize: containerSize)
+            }
+        }
+        actionDispatcher.register(.toggleHUD) {
+            showingHUD.toggle()
+        }
+        actionDispatcher.register(.showActionsList) {
+            commandPalette.setPresented(true, mode: .actionsList)
+        }
+        actionDispatcher.register(.createSubCanvas) {
+            router.activeStore.addNode(type: .subCanvas)
+        }
     }
 
     private func setupCommandHandlers() {

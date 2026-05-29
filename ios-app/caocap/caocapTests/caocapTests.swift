@@ -70,19 +70,9 @@ struct caocapTests {
         let dispatcher = AppActionDispatcher()
         var createdTextNode = false
 
-        dispatcher.configure(
-            goRoot: {},
-            goBack: {},
-            newProject: {},
-            createNode: {},
-            onCreateTextNode: { createdTextNode = true },
-            onCreateCalculationNode: {},
-            onCreateDisplayNode: {},
-            onCreateNumberNode: {},
-            onCreateTableNode: {},
-            onCreateAiAgentNode: {},
-            summonCoCaptain: {}
-        )
+        dispatcher.register(.createTextNode) {
+            createdTextNode = true
+        }
 
         let result = dispatcher.perform(.createTextNode, source: .agentAutomatic)
 
@@ -95,18 +85,9 @@ struct caocapTests {
         let dispatcher = AppActionDispatcher()
         var createdProject = false
 
-        dispatcher.configure(
-            goRoot: {},
-            goBack: {},
-            newProject: { createdProject = true },
-            createNode: {},
-            onCreateCalculationNode: {},
-            onCreateDisplayNode: {},
-            onCreateNumberNode: {},
-            onCreateTableNode: {},
-            onCreateAiAgentNode: {},
-            summonCoCaptain: {}
-        )
+        dispatcher.register(.newProject) {
+            createdProject = true
+        }
 
         let result = dispatcher.perform(.newProject, source: .agentAutomatic)
 
