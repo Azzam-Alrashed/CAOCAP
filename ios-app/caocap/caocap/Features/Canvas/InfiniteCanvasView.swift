@@ -96,13 +96,7 @@ struct InfiniteCanvasView: View {
                             )
                             .onTapGesture(count: 2) {
                                 withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                                    var targetScale: CGFloat = 1.0
-                                    if let frameData = nodeFrames[node.id], geometry.size != .zero {
-                                        let paddingFactor: CGFloat = 0.8
-                                        let scaleX = (geometry.size.width * paddingFactor) / frameData.size.width
-                                        let scaleY = (geometry.size.height * paddingFactor) / frameData.size.height
-                                        targetScale = min(min(scaleX, scaleY), 1.2)
-                                    }
+                                    let targetScale = computeTargetScale(for: node.id, containerSize: geometry.size)
                                     viewport.flyTo(nodePosition: node.position, containerSize: geometry.size, targetScale: targetScale)
                                 }
                                 HapticsManager.shared.impact(.medium)
@@ -243,6 +237,16 @@ struct InfiniteCanvasView: View {
             scale: viewport.scale,
             persist: true
         )
+    }
+
+    private func computeTargetScale(for nodeId: UUID, containerSize: CGSize) -> CGFloat {
+        guard let frameData = nodeFrames[nodeId], containerSize != .zero else {
+            return 1.0
+        }
+        let paddingFactor: CGFloat = 0.8
+        let scaleX = (containerSize.width * paddingFactor) / frameData.size.width
+        let scaleY = (containerSize.height * paddingFactor) / frameData.size.height
+        return min(min(scaleX, scaleY), 1.2)
     }
 }
 

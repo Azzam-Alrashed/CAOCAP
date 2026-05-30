@@ -54,46 +54,7 @@ struct NewProjectSheetView: View {
                                 selectedTemplate = template
                                 HapticsManager.shared.impact(.light)
                             } label: {
-                                HStack(spacing: 16) {
-                                    ZStack {
-                                        Circle()
-                                            .fill(template.theme.color.opacity(0.15))
-                                            .frame(width: 44, height: 44)
-                                        
-                                        Image(systemName: template.icon)
-                                            .font(.system(size: 20, weight: .semibold))
-                                            .foregroundColor(template.theme.color)
-                                    }
-                                    
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(template.displayName)
-                                            .font(.system(size: 16, weight: .bold, design: .rounded))
-                                            .foregroundColor(.white)
-                                        
-                                        Text(template.description)
-                                            .font(.system(size: 11, weight: .medium))
-                                            .foregroundColor(.white.opacity(0.5))
-                                            .multilineTextAlignment(.leading)
-                                            .lineLimit(2)
-                                    }
-                                    
-                                    Spacer()
-                                    
-                                    if selectedTemplate == template {
-                                        Image(systemName: "checkmark.circle.fill")
-                                            .font(.system(size: 20))
-                                            .foregroundColor(template.theme.color)
-                                    }
-                                }
-                                .padding()
-                                .background(
-                                    RoundedRectangle(cornerRadius: 16)
-                                        .fill(selectedTemplate == template ? Color.white.opacity(0.08) : Color.white.opacity(0.03))
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 16)
-                                                .stroke(selectedTemplate == template ? template.theme.color.opacity(0.6) : Color.white.opacity(0.1), lineWidth: 1.5)
-                                        )
-                                )
+                                TemplateRowView(template: template, isSelected: selectedTemplate == template)
                             }
                             .buttonStyle(.plain)
                         }
@@ -140,6 +101,54 @@ struct NewProjectSheetView: View {
                     .blur(radius: 80)
                     .offset(x: 100, y: -150)
             }
+        )
+    }
+}
+
+private struct TemplateRowView: View {
+    let template: ProjectTemplate
+    let isSelected: Bool
+    
+    var body: some View {
+        HStack(spacing: 16) {
+            ZStack {
+                Circle()
+                    .fill(template.theme.color.opacity(0.15))
+                    .frame(width: 44, height: 44)
+                
+                Image(systemName: template.icon)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(template.theme.color)
+            }
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(template.displayName)
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundColor(.white)
+                
+                Text(template.description)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(.white.opacity(0.5))
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(2)
+            }
+            
+            Spacer()
+            
+            if isSelected {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(template.theme.color)
+            }
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(isSelected ? Color.white.opacity(0.08) : Color.white.opacity(0.03))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(isSelected ? template.theme.color.opacity(0.6) : Color.white.opacity(0.1), lineWidth: 1.5)
+                )
         )
     }
 }

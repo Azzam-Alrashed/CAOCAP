@@ -149,9 +149,9 @@ public struct ProjectTemplateProvider {
                 subtitle: "Subtracts inputs in real-time",
                 theme: .orange,
                 nextNodeId: dispId,
-                inputNodeIds: [revId, costId],
                 operation: .subtract,
-                outputValue: 400.0
+                outputValue: 400.0,
+                inputNodeIds: [revId, costId]
             ),
             SpatialNode(
                 id: dispId,
