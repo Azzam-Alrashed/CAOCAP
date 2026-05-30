@@ -351,103 +351,29 @@ public final class AppActionDispatcher: AppActionPerforming {
         )
     ]
 
-    private var goRootHandler: (() -> Void)?
-    private var goBackHandler: (() -> Void)?
-    private var newProjectHandler: (() -> Void)?
-    private var createNodeHandler: (() -> Void)?
-    private var createTextNodeHandler: (() -> Void)?
-    private var createCalculationNodeHandler: (() -> Void)?
-    private var createDisplayNodeHandler: (() -> Void)?
-    private var createNumberNodeHandler: (() -> Void)?
-    private var createTableNodeHandler: (() -> Void)?
-    private var createChartNodeHandler: (() -> Void)?
-    private var createFirebaseNodeHandler: (() -> Void)?
-    private var createAiAgentNodeHandler: (() -> Void)?
-    private var summonCoCaptainHandler: (() -> Void)?
-    private var openFileHandler: (() -> Void)?
-    private var toggleGridHandler: (() -> Void)?
-    private var shareProjectHandler: (() -> Void)?
-    private var proSubscriptionHandler: (() -> Void)?
-    private var signInHandler: (() -> Void)?
-    private var openSettingsHandler: (() -> Void)?
-    private var openProfileHandler: (() -> Void)?
-    private var openProjectExplorerHandler: (() -> Void)?
-    private var helpHandler: (() -> Void)?
-    private var moveNodeHandler: (([String: String]) -> Void)?
-    private var themeNodeHandler: (([String: String]) -> Void)?
-    private var transformNodeHandler: (([String: String]) -> Void)?
-    private var organizeNodesHandler: (() -> Void)?
-    private var openSnapshotBrowserHandler: (() -> Void)?
-    private var toggleHUDHandler: (() -> Void)?
-    private var showActionsListHandler: (() -> Void)?
-    private var createSubCanvasHandler: (() -> Void)?
+    private var handlers: [AppActionID: ([String: String]?) -> String?] = [:]
 
     public init() {}
 
-    /// Injects handlers from the app shell. Definitions stay stable while the
-    /// concrete closures can depend on the currently mounted views/services.
-    public func configure(
-        goRoot: @escaping () -> Void,
-        goBack: @escaping () -> Void,
-        newProject: @escaping () -> Void,
-        createNode: @escaping () -> Void,
-        onCreateTextNode: (() -> Void)? = nil,
-        onCreateCalculationNode: @escaping () -> Void,
-        onCreateDisplayNode: @escaping () -> Void,
-        onCreateNumberNode: @escaping () -> Void,
-        onCreateTableNode: @escaping () -> Void,
-        onCreateChartNode: (() -> Void)? = nil,
-        onCreateFirebaseNode: (() -> Void)? = nil,
-        onCreateAiAgentNode: @escaping () -> Void,
-        summonCoCaptain: @escaping () -> Void,
-        openFile: (() -> Void)? = nil,
-        toggleGrid: (() -> Void)? = nil,
-        shareProject: (() -> Void)? = nil,
-        proSubscription: (() -> Void)? = nil,
-        signIn: (() -> Void)? = nil,
-        openSettings: (() -> Void)? = nil,
-        openProfile: (() -> Void)? = nil,
-        openProjectExplorer: (() -> Void)? = nil,
-        openSnapshotBrowser: (() -> Void)? = nil,
-        help: (() -> Void)? = nil,
-        moveNode: (([String: String]) -> Void)? = nil,
-        themeNode: (([String: String]) -> Void)? = nil,
-        transformNode: (([String: String]) -> Void)? = nil,
-        organizeNodes: (() -> Void)? = nil,
-        toggleHUD: (() -> Void)? = nil,
-        showActionsList: (() -> Void)? = nil,
-        createSubCanvas: (() -> Void)? = nil
-    ) {
-        self.goRootHandler = goRoot
-        self.goBackHandler = goBack
-        self.newProjectHandler = newProject
-        self.createNodeHandler = createNode
-        self.createTextNodeHandler = onCreateTextNode
-        self.createCalculationNodeHandler = onCreateCalculationNode
-        self.createDisplayNodeHandler = onCreateDisplayNode
-        self.createNumberNodeHandler = onCreateNumberNode
-        self.createTableNodeHandler = onCreateTableNode
-        self.createChartNodeHandler = onCreateChartNode
-        self.createFirebaseNodeHandler = onCreateFirebaseNode
-        self.createAiAgentNodeHandler = onCreateAiAgentNode
-        self.summonCoCaptainHandler = summonCoCaptain
-        self.openFileHandler = openFile
-        self.toggleGridHandler = toggleGrid
-        self.shareProjectHandler = shareProject
-        self.proSubscriptionHandler = proSubscription
-        self.signInHandler = signIn
-        self.openSettingsHandler = openSettings
-        self.openProfileHandler = openProfile
-        self.openProjectExplorerHandler = openProjectExplorer
-        self.openSnapshotBrowserHandler = openSnapshotBrowser
-        self.helpHandler = help
-        self.moveNodeHandler = moveNode
-        self.themeNodeHandler = themeNode
-        self.transformNodeHandler = transformNode
-        self.organizeNodesHandler = organizeNodes
-        self.toggleHUDHandler = toggleHUD
-        self.showActionsListHandler = showActionsList
-        self.createSubCanvasHandler = createSubCanvas
+    /// Registers a simple parameter-free handler.
+    public func register(_ id: AppActionID, handler: @escaping () -> Void) {
+        handlers[id] = { _ in
+            handler()
+            return nil
+        }
+    }
+
+    /// Registers a handler that accepts arguments.
+    public func register(_ id: AppActionID, handler: @escaping ([String: String]?) -> Void) {
+        handlers[id] = { arguments in
+            handler(arguments)
+            return nil
+        }
+    }
+
+    /// Registers a handler that accepts arguments and returns a custom status message.
+    public func register(_ id: AppActionID, handler: @escaping ([String: String]?) -> String?) {
+        handlers[id] = handler
     }
 
     public func definition(for id: AppActionID) -> AppActionDefinition? {
@@ -478,83 +404,7 @@ public final class AppActionDispatcher: AppActionPerforming {
             }
         }
 
-        let handler: (() -> Void)?
-        switch id {
-        case .goRoot:
-            handler = goRootHandler
-        case .goBack:
-            handler = goBackHandler
-        case .newProject:
-            handler = newProjectHandler
-        case .createNode:
-            handler = createNodeHandler
-        case .createTextNode:
-            handler = createTextNodeHandler
-        case .createCalculationNode:
-            handler = createCalculationNodeHandler
-        case .createDisplayNode:
-            handler = createDisplayNodeHandler
-        case .createNumberNode:
-            handler = createNumberNodeHandler
-        case .createTableNode:
-            handler = createTableNodeHandler
-        case .createChartNode:
-            handler = createChartNodeHandler
-        case .createFirebaseNode:
-            handler = createFirebaseNodeHandler
-        case .createAiAgentNode:
-            handler = createAiAgentNodeHandler
-        case .summonCoCaptain:
-            handler = summonCoCaptainHandler
-        case .openFile:
-            handler = openFileHandler
-        case .toggleGrid:
-            handler = toggleGridHandler
-        case .shareProject:
-            handler = shareProjectHandler
-        case .proSubscription:
-            handler = proSubscriptionHandler
-        case .signIn:
-            handler = signInHandler
-        case .openSettings:
-            handler = openSettingsHandler
-        case .openProfile:
-            handler = openProfileHandler
-        case .openProjectExplorer:
-            handler = openProjectExplorerHandler
-        case .help:
-            handler = helpHandler
-        case .moveNode:
-            if let moveNodeHandler, let arguments {
-                moveNodeHandler(arguments)
-                return AppActionResult(actionID: definition.id, title: definition.localizedTitle, executed: true, message: "")
-            }
-            handler = nil
-        case .themeNode:
-            if let themeNodeHandler, let arguments {
-                themeNodeHandler(arguments)
-                return AppActionResult(actionID: definition.id, title: definition.localizedTitle, executed: true, message: "")
-            }
-            handler = nil
-        case .transformNode:
-            if let transformNodeHandler, let arguments {
-                transformNodeHandler(arguments)
-                return AppActionResult(actionID: definition.id, title: definition.localizedTitle, executed: true, message: "")
-            }
-            handler = nil
-        case .organizeNodes:
-            handler = organizeNodesHandler
-        case .openSnapshotBrowser:
-            handler = openSnapshotBrowserHandler
-        case .toggleHUD:
-            handler = toggleHUDHandler
-        case .showActionsList:
-            handler = showActionsListHandler
-        case .createSubCanvas:
-            handler = createSubCanvasHandler
-        }
-
-        guard let handler else {
+        guard let handler = handlers[id] else {
             return AppActionResult(
                 actionID: definition.id,
                 title: definition.localizedTitle,
@@ -563,12 +413,14 @@ public final class AppActionDispatcher: AppActionPerforming {
             )
         }
 
-        handler()
+        let customMessage = handler(arguments)
+        let defaultMessage = LocalizationManager.shared.localizedString("appAction.executedMessage", arguments: [definition.localizedTitle])
+        
         return AppActionResult(
             actionID: definition.id,
             title: definition.localizedTitle,
             executed: true,
-            message: LocalizationManager.shared.localizedString("appAction.executedMessage", arguments: [definition.localizedTitle])
+            message: customMessage ?? defaultMessage
         )
     }
 }
