@@ -49,7 +49,9 @@ struct NewProjectSheetView: View {
                 
                 ScrollView {
                     VStack(spacing: 12) {
-                        ForEach(ProjectTemplate.allCases, id: \.self) { template in
+                        let templates = Array(ProjectTemplate.allCases)
+                        ForEach(0..<templates.count, id: \.self) { index in
+                            let template = templates[index]
                             Button {
                                 selectedTemplate = template
                                 HapticsManager.shared.impact(.light)
