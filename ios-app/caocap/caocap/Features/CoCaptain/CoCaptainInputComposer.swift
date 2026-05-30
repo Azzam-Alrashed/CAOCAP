@@ -14,7 +14,7 @@ struct CoCaptainInputComposer: View {
     let onDismissSuggestion: (ProjectSuggestion) -> Void
     
     @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
-    @State private var llmService = LLMService.shared
+    @State private var localModelManager = LocalMLXModelManager.shared
     
     // Onboarding glow animation states
     @State private var onboardingGlowScale: CGFloat = 1.0
@@ -32,18 +32,18 @@ struct CoCaptainInputComposer: View {
         VStack(spacing: 10) {
             Divider().opacity(0.5)
 
-            if llmService.isDownloadingLocalModel {
+            if localModelManager.isDownloadingLocalModel {
                 VStack(spacing: 6) {
                     HStack {
                         Label("Downloading Local Gemma 4 Model...", systemImage: "cpu")
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(.orange)
                         Spacer()
-                        Text("\(Int(llmService.localModelDownloadProgress * 100))%")
+                        Text("\(Int(localModelManager.localModelDownloadProgress * 100))%")
                             .font(.system(size: 12, design: .monospaced))
                             .foregroundStyle(.secondary)
                     }
-                    ProgressView(value: llmService.localModelDownloadProgress)
+                    ProgressView(value: localModelManager.localModelDownloadProgress)
                         .tint(.orange)
                 }
                 .padding(.horizontal, 16)
