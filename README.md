@@ -21,6 +21,10 @@ The goal: make it super easy, simple, cheap & fun (E.S.C.F) to turn any **idea i
 >  I fried my brain trying to figure it out. 
 
 
+Hello ✋🏽, My name is Anas Ahumaid.
+Thanks Azzam for reviewing and merging my pull request — I really appreciate it. Glad I could contribute to the project.
+For any one intrested you can find my fork at: https://github.com/AnasAlhumaid/CAOCAP-Ficruty
+
 **CAOCAP is the refusal to accept today's software development process as the final form.**
 
 **CAOCAP is not defined by any single interface, feature, or implementation. It is a relentless belief that the software development process can be improved, and a commitment to keep pushing until building software feels closer to thinking.**
