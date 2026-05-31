@@ -25,7 +25,10 @@ This document tracks the current product milestones for CAOCAP. The near-term pr
     - [x] **Tutorial Manifest**: Create a `tutorial.json` with pre-placed learning nodes.
     - [x] **Spatial Markers**: Implement animated focus rings to highlight UI elements during steps.
     - [x] **Gesture Gates**: Add logic that unlocks the next step only after a specific pan/zoom/tap action.
-- [ ] **Post-Launch Feedback Loop**: Make user support, issue triage, and release follow-up part of the product rhythm.
+- [x] **Spatial Polish**: Hierarchical flow layout, auto-fitting viewport, symmetrical undo/redo, and nested sub-canvases for infinite spatial organization.
+- [x] **Omnibox Redesign**: Floating capsule search interface with actions list mode for the command palette.
+- [x] **Projects Explorer**: Add Search, Create, Rename, Duplicate, Export, and dynamic visual presets for project management.
+- [x] **Post-Launch Feedback Loop**: Make user support, issue triage, and release follow-up part of the product rhythm (Addressed via Agent triage and QA skills).
 - [ ] **Release Hardening**: Re-check account deletion, privacy links, subscriptions, restore purchases, onboarding reset, and first project creation after each App Store update.
 
 ---
@@ -49,8 +52,10 @@ This document tracks the current product milestones for CAOCAP. The near-term pr
     - [ ] **Backend Quota Gate**: Preflight AI requests through a backend function or route model calls through the backend before Firebase AI Logic is invoked.
     - [ ] **Remote Config Quota Tuning**: Move free monthly token caps and warning thresholds to Remote Config so launch pricing/cost controls can change without an app update.
     - [ ] **Entitlement-Aware Enforcement**: Ensure verified Pro subscriptions bypass server-side quota checks while free and anonymous users share a consistent monthly usage window.
+- [x] **Local On-Device Models**: Add support for running MLX models (e.g. Gemma 4) locally on-device for privacy-first AI assistance without network dependencies.
 - [ ] **Intent-to-Node**: Transform a natural language prompt directly into a fully wired node graph.
-- [ ] **Agent Contract Hardening**: Keep parser, validator, dispatcher, patching, and review-bundle behavior covered by focused tests as contracts evolve.
+- [x] **Agent Contract Hardening**: Keep parser, validator, dispatcher, patching, and review-bundle behavior covered by focused tests as contracts evolve. (ProjectStore decoupled into focused engines with comprehensive tests).
+- [x] **Agent Development Skills**: Configured domain, issue-tracker, and QA skills to accelerate AI-driven development in the repository.
 
 ---
 
@@ -65,6 +70,7 @@ This document tracks the current product milestones for CAOCAP. The near-term pr
 - [x] **Console Node**: A dedicated node type that captures `console.log` output from the WebView in real-time.
 - [ ] **Project Templates**: A public library of starter templates (games, landing pages, tools) selectable from the Omnibox.
 - [/] **File System Bridge**: Basic project sharing/export exists; next step is a fuller HTML/CSS/JS bundle and future Git-style export.
+    - [x] **Project Import**: Support importing `.caocap` and `.json` project files directly from the file system.
 - [/] **Snapshot Browser**: Checkpoint infrastructure exists; next step is a user-facing browser for inspecting and restoring prior states.
 
 ---

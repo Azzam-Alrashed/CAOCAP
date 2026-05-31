@@ -70,19 +70,9 @@ struct caocapTests {
         let dispatcher = AppActionDispatcher()
         var createdTextNode = false
 
-        dispatcher.configure(
-            goRoot: {},
-            goBack: {},
-            newProject: {},
-            createNode: {},
-            onCreateTextNode: { createdTextNode = true },
-            onCreateCalculationNode: {},
-            onCreateDisplayNode: {},
-            onCreateNumberNode: {},
-            onCreateTableNode: {},
-            onCreateAiAgentNode: {},
-            summonCoCaptain: {}
-        )
+        dispatcher.register(.createTextNode) {
+            createdTextNode = true
+        }
 
         let result = dispatcher.perform(.createTextNode, source: .agentAutomatic)
 
@@ -95,18 +85,9 @@ struct caocapTests {
         let dispatcher = AppActionDispatcher()
         var createdProject = false
 
-        dispatcher.configure(
-            goRoot: {},
-            goBack: {},
-            newProject: { createdProject = true },
-            createNode: {},
-            onCreateCalculationNode: {},
-            onCreateDisplayNode: {},
-            onCreateNumberNode: {},
-            onCreateTableNode: {},
-            onCreateAiAgentNode: {},
-            summonCoCaptain: {}
-        )
+        dispatcher.register(.newProject) {
+            createdProject = true
+        }
 
         let result = dispatcher.perform(.newProject, source: .agentAutomatic)
 
@@ -147,5 +128,32 @@ struct caocapTests {
         
         onboarding.startIfNeeded()
         #expect(onboarding.currentStep == .tapFAB)
+    }
+
+    @MainActor
+    @Test func llmServiceLocalStreamingDelegatesToLocalMLXModelManager() async throws {
+        let originalModelName = UserDefaults.standard.string(forKey: "cocaptain.modelName")
+        UserDefaults.standard.set("gemma-4-local", forKey: "cocaptain.modelName")
+        
+        let llmService = LLMService.shared
+        
+        let events = llmService.streamAgentEvents(for: "test", context: nil, expectsStructuredResponse: false, availableActions: [])
+        
+        var threwExpectedError = false
+        do {
+            for try await _ in events {
+                // Expect an error because of missing/invalid local token/cache
+            }
+        } catch {
+            let errorDescription = error.localizedDescription
+            if errorDescription.contains("Access Token") || errorDescription.contains("LocalMLXModelManager") || errorDescription.contains("token") {
+                threwExpectedError = true
+            }
+        }
+        
+        #expect(threwExpectedError)
+        
+        // Restore original
+        UserDefaults.standard.set(originalModelName, forKey: "cocaptain.modelName")
     }
 }
