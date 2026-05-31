@@ -94,6 +94,13 @@ struct InfiniteCanvasView: View {
                                 x: node.position.x + currentOffset.width,
                                 y: node.position.y + currentOffset.height
                             )
+                            .onTapGesture(count: 2) {
+                                withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                                    let targetScale = computeTargetScale(for: node.id, containerSize: geometry.size)
+                                    viewport.flyTo(nodePosition: node.position, containerSize: geometry.size, targetScale: targetScale)
+                                }
+                                HapticsManager.shared.trigger(.medium)
+                            }
                             .onTapGesture {
                                 if let action = node.action {
                                     onNodeAction?(action)
@@ -156,6 +163,12 @@ struct InfiniteCanvasView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .contentShape(Rectangle()) // Ensure the entire area is gesture-sensitive.
+            .onTapGesture(count: 2) {
+                withAnimation(.spring(response: 0.6, dampingFraction: 0.85)) {
+                    viewport.fitTo(nodes: store.nodes, containerSize: geometry.size)
+                }
+                HapticsManager.shared.trigger(.medium)
+            }
             .gesture(
                 TrackpadPanGesture(
                     onChanged: { translation in
@@ -224,6 +237,16 @@ struct InfiniteCanvasView: View {
             scale: viewport.scale,
             persist: true
         )
+    }
+
+    private func computeTargetScale(for nodeId: UUID, containerSize: CGSize) -> CGFloat {
+        guard let frameData = nodeFrames[nodeId], containerSize != .zero else {
+            return 1.0
+        }
+        let paddingFactor: CGFloat = 0.8
+        let scaleX = (containerSize.width * paddingFactor) / frameData.size.width
+        let scaleY = (containerSize.height * paddingFactor) / frameData.size.height
+        return min(min(scaleX, scaleY), 1.2)
     }
 }
 

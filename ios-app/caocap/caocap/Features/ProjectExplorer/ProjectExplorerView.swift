@@ -12,8 +12,7 @@ struct ProjectExplorerView: View {
     @State private var searchText = ""
     
     // Alert & Action States
-    @State private var showingCreateAlert = false
-    @State private var newProjectName = ""
+    @State private var showingCreateSheet = false
     
     @State private var showingRenameAlert = false
     @State private var renameText = ""
@@ -65,7 +64,7 @@ struct ProjectExplorerView: View {
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     Button {
-                        showingCreateAlert = true
+                        showingCreateSheet = true
                     } label: {
                         Image(systemName: "plus")
                             .fontWeight(.semibold)
@@ -75,17 +74,18 @@ struct ProjectExplorerView: View {
                         .fontWeight(.bold)
                 }
             }
-            .alert("New Project", isPresented: $showingCreateAlert) {
-                TextField("Project Name", text: $newProjectName)
-                Button("Cancel", role: .cancel) {
-                    newProjectName = ""
-                }
-                Button("Create") {
-                    createProject(name: newProjectName.isEmpty ? "Untitled Project" : newProjectName)
-                    newProjectName = ""
-                }
-            } message: {
-                Text("Enter a name for your new project.")
+            .sheet(isPresented: $showingCreateSheet) {
+                NewProjectSheetView(
+                    onCreate: { name, template in
+                        createProject(name: name, template: template)
+                        showingCreateSheet = false
+                    },
+                    onCancel: {
+                        showingCreateSheet = false
+                    }
+                )
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
             }
             .alert("Rename Project", isPresented: $showingRenameAlert) {
                 TextField("New Name", text: $renameText)
@@ -124,11 +124,11 @@ struct ProjectExplorerView: View {
         }
     }
     
-    private func createProject(name: String) {
+    private func createProject(name: String, template: ProjectTemplate = .helloWorld) {
         isLoading = true
         Task {
             do {
-                let newFileName = try await ProjectManager.shared.createNewProject(name: name)
+                let newFileName = try await ProjectManager.shared.createNewProject(name: name, template: template)
                 onSelect(newFileName)
                 dismiss()
             } catch {

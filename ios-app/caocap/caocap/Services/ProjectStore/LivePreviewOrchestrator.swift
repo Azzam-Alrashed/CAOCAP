@@ -37,6 +37,7 @@ struct LivePreviewOrchestrator {
         if nodes[webViewIndex].htmlContent != compilation.html {
             nodes[webViewIndex].htmlContent = compilation.html
             modified = true
+            ConsoleLogStore.shared.clear()
         }
         
         return modified

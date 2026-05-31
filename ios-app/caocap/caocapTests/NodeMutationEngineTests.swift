@@ -23,6 +23,12 @@ final class NodeMutationEngineTests: XCTestCase {
         XCTAssertEqual(nodes.count, 2)
         XCTAssertEqual(nodes[1].type, .srs)
         XCTAssertEqual(nodes[1].title, "Software Requirements Specification")
+        
+        engine.addNode(nodes: &nodes, type: .console)
+        XCTAssertEqual(nodes.count, 3)
+        XCTAssertEqual(nodes[2].type, .console)
+        XCTAssertEqual(nodes[2].title, "Console")
+        XCTAssertEqual(nodes[2].subtitle, "Logs and errors from Live Preview")
     }
     
     func testUpdateNodeTypeTriggersCallbacks() {

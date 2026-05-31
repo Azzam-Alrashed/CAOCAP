@@ -229,6 +229,8 @@ public struct ProjectContextBuilder {
         case .subCanvas:
             let fileName = node.linkedCanvasFileName ?? "[None]"
             return "Sub-Canvas node linking to file: \(fileName)"
+        case .console:
+            return "[Console log output node]"
         }
     }
 

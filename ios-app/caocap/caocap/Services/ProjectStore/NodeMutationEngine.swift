@@ -78,6 +78,8 @@ final class NodeMutationEngine {
                 if nodes[index].linkedCanvasFileName == nil {
                     nodes[index].linkedCanvasFileName = "project_\(UUID().uuidString.prefix(8)).json"
                 }
+            case .console:
+                break
             }
             
             if persist {
@@ -243,6 +245,9 @@ final class NodeMutationEngine {
         case .subCanvas:
             subtitle = "Tap to open this canvas"
             initialText = nil
+        case .console:
+            subtitle = "Logs and errors from Live Preview"
+            initialText = nil
         default:
             subtitle = nil
             initialText = nil
@@ -296,6 +301,7 @@ final class NodeMutationEngine {
         case .chart: return "chart.line.uptrend.xyaxis"
         case .firebase: return "flame.fill"
         case .subCanvas: return "folder.fill"
+        case .console: return "terminal.fill"
         }
     }
 
@@ -310,6 +316,7 @@ final class NodeMutationEngine {
         case .chart: return .purple
         case .firebase: return .orange
         case .subCanvas: return .cyan
+        case .console: return .purple
         default: return .blue
         }
     }
