@@ -74,14 +74,14 @@ public class ProjectStore {
         }
         mutationEngine.onCompileLivePreview = { [weak self] nodes in
             guard let self else { return }
-            _ = self.livePreviewOrchestrator.compile(nodes: &self.nodes)
+            _ = self.livePreviewOrchestrator.compile(nodes: &nodes)
         }
-        mutationEngine.onRecalculateGraph = { [weak self] _ in
+        mutationEngine.onRecalculateGraph = { [weak self] nodes in
             guard let self else { return }
-            _ = self.reactiveGraphEngine.recalculate(nodes: &self.nodes)
+            _ = self.reactiveGraphEngine.recalculate(nodes: &nodes)
         }
-        mutationEngine.onTriggerDownstreamAgents = { [weak self] id in
-            self?.triggerDownstreamAgents(from: id)
+        mutationEngine.onTriggerDownstreamAgents = { [weak self] id, nodes in
+            self?.triggerDownstreamAgents(from: id, nodes: nodes)
         }
         mutationEngine.onViewportChange = { [weak self] in
             self?.viewportOffset ?? .zero
@@ -168,6 +168,10 @@ public class ProjectStore {
     
     /// Autonomously triggers agents on downstream nodes when an upstream node updates.
     public func triggerDownstreamAgents(from sourceNodeID: UUID) {
+        triggerDownstreamAgents(from: sourceNodeID, nodes: nodes)
+    }
+
+    private func triggerDownstreamAgents(from sourceNodeID: UUID, nodes: [SpatialNode]) {
         agentPipeline.triggerDownstreamAgents(from: sourceNodeID, nodes: nodes, store: self)
     }
 

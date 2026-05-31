@@ -31,6 +31,10 @@ For any one intrested you can find my fork at: https://github.com/AnasAlhumaid/C
 
 CAOCAP is bigger than the current implementation. The current implementation is not the doctrine. It's an experiment in service of the larger act: challenging the inherited shape of software development and building better ways to go from ideas -> software.
 
+## Learn The Codebase
+
+Start with [The CAOCAP Codebase Learning Book](docs/caocap-codebase-learning-book.md) for a guided path through the app shell, spatial canvas, project store, live preview runtime, and CoCaptain agent flow.
+
 ```
 function CAOCAP(idea) {
   const app = new Software();

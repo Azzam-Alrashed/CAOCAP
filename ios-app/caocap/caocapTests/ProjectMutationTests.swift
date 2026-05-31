@@ -99,6 +99,26 @@ struct ProjectMutationTests {
         #expect(!store.isSaving)
     }
 
+    @Test func updatingTextNodeRecalculatesDependentNodes() throws {
+        let inputId = UUID()
+        var input = SpatialNode(id: inputId, type: .text, position: .zero, title: "Input")
+        input.textContent = "10"
+
+        var calculation = SpatialNode(type: .calculation, position: .zero, title: "Double")
+        calculation.operation = .add
+        calculation.inputNodeIds = [inputId, inputId]
+
+        let store = ProjectStore(
+            fileName: UUID().uuidString + ".json",
+            initialNodes: [input, calculation]
+        )
+
+        store.updateNodeTextContent(id: inputId, text: "21", persist: false)
+
+        let updatedCalculation = try #require(store.nodes.first(where: { $0.id == calculation.id }))
+        #expect(updatedCalculation.outputValue == 42)
+    }
+
     @Test func organizeNodesRegistersUndoAndRedo() throws {
         let node1Id = UUID()
         let node2Id = UUID()
