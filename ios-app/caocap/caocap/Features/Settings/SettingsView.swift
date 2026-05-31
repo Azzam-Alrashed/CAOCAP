@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(OnboardingCoordinator.self) private var onboarding
     
     @AppStorage("app_language") private var selectedLanguage = "English"
     @AppStorage("app_theme") private var selectedTheme = "System"
@@ -255,6 +256,21 @@ struct SettingsView: View {
                                     
                                     SettingsPickerRow(icon: "shredder.fill", title: "Intensity", selection: $hapticsIntensity, options: intensities, color: .green)
                                 }
+                            }
+                            
+                            // MARK: - Tutorial
+                            SettingsSection("Tutorial") {
+                                SettingsRow(
+                                    icon: "arrow.clockwise.circle",
+                                    title: "Restart Interactive Tutorial",
+                                    subtitle: "Reset and start first-run walkthrough",
+                                    color: .blue,
+                                    action: {
+                                        onboarding.reset()
+                                        onboarding.startIfNeeded()
+                                        dismiss()
+                                    }
+                                )
                             }
                         }
                         .padding(.horizontal, 20)

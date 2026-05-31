@@ -56,7 +56,7 @@ public actor ProjectManager {
         try? FileManager.default.removeItem(at: url)
     }
     
-    public func createNewProject(name: String) throws -> String {
+    public func createNewProject(name: String, template: ProjectTemplate = .helloWorld) throws -> String {
         let id = UUID().uuidString.prefix(8)
         let fileName = "project_\(id).json"
         
@@ -64,7 +64,7 @@ public actor ProjectManager {
         let snapshot = ProjectSnapshot(
             schemaVersion: ProjectPersistenceService.currentSchemaVersion,
             projectName: name,
-            nodes: ProjectTemplateProvider.defaultNodes,
+            nodes: ProjectTemplateProvider.nodes(for: template),
             viewportOffset: .zero,
             viewportScale: 0.3
         )

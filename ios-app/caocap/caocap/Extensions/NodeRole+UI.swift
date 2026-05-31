@@ -16,6 +16,7 @@ extension NodeRole {
         case .chart: return "chart.line.uptrend.xyaxis"
         case .firebase: return "flame.fill"
         case .subCanvas: return "folder.fill"
+        case .console: return "terminal.fill"
         case .custom: return "square.grid.2x2.fill"
         }
     }
@@ -35,6 +36,7 @@ extension NodeRole {
         case .chart: return .purple
         case .firebase: return .orange
         case .subCanvas: return .cyan
+        case .console: return .purple
         case .custom: return .purple
         }
     }

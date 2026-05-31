@@ -14,6 +14,7 @@ public enum NodeRole: String, CaseIterable, Codable, Hashable {
     case chart
     case firebase
     case subCanvas
+    case console
     case custom
 
     public static let editableCanonicalRoles: [NodeRole] = [
@@ -41,6 +42,7 @@ public enum NodeRole: String, CaseIterable, Codable, Hashable {
         case .chart: return "Chart"
         case .firebase: return "Firebase"
         case .subCanvas: return "Sub-Canvas"
+        case .console: return "Console"
         case .custom: return "Custom"
         }
     }
@@ -90,6 +92,8 @@ public extension SpatialNode {
             return .firebase
         case .subCanvas:
             return .subCanvas
+        case .console:
+            return .console
         default:
             return .custom
         }
