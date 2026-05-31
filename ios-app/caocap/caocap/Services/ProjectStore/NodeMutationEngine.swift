@@ -13,7 +13,7 @@ final class NodeMutationEngine {
     var onRequestSave: ((Bool) -> Void)?
     var onCompileLivePreview: ((inout [SpatialNode]) -> Void)?
     var onRecalculateGraph: ((inout [SpatialNode]) -> Void)?
-    var onTriggerDownstreamAgents: ((UUID) -> Void)?
+    var onTriggerDownstreamAgents: ((UUID, [SpatialNode]) -> Void)?
     var onViewportChange: (() -> CGSize)?
     var onPerformUndoMutation: (( @escaping (inout [SpatialNode]) -> Void ) -> Void)?
     
@@ -160,7 +160,7 @@ final class NodeMutationEngine {
                 onRequestSave?(true)
             }
             onRecalculateGraph?(&nodes)
-            onTriggerDownstreamAgents?(id)
+            onTriggerDownstreamAgents?(id, nodes)
         }
     }
     
