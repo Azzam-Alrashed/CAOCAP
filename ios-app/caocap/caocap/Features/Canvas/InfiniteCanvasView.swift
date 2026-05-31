@@ -99,7 +99,7 @@ struct InfiniteCanvasView: View {
                                     let targetScale = computeTargetScale(for: node.id, containerSize: geometry.size)
                                     viewport.flyTo(nodePosition: node.position, containerSize: geometry.size, targetScale: targetScale)
                                 }
-                                HapticsManager.shared.impact(.medium)
+                                HapticsManager.shared.trigger(.medium)
                             }
                             .onTapGesture {
                                 if let action = node.action {
@@ -167,7 +167,7 @@ struct InfiniteCanvasView: View {
                 withAnimation(.spring(response: 0.6, dampingFraction: 0.85)) {
                     viewport.fitTo(nodes: store.nodes, containerSize: geometry.size)
                 }
-                HapticsManager.shared.impact(.medium)
+                HapticsManager.shared.trigger(.medium)
             }
             .gesture(
                 TrackpadPanGesture(
