@@ -21,42 +21,19 @@ public class OnboardingCoordinator {
         }
 
         var title: String {
-            switch self {
-            case .tapFAB:             return "Your Command Center"
-            case .searchBarCoCaptain: return "Ask CoCaptain"
-            case .chatCoCaptain:      return "Meet Your Co-pilot"
-            case .dismissCoCaptain:   return "Back to Canvas"
-            case .longPressFAB:       return "Quick Shortcuts"
-            }
+            OnboardingManifest.content(for: self).title
         }
 
         var message: String {
-            switch self {
-            case .tapFAB:
-                return "Tap this button to open the command palette — your gateway to every action in CAOCAP."
-            case .searchBarCoCaptain:
-                return "Type a message like 'hi' here and press return to send it to your AI pilot."
-            case .chatCoCaptain:
-                return "CoCaptain is here! Type a message here to build, refine, or explain code."
-            case .dismissCoCaptain:
-                return "Tap 'Done' or drag the panel down to close CoCaptain and return to the canvas."
-            case .longPressFAB:
-                return "Press and hold this button to reveal quick actions, or drag to the sparkles ✦ to quickly summon CoCaptain."
-            }
+            OnboardingManifest.content(for: self).message
         }
 
         var icon: String {
-            switch self {
-            case .tapFAB:             return "hand.tap"
-            case .searchBarCoCaptain: return "keyboard"
-            case .chatCoCaptain:      return "bubble.left.and.text.bubble.right"
-            case .dismissCoCaptain:   return "arrow.down"
-            case .longPressFAB:       return "hand.tap.fill"
-            }
+            OnboardingManifest.content(for: self).icon
         }
 
         var stepLabel: String {
-            "\(rawValue + 1) of \(Step.allCases.count)"
+            OnboardingManifest.stepLabel(for: self)
         }
     }
 
@@ -93,8 +70,13 @@ public class OnboardingCoordinator {
         guard !isCompleted else { return }
 
         // If the user closed the app mid-onboarding, reset back to the beginning for a cohesive flow
-        currentStep = .tapFAB
-        UserDefaults.standard.set(0, forKey: Self.stepKey)
+        guard let firstStep = OnboardingManifest.firstStep else {
+            markComplete()
+            return
+        }
+
+        currentStep = firstStep
+        UserDefaults.standard.set(firstStep.rawValue, forKey: Self.stepKey)
 
         Task {
             try? await Task.sleep(for: .seconds(initialDelay))
@@ -109,9 +91,8 @@ public class OnboardingCoordinator {
         guard let step = currentStep else { return }
         showPopover = false
 
-        let nextRaw = step.rawValue + 1
-        if let next = Step(rawValue: nextRaw) {
-            UserDefaults.standard.set(nextRaw, forKey: Self.stepKey)
+        if let next = OnboardingManifest.nextStep(after: step) {
+            UserDefaults.standard.set(next.rawValue, forKey: Self.stepKey)
             currentStep = next
             Task {
                 try? await Task.sleep(for: .seconds(interStepDelay))

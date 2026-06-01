@@ -486,6 +486,26 @@ struct CoCaptainAgentTests {
         #expect(viewModel.selectedIndex == 0)
     }
 
+    @MainActor
+    @Test func commandPaletteClearingPromptDisablesPromptSubmissionAndResetsSelection() {
+        let viewModel = CommandPaletteViewModel()
+        viewModel.actions = TestActionDispatcher().availableActions
+        viewModel.query = "settings"
+
+        let promptIndex = viewModel.filteredActions.count + viewModel.nodeResults.count
+        while viewModel.selectedIndex != promptIndex {
+            viewModel.moveSelection(direction: .down)
+        }
+
+        #expect(viewModel.canSubmitPrompt)
+        #expect(viewModel.selectedIndex == promptIndex)
+
+        viewModel.query = ""
+
+        #expect(!viewModel.canSubmitPrompt)
+        #expect(viewModel.selectedIndex == 0)
+    }
+
     @Test func parserExtractsTrailingStructuredBlock() throws {
         let parser = CoCaptainAgentParser()
         let response =
