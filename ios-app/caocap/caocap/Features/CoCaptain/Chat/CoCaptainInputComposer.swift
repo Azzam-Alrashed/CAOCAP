@@ -122,6 +122,11 @@ struct CoCaptainInputComposer: View {
                 .foregroundColor(.blue)
                 .shadow(color: .blue.opacity(0.2), radius: 4)
         }
+        .simultaneousGesture(
+            TapGesture().onEnded {
+                isFocused = false
+            }
+        )
         .padding(.bottom, 6)
     }
 

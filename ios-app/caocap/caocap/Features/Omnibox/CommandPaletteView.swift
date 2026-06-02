@@ -71,6 +71,7 @@ struct CommandPaletteView: View {
                 Color.black.opacity(viewModel.mode == .actionsList ? 0.4 : 0.2)
                     .ignoresSafeArea()
                     .onTapGesture {
+                        isFocused = false
                         viewModel.setPresented(false)
                     }
                     .transition(.opacity)
@@ -276,6 +277,7 @@ struct CommandPaletteView: View {
                                 .padding(.vertical, 8)
                             }
                             .frame(maxHeight: 400)
+                            .interactiveKeyboardDismiss()
                             .onChange(of: viewModel.selectedIndex) { oldIndex, newIndex in
                                 let actions = viewModel.filteredActions
                                 let nodeResults = viewModel.nodeResults
@@ -440,6 +442,7 @@ struct CommandPaletteView: View {
                                         .padding(.vertical, 8)
                                     }
                                     .frame(maxHeight: 250)
+                                    .interactiveKeyboardDismiss()
                                     .onChange(of: viewModel.selectedIndex) { oldIndex, newIndex in
                                         let actions = viewModel.filteredActions
                                         let nodeResults = viewModel.nodeResults

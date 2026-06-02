@@ -6,6 +6,7 @@ struct NewProjectSheetView: View {
     
     @State private var projectName = ""
     @State private var selectedTemplate: ProjectTemplate = .helloWorld
+    @FocusState private var isNameFocused: Bool
     
     var body: some View {
         VStack(spacing: 24) {
@@ -28,6 +29,7 @@ struct NewProjectSheetView: View {
                     .foregroundColor(.white.opacity(0.4))
                 
                 TextField("Untitled Project", text: $projectName)
+                    .focused($isNameFocused)
                     .font(.system(size: 16, weight: .medium))
                     .padding()
                     .background(Color.white.opacity(0.05))
@@ -51,6 +53,7 @@ struct NewProjectSheetView: View {
                     VStack(spacing: 12) {
                         ForEach(Array(ProjectTemplate.allCases), id: \.id) { template in
                             Button {
+                                isNameFocused = false
                                 selectedTemplate = template
                                 HapticsManager.shared.trigger(.light)
                             } label: {
@@ -62,6 +65,7 @@ struct NewProjectSheetView: View {
                     .padding(.horizontal, 20)
                     .padding(.bottom, 20)
                 }
+                .interactiveKeyboardDismiss()
             }
             
             // Buttons

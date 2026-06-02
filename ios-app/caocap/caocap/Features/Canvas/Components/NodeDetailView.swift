@@ -575,6 +575,7 @@ struct NodeDetailView: View {
                         }
                         .padding(24)
                     }
+                    .interactiveKeyboardDismiss()
                 }
                 .navigationTitle("Node Inspector")
                 .navigationBarTitleDisplayMode(.inline)

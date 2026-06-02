@@ -17,7 +17,7 @@ struct CoCaptainView: View {
                 CoCaptainTimelineListView(
                     viewModel: viewModel,
                     lastScrollPosition: $viewModel.lastScrollPosition,
-                    isFocused: isFocused
+                    isFocused: $isFocused
                 )
 
                 CoCaptainInputComposer(
@@ -38,6 +38,7 @@ struct CoCaptainView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
+                        isFocused = false
                         viewModel.setPresented(false)
                     }
                     .overlay {
