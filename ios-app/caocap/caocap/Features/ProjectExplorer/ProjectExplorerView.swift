@@ -318,6 +318,7 @@ private struct ProjectListView: View {
             }
         }
         .listStyle(.plain)
+        .interactiveKeyboardDismiss()
     }
 }
 

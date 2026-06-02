@@ -212,6 +212,8 @@ Lightweight, reusable Swift and framework extensions. No dependencies on app-spe
 | `Color+Hex.swift` | Hex string → `SwiftUI.Color` conversion utility. |
 | `NodeRole+UI.swift` | View layer mapping for node icons and theme colors. |
 | `NodeTheme+UI.swift` | Computed SwiftUI Color mapping for pure NodeTheme model. |
+| `KeyboardDismisser.swift` | UIKit fallback that resigns the current first responder, for input surfaces without a `@FocusState` binding. |
+| `View+KeyboardDismiss.swift` | Shared opt-in view modifiers (`dismissKeyboardOnTap`, `interactiveKeyboardDismiss`) for consistent keyboard dismissal across text-input surfaces. |
 
 ---
 
