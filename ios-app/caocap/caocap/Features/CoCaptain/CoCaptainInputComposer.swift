@@ -14,8 +14,6 @@ struct CoCaptainInputComposer: View {
     
     @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
     @State private var localModelManager = LocalMLXModelManager.shared
-    
-    @State private var isOnboardingBreathing: Bool = false
 
     private var isInputValid: Bool {
         !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -23,11 +21,6 @@ struct CoCaptainInputComposer: View {
 
     private var canSend: Bool {
         isInputValid && !isThinking
-    }
-
-    private var isChatOnboardingActive: Bool {
-        guard let onboarding else { return false }
-        return onboarding.currentStep == .chatCoCaptain && onboarding.showPopover
     }
 
     var body: some View {
@@ -149,59 +142,15 @@ struct CoCaptainInputComposer: View {
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(Color.primary.opacity(0.06))
-                .shadow(
-                    color: isChatOnboardingActive ? Color(hex: "0066FF").opacity(isOnboardingBreathing ? 0.8 : 0.4) : .clear,
-                    radius: isChatOnboardingActive ? (isOnboardingBreathing ? 24 : 10) : 0,
-                    x: 0,
-                    y: isChatOnboardingActive ? (isOnboardingBreathing ? 4 : 5) : 0
-                )
         )
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .stroke(
-                    isChatOnboardingActive ? Color(hex: "0066FF").opacity(isOnboardingBreathing ? 0.55 : 0.3) : (isFocused ? Color.blue.opacity(0.3) : Color.clear),
+                    isFocused ? Color.blue.opacity(0.3) : Color.clear,
                     lineWidth: 1.5
                 )
         )
-        .onboardingScale(isActive: isChatOnboardingActive, isBreathing: isOnboardingBreathing)
         .animation(.easeInOut(duration: 0.2), value: isFocused)
-        .onAppear {
-            if isChatOnboardingActive {
-                withAnimation(
-                    .easeInOut(duration: 1.8)
-                        .repeatForever(autoreverses: true)
-                ) {
-                    isOnboardingBreathing = true
-                }
-            }
-        }
-        .onChange(of: isChatOnboardingActive) { _, newValue in
-            if newValue {
-                withAnimation(
-                    .easeInOut(duration: 1.8)
-                        .repeatForever(autoreverses: true)
-                ) {
-                    isOnboardingBreathing = true
-                }
-            } else {
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    isOnboardingBreathing = false
-                }
-            }
-        }
-        .overlay(alignment: .top) {
-            if let step = onboarding?.currentStep {
-                if isChatOnboardingActive {
-                    OnboardingPopoverCard(step: step, arrowPlacement: .bottom) {
-                        onboarding?.skip()
-                    }
-                    .offset(y: -150)
-                    .transition(.scale(scale: 0.85).combined(with: .opacity))
-                    .zIndex(10)
-                }
-            }
-        }
-        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isChatOnboardingActive)
     }
 
     private var sendButton: some View {
@@ -241,11 +190,5 @@ struct CoCaptainInputComposer: View {
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isInputValid)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isThinking)
         .padding(.bottom, 5)
-    }
-}
-
-private extension View {
-    func onboardingScale(isActive: Bool, isBreathing: Bool) -> some View {
-        scaleEffect(isActive ? (isBreathing ? 1.04 : 1.0) : 1.0)
     }
 }
