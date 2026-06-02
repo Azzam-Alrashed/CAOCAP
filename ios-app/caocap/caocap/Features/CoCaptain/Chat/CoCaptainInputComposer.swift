@@ -14,6 +14,7 @@ struct CoCaptainInputComposer: View {
     
     @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
     @State private var localModelManager = LocalMLXModelManager.shared
+    @State private var isContextVisible = false
 
     private var isInputValid: Bool {
         !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -58,12 +59,13 @@ struct CoCaptainInputComposer: View {
                 .transition(.move(edge: .top).combined(with: .opacity))
             }
 
-            if let store {
+            if isContextVisible, let store {
                 ContextPill(
                     projectName: store.projectName,
                     fileName: store.fileName,
                     nodeCount: store.nodes.count
                 )
+                .transition(.move(edge: .top).combined(with: .opacity))
             }
 
             HStack(alignment: .bottom, spacing: 8) {
@@ -75,10 +77,25 @@ struct CoCaptainInputComposer: View {
             .padding(.bottom, 10)
         }
         .background(Color.primary.opacity(0.02))
+        .animation(.spring(response: 0.25, dampingFraction: 0.85), value: isContextVisible)
     }
 
     private var quickPromptMenu: some View {
         Menu {
+            if store != nil {
+                Button {
+                    isContextVisible.toggle()
+                } label: {
+                    Label(
+                        isContextVisible ? "Hide Canvas Context" : "Show Canvas Context",
+                        systemImage: "scope"
+                    )
+                }
+                .disabled(isThinking)
+
+                Divider()
+            }
+
             Button {
                 onQuickPrompt("Summarize the current canvas and point out the most important next step.")
             } label: {
