@@ -132,6 +132,9 @@ struct CoCaptainView: View {
         text = ""
         isFocused = false
         viewModel.sendMessage(prompt)
+        if onboarding?.currentStep == .chatCoCaptain {
+            onboarding?.completeCurrentStep()
+        }
     }
 }
 

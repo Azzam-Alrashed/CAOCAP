@@ -257,8 +257,10 @@ struct ContentView: View {
             if isPresented {
                 if onboarding.currentStep == .searchBarCoCaptain {
                     onboarding.completeCurrentStep()
+                    coCaptain.presentOnboardingChatIntro()
                 } else if onboarding.currentStep == .tapFAB {
                     onboarding.moveToStep(.chatCoCaptain)
+                    coCaptain.presentOnboardingChatIntro()
                 }
             } else {
                 if onboarding.currentStep == .dismissCoCaptain {
@@ -279,6 +281,11 @@ struct ContentView: View {
                 offset: router.activeStore.viewportOffset,
                 scale: router.activeStore.viewportScale
             )
+        }
+        .onChange(of: onboarding.currentStep) { _, step in
+            if step == .chatCoCaptain && coCaptain.isPresented {
+                coCaptain.presentOnboardingChatIntro()
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .NSUndoManagerDidUndoChange)) { _ in
             router.activeStore.undoStackChanged += 1
