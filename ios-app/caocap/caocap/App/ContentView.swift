@@ -42,6 +42,9 @@ struct ContentView: View {
     
     // Onboarding
     @State private var onboarding = OnboardingCoordinator()
+    @State private var coCaptainDetent: PresentationDetent = .medium
+    @State private var coCaptainStartsLarge = false
+    @State private var coCaptainAllowsMediumDetent = true
 
     var body: some View {
         GeometryReader { geometry in
@@ -148,13 +151,20 @@ struct ContentView: View {
         }
         .sheet(isPresented: $coCaptain.isPresented) {
             CoCaptainView(viewModel: coCaptain)
-                .presentationDetents([.medium, .large])
+                .presentationDetents(coCaptainAvailableDetents, selection: $coCaptainDetent)
                 .presentationDragIndicator(.visible)
                 .presentationBackground {
                     Color.white.opacity(0.4)
                         .background(.ultraThinMaterial)
                 }
                 .presentationBackgroundInteraction(.enabled)
+                .onAppear {
+                    guard coCaptainStartsLarge else { return }
+                    Task { @MainActor in
+                        await Task.yield()
+                        coCaptainAllowsMediumDetent = true
+                    }
+                }
         }
         .sheet(isPresented: $showingSignIn) {
             SignInView()
@@ -400,6 +410,27 @@ struct ContentView: View {
         }
     }
 
+    private var shouldOpenCoCaptainLargeForOnboarding: Bool {
+        UIDevice.current.userInterfaceIdiom == .phone &&
+            (onboarding.currentStep == .submitCoCaptainPrompt || onboarding.currentStep == .chatCoCaptain)
+    }
+
+    private var coCaptainAvailableDetents: Set<PresentationDetent> {
+        coCaptainAllowsMediumDetent ? [.medium, .large] : [.large]
+    }
+
+    private func prepareCoCaptainPresentation() {
+        let startsLarge = shouldOpenCoCaptainLargeForOnboarding
+        coCaptainStartsLarge = startsLarge
+        coCaptainAllowsMediumDetent = !startsLarge
+        coCaptainDetent = startsLarge ? .large : .medium
+    }
+
+    private func presentCoCaptain() {
+        prepareCoCaptainPresentation()
+        coCaptain.setPresented(true)
+    }
+
     private func configureActionDispatcher() {
         actionDispatcher.register(.goRoot) {
             router.goRoot()
@@ -440,7 +471,7 @@ struct ContentView: View {
         }
         actionDispatcher.register(.summonCoCaptain) {
             coCaptain.configureProjectSession(store: router.activeStore, dispatcher: actionDispatcher)
-            coCaptain.setPresented(true)
+            presentCoCaptain()
         }
         actionDispatcher.register(.openFile) {
             showingFileImporter = true
@@ -575,7 +606,7 @@ struct ContentView: View {
         }
         commandPalette.onSubmitPrompt = { prompt in
             coCaptain.configureProjectSession(store: router.activeStore, dispatcher: actionDispatcher)
-            coCaptain.setPresented(true)
+            presentCoCaptain()
             coCaptain.sendMessage(prompt)
         }
     }
