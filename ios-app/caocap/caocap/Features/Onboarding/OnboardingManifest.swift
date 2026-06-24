@@ -36,13 +36,13 @@ enum OnboardingManifest {
         OnboardingStepContent(
             step: .dismissCoCaptain,
             title: "Back to Canvas",
-            message: "Tap Done or drag the panel down to close CoCaptain and return to the canvas.",
+            message: "Tap Done or drag the panel down.",
             icon: "arrow.down"
         ),
         OnboardingStepContent(
             step: .longPressFAB,
             title: "Quick Shortcuts",
-            message: "Press and hold this button to reveal quick actions, or drag to the sparkles to quickly summon CoCaptain.",
+            message: "Press and hold this button to reveal quick actions. Use it to undo/redo and quickly summon CoCaptain.",
             icon: "hand.tap.fill"
         )
     ]

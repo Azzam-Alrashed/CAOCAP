@@ -18,6 +18,7 @@ struct OnboardingManifestTests {
         #expect(OnboardingManifest.nextStep(after: .dismissCoCaptain) == .longPressFAB)
         #expect(OnboardingManifest.nextStep(after: .longPressFAB) == nil)
 
+        #expect(OnboardingManifest.steps.count == 6)
         #expect(OnboardingCoordinator.Step.tapFAB.stepLabel == "1 of 6")
         #expect(OnboardingCoordinator.Step.longPressFAB.stepLabel == "6 of 6")
     }
