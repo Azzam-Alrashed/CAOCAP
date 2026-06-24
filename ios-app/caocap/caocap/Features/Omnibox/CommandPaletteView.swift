@@ -15,25 +15,27 @@ struct CommandPaletteView: View {
     
     private var isShowPopoverActive: Bool {
         guard let onboarding else { return false }
-        return onboarding.currentStep == .searchBarCoCaptain && onboarding.showPopover
-    }
-    
-    private var isCoCaptainRowSelected: Bool {
-        guard viewModel.canSubmitPrompt && isCoCaptainRowVisible else { return false }
-        let offset = viewModel.filteredActions.count + viewModel.nodeResults.count
-        return viewModel.selectedIndex == offset
+        return onboarding.showPopover && (
+            onboarding.currentStep == .typeCoCaptainPrompt ||
+            onboarding.currentStep == .submitCoCaptainPrompt
+        )
     }
     
     private var isSearchBarGlowActive: Bool {
-        isShowPopoverActive
+        guard let onboarding else { return false }
+        return onboarding.currentStep == .typeCoCaptainPrompt && onboarding.showPopover
     }
 
     private var isSearchBarPopoverActive: Bool {
-        isShowPopoverActive && !isCoCaptainRowOnboardingActive
+        isSearchBarGlowActive
     }
     
     private var isCoCaptainRowOnboardingActive: Bool {
-        isShowPopoverActive && viewModel.canSubmitPrompt && isCoCaptainRowSelected
+        guard let onboarding else { return false }
+        return onboarding.currentStep == .submitCoCaptainPrompt &&
+            onboarding.showPopover &&
+            viewModel.canSubmitPrompt &&
+            isCoCaptainRowVisible
     }
 
     private var isRowPopoverPresented: Bool {
@@ -225,7 +227,7 @@ struct CommandPaletteView: View {
                                         CoCaptainPromptRow(
                                             prompt: viewModel.query,
                                             isSelected: offset == viewModel.selectedIndex,
-                                            isGlowActive: false,
+                                            isGlowActive: isCoCaptainRowOnboardingActive,
                                             isBreathing: isBreathing,
                                             isVisible: $isCoCaptainRowVisible
                                         ) {
@@ -265,7 +267,7 @@ struct CommandPaletteView: View {
                                             }
                                         ) {
                                             if let step = onboarding?.currentStep {
-                                                OnboardingPopoverCard(step: step, isSubStep2_1: true, arrowPlacement: .top) {
+                                                OnboardingPopoverCard(step: step, arrowPlacement: .top) {
                                                     onboarding?.skip()
                                                 }
                                             } else {
@@ -390,7 +392,7 @@ struct CommandPaletteView: View {
                                                 CoCaptainPromptRow(
                                                     prompt: viewModel.query,
                                                     isSelected: offset == viewModel.selectedIndex,
-                                                    isGlowActive: false,
+                                                    isGlowActive: isCoCaptainRowOnboardingActive,
                                                     isBreathing: isBreathing,
                                                     isVisible: $isCoCaptainRowVisible
                                                 ) {
@@ -430,7 +432,7 @@ struct CommandPaletteView: View {
                                                     }
                                                 ) {
                                                     if let step = onboarding?.currentStep {
-                                                        OnboardingPopoverCard(step: step, isSubStep2_1: true, arrowPlacement: .bottom) {
+                                                        OnboardingPopoverCard(step: step, arrowPlacement: .bottom) {
                                                             onboarding?.skip()
                                                         }
                                                     } else {
@@ -662,9 +664,19 @@ struct CommandPaletteView: View {
             }
         }
         .onChange(of: viewModel.canSubmitPrompt) { _, canSubmitPrompt in
-            if !canSubmitPrompt {
+            if canSubmitPrompt {
+                if onboarding?.currentStep == .typeCoCaptainPrompt {
+                    viewModel.selectPromptRowIfAvailable()
+                    onboarding?.completeCurrentStep()
+                } else if onboarding?.currentStep == .submitCoCaptainPrompt {
+                    viewModel.selectPromptRowIfAvailable()
+                }
+            } else {
                 showRowPopoverDelay = false
                 isCoCaptainRowVisible = false
+                if viewModel.isPresented && onboarding?.currentStep == .submitCoCaptainPrompt {
+                    onboarding?.moveToStep(.typeCoCaptainPrompt)
+                }
             }
         }
     }

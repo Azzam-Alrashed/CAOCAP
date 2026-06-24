@@ -16,14 +16,20 @@ enum OnboardingManifest {
             icon: "hand.tap"
         ),
         OnboardingStepContent(
-            step: .searchBarCoCaptain,
+            step: .typeCoCaptainPrompt,
             title: "Ask CoCaptain",
-            message: "Type a message like \"hi\" here and press return to send it to your AI pilot.",
+            message: "Type a message like \"hi\" here to turn the command palette into an AI prompt.",
             icon: "keyboard"
         ),
         OnboardingStepContent(
+            step: .submitCoCaptainPrompt,
+            title: "Send to CoCaptain",
+            message: "Tap the Ask CoCaptain row or press return to send your message.",
+            icon: "sparkles"
+        ),
+        OnboardingStepContent(
             step: .chatCoCaptain,
-            title: "Meet Your Co-pilot",
+            title: "Meet Your CoCaptain",
             message: "CoCaptain is here. Type a message here to build, refine, or explain code.",
             icon: "bubble.left.and.text.bubble.right"
         ),

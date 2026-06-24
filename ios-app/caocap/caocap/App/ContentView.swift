@@ -244,9 +244,9 @@ struct ContentView: View {
                     onboarding.completeCurrentStep()
                 }
             } else {
-                if onboarding.currentStep == .searchBarCoCaptain {
+                if onboarding.currentStep == .typeCoCaptainPrompt || onboarding.currentStep == .submitCoCaptainPrompt {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        if onboarding.currentStep == .searchBarCoCaptain && !coCaptain.isPresented {
+                        if (onboarding.currentStep == .typeCoCaptainPrompt || onboarding.currentStep == .submitCoCaptainPrompt) && !coCaptain.isPresented {
                             onboarding.moveToStep(.tapFAB)
                         }
                     }
@@ -255,7 +255,7 @@ struct ContentView: View {
         }
         .onChange(of: coCaptain.isPresented) { _, isPresented in
             if isPresented {
-                if onboarding.currentStep == .searchBarCoCaptain {
+                if onboarding.currentStep == .submitCoCaptainPrompt {
                     onboarding.completeCurrentStep()
                     coCaptain.presentOnboardingChatIntro()
                 } else if onboarding.currentStep == .tapFAB {

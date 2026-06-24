@@ -11,7 +11,8 @@ public class OnboardingCoordinator {
 
     public enum Step: Int, CaseIterable, Comparable {
         case tapFAB = 0
-        case searchBarCoCaptain
+        case typeCoCaptainPrompt
+        case submitCoCaptainPrompt
         case chatCoCaptain
         case dismissCoCaptain
         case longPressFAB

@@ -467,6 +467,18 @@ struct CoCaptainAgentTests {
     }
 
     @MainActor
+    @Test func commandPaletteCanSelectPromptRowDirectly() {
+        let viewModel = CommandPaletteViewModel()
+        viewModel.actions = TestActionDispatcher().availableActions
+        viewModel.query = "settings"
+
+        viewModel.selectPromptRowIfAvailable()
+
+        let promptIndex = viewModel.filteredActions.count + viewModel.nodeResults.count
+        #expect(viewModel.selectedIndex == promptIndex)
+    }
+
+    @MainActor
     @Test func commandPaletteArrowNavigationWraparound() {
         let viewModel = CommandPaletteViewModel()
         viewModel.actions = TestActionDispatcher().availableActions
@@ -1277,6 +1289,20 @@ struct CoCaptainAgentTests {
 
         #expect(dispatcher.executedActionIDs.contains(.proSubscription))
         #expect(dispatcher.executedSources.last == .user)
+    }
+
+    @MainActor
+    @Test func cancelledAgentTurnClearsThinkingState() async throws {
+        let coordinator = CoCaptainAgentCoordinator(llmClient: ThrowingLLMClient(error: CancellationError()))
+        let vm = CoCaptainViewModel(agentCoordinator: coordinator)
+
+        vm.sendMessage("hi")
+
+        for _ in 0..<20 where vm.isThinking {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+
+        #expect(!vm.isThinking)
     }
 
     @MainActor
