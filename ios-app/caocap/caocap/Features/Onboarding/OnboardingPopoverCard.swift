@@ -133,9 +133,7 @@ struct OnboardingPopoverCard: View {
                         .font(.system(size: 16, weight: .bold))
                         .foregroundColor(.primary)
 
-                    Text(step.stepLabel)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.secondary)
+                    OnboardingProgressBar(step: step)
                 }
 
                 Spacer()
@@ -191,6 +189,25 @@ struct OnboardingPopoverCard: View {
         )
         .shadow(color: Color.black.opacity(0.35), radius: 20, x: 0, y: 10)
         .shadow(color: Color.blue.opacity(0.08), radius: 30, x: 0, y: 5)
+    }
+}
+
+private struct OnboardingProgressBar: View {
+    let step: OnboardingCoordinator.Step
+
+    private var currentIndex: Int {
+        OnboardingManifest.steps.firstIndex(where: { $0.step == step }) ?? 0
+    }
+
+    var body: some View {
+        HStack(spacing: 3) {
+            ForEach(Array(OnboardingManifest.steps.enumerated()), id: \.element.step.rawValue) { index, _ in
+                Capsule()
+                    .fill(index <= currentIndex ? Color.blue.opacity(0.85) : Color.primary.opacity(0.12))
+                    .frame(width: 16, height: 4)
+            }
+        }
+        .accessibilityLabel(Text(step.stepLabel))
     }
 }
 
