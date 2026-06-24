@@ -159,6 +159,11 @@ public final class CoCaptainViewModel {
         )
 
         streamingTask = Task { @MainActor in
+            defer {
+                streamingTask = nil
+                isThinking = false
+            }
+
             do {
                 let result = try await agentCoordinator.run(
                     userMessage: text,
@@ -209,8 +214,6 @@ public final class CoCaptainViewModel {
                     )
                 }
             }
-
-            isThinking = false
         }
     }
 

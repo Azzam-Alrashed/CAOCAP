@@ -11,14 +11,15 @@ struct OnboardingManifestTests {
 
     @Test func manifestDrivesStepLabelsAndProgression() {
         #expect(OnboardingManifest.firstStep == .tapFAB)
-        #expect(OnboardingManifest.nextStep(after: .tapFAB) == .searchBarCoCaptain)
-        #expect(OnboardingManifest.nextStep(after: .searchBarCoCaptain) == .chatCoCaptain)
+        #expect(OnboardingManifest.nextStep(after: .tapFAB) == .typeCoCaptainPrompt)
+        #expect(OnboardingManifest.nextStep(after: .typeCoCaptainPrompt) == .submitCoCaptainPrompt)
+        #expect(OnboardingManifest.nextStep(after: .submitCoCaptainPrompt) == .chatCoCaptain)
         #expect(OnboardingManifest.nextStep(after: .chatCoCaptain) == .dismissCoCaptain)
         #expect(OnboardingManifest.nextStep(after: .dismissCoCaptain) == .longPressFAB)
         #expect(OnboardingManifest.nextStep(after: .longPressFAB) == nil)
 
-        #expect(OnboardingCoordinator.Step.tapFAB.stepLabel == "1 of 5")
-        #expect(OnboardingCoordinator.Step.longPressFAB.stepLabel == "5 of 5")
+        #expect(OnboardingCoordinator.Step.tapFAB.stepLabel == "1 of 6")
+        #expect(OnboardingCoordinator.Step.longPressFAB.stepLabel == "6 of 6")
     }
 
     @Test func manifestContentIsReadyForPopoverPresentation() {

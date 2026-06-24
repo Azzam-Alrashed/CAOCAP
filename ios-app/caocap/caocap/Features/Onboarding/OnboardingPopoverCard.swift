@@ -101,7 +101,6 @@ struct UnifiedBubbleWithArrowShape: Shape {
 /// Matches CAOCAP's dark, material-blurred visual language.
 struct OnboardingPopoverCard: View {
     let step: OnboardingCoordinator.Step
-    var isSubStep2_1: Bool = false
     var arrowOffset: CGFloat = 0
     var arrowPlacement: UnifiedBubbleWithArrowShape.ArrowPlacement = .bottom
     let onSkip: () -> Void
@@ -116,11 +115,11 @@ struct OnboardingPopoverCard: View {
     )
 
     private var cardTitle: String {
-        isSubStep2_1 ? "Ask CoCaptain" : step.title
+        step.title
     }
     
     private var cardIcon: String {
-        isSubStep2_1 ? "sparkles" : step.icon
+        step.icon
     }
     
     private var cardStepLabel: String {
@@ -128,7 +127,7 @@ struct OnboardingPopoverCard: View {
     }
     
     private var cardMessage: String {
-        isSubStep2_1 ? "Tap the 'Ask CoCaptain' action row or tap the return button on your keyboard to send your message." : step.message
+        step.message
     }
 
     var body: some View {
