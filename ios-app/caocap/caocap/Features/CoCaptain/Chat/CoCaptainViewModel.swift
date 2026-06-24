@@ -33,8 +33,6 @@ public final class CoCaptainViewModel {
     private var lastStoreFileName: String?
     @ObservationIgnored
     private var streamingTask: Task<Void, Never>?
-    @ObservationIgnored
-    private var didAppendOnboardingChatIntro = false
 
     public var isThinking: Bool = false
     public var isAwaitingFirstResponse: Bool {
@@ -55,7 +53,6 @@ public final class CoCaptainViewModel {
 
     public func clearHistory() {
         items = [CoCaptainViewModel.greetingItem()]
-        didAppendOnboardingChatIntro = false
         agentCoordinator.resetChat(scope: scope)
         if case .node(let nodeID) = scope {
             store?.clearNodeAgentMessages(id: nodeID)
@@ -102,17 +99,6 @@ public final class CoCaptainViewModel {
         if presented {
             runAnalysis()
         }
-    }
-
-    public func presentOnboardingChatIntro() {
-        guard scope == .project, !didAppendOnboardingChatIntro else { return }
-
-        didAppendOnboardingChatIntro = true
-        appendAssistantMessage(
-            LocalizationManager.shared.localizedString(
-                "I'm CoCaptain. Tell me what you want to build, ask me to explain the canvas, or use one of the quick prompts below. I'll keep the work human-in-the-loop, so code edits stay reviewable before they are applied."
-            )
-        )
     }
 
     public func runAnalysis() {

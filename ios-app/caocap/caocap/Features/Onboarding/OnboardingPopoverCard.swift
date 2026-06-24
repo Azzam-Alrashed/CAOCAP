@@ -114,28 +114,12 @@ struct OnboardingPopoverCard: View {
         endPoint: .bottomTrailing
     )
 
-    private var cardTitle: String {
-        step.title
-    }
-    
-    private var cardIcon: String {
-        step.icon
-    }
-    
-    private var cardStepLabel: String {
-        step.stepLabel
-    }
-    
-    private var cardMessage: String {
-        step.message
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             // Header: icon + title + step counter
             HStack(spacing: 10) {
                 // Animated icon
-                Image(systemName: cardIcon)
+                Image(systemName: step.icon)
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(accentGradient)
                     .frame(width: 32, height: 32)
@@ -145,11 +129,11 @@ struct OnboardingPopoverCard: View {
                     )
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(cardTitle)
+                    Text(step.title)
                         .font(.system(size: 16, weight: .bold))
                         .foregroundColor(.primary)
 
-                    Text(cardStepLabel)
+                    Text(step.stepLabel)
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.secondary)
                 }
@@ -176,7 +160,7 @@ struct OnboardingPopoverCard: View {
             }
 
             // Message body
-            Text(cardMessage)
+            Text(step.message)
                 .font(.system(size: 14, weight: .regular))
                 .foregroundColor(.primary.opacity(0.85))
                 .lineSpacing(3)
