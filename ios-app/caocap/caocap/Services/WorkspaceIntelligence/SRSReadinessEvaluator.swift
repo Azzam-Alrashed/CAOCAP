@@ -1,6 +1,6 @@
 import Foundation
 
-/// Derives the formal SRSReadinessState from raw SRS text content.
+/// Derives the formal SRSReadinessState from raw Mini-App SRS content.
 /// Pure input → output: no store access, no async, no side effects.
 /// This makes it unit-testable without any mocks.
 public struct SRSReadinessEvaluator {
@@ -8,7 +8,7 @@ public struct SRSReadinessEvaluator {
 
     /// Evaluates the readiness state from text.
     /// - Parameters:
-    ///   - text: The current raw text content of the SRS node.
+    ///   - text: The current raw Mini-App SRS text.
     ///   - currentState: The previously persisted state. If `.stale`, that
     ///     state is preserved until the user explicitly clears it.
     /// - Returns: The derived `SRSReadinessState`.

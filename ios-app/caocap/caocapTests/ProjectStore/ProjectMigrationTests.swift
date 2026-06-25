@@ -22,7 +22,7 @@ struct ProjectMigrationTests {
 
         try legacyJSON.data(using: .utf8)!.write(to: persistence.fileURL(for: fileName))
 
-        #expect(throws: ProjectPersistenceError.unsupportedSchemaVersion(nil, current: 3)) {
+        #expect(throws: ProjectPersistenceError.unsupportedSchemaVersion(nil, current: ProjectPersistenceService.currentSchemaVersion)) {
             try persistence.load(fileName: fileName)
         }
     }
@@ -32,23 +32,23 @@ struct ProjectMigrationTests {
         let tempDirectory = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: tempDirectory) }
         let persistence = ProjectPersistenceService(baseDirectory: tempDirectory)
-        let fileName = "v3.json"
-        let v3JSON = """
+        let fileName = "v4.json"
+        let v4JSON = """
         {
-            "schemaVersion": 3,
-            "projectName": "V3 Project",
+            "schemaVersion": 4,
+            "projectName": "V4 Project",
             "viewportOffset": {"width": 10, "height": 20},
             "viewportScale": 0.5,
             "nodes": []
         }
         """
 
-        try v3JSON.data(using: .utf8)!.write(to: persistence.fileURL(for: fileName))
+        try v4JSON.data(using: .utf8)!.write(to: persistence.fileURL(for: fileName))
 
         let snapshot = try persistence.load(fileName: fileName)
 
-        #expect(snapshot.schemaVersion == 3)
-        #expect(snapshot.projectName == "V3 Project")
+        #expect(snapshot.schemaVersion == ProjectPersistenceService.currentSchemaVersion)
+        #expect(snapshot.projectName == "V4 Project")
         #expect(snapshot.viewportScale == 0.5)
     }
 
@@ -70,7 +70,7 @@ struct ProjectMigrationTests {
 
         try v1JSON.data(using: .utf8)!.write(to: persistence.fileURL(for: fileName))
 
-        #expect(throws: ProjectPersistenceError.unsupportedSchemaVersion(1, current: 3)) {
+        #expect(throws: ProjectPersistenceError.unsupportedSchemaVersion(1, current: ProjectPersistenceService.currentSchemaVersion)) {
             try persistence.load(fileName: fileName)
         }
     }
@@ -93,7 +93,7 @@ struct ProjectMigrationTests {
 
         try v99JSON.data(using: .utf8)!.write(to: persistence.fileURL(for: fileName))
 
-        #expect(throws: ProjectPersistenceError.unsupportedSchemaVersion(99, current: 3)) {
+        #expect(throws: ProjectPersistenceError.unsupportedSchemaVersion(99, current: ProjectPersistenceService.currentSchemaVersion)) {
             try persistence.load(fileName: fileName)
         }
     }
@@ -106,7 +106,7 @@ struct ProjectMigrationTests {
         let fileName = "corrupted.json"
         try Data("{not-json}".utf8).write(to: persistence.fileURL(for: fileName))
 
-        let fallbackNode = SpatialNode(type: .code, position: .zero, title: "Code", textContent: "<h1>Fallback</h1>")
+        let fallbackNode = SpatialNode(type: .miniApp, position: .zero, title: "Mini-App", miniApp: MiniAppState(codeText: "<h1>Fallback</h1>"))
         let store = ProjectStore(
             fileName: fileName,
             projectName: "Fallback Project",
@@ -135,7 +135,7 @@ struct ProjectMigrationTests {
         """
         try v1JSON.data(using: .utf8)!.write(to: persistence.fileURL(for: fileName))
 
-        let fallbackNode = SpatialNode(type: .code, position: .zero, title: "Code", textContent: "<h1>Fallback</h1>")
+        let fallbackNode = SpatialNode(type: .miniApp, position: .zero, title: "Mini-App", miniApp: MiniAppState(codeText: "<h1>Fallback</h1>"))
         _ = ProjectStore(
             fileName: fileName,
             projectName: "Fallback Project",
@@ -164,7 +164,7 @@ struct ProjectMigrationTests {
         """
         try legacyJSON.data(using: .utf8)!.write(to: persistence.fileURL(for: fileName))
 
-        let fallbackNode = SpatialNode(type: .code, position: .zero, title: "Code", textContent: "<h1>Fallback</h1>")
+        let fallbackNode = SpatialNode(type: .miniApp, position: .zero, title: "Mini-App", miniApp: MiniAppState(codeText: "<h1>Fallback</h1>"))
         _ = ProjectStore(
             fileName: fileName,
             projectName: "Fallback Project",
@@ -184,7 +184,7 @@ struct ProjectMigrationTests {
         let snapshot = ProjectSnapshot(
             projectName: "Round Trip",
             nodes: [
-                SpatialNode(type: .code, position: CGPoint(x: 12, y: 24), title: "Code", textContent: "<h1>Hello</h1>")
+                SpatialNode(type: .miniApp, position: CGPoint(x: 12, y: 24), title: "Mini-App", miniApp: MiniAppState(codeText: "<h1>Hello</h1>"))
             ],
             viewportOffset: CGSize(width: 10, height: 20),
             viewportScale: 0.75

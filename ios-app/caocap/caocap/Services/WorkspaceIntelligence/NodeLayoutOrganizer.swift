@@ -115,7 +115,7 @@ public struct NodeLayoutOrganizer: Sendable {
                     // Determine vertical spacing dynamically
                     let hasLargeNodes = rankNodes.contains { id in
                         if let node = nodes.first(where: { $0.id == id }) {
-                            return [.webView, .firebase].contains(node.type)
+                            return node.type == .miniApp
                         }
                         return false
                     }

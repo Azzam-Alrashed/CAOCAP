@@ -22,11 +22,11 @@ struct ProjectMutationTests {
     }
 
     @Test func nodeDeletionCleansUpConnections() throws {
-        let node1 = SpatialNode(id: UUID(), type: .code, position: .zero, title: "N1")
+        let node1 = SpatialNode(id: UUID(), type: .miniApp, position: .zero, title: "N1")
         let node2Id = UUID()
-        let node2 = SpatialNode(id: node2Id, type: .code, position: .zero, title: "N2")
+        let node2 = SpatialNode(id: node2Id, type: .miniApp, position: .zero, title: "N2")
         
-        var node3 = SpatialNode(id: UUID(), type: .code, position: .zero, title: "N3")
+        var node3 = SpatialNode(id: UUID(), type: .miniApp, position: .zero, title: "N3")
         node3.nextNodeId = node2Id
         node3.connectedNodeIds = [node2Id]
         
@@ -43,7 +43,7 @@ struct ProjectMutationTests {
     }
 
     @Test func nodeDeletionRegistersUndo() throws {
-        let node1 = SpatialNode(id: UUID(), type: .code, position: .zero, title: "N1")
+        let node1 = SpatialNode(id: UUID(), type: .miniApp, position: .zero, title: "N1")
         let store = ProjectStore(fileName: UUID().uuidString + ".json", initialNodes: [node1])
         let undoManager = UndoManager()
         store.undoManager = undoManager
@@ -61,11 +61,11 @@ struct ProjectMutationTests {
         let sourceId = UUID()
         let targetId = UUID()
 
-        var sourceNode = SpatialNode(id: sourceId, type: .code, position: .zero, title: "Source")
+        var sourceNode = SpatialNode(id: sourceId, type: .miniApp, position: .zero, title: "Source")
         sourceNode.nextNodeId = targetId
         sourceNode.connectedNodeIds = [targetId]
 
-        let targetNode = SpatialNode(id: targetId, type: .code, position: .zero, title: "Target")
+        let targetNode = SpatialNode(id: targetId, type: .miniApp, position: .zero, title: "Target")
         let store = ProjectStore(
             fileName: UUID().uuidString + ".json",
             initialNodes: [sourceNode, targetNode]
@@ -102,8 +102,8 @@ struct ProjectMutationTests {
     @Test func organizeNodesRegistersUndoAndRedo() throws {
         let node1Id = UUID()
         let node2Id = UUID()
-        let node1 = SpatialNode(id: node1Id, type: .code, position: CGPoint(x: 10, y: 20), title: "Node 1")
-        let node2 = SpatialNode(id: node2Id, type: .code, position: CGPoint(x: 30, y: 40), title: "Node 2")
+        let node1 = SpatialNode(id: node1Id, type: .miniApp, position: CGPoint(x: 10, y: 20), title: "Node 1")
+        let node2 = SpatialNode(id: node2Id, type: .miniApp, position: CGPoint(x: 30, y: 40), title: "Node 2")
         
         let store = ProjectStore(fileName: UUID().uuidString + ".json", initialNodes: [node1, node2])
         let undoManager = UndoManager()
@@ -172,8 +172,8 @@ struct ProjectMutationTests {
     @Test func organizeNodesProducesHierarchicalFlow() throws {
         let node1Id = UUID()
         let node2Id = UUID()
-        var node1 = SpatialNode(id: node1Id, type: .code, position: CGPoint(x: 100, y: 100), title: "Source")
-        let node2 = SpatialNode(id: node2Id, type: .code, position: CGPoint(x: 0, y: 0), title: "Target")
+        var node1 = SpatialNode(id: node1Id, type: .miniApp, position: CGPoint(x: 100, y: 100), title: "Source")
+        let node2 = SpatialNode(id: node2Id, type: .miniApp, position: CGPoint(x: 0, y: 0), title: "Target")
         node1.connectedNodeIds = [node2Id]
         
         let store = ProjectStore(fileName: UUID().uuidString + ".json", initialNodes: [node1, node2])
@@ -185,14 +185,14 @@ struct ProjectMutationTests {
         #expect(pos1.x < pos2.x)
     }
 
-    @Test func organizeNodesAppliesLargerVerticalSpacingForWebViews() throws {
+    @Test func organizeNodesAppliesLargerVerticalSpacingForMiniApps() throws {
         let sourceId = UUID()
         let node1Id = UUID()
         let node2Id = UUID()
         
-        let source = SpatialNode(id: sourceId, type: .code, position: CGPoint(x: -100, y: 0), title: "Source")
-        let node1 = SpatialNode(id: node1Id, type: .webView, position: CGPoint(x: 0, y: 0), title: "WebView 1")
-        let node2 = SpatialNode(id: node2Id, type: .webView, position: CGPoint(x: 100, y: 100), title: "WebView 2")
+        let source = SpatialNode(id: sourceId, type: .miniApp, position: CGPoint(x: -100, y: 0), title: "Source")
+        let node1 = SpatialNode(id: node1Id, type: .miniApp, position: CGPoint(x: 0, y: 0), title: "Mini-App 1")
+        let node2 = SpatialNode(id: node2Id, type: .miniApp, position: CGPoint(x: 100, y: 100), title: "Mini-App 2")
         
         // Connect both to source so they share the same rank and cluster
         var linkedSource = source
@@ -209,8 +209,8 @@ struct ProjectMutationTests {
     }
 
     @Test func organizeNodesAvoidsClusterOverlap() throws {
-        let node1 = SpatialNode(id: UUID(), type: .code, position: CGPoint(x: 0, y: 0), title: "Cluster 1 Node")
-        let node2 = SpatialNode(id: UUID(), type: .code, position: CGPoint(x: 100, y: 100), title: "Cluster 2 Node")
+        let node1 = SpatialNode(id: UUID(), type: .miniApp, position: CGPoint(x: 0, y: 0), title: "Cluster 1 Node")
+        let node2 = SpatialNode(id: UUID(), type: .miniApp, position: CGPoint(x: 100, y: 100), title: "Cluster 2 Node")
         
         let store = ProjectStore(fileName: UUID().uuidString + ".json", initialNodes: [node1, node2])
         store.organizeNodes()

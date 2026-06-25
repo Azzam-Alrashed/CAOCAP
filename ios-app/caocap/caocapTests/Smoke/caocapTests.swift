@@ -39,20 +39,21 @@ struct caocapTests {
     }
 
     @Test func defaultProjectStartsWithStructuredSRS() throws {
-        let srsNode = try #require(ProjectTemplateProvider.defaultNodes.first { $0.type == .srs })
-        let text = try #require(srsNode.textContent)
+        let miniAppNode = try #require(ProjectTemplateProvider.defaultNodes.first { $0.type == .miniApp })
+        let miniApp = try #require(miniAppNode.miniApp)
+        let text = miniApp.srsText
 
         #expect(text.contains("# Intent"))
         #expect(text.contains("## Why It Matters"))
         #expect(text.contains("## Core Flow"))
         #expect(text.contains("## Acceptance Checks"))
         #expect(text.contains("CoCaptain has enough context"))
-        #expect(srsNode.srsReadinessState == .needsClarification)
+        #expect(miniApp.srsReadinessState == .needsClarification)
     }
 
     @Test func defaultProjectDoesNotAutoTriggerNodeAgents() throws {
-        let codeNode = try #require(ProjectTemplateProvider.defaultNodes.first { $0.type == .code })
-        #expect(codeNode.agentProfile.isAutoTriggerEnabled == false)
+        let miniAppNode = try #require(ProjectTemplateProvider.defaultNodes.first { $0.type == .miniApp })
+        #expect(miniAppNode.agentProfile.isAutoTriggerEnabled == false)
     }
 
     @Test func srsScaffoldPreservesDraftAndAddsMissingSections() {

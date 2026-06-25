@@ -41,6 +41,7 @@ public enum NodePatchError: LocalizedError, Hashable {
 public struct NodePatchPreview: Hashable {
     public let nodeID: UUID
     public let role: NodeRole
+    public let section: CoCaptainNodeEditProposal.MiniAppSection
     public let originalText: String
     public let resultText: String
 }
@@ -55,7 +56,7 @@ public struct NodePatchEngine {
     public func resolveNode(nodeID: UUID? = nil, for role: NodeRole, in store: ProjectStore) -> SpatialNode? {
         if let nodeID {
             guard let node = store.nodes.first(where: { $0.id == nodeID }),
-                  node.type != .webView else {
+                  node.type == .miniApp else {
                 return nil
             }
             return node
@@ -68,6 +69,7 @@ public struct NodePatchEngine {
     public func preview(
         nodeID: UUID? = nil,
         role: NodeRole,
+        section: CoCaptainNodeEditProposal.MiniAppSection = .code,
         operations: [NodePatchOperation],
         in store: ProjectStore
     ) throws -> NodePatchPreview {
@@ -78,9 +80,15 @@ public struct NodePatchEngine {
             throw NodePatchError.missingNode(role)
         }
 
-        let originalText = node.textContent ?? ""
+        let originalText: String
+        switch section {
+        case .srs:
+            originalText = node.miniApp?.srsText ?? ""
+        case .code:
+            originalText = node.miniApp?.codeText ?? ""
+        }
         let resultText = try apply(operations: operations, to: originalText)
-        return NodePatchPreview(nodeID: node.id, role: node.role, originalText: originalText, resultText: resultText)
+        return NodePatchPreview(nodeID: node.id, role: node.role, section: section, originalText: originalText, resultText: resultText)
     }
 
     /// Applies operations in order. Exact operations fail fast when their target

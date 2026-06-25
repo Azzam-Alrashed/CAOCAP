@@ -58,6 +58,9 @@ struct ContentView: View {
                     },
                     onNavigateToSubCanvas: { fileName in
                         router.navigateToSubCanvas(fileName: fileName)
+                    },
+                    onRecoverUnsupportedProject: {
+                        router.createFreshMiniAppCanvas()
                     }
                 )
                 .id("root_canvas")
@@ -71,6 +74,9 @@ struct ContentView: View {
                     },
                     onNavigateToSubCanvas: { fileName in
                         router.navigateToSubCanvas(fileName: fileName)
+                    },
+                    onRecoverUnsupportedProject: {
+                        router.createFreshMiniAppCanvas()
                     }
                 )
                 .id("project_canvas_\(fileName)")
@@ -419,10 +425,10 @@ struct ContentView: View {
             router.goBack()
         }
         actionDispatcher.register(.createNode) {
-            router.activeStore.addNode(type: .code)
+            router.activeStore.addNode(type: .miniApp)
         }
         actionDispatcher.register(.createFirebaseNode) {
-            router.activeStore.addNode(type: .firebase)
+            router.activeStore.addNode(type: .miniApp)
         }
         actionDispatcher.register(.summonCoCaptain) {
             coCaptain.configureProjectSession(store: router.activeStore, dispatcher: actionDispatcher)
@@ -547,7 +553,7 @@ struct ContentView: View {
                     size = frameData.size
                 } else {
                     switch node.type {
-                    case .webView:
+                    case .miniApp:
                         size = CGSize(width: 375, height: 667)
                     default:
                         size = CGSize(width: 280, height: 180)

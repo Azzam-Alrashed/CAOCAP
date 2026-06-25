@@ -57,7 +57,7 @@ final class CheckpointManagerTests: XCTestCase {
     }
     
     func testRestoreCheckpoint() async throws {
-        let snapshot = ProjectSnapshot(schemaVersion: ProjectPersistenceService.currentSchemaVersion, projectName: "Test", nodes: [SpatialNode(type: .code, position: .zero, title: "Code")], viewportOffset: .zero, viewportScale: 1.0)
+        let snapshot = ProjectSnapshot(schemaVersion: ProjectPersistenceService.currentSchemaVersion, projectName: "Test", nodes: [SpatialNode(type: .miniApp, position: .zero, title: "Mini-App")], viewportOffset: .zero, viewportScale: 1.0)
         manager.createCheckpoint(snapshot: snapshot, fileName: fileName, label: "To Restore")
         
         try await Task.sleep(nanoseconds: 500_000_000)

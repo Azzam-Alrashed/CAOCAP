@@ -65,9 +65,8 @@ struct NodeView: View {
                             .lineLimit(3)
                     }
 
-                    // Show SRS readiness badge for SRS nodes.
-                    if node.type == .srs {
-                        let state = node.srsReadinessState ?? .empty
+                    if node.type == .miniApp, let miniApp = node.miniApp {
+                        let state = miniApp.srsReadinessState
                         HStack(spacing: 5) {
                             Image(systemName: state.icon)
                                 .font(.system(size: 10, weight: .semibold))
@@ -84,9 +83,9 @@ struct NodeView: View {
                 }
                 .frame(maxWidth: 240, alignment: .leading)
             }
-            .frame(width: node.type == .webView ? 240 : nil, alignment: .leading)
+            .frame(width: node.type == .miniApp ? 240 : nil, alignment: .leading)
             .environment(\.layoutDirection, LocalizationManager.shared.layoutDirection(for: selectedLanguage))
-            .padding(.bottom, node.type == .webView ? 12 : 0)
+            .padding(.bottom, node.type == .miniApp ? 12 : 0)
             
             NodePreviewContent(
                 node: node,
@@ -94,8 +93,8 @@ struct NodeView: View {
                 themeColor: themeColor
             )
         }
-        .padding(.horizontal, node.type == .webView ? 12 : 20)
-        .padding(.vertical, node.type == .webView ? 12 : 20)
+        .padding(.horizontal, node.type == .miniApp ? 12 : 20)
+        .padding(.vertical, node.type == .miniApp ? 12 : 20)
         .background(backgroundStack)
         .overlay(borderOverlay)
         .overlay(statusOverlay)
@@ -232,8 +231,8 @@ private struct NodePreviewContent: View {
                 EmptyView()
             } else {
                 switch node.type {
-                case .webView:
-                    if let html = node.htmlContent {
+                case .miniApp:
+                    if let html = node.miniApp?.compiledHTML {
                         HTMLWebView(htmlContent: html)
                             .frame(width: 375, height: 667)
                             .scaleEffect(240.0 / 375.0)
@@ -241,19 +240,6 @@ private struct NodePreviewContent: View {
                             .background(Color.white.opacity(0.1))
                             .cornerRadius(12)
                     }
-                    
-                case .firebase:
-                    VStack(alignment: .leading, spacing: 8) {
-                        Label("FIREBASE (WEB)", systemImage: "flame.fill")
-                            .font(.system(size: 10, weight: .black))
-                            .opacity(0.4)
-
-                        Text(FirebasePreviewBootstrap.canvasSummaryLine(for: node))
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    .padding(.top, 12)
 
                 case .subCanvas:
                     VStack(alignment: .leading, spacing: 8) {

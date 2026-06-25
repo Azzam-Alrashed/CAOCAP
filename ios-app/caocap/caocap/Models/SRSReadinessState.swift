@@ -1,6 +1,6 @@
 import Foundation
 
-/// Represents the formal readiness state of an SRS node, as defined in
+/// Represents the formal readiness state of Mini-App SRS content, as defined in
 /// FR-SRS-013 through FR-SRS-023. Derivation logic lives in SRSReadinessEvaluator.
 public enum SRSReadinessState: String, CaseIterable, Codable, Hashable {
     /// No meaningful user-authored content.

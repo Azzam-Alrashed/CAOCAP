@@ -1,24 +1,17 @@
 import Foundation
 
 public enum NodeRole: String, CaseIterable, Codable, Hashable {
-    case srs
-    case code
-    case livePreview
-    case firebase
+    case miniApp
     case subCanvas
     case custom
 
     public static let editableCanonicalRoles: [NodeRole] = [
-        .srs,
-        .code
+        .miniApp
     ]
 
     public var displayName: String {
         switch self {
-        case .srs: return "SRS"
-        case .code: return "Code"
-        case .livePreview: return "Live Preview"
-        case .firebase: return "Firebase"
+        case .miniApp: return "Mini-App"
         case .subCanvas: return "Sub-Canvas"
         case .custom: return "Custom"
         }
@@ -40,14 +33,8 @@ public enum NodeRole: String, CaseIterable, Codable, Hashable {
 public extension SpatialNode {
     var role: NodeRole {
         switch type {
-        case .webView:
-            return .livePreview
-        case .srs:
-            return .srs
-        case .code:
-            return .code
-        case .firebase:
-            return .firebase
+        case .miniApp:
+            return .miniApp
         case .subCanvas:
             return .subCanvas
         default:

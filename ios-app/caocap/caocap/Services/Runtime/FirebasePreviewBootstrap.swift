@@ -1,10 +1,10 @@
 import Foundation
 
-/// Builds HTML snippets so Live Preview can load Firebase Web compat SDK and
-/// `initializeApp` from a **Firebase Web app config** JSON stored on a node.
+/// Builds HTML snippets so a Mini-App preview can load Firebase Web compat SDK
+/// and `initializeApp` from the Mini-App's embedded Firebase Web config JSON.
 public enum FirebasePreviewBootstrap {
 
-    /// Placeholder JSON for a new Firebase node (replace with values from the console).
+    /// Placeholder JSON for a Mini-App Firebase config (replace with values from the console).
     public static func placeholderConfigJSON() -> String {
         """
         {
@@ -20,14 +20,21 @@ public enum FirebasePreviewBootstrap {
 
     /// One-line status for the canvas card (no API keys).
     public static func canvasSummaryLine(for node: SpatialNode) -> String {
-        guard let raw = node.textContent?.data(using: .utf8),
+        guard let miniApp = node.miniApp else {
+            return "Firebase config unavailable"
+        }
+        return canvasSummaryLine(for: miniApp)
+    }
+
+    public static func canvasSummaryLine(for miniApp: MiniAppState) -> String {
+        guard let raw = miniApp.firebaseConfigText.data(using: .utf8),
               let obj = try? JSONSerialization.jsonObject(with: raw) as? [String: Any],
               let pid = obj["projectId"] as? String,
               !pid.isEmpty
         else {
             return "Tap to paste Firebase Web config"
         }
-        if let path = node.firebaseFirestorePath?.trimmingCharacters(in: .whitespacesAndNewlines), !path.isEmpty {
+        if let path = miniApp.firebaseFirestorePath?.trimmingCharacters(in: .whitespacesAndNewlines), !path.isEmpty {
             return "project: \(pid) · path: \(path)"
         }
         return "project: \(pid)"
@@ -37,20 +44,9 @@ public enum FirebasePreviewBootstrap {
     static let firebaseAppScriptURL = "https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"
     static let firebaseFirestoreScriptURL = "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"
 
-    /// First `firebase` node whose Web config is non-empty, parses as JSON, and is not a template placeholder.
-    /// Order follows the canvas `nodes` array so a **second** node can win if the first is still a stub.
-    public static func firstInjectableFirebaseNode(in nodes: [SpatialNode]) -> SpatialNode? {
-        for node in nodes where node.type == .firebase {
-            if injectableFirebaseConfig(for: node) != nil {
-                return node
-            }
-        }
-        return nil
-    }
-
     /// Parsed `firebaseConfig` object suitable for `initializeApp`, or `nil`.
-    public static func injectableFirebaseConfig(for node: SpatialNode) -> [String: Any]? {
-        let raw = node.textContent?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    public static func injectableFirebaseConfig(for miniApp: MiniAppState) -> [String: Any]? {
+        let raw = miniApp.firebaseConfigText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !raw.isEmpty,
               let data = raw.data(using: .utf8),
               let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -69,15 +65,14 @@ public enum FirebasePreviewBootstrap {
         return obj
     }
 
-    /// Returns HTML to inject at the start of `<head>`, or `nil` if no valid config node.
-    static func headInjectionHTML(from nodes: [SpatialNode]) -> String? {
-        guard let node = firstInjectableFirebaseNode(in: nodes),
-              let obj = injectableFirebaseConfig(for: node),
+    /// Returns HTML to inject at the start of `<head>`, or `nil` if the Mini-App has no valid config.
+    static func headInjectionHTML(from miniApp: MiniAppState) -> String? {
+        guard let obj = injectableFirebaseConfig(for: miniApp),
               let jsonData = try? JSONSerialization.data(withJSONObject: obj, options: []),
               let b64 = Optional(jsonData.base64EncodedString())
         else { return nil }
 
-        let pathAttr = (node.firebaseFirestorePath ?? "")
+        let pathAttr = (miniApp.firebaseFirestorePath ?? "")
             .replacingOccurrences(of: "&", with: "&amp;")
             .replacingOccurrences(of: "\"", with: "&quot;")
 

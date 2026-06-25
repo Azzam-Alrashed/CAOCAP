@@ -5,70 +5,64 @@ import Testing
 
 struct CoCaptainAgentTests {
     @MainActor
-    @Test func projectContextIncludesCanonicalNodesAndExcludesCompiledPreview() throws {
+    @Test func projectContextIncludesMiniAppsAndExcludesCompiledPreview() throws {
         let store = makeStore()
-        store.nodes.append(
-            SpatialNode(
-                type: .webView,
-                position: .zero,
-                title: "Live Preview",
-                theme: .blue,
-                htmlContent: "<html>compiled</html>"
-            )
-        )
+        store.nodes[0].miniApp?.compiledHTML = "<html>compiled</html>"
 
         let context = ProjectContextBuilder().buildPromptContext(from: store)
 
         #expect(context.contains("Project Name: Test Project"))
-        #expect(context.contains("SRS:"))
-        #expect(context.contains("Code:"))
+        #expect(context.contains("Mini-App Count: 1"))
+        #expect(context.contains("SRS Readiness:"))
         #expect(context.contains("Build a landing page"))
+        #expect(context.contains("<html><body><h1>Hello World!</h1></body></html>"))
         #expect(!context.contains("compiled"))
     }
 
     @MainActor
-    @Test func projectContextIncludesBlankCanvasHintWhenNoCodeNodesExist() throws {
+    @Test func projectContextIncludesBlankMiniAppCode() throws {
         let store = ProjectStore(
             fileName: "blank-canvas-test-\(UUID().uuidString).json",
             projectName: "Blank Project",
             initialNodes: [
                 SpatialNode(
-                    type: .srs,
+                    type: .miniApp,
                     position: CGPoint(x: 0, y: 0),
-                    title: "Software Requirements (SRS)",
-                    theme: .purple,
-                    textContent: "Just starting out."
+                    title: "Mini-App",
+                    miniApp: MiniAppState(srsText: "Just starting out.", codeText: "")
                 )
             ]
         )
 
         let context = ProjectContextBuilder().buildPromptContext(from: store)
 
-        #expect(context.contains("Implementation State: Blank Canvas (No code nodes exist yet)"))
+        #expect(context.contains("Mini-App Count: 1"))
+        #expect(context.contains("Code:"))
     }
 
     @MainActor
     @Test func nodeContextIncludesSelectedNodeAndLinkedNeighbors() throws {
-        let codeID = UUID()
-        let srsID = UUID()
+        let linkedID = UUID()
+        let selectedID = UUID()
         let unrelatedID = UUID()
         let store = ProjectStore(
             fileName: "node-context-\(UUID().uuidString).json",
             projectName: "Node Context",
             initialNodes: [
-                SpatialNode(id: srsID, type: .srs, position: .zero, title: "Software Requirements (SRS)", connectedNodeIds: [codeID], textContent: "Selected SRS content"),
-                SpatialNode(id: codeID, type: .code, position: .zero, title: "Code", textContent: "<h1>Linked code</h1>"),
-                SpatialNode(id: unrelatedID, type: .code, position: .zero, title: "Unrelated", textContent: "Do not leak full unrelated content")
+                SpatialNode(id: selectedID, type: .miniApp, position: .zero, title: "Selected Mini-App", connectedNodeIds: [linkedID], miniApp: MiniAppState(srsText: "Selected SRS content", codeText: "<h1>Selected code</h1>")),
+                SpatialNode(id: linkedID, type: .miniApp, position: .zero, title: "Linked Mini-App", miniApp: MiniAppState(codeText: "<h1>Linked code</h1>")),
+                SpatialNode(id: unrelatedID, type: .miniApp, position: .zero, title: "Unrelated", miniApp: MiniAppState(codeText: "Do not leak full unrelated content"))
             ]
         )
 
-        let context = ProjectContextBuilder().buildNodePromptContext(from: store, nodeID: srsID)
+        let context = ProjectContextBuilder().buildNodePromptContext(from: store, nodeID: selectedID)
 
-        #expect(context.contains("Selected Node ID: \(srsID.uuidString)"))
-        #expect(context.contains("Selected Node Content:\nSelected SRS content"))
+        #expect(context.contains("Selected Node ID: \(selectedID.uuidString)"))
+        #expect(context.contains("Selected Node Context:"))
+        #expect(context.contains("Selected SRS content"))
         #expect(context.contains("Linked Neighbor Nodes:"))
         #expect(context.contains("<h1>Linked code</h1>"))
-        #expect(context.contains("Unrelated [code] id: \(unrelatedID.uuidString)"))
+        #expect(context.contains("Unrelated [miniApp] id: \(unrelatedID.uuidString)"))
         #expect(!context.contains("Do not leak full unrelated content"))
     }
 
@@ -82,7 +76,7 @@ struct CoCaptainAgentTests {
             <cocaptain_actions>
               <assistant_message>Prepared a targeted edit.</assistant_message>
               <node_edits>
-                <node_edit nodeId="\(nodeID.uuidString)" role="code" summary="Target exact code node.">
+                <node_edit nodeId="\(nodeID.uuidString)" role="miniApp" section="code" summary="Target exact Mini-App code.">
                   <operation type="replace_all">
                     <content><![CDATA[<h1>Targeted</h1>]]></content>
                   </operation>
@@ -94,7 +88,8 @@ struct CoCaptainAgentTests {
         let parsed = parser.parse(response)
 
         #expect(parsed.payload?.nodeEdits.first?.nodeID == nodeID)
-        #expect(parsed.payload?.nodeEdits.first?.role == .code)
+        #expect(parsed.payload?.nodeEdits.first?.role == .miniApp)
+        #expect(parsed.payload?.nodeEdits.first?.section == .code)
     }
 
     @MainActor
@@ -104,14 +99,15 @@ struct CoCaptainAgentTests {
         let store = ProjectStore(
             fileName: "node-patch-\(UUID().uuidString).json",
             initialNodes: [
-                SpatialNode(id: otherID, type: .code, position: .zero, title: "Code", textContent: "wrong"),
-                SpatialNode(id: targetID, type: .code, position: .zero, title: "Custom Code", textContent: "right")
+                SpatialNode(id: otherID, type: .miniApp, position: .zero, title: "Other Mini-App", miniApp: MiniAppState(codeText: "wrong")),
+                SpatialNode(id: targetID, type: .miniApp, position: .zero, title: "Custom Mini-App", miniApp: MiniAppState(codeText: "right"))
             ]
         )
 
         let preview = try NodePatchEngine().preview(
             nodeID: targetID,
-            role: .code,
+            role: .miniApp,
+            section: .code,
             operations: [NodePatchOperation(type: .replaceAll, content: "updated")],
             in: store
         )
@@ -124,7 +120,7 @@ struct CoCaptainAgentTests {
     @MainActor
     @Test func nodeAgentMessagesPersistOnNode() {
         let store = makeStore()
-        let node = store.nodes.first(where: { $0.role == .srs })!
+        let node = store.nodes.first(where: { $0.role == .miniApp })!
 
         store.appendNodeAgentMessage(
             id: node.id,
@@ -175,83 +171,31 @@ struct CoCaptainAgentTests {
     }
 
     @Test func nodeRoleInferenceRecognizesCanonicalTemplateNodes() {
-        #expect(SpatialNode(type: .srs, position: .zero, title: "Software Requirements (SRS)").role == .srs)
-        #expect(SpatialNode(type: .code, position: .zero, title: "Code").role == .code)
-        #expect(SpatialNode(type: .code, position: .zero, title: "HTML").role == .code)
-        #expect(SpatialNode(type: .code, position: .zero, title: "CSS").role == .code)
-        #expect(SpatialNode(type: .code, position: .zero, title: "JavaScript").role == .code)
-        #expect(SpatialNode(type: .webView, position: .zero, title: "Live Preview").role == .livePreview)
-        #expect(SpatialNode(type: .code, position: .zero, title: "New Logic").role == .code)
+        #expect(SpatialNode(type: .miniApp, position: .zero, title: "Mini-App").role == .miniApp)
+        #expect(SpatialNode(type: .subCanvas, position: .zero, title: "Nested").role == .subCanvas)
         #expect(SpatialNode(position: .zero, title: "New Logic").role == .custom)
-        #expect(SpatialNode(type: .firebase, position: .zero, title: "Firebase").role == .firebase)
     }
 
-    @Test func livePreviewCompilerInjectsFirebaseWhenConfigNodePresent() throws {
-        let codeNode = SpatialNode(
-            type: .code,
+    @Test func livePreviewCompilerInjectsFirebaseWhenMiniAppConfigPresent() throws {
+        let miniApp = SpatialNode(
+            type: .miniApp,
             position: .zero,
-            title: "Code",
-            theme: .orange,
-            textContent: "<html><head></head><body><p>x</p></body></html>"
+            title: "Mini-App",
+            theme: .blue,
+            miniApp: MiniAppState(
+                codeText: "<html><head></head><body><p>x</p></body></html>",
+                firebaseConfigText: #"{"apiKey":"testKey","authDomain":"t.firebaseapp.com","projectId":"tid","storageBucket":"t.appspot.com","messagingSenderId":"1","appId":"1:1:web:abc"}"#
+            )
         )
-        let previewNode = SpatialNode(
-            type: .webView,
-            position: .zero,
-            title: "Live Preview",
-            theme: .blue
-        )
-        let firebaseNode = SpatialNode(
-            type: .firebase,
-            position: .zero,
-            title: "Firebase",
-            theme: .orange,
-            textContent: #"{"apiKey":"testKey","authDomain":"t.firebaseapp.com","projectId":"tid","storageBucket":"t.appspot.com","messagingSenderId":"1","appId":"1:1:web:abc"}"#
-        )
-        let compilation = try #require(LivePreviewCompiler().compile(nodes: [previewNode, codeNode, firebaseNode]))
+        let compilation = try #require(LivePreviewCompiler().compile(nodes: [miniApp]))
         #expect(compilation.html.contains("__caocap_fb_b64"))
         #expect(compilation.html.contains("firebase-app-compat.js"))
     }
 
-    @Test func livePreviewCompilerUsesFirstValidFirebaseNodeWhenEarlierIsPlaceholder() throws {
-        let htmlNode = SpatialNode(
-            type: .code,
-            position: .zero,
-            title: "HTML",
-            theme: .orange,
-            textContent: "<html><head></head><body></body></html>"
-        )
-        let previewNode = SpatialNode(
-            type: .webView,
-            position: .zero,
-            title: "Live Preview",
-            theme: .blue
-        )
-        let stubFirebase = SpatialNode(
-            type: .firebase,
-            position: .zero,
-            title: "Firebase Stub",
-            theme: .orange,
-            textContent: FirebasePreviewBootstrap.placeholderConfigJSON()
-        )
-        let realFirebase = SpatialNode(
-            type: .firebase,
-            position: .zero,
-            title: "Firebase Real",
-            theme: .orange,
-            textContent: #"{"apiKey":"realWebKey","authDomain":"x.firebaseapp.com","projectId":"myrealpid","storageBucket":"x.appspot.com","messagingSenderId":"1","appId":"1:1:web:abc"}"#
-        )
-        let compilation = try #require(
-            LivePreviewCompiler().compile(nodes: [previewNode, htmlNode, stubFirebase, realFirebase])
-        )
-        #expect(compilation.html.contains("__caocap_fb_b64"))
-        #expect(compilation.html.contains("firebase-app-compat.js"))
-    }
-
-    @Test func livePreviewCompilerUsesFirstCodeNodeWhenMultipleExist() throws {
+    @Test func livePreviewCompilerUsesFirstMiniAppWhenMultipleExist() throws {
         let nodes = [
-            SpatialNode(type: .webView, position: .zero, title: "Live Preview"),
-            SpatialNode(type: .code, position: .zero, title: "Code", textContent: "<html><body><h1>Combined</h1></body></html>"),
-            SpatialNode(type: .code, position: .zero, title: "Other Code", textContent: "<h1>Ignored</h1>")
+            SpatialNode(type: .miniApp, position: .zero, title: "Mini-App", miniApp: MiniAppState(codeText: "<html><body><h1>Combined</h1></body></html>")),
+            SpatialNode(type: .miniApp, position: .zero, title: "Other Mini-App", miniApp: MiniAppState(codeText: "<h1>Ignored</h1>"))
         ]
 
         let compilation = try #require(LivePreviewCompiler().compile(nodes: nodes))
@@ -260,15 +204,16 @@ struct CoCaptainAgentTests {
         #expect(!compilation.html.contains("Ignored"))
     }
 
-    @Test func livePreviewCompilerInjectsFirebaseIntoCombinedCodeNode() throws {
+    @Test func livePreviewCompilerInjectsFirebaseIntoMiniAppCode() throws {
         let nodes = [
-            SpatialNode(type: .webView, position: .zero, title: "Live Preview"),
-            SpatialNode(type: .code, position: .zero, title: "Code", textContent: "<html><head></head><body><h1>Combined</h1></body></html>"),
             SpatialNode(
-                type: .firebase,
+                type: .miniApp,
                 position: .zero,
-                title: "Firebase",
-                textContent: #"{"apiKey":"testKey","authDomain":"t.firebaseapp.com","projectId":"tid","storageBucket":"t.appspot.com","messagingSenderId":"1","appId":"1:1:web:abc"}"#
+                title: "Mini-App",
+                miniApp: MiniAppState(
+                    codeText: "<html><head></head><body><h1>Combined</h1></body></html>",
+                    firebaseConfigText: #"{"apiKey":"testKey","authDomain":"t.firebaseapp.com","projectId":"tid","storageBucket":"t.appspot.com","messagingSenderId":"1","appId":"1:1:web:abc"}"#
+                )
             )
         ]
 
@@ -284,24 +229,21 @@ struct CoCaptainAgentTests {
         
         // Scenario 1: Already has viewport tag (double quotes)
         let hasViewportDouble = [
-            SpatialNode(type: .webView, position: .zero, title: "Live Preview"),
-            SpatialNode(type: .code, position: .zero, title: "Code", textContent: "<html><head><meta name=\"viewport\" content=\"width=device-width\"></head><body></body></html>")
+            SpatialNode(type: .miniApp, position: .zero, title: "Mini-App", miniApp: MiniAppState(codeText: "<html><head><meta name=\"viewport\" content=\"width=device-width\"></head><body></body></html>"))
         ]
         let compilationDouble = try #require(compiler.compile(nodes: hasViewportDouble))
         #expect(compilationDouble.html.components(separatedBy: "viewport").count == 2)
         
         // Scenario 2: Already has viewport tag (single quotes)
         let hasViewportSingle = [
-            SpatialNode(type: .webView, position: .zero, title: "Live Preview"),
-            SpatialNode(type: .code, position: .zero, title: "Code", textContent: "<html><head><meta name='viewport' content='width=device-width'></head><body></body></html>")
+            SpatialNode(type: .miniApp, position: .zero, title: "Mini-App", miniApp: MiniAppState(codeText: "<html><head><meta name='viewport' content='width=device-width'></head><body></body></html>"))
         ]
         let compilationSingle = try #require(compiler.compile(nodes: hasViewportSingle))
         #expect(compilationSingle.html.components(separatedBy: "viewport").count == 2)
         
         // Scenario 3: Has <head>, missing viewport
         let missingViewportWithHead = [
-            SpatialNode(type: .webView, position: .zero, title: "Live Preview"),
-            SpatialNode(type: .code, position: .zero, title: "Code", textContent: "<html><head><title>Test</title></head><body><h1>Hello</h1></body></html>")
+            SpatialNode(type: .miniApp, position: .zero, title: "Mini-App", miniApp: MiniAppState(codeText: "<html><head><title>Test</title></head><body><h1>Hello</h1></body></html>"))
         ]
         let compilationWithHead = try #require(compiler.compile(nodes: missingViewportWithHead))
         #expect(compilationWithHead.html.contains("viewport"))
@@ -309,8 +251,7 @@ struct CoCaptainAgentTests {
         
         // Scenario 4: Has <html>, missing <head>
         let missingViewportWithHtml = [
-            SpatialNode(type: .webView, position: .zero, title: "Live Preview"),
-            SpatialNode(type: .code, position: .zero, title: "Code", textContent: "<html><body><h1>Hello</h1></body></html>")
+            SpatialNode(type: .miniApp, position: .zero, title: "Mini-App", miniApp: MiniAppState(codeText: "<html><body><h1>Hello</h1></body></html>"))
         ]
         let compilationWithHtml = try #require(compiler.compile(nodes: missingViewportWithHtml))
         #expect(compilationWithHtml.html.contains("viewport"))
@@ -318,8 +259,7 @@ struct CoCaptainAgentTests {
         
         // Scenario 5: Missing both <head> and <html>
         let missingViewportFragment = [
-            SpatialNode(type: .webView, position: .zero, title: "Live Preview"),
-            SpatialNode(type: .code, position: .zero, title: "Code", textContent: "<h1>Hello World</h1>")
+            SpatialNode(type: .miniApp, position: .zero, title: "Mini-App", miniApp: MiniAppState(codeText: "<h1>Hello World</h1>"))
         ]
         let compilationFragment = try #require(compiler.compile(nodes: missingViewportFragment))
         #expect(compilationFragment.html.contains("viewport"))
@@ -327,13 +267,11 @@ struct CoCaptainAgentTests {
         #expect(compilationFragment.html.contains("<html><head>"))
     }
 
-    @Test func livePreviewCompilerRequiresPreviewAndCodeNodes() {
+    @Test func livePreviewCompilerRequiresMiniAppNode() {
         let compiler = LivePreviewCompiler()
-        let codeOnly = [SpatialNode(type: .code, position: .zero, title: "Code", textContent: "<h1>Hello</h1>")]
-        let previewOnly = [SpatialNode(type: .webView, position: .zero, title: "Live Preview")]
+        let standardOnly = [SpatialNode(type: .standard, position: .zero, title: "Note")]
 
-        #expect(compiler.compile(nodes: codeOnly) == nil)
-        #expect(compiler.compile(nodes: previewOnly) == nil)
+        #expect(compiler.compile(nodes: standardOnly) == nil)
     }
 
     @Test func chatBubbleMarkdownPreservesVisibleContent() {
@@ -543,7 +481,7 @@ struct CoCaptainAgentTests {
             <cocaptain_actions>
               <assistant_message>Documented the preference.</assistant_message>
               <node_edits>
-                <node_edit role="srs" summary="Document color preference.">
+                <node_edit role="miniApp" section="srs" summary="Document color preference.">
                   <operation type="append">
                     <content><![CDATA[\nPrimary color: Slate Grey.]]></content>
                   </operation>
@@ -715,7 +653,7 @@ struct CoCaptainAgentTests {
             <cocaptain_actions>
               <assistant_message>I updated the project.</assistant_message>
               <node_edits>
-                <node_edit role="code" summary="Update Code.">
+                <node_edit role="miniApp" section="code" summary="Update Code.">
                   <operation type="replace_all">
                     <content><![CDATA[<h1>Fixed</h1>]]></content>
                   </operation>
@@ -735,7 +673,8 @@ struct CoCaptainAgentTests {
         )
 
         #expect(directive.payload?.safeActions.first?.actionID == "go_root")
-        #expect(directive.payload?.nodeEdits.first?.role == .code)
+        #expect(directive.payload?.nodeEdits.first?.role == .miniApp)
+        #expect(directive.payload?.nodeEdits.first?.section == .code)
         #expect(directive.source == .combined)
     }
 
@@ -756,7 +695,7 @@ struct CoCaptainAgentTests {
                 <cocaptain_actions>
                   <assistant_message>I prepared a valid code edit.</assistant_message>
                   <node_edits>
-                    <node_edit role="code" summary="Update Code.">
+                    <node_edit role="miniApp" section="code" summary="Update Code.">
                       <operation type="replace_all">
                         <content><![CDATA[<h1>Fixed</h1>]]></content>
                       </operation>
@@ -791,7 +730,7 @@ struct CoCaptainAgentTests {
                 <cocaptain_actions>
                   <assistant_message>I prepared an SRS update.</assistant_message>
                   <node_edits>
-                    <node_edit role="srs" summary="Draft the product requirements.">
+                    <node_edit role="miniApp" section="srs" summary="Draft the product requirements.">
                       <operation type="replace_all">
                         <content><![CDATA[# Software Requirements
 
@@ -815,7 +754,7 @@ struct CoCaptainAgentTests {
 
         #expect(llm.receivedMessages.count == 2)
         #expect(llm.receivedMessages.last?.contains("documentation, requirements, spec, or SRS requests") == true)
-        #expect(result.reviewBundle?.items.first?.targetLabel == "SRS")
+        #expect(result.reviewBundle?.items.first?.targetLabel == "Mini-App SRS")
         #expect(result.reviewBundle?.items.first?.status == .pending)
     }
 
@@ -832,7 +771,7 @@ struct CoCaptainAgentTests {
                   <safe_actions><action id="go_root"/></safe_actions>
                   <pending_actions><action id="create_node"/></pending_actions>
                   <node_edits>
-                    <node_edit role="code" summary="Update the headline.">
+                    <node_edit role="miniApp" section="code" summary="Update the headline.">
                       <operation type="replace_exact">
                         <target>Hello World!</target>
                         <content><![CDATA[Agentic Hello!]]></content>
@@ -860,7 +799,7 @@ struct CoCaptainAgentTests {
     @Test func coordinatorUsesNodeScopedSessionAndStagesTargetedEdit() async throws {
         let dispatcher = TestActionDispatcher()
         let store = makeStore()
-        let codeNode = try #require(store.nodes.first(where: { $0.role == .code }))
+        let miniAppNode = try #require(store.nodes.first(where: { $0.role == .miniApp }))
         let llm = TestLLMClient(
             response:
                 """
@@ -869,7 +808,7 @@ struct CoCaptainAgentTests {
                 <cocaptain_actions>
                   <assistant_message>I prepared a code-node update.</assistant_message>
                   <node_edits>
-                    <node_edit nodeId="\(codeNode.id.uuidString)" role="code" summary="Update targeted code node.">
+                    <node_edit nodeId="\(miniAppNode.id.uuidString)" role="miniApp" section="code" summary="Update targeted mini-app.">
                       <operation type="replace_all">
                         <content><![CDATA[<h1>Scoped</h1>]]></content>
                       </operation>
@@ -884,12 +823,12 @@ struct CoCaptainAgentTests {
             userMessage: "change this code node",
             store: store,
             dispatcher: dispatcher,
-            scope: .node(codeNode.id)
+            scope: .node(miniAppNode.id)
         ) { _ in }
 
-        #expect(llm.receivedScopes == [.node(codeNode.id)])
-        #expect(result.reviewBundle?.items.first?.targetNodeID == codeNode.id)
-        #expect(result.reviewBundle?.items.first?.targetLabel == "Code")
+        #expect(llm.receivedScopes == [.node(miniAppNode.id)])
+        #expect(result.reviewBundle?.items.first?.targetNodeID == miniAppNode.id)
+        #expect(result.reviewBundle?.items.first?.targetLabel == "Mini-App CODE")
     }
 
     @MainActor
@@ -1093,7 +1032,7 @@ struct CoCaptainAgentTests {
                 <cocaptain_actions>
                   <assistant_message>I prepared an edit.</assistant_message>
                   <node_edits>
-                    <node_edit role="code" summary="Update Code.">
+                    <node_edit role="miniApp" section="code" summary="Update Code.">
                     </node_edit>
                   </node_edits>
                 </cocaptain_actions>
@@ -1104,7 +1043,7 @@ struct CoCaptainAgentTests {
                 <cocaptain_actions>
                   <assistant_message>I prepared a valid code edit.</assistant_message>
                   <node_edits>
-                    <node_edit role="code" summary="Update Code.">
+                    <node_edit role="miniApp" section="code" summary="Update Code.">
                       <operation type="replace_all">
                         <content><![CDATA[<h1>Fixed</h1>]]></content>
                       </operation>
@@ -1133,8 +1072,8 @@ struct CoCaptainAgentTests {
         let vm = CoCaptainViewModel()
         vm.store = store
 
-        let codeNode = store.nodes.first(where: { $0.title == "Code" })!
-        let baseText = codeNode.textContent ?? ""
+        let miniAppNode = store.nodes.first(where: { $0.title == "Mini-App" })!
+        let baseText = miniAppNode.miniApp?.codeText ?? ""
         let bundleID = UUID()
         let itemID = UUID()
 
@@ -1144,11 +1083,12 @@ struct CoCaptainAgentTests {
                 id: bundleID,
                 items: [PendingReviewItem(
                     id: itemID,
-                    targetLabel: "Code",
+                    targetLabel: "Mini-App CODE",
                     summary: "Update headline",
                     preview: "<h1>Agentic Hello!</h1>",
                     source: .nodeEdit(
-                        role: .code,
+                        role: .miniApp,
+                        section: .code,
                         operations: [NodePatchOperation(type: .replaceAll, content: "<h1>Agentic Hello!</h1>")],
                         baseText: baseText
                     )
@@ -1156,8 +1096,8 @@ struct CoCaptainAgentTests {
             ))
         ))
 
-        // User edits the Code node before clicking Apply — stale scenario.
-        store.updateNodeTextContent(id: codeNode.id, text: "<h1>User wrote this instead</h1>", persist: false)
+        // User edits the Mini-App code before clicking Apply — stale scenario.
+        store.updateMiniAppCode(id: miniAppNode.id, text: "<h1>User wrote this instead</h1>", persist: false)
         vm.applyReviewItem(bundleID: bundleID, itemID: itemID)
 
         guard case .reviewBundle(let bundle) = vm.items.first(where: { $0.id == bundleID })?.content,
@@ -1176,8 +1116,8 @@ struct CoCaptainAgentTests {
         let vm = CoCaptainViewModel()
         vm.store = store
 
-        let codeNode = store.nodes.first(where: { $0.title == "Code" })!
-        let baseText = codeNode.textContent ?? ""
+        let miniAppNode = store.nodes.first(where: { $0.title == "Mini-App" })!
+        let baseText = miniAppNode.miniApp?.codeText ?? ""
         let bundleID = UUID()
         let itemID = UUID()
 
@@ -1187,11 +1127,12 @@ struct CoCaptainAgentTests {
                 id: bundleID,
                 items: [PendingReviewItem(
                     id: itemID,
-                    targetLabel: "Code",
+                    targetLabel: "Mini-App CODE",
                     summary: "Update headline",
                     preview: "<h1>Agentic Hello!</h1>",
                     source: .nodeEdit(
-                        role: .code,
+                        role: .miniApp,
+                        section: .code,
                         operations: [NodePatchOperation(type: .replaceAll, content: "<h1>Agentic Hello!</h1>")],
                         baseText: baseText
                     )
@@ -1285,18 +1226,14 @@ struct CoCaptainAgentTests {
             projectName: "Test Project",
             initialNodes: [
                 SpatialNode(
-                    type: .srs,
+                    type: .miniApp,
                     position: CGPoint(x: 0, y: 0),
-                    title: "Software Requirements (SRS)",
-                    theme: .purple,
-                    textContent: "Build a landing page"
-                ),
-                SpatialNode(
-                    type: .code,
-                    position: CGPoint(x: 10, y: 0),
-                    title: "Code",
-                    theme: .orange,
-                    textContent: "<html><body><h1>Hello World!</h1></body></html>"
+                    title: "Mini-App",
+                    theme: .blue,
+                    miniApp: MiniAppState(
+                        srsText: "Build a landing page",
+                        codeText: "<html><body><h1>Hello World!</h1></body></html>"
+                    )
                 )
             ]
         )
@@ -1304,8 +1241,7 @@ struct CoCaptainAgentTests {
 
     private func makePreviewNodes(code: String) -> [SpatialNode] {
         [
-            SpatialNode(type: .webView, position: .zero, title: "Live Preview"),
-            SpatialNode(type: .code, position: .zero, title: "Code", textContent: code)
+            SpatialNode(type: .miniApp, position: .zero, title: "Mini-App", miniApp: MiniAppState(codeText: code))
         ]
     }
 }

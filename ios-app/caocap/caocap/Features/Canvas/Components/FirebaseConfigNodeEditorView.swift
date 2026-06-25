@@ -11,8 +11,8 @@ struct FirebaseConfigNodeEditorView: View {
     init(node: SpatialNode, store: ProjectStore) {
         self.node = node
         self.store = store
-        _jsonText = State(initialValue: node.textContent ?? "")
-        _collectionPath = State(initialValue: node.firebaseFirestorePath ?? "")
+        _jsonText = State(initialValue: node.miniApp?.firebaseConfigText ?? "")
+        _collectionPath = State(initialValue: node.miniApp?.firebaseFirestorePath ?? "")
     }
 
     private var currentNode: SpatialNode {
@@ -27,7 +27,7 @@ struct FirebaseConfigNodeEditorView: View {
                         .font(.title2.bold())
 
                     Text(
-                        "In Firebase Console: Project settings → Your apps → Web app → copy the `firebaseConfig` object. Paste it below. Live Preview loads the compat SDK and sets `window.__caocapFirestore` and optional `window.__caocapFirestoreDefaultPath`."
+                        "In Firebase Console: Project settings → Your apps → Web app → copy the `firebaseConfig` object. Paste it below. Mini-App Preview loads the compat SDK and sets `window.__caocapFirestore` and optional `window.__caocapFirestoreDefaultPath`."
                     )
                     .font(.subheadline)
                     .foregroundColor(.secondary)
@@ -84,7 +84,7 @@ struct FirebaseConfigNodeEditorView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
                         let trimmedPath = collectionPath.trimmingCharacters(in: .whitespacesAndNewlines)
-                        store.updateNodeTextContent(id: node.id, text: jsonText, persist: true)
+                        store.updateMiniAppFirebaseConfig(id: node.id, text: jsonText, persist: true)
                         store.updateNodeFirebaseFirestorePath(id: node.id, path: trimmedPath.isEmpty ? nil : trimmedPath)
                         dismiss()
                     }

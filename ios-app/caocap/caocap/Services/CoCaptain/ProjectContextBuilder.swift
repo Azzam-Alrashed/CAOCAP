@@ -1,36 +1,24 @@
 import Foundation
 
 public struct ProjectContextBuilder {
-    /// Cap for Firebase Web config JSON in prompts (large values can break AI calls).
     private static let maxFirebaseConfigChars = 4_000
 
     public init() {}
 
     @MainActor
     public func buildPromptContext(from store: ProjectStore) -> String {
-        let inventory = store.nodes.map { node in
-            let linkCount = (node.connectedNodeIds?.count ?? 0) + (node.nextNodeId == nil ? 0 : 1)
-            return "- \(node.title) [\(node.type.rawValue)] links: \(linkCount)"
-        }.joined(separator: "\n")
-
-        let sections = NodeRole.editableCanonicalRoles.compactMap { role -> String? in
-            guard let node = node(for: role, in: store.nodes) else { return nil }
-            // Keep context compact; large prompts can cause Firebase AI Logic calls
-            // to fail with opaque errors (e.g. GenerateContentError error 0).
-            let content = Self.trimmed(node.textContent ?? "", limit: 1000)
-            guard !content.isEmpty else { return nil }
-            return "\(role.displayName):\n\(content)"
-        }
+        let miniApps = store.nodes.filter { $0.type == .miniApp }
+        let inventory = nodeInventory(store.nodes)
+        let miniAppSections = miniApps.map { miniAppContext(for: $0, selected: false) }
 
         return [
             "Project Name: \(store.projectName)",
             "Workspace ID: \(store.fileName)",
             "Node Count: \(store.nodes.count)",
-            srsReadinessContext(from: store),
-            Self.firebaseContextForCoCaptain(nodes: store.nodes),
-            "Node Graph:",
-            inventory,
-            sections.isEmpty ? nil : "Canonical Nodes:\n" + sections.joined(separator: "\n\n")
+            "Mini-App Count: \(miniApps.count)",
+            "Node Graph:\n\(inventory)",
+            miniAppSections.isEmpty ? nil : "Mini-Apps:\n\n" + miniAppSections.joined(separator: "\n\n---\n\n"),
+            ProjectContextBuilder.firebaseWiringRulesBulletList()
         ]
         .compactMap { $0 }
         .joined(separator: "\n\n")
@@ -42,22 +30,8 @@ public struct ProjectContextBuilder {
             return buildPromptContext(from: store)
         }
 
-        let inventory = store.nodes.map { node in
-            let marker = node.id == nodeID ? " [selected]" : ""
-            let linkCount = (node.connectedNodeIds?.count ?? 0) + (node.nextNodeId == nil ? 0 : 1)
-            return "- \(node.title) [\(node.type.rawValue)] id: \(node.id.uuidString)\(marker) links: \(linkCount)"
-        }.joined(separator: "\n")
-
         let linkedNodes = linkedNeighbors(of: selectedNode, in: store.nodes)
-        let linkedSections = linkedNodes.map { node in
-            let content = editableContent(for: node, selected: false)
-            return """
-            - \(node.title) [\(node.type.rawValue)] id: \(node.id.uuidString) role: \(node.role.rawValue)
-              snippet: \(Self.trimmed(content, limit: 500))
-            """
-        }.joined(separator: "\n")
-
-        let selectedContent = editableContent(for: selectedNode, selected: true)
+        let linkedSections = linkedNodes.map { miniAppContext(for: $0, selected: false) }
 
         return [
             "Project Name: \(store.projectName)",
@@ -67,131 +41,53 @@ public struct ProjectContextBuilder {
             "Selected Node ID: \(selectedNode.id.uuidString)",
             "Selected Node Type: \(selectedNode.type.rawValue)",
             "Selected Node Role: \(selectedNode.role.rawValue)",
-            srsReadinessContext(from: store),
             selectedNode.agentState.memorySummary.map { "Node Agent Memory:\n\($0)" },
-            "Selected Node Content:\n\(selectedContent.isEmpty ? "[EMPTY]" : selectedContent)",
-            linkedSections.isEmpty ? nil : "Linked Neighbor Nodes:\n\(linkedSections)",
-            "Project Inventory:\n\(inventory)"
+            "Selected Node Context:\n\(miniAppContext(for: selectedNode, selected: true))",
+            linkedSections.isEmpty ? nil : "Linked Neighbor Nodes:\n\n\(linkedSections.joined(separator: "\n\n"))",
+            "Project Inventory:\n\(nodeInventory(store.nodes))",
+            ProjectContextBuilder.firebaseWiringRulesBulletList()
         ]
         .compactMap { $0 }
         .joined(separator: "\n\n")
     }
 
-    // MARK: - Firebase (CoCaptain must read canvas node contents)
+    private func nodeInventory(_ nodes: [SpatialNode]) -> String {
+        nodes.map { node in
+            let linkCount = (node.connectedNodeIds?.count ?? 0) + (node.nextNodeId == nil ? 0 : 1)
+            return "- \(node.title) [\(node.type.rawValue)] id: \(node.id.uuidString) links: \(linkCount)"
+        }.joined(separator: "\n")
+    }
 
-    /// Full Firebase canvas context: actual `firebaseConfig` from the node (truncated) + how to wire JS.
-    /// Web `apiKey` is intentionally client-exposed in Firebase; rules protect data.
-    private static func firebaseContextForCoCaptain(nodes: [SpatialNode]) -> String {
-        var parts: [String] = []
-        parts.append("### Firebase canvas node + Live Preview wiring")
-
-        let firebaseNodes = nodes.filter { $0.type == .firebase }
-        guard !firebaseNodes.isEmpty else {
-            parts.append(
-                """
-                No `firebase` node on this canvas yet.
-                - Tell the user to add a Firebase node from the command palette (⌘K → search "firebase" → Create Firebase Node) and paste the Web `firebaseConfig` object from Firebase Console → Project settings → Your apps.
-                - You may propose a pending app action with id `create_firebase_node` so an empty Firebase node appears for them to fill.
-                """
-            )
-            parts.append(Self.firebaseWiringRulesBulletList())
-            return parts.joined(separator: "\n\n")
-        }
-
-        guard let node = FirebasePreviewBootstrap.firstInjectableFirebaseNode(in: nodes) else {
-            parts.append(
-                """
-                There are \(firebaseNodes.count) `firebase` node(s), but **none** have a valid Web `firebaseConfig` yet (empty text, invalid JSON, or still using placeholders like YOUR_WEB_API_KEY / projectId your-project-id).
-                - Tell the user to open each Firebase node and paste the real config from Firebase Console, or delete duplicate empty nodes.
-                """
-            )
-            parts.append(Self.firebaseWiringRulesBulletList())
-            return parts.joined(separator: "\n\n")
-        }
-
-        if firebaseNodes.count > 1 {
-            parts.append("Multiple Firebase nodes: Live Preview uses the **first in the node list with a valid** Web config (skips placeholders). Config below is from: **\(node.title)**.")
-        } else {
-            parts.append("Live Preview uses this Firebase node: **\(node.title)**.")
-        }
-
-        let path = node.firebaseFirestorePath?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        parts.append(
-            "Optional default Firestore path (exposed as `window.__caocapFirestoreDefaultPath`): \(path.isEmpty ? "(none set)" : "`\(path)`")"
-        )
-
-        let raw = node.textContent?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        if raw.isEmpty {
-            parts.append("**firebaseConfig JSON in node is empty** — user must open this node and paste the Web app config from Firebase Console.")
-        } else {
-            let formatted = Self.formatFirebaseConfigForPrompt(raw)
-            parts.append(
-                """
-                **firebaseConfig stored on this node** (Live Preview injects this for `initializeApp`; Web `apiKey` is public by Firebase design — protect data with Security Rules):
-                \(formatted)
-                """
-            )
-            if let data = raw.data(using: .utf8),
-               let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let pid = obj["projectId"] as? String, !pid.isEmpty {
-                parts.append("Parsed `projectId` for reference: `\(pid)`")
+    private func miniAppContext(for node: SpatialNode, selected: Bool) -> String {
+        guard node.type == .miniApp, let miniApp = node.miniApp else {
+            if node.type == .subCanvas {
+                return "- \(node.title) [subCanvas] links to file: \(node.linkedCanvasFileName ?? "[None]")"
             }
+            return "- \(node.title) [\(node.type.rawValue)]"
         }
 
-        parts.append(Self.firebaseWiringRulesBulletList())
-        return parts.joined(separator: "\n\n")
-    }
+        let srsLimit = selected ? 3_000 : 1_000
+        let codeLimit = selected ? 6_000 : 1_600
+        let firebaseConfig = miniApp.firebaseConfigText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let firebaseStatus = FirebasePreviewBootstrap.injectableFirebaseConfig(for: miniApp) == nil ? "not ready" : "ready"
+        let firestorePath = miniApp.firebaseFirestorePath?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
 
-    private static func formatFirebaseConfigForPrompt(_ raw: String) -> String {
-        guard let data = raw.data(using: .utf8) else {
-            return Self.trimmed(raw, limit: maxFirebaseConfigChars)
-        }
-        if let obj = try? JSONSerialization.jsonObject(with: data),
-           JSONSerialization.isValidJSONObject(obj),
-           let pretty = try? JSONSerialization.data(withJSONObject: obj, options: [.prettyPrinted, .sortedKeys]),
-           let str = String(data: pretty, encoding: .utf8) {
-            return Self.trimmed(str, limit: maxFirebaseConfigChars)
-        }
-        return Self.trimmed(raw, limit: maxFirebaseConfigChars)
-    }
+        return """
+        - \(node.title) [miniApp] id: \(node.id.uuidString)
+          SRS Readiness: \(miniApp.srsReadinessState.contextLabel)
+          Firebase: \(firebaseStatus)
+          Firestore Default Path: \(firestorePath.isEmpty ? "(none set)" : firestorePath)
+          SRS:
+        \(Self.indent(Self.trimmed(miniApp.srsText, limit: srsLimit), spaces: 4))
 
-    private static func firebaseWiringRulesBulletList() -> String {
-        """
-        Wiring rules for you (CoCaptain):
-        - Live Preview loads this config and sets `window.__caocapFirestore` when valid. Check `window.__caocapFirestoreStatus === 'ready'`; if not ready, read `window.__caocapFirestoreLastError` — do **not** call `initializeApp` again in the code node.
-        - Always guard: `const db = window.__caocapFirestore; if (!db) { … }`
-        - **Firestore compat:** `db.collection('segment')` only accepts a **single** collection id (e.g. `leads`). For nested paths like `users/UID/items`, use `db.collection('users').doc(uid).collection('items')` — never pass a slash string into `collection()`.
-        - If `window.__caocapFirestoreDefaultPath` is one segment, `db.collection(window.__caocapFirestoreDefaultPath)` is OK; if it contains `/`, build `doc()` / `collection()` chains instead.
-        - To persist data, emit **`code` `node_edits`** with inline JavaScript using `.add()`, `.set({ merge: true })`, etc., after DOM ready or inside click/submit handlers. Match **real** HTML `id` / `name` attributes from the code node content.
-        - Remind the user: **Firestore Security Rules** must allow the intended client reads/writes (permission-denied often looks like “not saving”).
+          Code:
+        \(Self.indent(Self.trimmed(miniApp.codeText, limit: codeLimit), spaces: 4))
+
+          Firebase Config:
+        \(Self.indent(firebaseConfig.isEmpty ? "(empty)" : Self.formatFirebaseConfigForPrompt(firebaseConfig), spaces: 4))
         """
     }
 
-    // MARK: - Private helpers
-
-    /// Includes the SRS readiness state in the prompt so CoCaptain knows
-    /// whether to ask clarifying questions or proceed to code generation.
-    @MainActor
-    private func srsReadinessContext(from store: ProjectStore) -> String? {
-        guard let srsNode = store.nodes.first(where: { $0.role == .srs }) else { return nil }
-        let state = srsNode.srsReadinessState ?? .empty
-        
-        var context = "SRS Readiness: \(state.contextLabel)"
-        
-        let hasImplementationNodes = store.nodes.contains(where: { $0.role == .code })
-        if !hasImplementationNodes {
-            context += "\nImplementation State: Blank Canvas (No code nodes exist yet)"
-        }
-        
-        return context
-    }
-
-    @MainActor
-    private func node(for role: NodeRole, in nodes: [SpatialNode]) -> SpatialNode? {
-        nodes.first(where: { role.matches(node: $0) })
-    }
-
-    @MainActor
     private func linkedNeighbors(of selectedNode: SpatialNode, in nodes: [SpatialNode]) -> [SpatialNode] {
         var ids = Set<UUID>()
         if let nextNodeId = selectedNode.nextNodeId {
@@ -206,23 +102,41 @@ public struct ProjectContextBuilder {
         return nodes.filter { ids.contains($0.id) }
     }
 
-    private func editableContent(for node: SpatialNode, selected: Bool) -> String {
-        switch node.type {
-        case .webView:
-            return selected ? Self.trimmed(node.htmlContent ?? "", limit: 1600) : Self.trimmed(node.htmlContent ?? "", limit: 500)
-        case .standard, .srs, .code:
-            return selected ? (node.textContent ?? "") : Self.trimmed(node.textContent ?? "", limit: 500)
-        case .firebase:
-            let summary = FirebasePreviewBootstrap.canvasSummaryLine(for: node)
-            return selected ? (node.textContent ?? summary) : summary
-        case .subCanvas:
-            let fileName = node.linkedCanvasFileName ?? "[None]"
-            return "Sub-Canvas node linking to file: \(fileName)"
+    private static func formatFirebaseConfigForPrompt(_ raw: String) -> String {
+        guard let data = raw.data(using: .utf8) else {
+            return trimmed(raw, limit: maxFirebaseConfigChars)
         }
+        if let obj = try? JSONSerialization.jsonObject(with: data),
+           JSONSerialization.isValidJSONObject(obj),
+           let pretty = try? JSONSerialization.data(withJSONObject: obj, options: [.prettyPrinted, .sortedKeys]),
+           let str = String(data: pretty, encoding: .utf8) {
+            return trimmed(str, limit: maxFirebaseConfigChars)
+        }
+        return trimmed(raw, limit: maxFirebaseConfigChars)
+    }
+
+    private static func firebaseWiringRulesBulletList() -> String {
+        """
+        Mini-App Firebase wiring rules for CoCaptain:
+        - Firebase config lives inside each Mini-App, not in a separate Firebase node.
+        - The Mini-App preview injects valid config and sets `window.__caocapFirestore` plus `window.__caocapFirestoreDefaultPath`.
+        - Do not call `initializeApp` again in Mini-App code; use `window.__caocapFirestore` after null checks.
+        - For code edits, emit `node_edit` with `role="miniApp"` and `section="code"` targeting the Mini-App nodeId.
+        - For SRS edits, emit `node_edit` with `role="miniApp"` and `section="srs"` targeting the Mini-App nodeId.
+        - Firestore compat: `db.collection('segment')` accepts one collection id. For nested paths, chain `collection().doc().collection()`.
+        - Remind the user that Firestore Security Rules must allow intended client reads/writes.
+        """
     }
 
     private static func trimmed(_ text: String, limit: Int) -> String {
         guard text.count > limit else { return text }
         return String(text.prefix(limit)) + "\n[TRUNCATED]"
+    }
+
+    private static func indent(_ text: String, spaces: Int) -> String {
+        let prefix = String(repeating: " ", count: spaces)
+        return text.split(separator: "\n", omittingEmptySubsequences: false)
+            .map { prefix + String($0) }
+            .joined(separator: "\n")
     }
 }
