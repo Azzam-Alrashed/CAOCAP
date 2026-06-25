@@ -1,6 +1,7 @@
 import {
   AppWindow,
   ArrowUpRight,
+  BookOpen,
   Bot,
   Boxes,
   Code2,
@@ -217,6 +218,18 @@ export default function Home() {
         </div>
       </section>
 
+      <section className="learn-section">
+        <div>
+          <p className="eyebrow">Open source guide</p>
+          <h2>Learn the codebase as a working system.</h2>
+        </div>
+        <Link className="learn-card" href="/learn">
+          <BookOpen aria-hidden="true" size={28} />
+          <span>Read the CAOCAP Codebase Learning Book</span>
+          <ArrowUpRight aria-hidden="true" size={18} />
+        </Link>
+      </section>
+
       <section className="final-cta">
         <Code2 aria-hidden="true" size={30} />
         <h2>Start building through the map.</h2>
@@ -232,6 +245,7 @@ export default function Home() {
           <p>© 2026 Azzam Alrashed. Built for the spatial era.</p>
           <div className="footer-links">
             <Link href="/support">Support</Link>
+            <Link href="/learn">Learn</Link>
             <Link href="/privacy">Privacy Policy</Link>
             <Link href="/terms">Terms of Service</Link>
             <a href={githubUrl} target="_blank" rel="noreferrer">GitHub</a>

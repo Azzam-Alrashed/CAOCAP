@@ -83,6 +83,11 @@ public class CommandPaletteViewModel {
             selectedIndex = (selectedIndex + 1) % count
         }
     }
+
+    public func selectPromptRowIfAvailable() {
+        guard canSubmitPrompt else { return }
+        selectedIndex = filteredActions.count + nodeResults.count
+    }
     
     public func confirmSelection() {
         let actions = filteredActions
