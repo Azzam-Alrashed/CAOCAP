@@ -1,32 +1,32 @@
 import Foundation
 
 public struct LivePreviewCompilation: Hashable {
-    public let webViewNodeID: UUID
+    public let miniAppNodeID: UUID
     public let html: String
 }
 
-/// Produces the WebView payload from the canonical Code node.
+/// Produces each Mini-App's runnable preview payload from its embedded source.
 public struct LivePreviewCompiler {
     public init() {}
 
     public func compile(nodes: [SpatialNode]) -> LivePreviewCompilation? {
-        guard let webViewNode = nodes.first(where: { $0.role == .livePreview }) else {
+        guard let node = nodes.first(where: { $0.type == .miniApp }) else { return nil }
+        return compile(node: node)
+    }
+
+    public func compile(node: SpatialNode) -> LivePreviewCompilation? {
+        guard node.type == .miniApp, let miniApp = node.miniApp else {
             return nil
         }
 
-        guard let codeNode = nodes.first(where: { $0.role == .code }) else {
-            return nil
-        }
-
-        let hasFirebaseNode = nodes.contains { $0.type == .firebase }
-
-        var compiledHTML = codeNode.textContent ?? ""
-        injectFirebaseHead(from: nodes, into: &compiledHTML)
+        let hasFirebaseConfig = !miniApp.firebaseConfigText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        var compiledHTML = miniApp.codeText
+        injectFirebaseHead(from: miniApp, into: &compiledHTML)
         injectViewportMeta(into: &compiledHTML)
-        if hasFirebaseNode {
+        if hasFirebaseConfig {
             injectFirebasePreviewDiagnostics(into: &compiledHTML)
         }
-        return LivePreviewCompilation(webViewNodeID: webViewNode.id, html: compiledHTML)
+        return LivePreviewCompilation(miniAppNodeID: node.id, html: compiledHTML)
     }
 
     private func injectViewportMeta(into html: inout String) {
@@ -51,8 +51,8 @@ public struct LivePreviewCompiler {
         }
     }
 
-    private func injectFirebaseHead(from nodes: [SpatialNode], into html: inout String) {
-        guard let snippet = FirebasePreviewBootstrap.headInjectionHTML(from: nodes) else { return }
+    private func injectFirebaseHead(from miniApp: MiniAppState, into html: inout String) {
+        guard let snippet = FirebasePreviewBootstrap.headInjectionHTML(from: miniApp) else { return }
         if let headStart = html.range(of: "<head", options: .caseInsensitive),
            let headOpenEnd = html.range(of: ">", range: headStart.upperBound..<html.endIndex) {
             html.insert(contentsOf: snippet, at: headOpenEnd.upperBound)
@@ -71,7 +71,7 @@ public struct LivePreviewCompiler {
         """
     }
 
-    /// When Firestore is not ready, show a short bar in the WebView so users know to fix the Firebase node / config.
+    /// When Firestore is not ready, show a short bar in the preview so users know to fix the Mini-App Firebase config.
     private func injectFirebasePreviewDiagnostics(into html: inout String) {
         // Use single-quoted JS strings so Swift multiline literal stays valid.
         let snippet = #"""
@@ -88,9 +88,9 @@ public struct LivePreviewCompiler {
             var err = (window.__caocapFirestoreLastError || '').trim();
             var msg;
             if (!st && !db) {
-              msg = 'Live Preview: Firebase did not load. If you have more than one Firebase node, only the first valid config in the list is used (stubs are skipped). Paste the real Web app config from Firebase Console (Project settings → Your apps), remove YOUR_… placeholders, then tap Done on Code / Firebase to refresh.';
+              msg = 'Mini-App Preview: Firebase did not load. Paste the real Web app config in this Mini-App Firebase tool, remove YOUR_… placeholders, then tap Done to refresh.';
             } else {
-              msg = 'Live Preview: Firebase status is "' + st + '"' + (err ? (' — ' + err) : '') + '. Open the Firebase node and fix the Web config (apiKey + projectId), then refresh.';
+              msg = 'Mini-App Preview: Firebase status is "' + st + '"' + (err ? (' — ' + err) : '') + '. Open this Mini-App Firebase tool and fix the Web config (apiKey + projectId), then refresh.';
             }
             el.textContent = msg;
             (document.body || document.documentElement).appendChild(el);

@@ -9,7 +9,7 @@ struct CodeEditorView: View {
     init(node: SpatialNode, store: ProjectStore) {
         self.node = node
         self.store = store
-        self._text = State(initialValue: node.textContent ?? "")
+        self._text = State(initialValue: node.miniApp?.codeText ?? "")
     }
     
     var body: some View {
@@ -35,17 +35,6 @@ struct CodeEditorView: View {
                                 }
                             }
                             
-                            Section("Transform") {
-                                ForEach(NodeType.allCases, id: \.self) { type in
-                                    if type != node.type {
-                                        Button {
-                                            store.updateNodeType(id: node.id, type: type)
-                                        } label: {
-                                            Label(type.displayName, systemImage: "arrow.triangle.2.circlepath")
-                                        }
-                                    }
-                                }
-                            }
                         }
                 }
                 .padding(.horizontal, 16)
@@ -55,7 +44,7 @@ struct CodeEditorView: View {
                 Spacer()
                 
                 Button(action: {
-                    store.updateNodeTextContent(id: node.id, text: text, persist: true)
+                    store.updateMiniAppCode(id: node.id, text: text, persist: true)
                     dismiss()
                 }) {
                     Image(systemName: "xmark")

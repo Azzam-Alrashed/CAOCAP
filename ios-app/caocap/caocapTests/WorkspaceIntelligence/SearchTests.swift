@@ -7,8 +7,8 @@ struct SearchTests {
 
     @Test func searchIndexScoresTitleMatchesHigherThanContent() throws {
         let nodes = [
-            SpatialNode(id: UUID(), position: .zero, title: "Login Page", textContent: "Some details about login"),
-            SpatialNode(id: UUID(), position: .zero, title: "Other", textContent: "This contains the word login")
+            SpatialNode(id: UUID(), type: .miniApp, position: .zero, title: "Login Page", miniApp: MiniAppState(srsText: "Some details about login")),
+            SpatialNode(id: UUID(), type: .miniApp, position: .zero, title: "Other", miniApp: MiniAppState(srsText: "This contains the word login"))
         ]
         let index = NodeSearchIndex()
         let results = index.search(query: "login", in: nodes)
@@ -18,23 +18,21 @@ struct SearchTests {
         #expect(results[0].relevanceScore > results[1].relevanceScore)
     }
 
-    @Test func searchIndexIncludesLivePreview() throws {
-        // Wait, role is computed based on title/type. I should check how role is defined.
-        // If I use SpatialNode extension to check role:
-        let previewNode = SpatialNode(id: UUID(), type: .standard, position: .zero, title: "Live Preview")
-        #expect(previewNode.role == .livePreview)
+    @Test func searchIndexIncludesMiniApp() throws {
+        let previewNode = SpatialNode(id: UUID(), type: .miniApp, position: .zero, title: "Mini-App")
+        #expect(previewNode.role == .miniApp)
         
         let index = NodeSearchIndex()
-        let results = index.search(query: "live", in: [previewNode])
+        let results = index.search(query: "mini", in: [previewNode])
         
         #expect(results.count == 1)
-        #expect(results[0].title == "Live Preview")
+        #expect(results[0].title == "Mini-App")
     }
 
     @Test func searchIndexMatchesNodeRole() throws {
-        let codeNode = SpatialNode(id: UUID(), type: .code, position: .zero, title: "App Logic")
+        let codeNode = SpatialNode(id: UUID(), type: .miniApp, position: .zero, title: "App Logic")
         let index = NodeSearchIndex()
-        let results = index.search(query: "code", in: [codeNode])
+        let results = index.search(query: "mini", in: [codeNode])
 
         #expect(results.count == 1)
         #expect(results[0].title == "App Logic")
@@ -81,8 +79,8 @@ struct SearchTests {
     @Test func viewportFitToCalculatesCorrectBoundsAndOffset() throws {
         let viewport = ViewportState()
         let nodes = [
-            SpatialNode(id: UUID(), type: .code, position: CGPoint(x: 100, y: 100), title: "Node 1"),
-            SpatialNode(id: UUID(), type: .code, position: CGPoint(x: 500, y: 400), title: "Node 2")
+            SpatialNode(id: UUID(), type: .miniApp, position: CGPoint(x: 100, y: 100), title: "Node 1"),
+            SpatialNode(id: UUID(), type: .miniApp, position: CGPoint(x: 500, y: 400), title: "Node 2")
         ]
         
         let containerSize = CGSize(width: 800, height: 600)

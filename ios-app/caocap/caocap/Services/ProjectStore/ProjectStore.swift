@@ -24,6 +24,9 @@ public class ProjectStore {
     
     /// Tracks if a save operation is currently pending or in progress.
     public var isSaving: Bool { saveController.isSaving }
+
+    /// Non-nil when the on-disk project could not be opened with the current schema.
+    public var unsupportedProjectMessage: String?
     
     /// Historical checkpoints for this project.
     public var history: [SnapshotMetadata] {
@@ -98,7 +101,7 @@ public class ProjectStore {
             self.nodes = initialNodes ?? []
             self.viewportScale = initialViewportScale
             
-            // Ensure Live Preview is compiled immediately for new projects
+            // Ensure Mini-App previews are compiled immediately for new projects.
             _ = livePreviewOrchestrator.compile(nodes: &nodes)
             
             // Only perform an initial save for permanent project files.
@@ -110,21 +113,25 @@ public class ProjectStore {
         
         do {
             let snapshot = try persistence.load(fileName: fileName)
+            unsupportedProjectMessage = nil
             apply(snapshot: snapshot)
             logger.info("Successfully loaded project (v\(snapshot.schemaVersion)) from disk.")
         } catch ProjectPersistenceError.unsupportedSchemaVersion(let version, let current) {
             if let version {
                 logger.error("Project schema version \(version) is not supported (expected \(current)). Using defaults without overwriting file.")
+                unsupportedProjectMessage = "This project was created with an older CAOCAP format and cannot be opened in this version."
             } else {
                 logger.error("Project is missing schema version (expected \(current)). Using defaults without overwriting file.")
+                unsupportedProjectMessage = "This project is missing format information and cannot be opened in this version."
             }
             self.nodes = initialNodes ?? []
         } catch {
             logger.error("Failed to load project: \(error.localizedDescription)")
+            unsupportedProjectMessage = "This project could not be opened. Create a fresh Mini-App canvas to continue."
             self.nodes = initialNodes ?? []
         }
         
-        // Ensure the Live Preview is synced with the code nodes on startup
+        // Ensure Mini-App previews are synced with embedded code on startup.
         _ = livePreviewOrchestrator.compile(nodes: &nodes)
         
         // Load history
@@ -299,7 +306,7 @@ public class ProjectStore {
         }
     }
 
-    /// Changes a node's fundamental type (e.g. from Code to WebView).
+    /// Changes a node's fundamental type.
     /// - Parameters:
     ///   - id: The UUID of the node to transform.
     ///   - type: The target NodeType.
@@ -309,6 +316,15 @@ public class ProjectStore {
     }
     public func updateNodeTextContent(id: UUID, text: String, persist: Bool = true) {
         mutationEngine.updateNodeTextContent(nodes: &nodes, id: id, text: text, persist: persist)
+    }
+    public func updateMiniAppSRS(id: UUID, text: String, persist: Bool = true) {
+        mutationEngine.updateMiniAppSRS(nodes: &nodes, id: id, text: text, persist: persist)
+    }
+    public func updateMiniAppCode(id: UUID, text: String, persist: Bool = true) {
+        mutationEngine.updateMiniAppCode(nodes: &nodes, id: id, text: text, persist: persist)
+    }
+    public func updateMiniAppFirebaseConfig(id: UUID, text: String, persist: Bool = true) {
+        mutationEngine.updateMiniAppFirebaseConfig(nodes: &nodes, id: id, text: text, persist: persist)
     }
     public func updateNodeAgentState(id: UUID, agentState: NodeAgentState, persist: Bool = true) {
         mutationEngine.updateNodeAgentState(nodes: &nodes, id: id, agentState: agentState, persist: persist)
@@ -343,7 +359,7 @@ public class ProjectStore {
     public func organizeNodes() {
         mutationEngine.organizeNodes(nodes: &nodes, )
     }
-    public func addNode(type: NodeType = .code) {
+    public func addNode(type: NodeType = .miniApp) {
         mutationEngine.addNode(nodes: &nodes, type: type)
     }
     public func addShortcutNode(for appAction: AppActionID, definition: AppActionDefinition) {
@@ -359,6 +375,12 @@ public class ProjectStore {
     }
     public func updateNodeTitle(id: UUID, title: String) {
         mutationEngine.updateNodeTitle(nodes: &nodes, id: id, title: title)
+    }
+    public func updateNodeSubtitle(id: UUID, subtitle: String?) {
+        mutationEngine.updateNodeSubtitle(nodes: &nodes, id: id, subtitle: subtitle)
+    }
+    public func updateNodeIcon(id: UUID, icon: String?) {
+        mutationEngine.updateNodeIcon(nodes: &nodes, id: id, icon: icon)
     }
     public func deleteNode(id: UUID, persist: Bool = true) {
         mutationEngine.deleteNode(nodes: &nodes, id: id, persist: persist)

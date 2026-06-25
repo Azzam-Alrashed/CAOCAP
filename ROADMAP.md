@@ -11,9 +11,9 @@ This document tracks the current product milestones for CAOCAP. The near-term pr
 - [x] **Project Management**: Create, persist, and navigate named projects via the Home workspace.
 - [x] **Omnibox / Command Palette**: `Cmd+K` intent-driven command palette with spatial search.
 - [x] **Node Linking**: Visual Bezier-curve connections between nodes (1-to-N directed graph).
-- [x] **Live Preview WebView**: 9:16 `WKWebView` node with full-screen immersive sheet.
-- [x] **Native Code Editors**: Syntax-highlighted unified `CodeEditorView` for the Code node + SRS Zen Mode editor.
-- [x] **Live Compilation Engine**: Real-time `SRS -> Code -> WebView` rendering, debounced at 500ms.
+- [x] **Mini-App Preview**: Full-screen `WKWebView` preview launched from a Mini-App node.
+- [x] **Native Mini-App Editors**: SRS, code, Firebase, agent, and settings tools are available from the Mini-App FAB.
+- [x] **Live Compilation Engine**: Real-time Mini-App code rendering with debounced preview compilation.
 - [x] **Monetization (Pro)**: StoreKit 2 subscription integration.
 - [x] **Firebase Integration**: Authentication (Apple, Google, GitHub) and AI Logic infrastructure.
 - [x] **App Store Compliance**: Privacy Policy, Terms of Service, data usage declarations.
@@ -39,12 +39,12 @@ This document tracks the current product milestones for CAOCAP. The near-term pr
 - [x] **Firebase Auth**: Secure login and anonymous account linking for seamless cross-device persistence.
 - [x] **CoCaptain UI**: A polished, floating AI sidekick panel with glassmorphic design.
 - [x] **Context Engine**: Logic to "harvest" the current canvas state (nodes, connections) via `ProjectContextBuilder`.
-- [x] **Project Analysis**: Auto-analysis of canvas to suggest missing code, preview, or next build steps.
+- [x] **Project Analysis**: Auto-analysis of canvas to suggest missing Mini-App SRS, code, or next build steps.
 - [x] **The "Apply" Flow**: A UI interaction to preview and inject AI-generated code directly into a selected node.
 - [x] **Multi-turn Chat**: Persistent conversation memory with scroll position preservation.
 - [x] **Streaming UI**: Token-aware text view powered by Firebase AI Logic SDK.
 - [x] **Agentic Actions**: Implementation of `AppActionDispatcher` to allow the AI to control app navigation and project state.
-- [x] **Code Generation**: CoCaptain generates single-file app code from a natural language SRS node.
+- [x] **Code Generation**: CoCaptain generates single-file Mini-App code from natural language SRS content.
 - [x] **Recovery Checkpoints**: Automatic project checkpoints protect user work before AI-applied changes.
 - [/] **Free-Tier Token Quota**: Local estimated-token usage limit and CoCaptain upgrade prompts exist; next step is server-side usage enforcement.
     - [x] **Local Usage UX**: Keep CoCaptain free of persistent quota meters and route limit-hit users to the Pro subscription flow.

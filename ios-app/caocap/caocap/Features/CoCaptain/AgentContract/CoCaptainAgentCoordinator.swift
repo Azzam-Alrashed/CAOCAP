@@ -284,8 +284,8 @@ public final class CoCaptainAgentCoordinator {
         4. Put code/content implementation in `nodeEdits`.
         5. Put mutating or non-autonomous app actions in `pendingActions` or call `request_app_action` with `executionMode=pending`.
         6. Use `safeActions` or `executionMode=safe` only for available, non-mutating, autonomous app actions.
-        7. For full builds or games, use `replace_all` for the code node with a complete single-file HTML document.
-        8. For documentation, requirements, spec, or SRS requests, target the `srs` node unless the user explicitly asks for code.
+        7. For full builds or games, use `replace_all` for the Mini-App `section="code"` with a complete single-file HTML document.
+        8. For documentation, requirements, spec, or SRS requests, target the Mini-App `section="srs"` unless the user explicitly asks for code.
         
         Original user request:
         \(userMessage)
@@ -309,7 +309,7 @@ public final class CoCaptainAgentCoordinator {
                     summary: LocalizationManager.shared.localizedString("The assistant response could not be executed safely."),
                     preview: issues.joined(separator: "\n"),
                     status: .conflicted,
-                    source: .nodeEdit(role: .srs, operations: [], baseText: "")
+                    source: .nodeEdit(role: .miniApp, section: .srs, operations: [], baseText: "")
                 )
             ]
         )
@@ -373,15 +373,16 @@ public final class CoCaptainAgentCoordinator {
         if let store {
             for edit in nodeEdits {
                 do {
-                    let preview = try patchEngine.preview(nodeID: edit.nodeID, role: edit.role, operations: edit.operations, in: store)
+                    let preview = try patchEngine.preview(nodeID: edit.nodeID, role: edit.role, section: edit.section, operations: edit.operations, in: store)
                     let targetNode = store.nodes.first(where: { $0.id == preview.nodeID })
+                    let sectionLabel = edit.section.rawValue.uppercased()
                     items.append(
                         PendingReviewItem(
                             targetNodeID: preview.nodeID,
-                            targetLabel: targetNode?.displayTitle ?? edit.role.localizedDisplayName,
+                            targetLabel: "\(targetNode?.displayTitle ?? edit.role.localizedDisplayName) \(sectionLabel)",
                             summary: edit.summary,
                             preview: previewSnippet(for: preview.resultText),
-                            source: .nodeEdit(role: edit.role, operations: edit.operations, baseText: preview.originalText)
+                            source: .nodeEdit(role: edit.role, section: edit.section, operations: edit.operations, baseText: preview.originalText)
                         )
                     )
                 } catch {
@@ -392,7 +393,7 @@ public final class CoCaptainAgentCoordinator {
                             summary: edit.summary,
                             preview: error.localizedDescription,
                             status: .conflicted,
-                            source: .nodeEdit(role: edit.role, operations: edit.operations, baseText: "")
+                            source: .nodeEdit(role: edit.role, section: edit.section, operations: edit.operations, baseText: "")
                         )
                     )
                 }
@@ -406,7 +407,7 @@ public final class CoCaptainAgentCoordinator {
                         summary: edit.summary,
                         preview: LocalizationManager.shared.localizedString("No active project context is available for this edit."),
                         status: .conflicted,
-                        source: .nodeEdit(role: edit.role, operations: edit.operations, baseText: "")
+                        source: .nodeEdit(role: edit.role, section: edit.section, operations: edit.operations, baseText: "")
                     )
                 )
             }

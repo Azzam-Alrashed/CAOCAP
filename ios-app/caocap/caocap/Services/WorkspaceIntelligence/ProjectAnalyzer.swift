@@ -3,7 +3,7 @@ import Foundation
 /// Represents a potential improvement or action identified by analyzing the project nodes.
 public struct ProjectSuggestion: Identifiable, Equatable {
     public let id: UUID
-    /// Short title for the suggestion (e.g., "Code node is empty").
+    /// Short title for the suggestion.
     public let title: String
     /// More detailed explanation for the user.
     public let detail: String
@@ -33,30 +33,34 @@ public struct ProjectAnalyzer {
     public func analyze(nodes: [SpatialNode]) -> [ProjectSuggestion] {
         var suggestions: [ProjectSuggestion] = []
 
-        let code = nodes.first(where: { $0.role == .code })
-        let srs = nodes.first(where: { $0.role == .srs })
+        let miniApps = nodes.filter { $0.type == .miniApp }
 
-        // Rule: SRS is empty or blank
-        if let srs, srs.textContent?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true {
+        if miniApps.isEmpty {
             suggestions.append(ProjectSuggestion(
-                title: "SRS is blank",
-                detail: "Describe your app idea here so CoCaptain can help you build it.",
-                suggestedPrompt: "I have a blank SRS. Can you help me brainstorm requirements for a simple web app?",
-                severity: .info
+                title: "No Mini-App yet",
+                detail: "Create a Mini-App to start building directly on the canvas.",
+                suggestedPrompt: "Create a Mini-App for a simple web app idea.",
+                severity: .warning
             ))
         }
 
-        // Rule: canonical Code exists but is empty
-        if let code {
-            let isCodeEmpty = code.textContent?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true
-            if isCodeEmpty {
-                let detail = srs != nil ? "CoCaptain can generate a starter app from your SRS." : "Start by adding a small HTML/CSS/JS app."
-                let prompt = srs != nil ? "Can you generate a starter single-file web app based on my SRS requirements?" : "Generate a basic single-file HTML/CSS/JS app for me."
-
+        for miniAppNode in miniApps {
+            let srsText = miniAppNode.miniApp?.srsText.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if srsText.isEmpty {
                 suggestions.append(ProjectSuggestion(
-                    title: "Code is empty",
-                    detail: detail,
-                    suggestedPrompt: prompt,
+                    title: "\(miniAppNode.title) SRS is blank",
+                    detail: "Describe this Mini-App idea so CoCaptain can help refine and build it.",
+                    suggestedPrompt: "Help me write the SRS for \(miniAppNode.title).",
+                    severity: .info
+                ))
+            }
+
+            let isCodeEmpty = miniAppNode.miniApp?.codeText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true
+            if isCodeEmpty {
+                suggestions.append(ProjectSuggestion(
+                    title: "\(miniAppNode.title) code is empty",
+                    detail: "CoCaptain can generate a starter app from this Mini-App's SRS.",
+                    suggestedPrompt: "Generate a starter single-file HTML/CSS/JS app for \(miniAppNode.title).",
                     severity: .warning
                 ))
             }
