@@ -90,7 +90,7 @@ public struct ProjectContextBuilder {
             parts.append(
                 """
                 No `firebase` node on this canvas yet.
-                - Tell the user to add **Create Firebase Node** from the command palette (⌘K → Create New Node) or the + menu, then paste the Web `firebaseConfig` object from Firebase Console → Project settings → Your apps.
+                - Tell the user to add a Firebase node from the command palette (⌘K → search "firebase" → Create Firebase Node) and paste the Web `firebaseConfig` object from Firebase Console → Project settings → Your apps.
                 - You may propose a pending app action with id `create_firebase_node` so an empty Firebase node appears for them to fill.
                 """
             )

@@ -25,6 +25,9 @@ public struct NodeSearchIndex {
                 var score = 0
                 let titleLower = node.title.lowercased()
                 let contentLower = (node.textContent ?? "").lowercased()
+                let roleLower = node.role.displayName.lowercased()
+                let typeLower = node.type.displayName.lowercased()
+                let subtitleLower = (node.subtitle ?? "").lowercased()
 
                 if titleLower == trimmed {
                     score += 100
@@ -32,6 +35,16 @@ public struct NodeSearchIndex {
                     score += 60
                 } else if titleLower.contains(trimmed) {
                     score += 30
+                }
+
+                if roleLower == trimmed || typeLower == trimmed {
+                    score += 50
+                } else if roleLower.contains(trimmed) || typeLower.contains(trimmed) {
+                    score += 25
+                }
+
+                if subtitleLower.contains(trimmed) {
+                    score += 15
                 }
 
                 if contentLower.contains(trimmed) {

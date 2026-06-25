@@ -30,7 +30,6 @@ struct ContentView: View {
     @State private var isLaunching = true
     @State private var appUpdateService = AppUpdateService.shared
     @State private var viewport = ViewportState()
-    @State private var showingNodeCreationMenu = false
     @State private var nodeFrames: [UUID: NodeFrameData] = [:]
     @State private var containerSize: CGSize = .zero
     
@@ -139,14 +138,6 @@ struct ContentView: View {
             }
         }
         .preferredColorScheme(currentColorScheme)
-        .sheet(isPresented: $showingNodeCreationMenu) {
-            NodeCreationMenuView { type in
-                router.activeStore.addNode(type: type)
-                showingNodeCreationMenu = false
-            }
-            .presentationDetents([.medium])
-            .presentationDragIndicator(.visible)
-        }
         .sheet(isPresented: $coCaptain.isPresented) {
             CoCaptainView(viewModel: coCaptain)
                 .presentationDetents(coCaptainAvailableDetents, selection: $coCaptainDetent)
@@ -243,6 +234,7 @@ struct ContentView: View {
         }
         .onChange(of: commandPalette.isPresented) { _, isPresented in
             if isPresented {
+                commandPalette.nodes = router.activeStore.nodes
                 if onboarding.currentStep == .tapFAB {
                     onboarding.completeCurrentStep()
                 }
@@ -427,7 +419,7 @@ struct ContentView: View {
             router.goBack()
         }
         actionDispatcher.register(.createNode) {
-            showingNodeCreationMenu = true
+            router.activeStore.addNode(type: .code)
         }
         actionDispatcher.register(.createFirebaseNode) {
             router.activeStore.addNode(type: .firebase)
@@ -539,6 +531,10 @@ struct ContentView: View {
         commandPalette.onPinAction = { actionID in
             guard let definition = actionDispatcher.definition(for: actionID) else { return }
             router.activeStore.addShortcutNode(for: actionID, definition: definition)
+            commandPalette.nodes = router.activeStore.nodes
+        }
+        commandPalette.onCreateNode = { type in
+            router.activeStore.addNode(type: type)
             commandPalette.nodes = router.activeStore.nodes
         }
         commandPalette.onFlyToNode = { nodeId in

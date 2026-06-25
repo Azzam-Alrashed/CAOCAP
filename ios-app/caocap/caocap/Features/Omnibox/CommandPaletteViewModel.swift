@@ -32,9 +32,10 @@ public class CommandPaletteViewModel {
     /// in the UI language while still matching stable English action names.
     public var filteredActions: [AppActionDefinition] {
         let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmedQuery.isEmpty { return actions }
+        let paletteActions = actions.filter { !Self.hiddenCreationActionIDs.contains($0.id) }
+        if trimmedQuery.isEmpty { return paletteActions }
         
-        return actions.filter {
+        return paletteActions.filter {
             $0.localizedTitle.localizedCaseInsensitiveContains(trimmedQuery) ||
             $0.title.localizedCaseInsensitiveContains(trimmedQuery)
         }
@@ -44,21 +45,46 @@ public class CommandPaletteViewModel {
         searchIndex.search(query: query, in: nodes)
     }
 
+    public var nodeCreationResults: [NodeCreationOption] {
+        creationCatalog.search(query: query)
+    }
+
+    private static let hiddenCreationActionIDs: Set<AppActionID> = [
+        .createNode,
+        .createFirebaseNode,
+        .createSubCanvas
+    ]
+
+    private var nodeResultCount: Int { nodeResults.count }
+    private var nodeCreationResultCount: Int { nodeCreationResults.count }
+    private var actionResultCount: Int { filteredActions.count }
+
+    private var nodeResultsStartIndex: Int { 0 }
+    private var nodeCreationResultsStartIndex: Int { nodeResultCount }
+    private var actionsStartIndex: Int { nodeResultCount + nodeCreationResultCount }
+    private var promptRowIndex: Int { nodeResultCount + nodeCreationResultCount + actionResultCount }
+
+    public var promptSelectionIndex: Int { promptRowIndex }
+    
+    public var onExecute: ((AppActionID) -> Void)?
+    public var onPinAction: ((AppActionID) -> Void)?
+    public var onFlyToNode: ((UUID) -> Void)?
+    public var onCreateNode: ((NodeType) -> Void)?
+    public var onSubmitPrompt: ((String) -> Void)?
+    
+    @ObservationIgnored
+    private let searchIndex = NodeSearchIndex()
+
+    @ObservationIgnored
+    private let creationCatalog = NodeCreationCatalog()
+
     private var totalResultCount: Int {
-        var count = filteredActions.count + nodeResults.count
+        var count = nodeResultCount + nodeCreationResultCount + actionResultCount
         if canSubmitPrompt {
             count += 1
         }
         return count
     }
-    
-    public var onExecute: ((AppActionID) -> Void)?
-    public var onPinAction: ((AppActionID) -> Void)?
-    public var onFlyToNode: ((UUID) -> Void)?
-    public var onSubmitPrompt: ((String) -> Void)?
-    
-    @ObservationIgnored
-    private let searchIndex = NodeSearchIndex()
     
     public init() {}
     
@@ -87,18 +113,21 @@ public class CommandPaletteViewModel {
 
     public func selectPromptRowIfAvailable() {
         guard canSubmitPrompt else { return }
-        selectedIndex = filteredActions.count + nodeResults.count
+        selectedIndex = promptRowIndex
     }
     
     public func confirmSelection() {
-        let actions = filteredActions
         let nodeResults = nodeResults
+        let nodeCreationResults = nodeCreationResults
+        let actions = filteredActions
         
-        if selectedIndex >= 0 && selectedIndex < actions.count {
-            executeAction(actions[selectedIndex])
-        } else if selectedIndex >= actions.count && selectedIndex < (actions.count + nodeResults.count) {
-            flyToNode(nodeResults[selectedIndex - actions.count])
-        } else if canSubmitPrompt && selectedIndex == (actions.count + nodeResults.count) {
+        if selectedIndex >= nodeResultsStartIndex && selectedIndex < nodeCreationResultsStartIndex {
+            flyToNode(nodeResults[selectedIndex - nodeResultsStartIndex])
+        } else if selectedIndex >= nodeCreationResultsStartIndex && selectedIndex < actionsStartIndex {
+            createNode(nodeCreationResults[selectedIndex - nodeCreationResultsStartIndex])
+        } else if selectedIndex >= actionsStartIndex && selectedIndex < promptRowIndex {
+            executeAction(actions[selectedIndex - actionsStartIndex])
+        } else if canSubmitPrompt && selectedIndex == promptRowIndex {
             submitPromptIfNeeded()
         }
     }
@@ -121,6 +150,24 @@ public class CommandPaletteViewModel {
         logger.info("Flying to node: \(result.title)")
         onFlyToNode?(result.id)
         setPresented(false)
+    }
+
+    public func createNode(_ option: NodeCreationOption) {
+        logger.info("Creating node from palette: \(option.title)")
+        onCreateNode?(option.id)
+        setPresented(false)
+    }
+
+    public func selectionIndex(forNodeResultAt index: Int) -> Int {
+        nodeResultsStartIndex + index
+    }
+
+    public func selectionIndex(forNodeCreationResultAt index: Int) -> Int {
+        nodeCreationResultsStartIndex + index
+    }
+
+    public func selectionIndex(forActionAt index: Int) -> Int {
+        actionsStartIndex + index
     }
 
     public var canSubmitPrompt: Bool {
