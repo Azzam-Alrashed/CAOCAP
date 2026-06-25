@@ -35,17 +35,6 @@ struct ConnectionLayer: View {
                         drawArrow(context: context, from: start, to: end, themeColor: node.theme.color, scale: viewport.scale, isEventPipe: isEventPipe, isActive: isActive, isLogic: false)
                     }
                 }
-                
-                // 2. Logic Links (Inputs -> Current Node)
-                if let inputIds = node.inputNodeIds {
-                    for sourceId in inputIds {
-                        if let sourceNode = nodeDict[sourceId] {
-                            let start = screenPoint(for: sourceNode)
-                            let end = screenPoint(for: node)
-                            drawArrow(context: context, from: start, to: end, themeColor: sourceNode.theme.color, scale: viewport.scale, isEventPipe: false, isActive: false, isLogic: false)
-                        }
-                    }
-                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

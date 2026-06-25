@@ -328,7 +328,7 @@ public final class LLMService {
                 - Never request a non-autonomous action with executionMode `safe`.
 
                 Node edits:
-                - Only target editable source nodes for edits: srs, code, standard text nodes, or legacy html/css/javascript nodes. Legacy projects may expose html, css, and javascript, but prefer code whenever it exists.
+                - Only target editable source nodes for edits: srs, code, or legacy html/css/javascript nodes. Legacy projects may expose html, css, and javascript, but prefer code whenever it exists.
                 - Use LOWERCASE role names: srs, code, html, css, javascript, custom.
                 - In node-scoped sessions, include `nodeId="UUID"` on every `node_edit` whenever the target node is known.
                 - Code/content changes belong in `node_edits`, not app actions.

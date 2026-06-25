@@ -24,11 +24,11 @@ final class NodeMutationEngineTests: XCTestCase {
         XCTAssertEqual(nodes[1].type, .srs)
         XCTAssertEqual(nodes[1].title, "Software Requirements Specification")
         
-        engine.addNode(nodes: &nodes, type: .console)
+        engine.addNode(nodes: &nodes, type: .firebase)
         XCTAssertEqual(nodes.count, 3)
-        XCTAssertEqual(nodes[2].type, .console)
-        XCTAssertEqual(nodes[2].title, "Console")
-        XCTAssertEqual(nodes[2].subtitle, "Logs and errors from Live Preview")
+        XCTAssertEqual(nodes[2].type, .firebase)
+        XCTAssertEqual(nodes[2].title, "Firebase")
+        XCTAssertEqual(nodes[2].subtitle, "Project settings → Your apps → Web app config")
     }
     
     func testUpdateNodeTypeTriggersCallbacks() {
@@ -51,7 +51,6 @@ final class NodeMutationEngineTests: XCTestCase {
         let node1 = SpatialNode(type: .code, position: .zero, title: "1")
         var node2 = SpatialNode(type: .code, position: .zero, title: "2")
         
-        node2.inputNodeIds = [node1.id]
         node2.connectedNodeIds = [node1.id]
         node2.nextNodeId = node1.id
         
@@ -62,7 +61,6 @@ final class NodeMutationEngineTests: XCTestCase {
         XCTAssertEqual(nodes.count, 1)
         let updatedNode2 = nodes[0]
         
-        XCTAssertNil(updatedNode2.inputNodeIds)
         XCTAssertNil(updatedNode2.connectedNodeIds)
         XCTAssertNil(updatedNode2.nextNodeId)
     }

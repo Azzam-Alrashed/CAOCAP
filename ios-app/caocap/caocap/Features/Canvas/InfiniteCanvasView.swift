@@ -81,14 +81,7 @@ struct InfiniteCanvasView: View {
                         NodeView(
                             node: node,
                             isDragging: isDraggingThisNode,
-                            agentState: store.activeAgentStates[node.id] ?? .idle,
-                            allNodes: store.nodes,
-                            onUpdateChartX: { index in
-                                store.updateNodeChartXColumn(id: node.id, index: index)
-                            },
-                            onUpdateChartY: { index in
-                                store.updateNodeChartYColumn(id: node.id, index: index)
-                            }
+                            agentState: store.activeAgentStates[node.id] ?? .idle
                         )
                             .offset(
                                 x: node.position.x + currentOffset.width,
@@ -127,7 +120,7 @@ struct InfiniteCanvasView: View {
                                 }
                             }, preview: {
                                 // Provide a clean, unscaled preview of the node
-                                NodeView(node: node, allNodes: store.nodes)
+                                NodeView(node: node)
                                     .environment(\.colorScheme, .dark) // Force dark for consistency if needed
                                     .frame(width: 280) // Standard width for preview
                                     .padding()

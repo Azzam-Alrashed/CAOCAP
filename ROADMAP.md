@@ -67,8 +67,8 @@ This document tracks the current product milestones for CAOCAP. The near-term pr
     - [x] **Flight Engine**: Fly the viewport to a selected node from command palette search.
     - [x] **Focus Zoom**: Automatically adjust zoom level to fit the targeted node perfectly.
 - [ ] **Spatial Debugger**: Visualize variable flow, console output, and execution state as canvas overlays.
-- [x] **Console Node**: A dedicated node type that captures `console.log` output from the WebView in real-time.
-- [ ] **Project Templates**: A public library of starter templates (games, landing pages, tools) selectable from the Omnibox.
+- [ ] **Runtime Diagnostics**: Revisit console/log visibility as part of the future Spatial Debugger instead of a standalone canvas node.
+- [ ] **Project Templates**: A focused public library of starter templates (games, landing pages, tools) selectable from the Omnibox.
 - [/] **File System Bridge**: Basic project sharing/export exists; next step is a fuller HTML/CSS/JS bundle and future Git-style export.
     - [x] **Project Import**: Support importing `.caocap` and `.json` project files directly from the file system.
 - [/] **Snapshot Browser**: Checkpoint infrastructure exists; next step is a user-facing browser for inspecting and restoring prior states.

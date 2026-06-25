@@ -45,24 +45,24 @@ struct ProjectMigrationTests {
         let tempDirectory = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: tempDirectory) }
         let persistence = ProjectPersistenceService(baseDirectory: tempDirectory)
-        let fileName = "v2.json"
-        let v2JSON = """
+        let fileName = "v3.json"
+        let v3JSON = """
         {
-            "schemaVersion": 2,
-            "projectName": "V2 Project",
+            "schemaVersion": 3,
+            "projectName": "V3 Project",
             "viewportOffset": {"width": 10, "height": 20},
             "viewportScale": 0.5,
             "nodes": []
         }
         """
 
-        try v2JSON.data(using: .utf8)!.write(to: persistence.fileURL(for: fileName))
+        try v3JSON.data(using: .utf8)!.write(to: persistence.fileURL(for: fileName))
 
         let result = try persistence.load(fileName: fileName)
 
-        #expect(result.sourceSchemaVersion == 2)
+        #expect(result.sourceSchemaVersion == 3)
         #expect(!result.didMigrate)
-        #expect(result.snapshot.projectName == "V2 Project")
+        #expect(result.snapshot.projectName == "V3 Project")
         #expect(result.snapshot.viewportScale == 0.5)
     }
 

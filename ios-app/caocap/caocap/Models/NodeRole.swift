@@ -7,14 +7,8 @@ public enum NodeRole: String, CaseIterable, Codable, Hashable {
     case css
     case javascript
     case livePreview
-    case text
-    case calculation
-    case display
-    case aiAgent
-    case chart
     case firebase
     case subCanvas
-    case console
     case custom
 
     public static let editableCanonicalRoles: [NodeRole] = [
@@ -22,9 +16,7 @@ public enum NodeRole: String, CaseIterable, Codable, Hashable {
         .code,
         .html,
         .css,
-        .javascript,
-        .text,
-        .calculation
+        .javascript
     ]
 
     public var displayName: String {
@@ -35,14 +27,8 @@ public enum NodeRole: String, CaseIterable, Codable, Hashable {
         case .css: return "CSS"
         case .javascript: return "JavaScript"
         case .livePreview: return "Live Preview"
-        case .text: return "Text"
-        case .calculation: return "Calculation"
-        case .display: return "Display"
-        case .aiAgent: return "AI Agent"
-        case .chart: return "Chart"
         case .firebase: return "Firebase"
         case .subCanvas: return "Sub-Canvas"
-        case .console: return "Console"
         case .custom: return "Custom"
         }
     }
@@ -67,14 +53,6 @@ public extension SpatialNode {
             return .livePreview
         case .srs:
             return .srs
-        case .text:
-            return .text
-        case .calculation:
-            return .calculation
-        case .display:
-            return .display
-        case .chart:
-            return .chart
         case .code:
             switch title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
             case "html":
@@ -86,14 +64,10 @@ public extension SpatialNode {
             default:
                 return .code
             }
-        case .aiAgent:
-            return .aiAgent
         case .firebase:
             return .firebase
         case .subCanvas:
             return .subCanvas
-        case .console:
-            return .console
         default:
             return .custom
         }

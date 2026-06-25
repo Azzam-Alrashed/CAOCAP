@@ -62,7 +62,7 @@ public enum ProjectPersistenceError: LocalizedError, Equatable {
 /// Encapsulates project file layout, schema decoding, migrations, and atomic
 /// JSON writes so ProjectStore can stay focused on observable project state.
 public struct ProjectPersistenceService: Sendable {
-    public static let currentSchemaVersion = 2
+    public static let currentSchemaVersion = 3
 
     private struct VersionCheck: Codable {
         let schemaVersion: Int?

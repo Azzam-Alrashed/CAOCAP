@@ -3,7 +3,7 @@ import SwiftUI
 struct NodeCreationMenuView: View {
     var onSelect: (NodeType) -> Void
     
-    let options: [NodeType] = [.subCanvas, .code, .srs, .art, .text, .number, .table, .calculation, .display, .chart, .aiAgent, .firebase, .console]
+    let options: [NodeType] = [.webView, .srs, .code, .firebase, .subCanvas]
     
     var body: some View {
         VStack(spacing: 24) {
@@ -99,55 +99,33 @@ struct NodeCreationMenuView: View {
 
     private func typeDescription(for type: NodeType) -> String {
         switch type {
+        case .webView: return "Live preview surface"
         case .srs: return "Requirements document"
         case .code: return "Source code editor"
-        case .art: return "Drawing and sketching"
-        case .text: return "General notes and text"
-        case .number: return "Numeric data for math"
-        case .table: return "Import CSV/Excel data"
-        case .calculation: return "Reactive logic processor"
-        case .display: return "Live result output"
-        case .chart: return "Visual analytics from data"
-        case .aiAgent: return "Smart processing agent"
         case .firebase: return "Web app config for Live Preview"
         case .subCanvas: return "Nested canvas workspace"
-        case .console: return "Live logs and error reports"
         default: return "Standard node"
         }
     }
     
     private func typeIcon(for type: NodeType) -> String {
         switch type {
+        case .webView: return "play.display"
         case .srs: return "doc.text.fill"
         case .code: return "chevron.left.slash.chevron.right"
-        case .art: return "pencil.tip"
-        case .text: return "text.justify.left"
-        case .number: return "text.cursor"
-        case .table: return "tablecells.fill"
-        case .calculation: return "plus.forwardslash.minus"
-        case .display: return "opticaldisc.fill"
-        case .chart: return "chart.line.uptrend.xyaxis"
-        case .aiAgent: return "brain.head.profile.fill"
         case .firebase: return "flame.fill"
         case .subCanvas: return "folder.fill"
-        case .console: return "terminal.fill"
         default: return "square.grid.2x2"
         }
     }
     
     private func typeColor(for type: NodeType) -> Color {
         switch type {
+        case .webView: return .blue
         case .srs: return .purple
         case .code: return .blue
-        case .art: return .pink
-        case .text: return .blue
-        case .calculation: return .orange
-        case .display: return .green
-        case .chart: return .purple
-        case .aiAgent: return .indigo
         case .firebase: return .orange
         case .subCanvas: return .cyan
-        case .console: return .purple
         default: return .secondary
         }
     }

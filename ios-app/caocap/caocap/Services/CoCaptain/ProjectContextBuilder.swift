@@ -158,7 +158,7 @@ public struct ProjectContextBuilder {
     private static func firebaseWiringRulesBulletList() -> String {
         """
         Wiring rules for you (CoCaptain):
-        - Live Preview loads this config and sets `window.__caocapFirestore` when valid. Check `window.__caocapFirestoreStatus === 'ready'`; if not ready, read `window.__caocapFirestoreLastError` and `console` — do **not** call `initializeApp` again in the JavaScript node.
+        - Live Preview loads this config and sets `window.__caocapFirestore` when valid. Check `window.__caocapFirestoreStatus === 'ready'`; if not ready, read `window.__caocapFirestoreLastError` — do **not** call `initializeApp` again in the JavaScript node.
         - Always guard: `const db = window.__caocapFirestore; if (!db) { … }`
         - **Firestore compat:** `db.collection('segment')` only accepts a **single** collection id (e.g. `leads`). For nested paths like `users/UID/items`, use `db.collection('users').doc(uid).collection('items')` — never pass a slash string into `collection()`.
         - If `window.__caocapFirestoreDefaultPath` is one segment, `db.collection(window.__caocapFirestoreDefaultPath)` is OK; if it contains `/`, build `doc()` / `collection()` chains instead.
@@ -210,27 +210,14 @@ public struct ProjectContextBuilder {
         switch node.type {
         case .webView:
             return selected ? Self.trimmed(node.htmlContent ?? "", limit: 1600) : Self.trimmed(node.htmlContent ?? "", limit: 500)
-        case .art:
-            return node.drawingData == nil ? "[No drawing data]" : "[Pencil drawing data: \(node.drawingData?.count ?? 0) bytes]"
-        case .standard, .srs, .code, .text, .number, .table:
+        case .standard, .srs, .code:
             return selected ? (node.textContent ?? "") : Self.trimmed(node.textContent ?? "", limit: 500)
-        case .calculation, .display:
-            let val = node.outputValue ?? 0.0
-            return "Output Value: \(val)"
-        case .aiAgent:
-            return node.aiResponse ?? "[No response yet]"
-        case .chart:
-            let style = node.chartStyle?.displayName ?? "Bar Chart"
-            let inputCount = node.inputNodeIds?.count ?? 0
-            return "Chart Style: \(style)\nInput Count: \(inputCount)"
         case .firebase:
             let summary = FirebasePreviewBootstrap.canvasSummaryLine(for: node)
             return selected ? (node.textContent ?? summary) : summary
         case .subCanvas:
             let fileName = node.linkedCanvasFileName ?? "[None]"
             return "Sub-Canvas node linking to file: \(fileName)"
-        case .console:
-            return "[Console log output node]"
         }
     }
 
