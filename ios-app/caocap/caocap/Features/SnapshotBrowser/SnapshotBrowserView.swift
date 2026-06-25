@@ -8,6 +8,7 @@ struct SnapshotBrowserView: View {
     @State private var snapshotToRestore: SnapshotMetadata? = nil
     @State private var snapshotToDelete: SnapshotMetadata? = nil
     @State private var previewTexts: [UUID: String] = [:]
+    @FocusState private var isLabelFocused: Bool
     
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -47,6 +48,7 @@ struct SnapshotBrowserView: View {
                                         .font(.system(size: 16, weight: .semibold))
                                     
                                     TextField("Label (e.g. Added Landing Page)", text: $customLabel)
+                                        .focused($isLabelFocused)
                                         .font(.system(size: 16))
                                 }
                                 .padding(14)
@@ -132,6 +134,7 @@ struct SnapshotBrowserView: View {
                     }
                     .padding(.vertical, 24)
                 }
+                .interactiveKeyboardDismiss()
             }
             .navigationTitle(store.projectName)
             .navigationBarTitleDisplayMode(.inline)
@@ -298,6 +301,7 @@ struct SnapshotBrowserView: View {
         let label = customLabel.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !label.isEmpty else { return }
         
+        isLabelFocused = false
         store.createCheckpoint(label: label)
         customLabel = ""
         

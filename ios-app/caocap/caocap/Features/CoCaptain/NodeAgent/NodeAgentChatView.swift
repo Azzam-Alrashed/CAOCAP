@@ -16,7 +16,7 @@ struct NodeAgentChatView: View {
             CoCaptainTimelineListView(
                 viewModel: viewModel,
                 lastScrollPosition: $viewModel.lastScrollPosition,
-                isFocused: isFocused
+                isFocused: $isFocused
             )
 
             CoCaptainInputComposer(

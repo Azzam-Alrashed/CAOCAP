@@ -3,41 +3,44 @@ import SwiftUI
 struct CoCaptainTimelineListView: View {
     let viewModel: CoCaptainViewModel
     @Binding var lastScrollPosition: UUID?
-    let isFocused: Bool
+    @FocusState.Binding var isFocused: Bool
 
     var body: some View {
         ScrollViewReader { proxy in
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    ForEach(viewModel.items) { item in
-                        if !item.isEmptyAssistantMessage {
-                            TimelineItemView(item: item, viewModel: viewModel)
-                                .id(item.id)
+            GeometryReader { geometry in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        ForEach(viewModel.items) { item in
+                            if !item.isEmptyAssistantMessage {
+                                TimelineItemView(item: item, viewModel: viewModel)
+                                    .id(item.id)
+                            }
+                        }
+
+                        if viewModel.isAwaitingFirstResponse {
+                            HStack(alignment: .bottom, spacing: 8) {
+                                Image("cocaptain")
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 28, height: 28)
+                                    .clipShape(Circle())
+                                    .shadow(color: .blue.opacity(0.5), radius: 4, x: 0, y: 0)
+
+                                ThinkingIndicator()
+                                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+
+                                Spacer()
+                            }
+                            .id("thinking_indicator")
                         }
                     }
-
-                    if viewModel.isAwaitingFirstResponse {
-                        HStack(alignment: .bottom, spacing: 8) {
-                            Image("cocaptain")
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 28, height: 28)
-                                .clipShape(Circle())
-                                .shadow(color: .blue.opacity(0.5), radius: 4, x: 0, y: 0)
-
-                            ThinkingIndicator()
-                                .transition(.opacity.combined(with: .move(edge: .bottom)))
-
-                            Spacer()
-                        }
-                        .id("thinking_indicator")
-                    }
+                    .padding()
+                    .scrollTargetLayout()
+                    .frame(maxWidth: .infinity, minHeight: geometry.size.height, alignment: .top)
+                    .dismissKeyboardOnTap(isFocused: $isFocused)
                 }
-                .padding()
-                .scrollTargetLayout()
-            }
-            .scrollPosition(id: $lastScrollPosition)
-            .scrollDismissesKeyboard(.interactively)
+                .scrollPosition(id: $lastScrollPosition)
+                .interactiveKeyboardDismiss()
             .onChange(of: viewModel.items) {
                 scrollToBottom(proxy: proxy)
             }
@@ -54,6 +57,7 @@ struct CoCaptainTimelineListView: View {
             }
             .onAppear {
                 restoreScrollPosition(proxy: proxy)
+            }
             }
         }
     }

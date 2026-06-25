@@ -25,12 +25,12 @@ struct AnalysisTests {
         #expect(suggestions.contains { $0.title == "No styles added" })
     }
 
-    @Test func analyzerIdentifiesMissingPreview() throws {
+    @Test func analyzerDoesNotSuggestMissingPreview() throws {
         let nodes: [SpatialNode] = []
         let analyzer = ProjectAnalyzer()
         let suggestions = analyzer.analyze(nodes: nodes)
         
-        #expect(suggestions.contains { $0.title == "Missing Preview" })
+        #expect(!suggestions.contains { $0.title == "Missing Preview" })
     }
 
     @MainActor
@@ -44,7 +44,7 @@ struct AnalysisTests {
         // Set store (triggering analysis)
         viewModel.store = store
         
-        // Should have at least the "Missing Preview" or "SRS is blank" suggestions for a new store
+        // Should still surface relevant first-run suggestions without requiring a preview node.
         #expect(!viewModel.analysisItems.isEmpty)
     }
 }

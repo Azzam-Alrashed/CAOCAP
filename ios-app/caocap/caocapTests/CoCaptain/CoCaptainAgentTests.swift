@@ -467,6 +467,18 @@ struct CoCaptainAgentTests {
     }
 
     @MainActor
+    @Test func commandPaletteCanSelectPromptRowDirectly() {
+        let viewModel = CommandPaletteViewModel()
+        viewModel.actions = TestActionDispatcher().availableActions
+        viewModel.query = "settings"
+
+        viewModel.selectPromptRowIfAvailable()
+
+        let promptIndex = viewModel.filteredActions.count + viewModel.nodeResults.count
+        #expect(viewModel.selectedIndex == promptIndex)
+    }
+
+    @MainActor
     @Test func commandPaletteArrowNavigationWraparound() {
         let viewModel = CommandPaletteViewModel()
         viewModel.actions = TestActionDispatcher().availableActions
@@ -483,6 +495,26 @@ struct CoCaptainAgentTests {
         
         // Move down -> wraps to 0
         viewModel.moveSelection(direction: .down)
+        #expect(viewModel.selectedIndex == 0)
+    }
+
+    @MainActor
+    @Test func commandPaletteClearingPromptDisablesPromptSubmissionAndResetsSelection() {
+        let viewModel = CommandPaletteViewModel()
+        viewModel.actions = TestActionDispatcher().availableActions
+        viewModel.query = "settings"
+
+        let promptIndex = viewModel.filteredActions.count + viewModel.nodeResults.count
+        while viewModel.selectedIndex != promptIndex {
+            viewModel.moveSelection(direction: .down)
+        }
+
+        #expect(viewModel.canSubmitPrompt)
+        #expect(viewModel.selectedIndex == promptIndex)
+
+        viewModel.query = ""
+
+        #expect(!viewModel.canSubmitPrompt)
         #expect(viewModel.selectedIndex == 0)
     }
 
@@ -1257,6 +1289,20 @@ struct CoCaptainAgentTests {
 
         #expect(dispatcher.executedActionIDs.contains(.proSubscription))
         #expect(dispatcher.executedSources.last == .user)
+    }
+
+    @MainActor
+    @Test func cancelledAgentTurnClearsThinkingState() async throws {
+        let coordinator = CoCaptainAgentCoordinator(llmClient: ThrowingLLMClient(error: CancellationError()))
+        let vm = CoCaptainViewModel(agentCoordinator: coordinator)
+
+        vm.sendMessage("hi")
+
+        for _ in 0..<20 where vm.isThinking {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+
+        #expect(!vm.isThinking)
     }
 
     @MainActor
