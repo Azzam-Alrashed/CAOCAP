@@ -227,9 +227,9 @@ public final class LLMService {
         - Append the `cocaptain_actions` block at the end of every response that involves node content changes.
         - Safe actions are only for non-mutating autonomous app actions. Mutating or review-required app actions must use executionMode `pending`.
 
-        Firebase / Firestore (Live Preview):
-        - When the user asks to link JavaScript to Firebase, save/persist/sync data to Firestore, or connect the app to the backend, read the canvas context block about `window.__caocapFirestore` and `window.__caocapFirestoreDefaultPath`.
-        - Implement persistence with **`code` `node_edits`** (inline JavaScript in the single-file HTML document) using the Firestore compat instance on `window.__caocapFirestore` (never invent a second `initializeApp` in JS). If there is no Firebase node yet, propose `create_firebase_node` as a pending app action or tell the user to add the Firebase node and paste Web config from Firebase Console.
+        Firebase / Firestore (Mini-App Preview):
+        - When the user asks to link JavaScript to Firebase, save/persist/sync data to Firestore, or connect the app to the backend, read the Mini-App context block about `window.__caocapFirestore` and `window.__caocapFirestoreDefaultPath`.
+        - Implement persistence with Mini-App `section="code"` `node_edits` using the Firestore compat instance on `window.__caocapFirestore` (never invent a second `initializeApp` in JS). Firebase config lives inside the Mini-App's Firebase tool, not in a separate node.
         """
 
     private func makeModel(modelName: String) -> GenerativeModel {
@@ -283,7 +283,7 @@ public final class LLMService {
                     You are in a node-scoped agent session.
                     - Focus on the selected node in the context.
                     - For edits to the selected node or linked source nodes, include the exact `nodeId` attribute in each `node_edit`.
-                    - Do not directly edit WebView compiled preview HTML. If the selected node is a WebView, debug the preview and propose edits to upstream Code or SRS nodes.
+                    - Do not directly edit compiled preview HTML. Edit the Mini-App's `section="code"` or `section="srs"` source instead.
                     """
                 }
             }()
@@ -309,14 +309,14 @@ public final class LLMService {
 
                 SRS and Guarded Generation:
                 - If the context indicates SRS Readiness is "Draft", "Empty", or "Needs Clarification": prioritize asking clarifying questions to help the user complete the requirements. Do NOT write implementation code (HTML/CSS/JS) unless the user explicitly forces you to.
-                - If the context indicates SRS Readiness is "Implementation-Ready" and Implementation State is "Blank Canvas": your primary goal is to propose a complete project skeleton (a `code` node with a complete single-file HTML document containing inline CSS/JS) using `node_edits` in a `cocaptain_actions` block.
+                - If the context indicates SRS Readiness is "Implementation-Ready" and a Mini-App has blank code: propose a complete single-file HTML document containing inline CSS/JS using a Mini-App `section="code"` node edit.
 
                 - Respond conversationally first (concise).
                 - If the user is only asking a question, asking for advice, or asking for an opinion, do not request app actions and do not append `cocaptain_actions`.
                 - For app navigation or app-level tool actions, use the `request_app_action` function instead of manually writing app actions in XML.
                 - For any explicit command to build, make, create, add, change, update, fix, remove, style, implement, document, write to the canvas, or improve existing canvas content, you MUST append an XML block named `cocaptain_actions` with concrete `node_edits`.
                 - If you are only answering a question, providing advice, or discussing ideas (e.g., 'What game should we make?'), do NOT include a `cocaptain_actions` block.
-                - CRITICAL: If you are building a game or a full feature, use `replace_all` for the code node with a complete single-file HTML document containing inline CSS and JavaScript.
+                - CRITICAL: If you are building a game or a full feature, use `replace_all` for the Mini-App code section with a complete single-file HTML document containing inline CSS and JavaScript.
                 - NEVER provide a full file implementation inside the chat text. Put it in the `node_edits`.
 
                 App actions:
@@ -328,11 +328,11 @@ public final class LLMService {
                 - Never request a non-autonomous action with executionMode `safe`.
 
                 Node edits:
-                - Only target editable source nodes for edits: srs and code.
-                - Use LOWERCASE role names: srs, code, custom.
+                - Only target Mini-App source sections for edits: `section="srs"` and `section="code"`.
+                - Use LOWERCASE role name `miniApp`.
                 - In node-scoped sessions, include `nodeId="UUID"` on every `node_edit` whenever the target node is known.
                 - Code/content changes belong in `node_edits`, not app actions.
-                - For Firebase/Firestore persistence, edit the **code** node (inline JavaScript): use `window.__caocapFirestore` (and optional `window.__caocapFirestoreDefaultPath`) as described in canvas context; use compat-style `collection`/`doc`/`set`/`add`/`update` calls after null-checks.
+                - For Firebase/Firestore persistence, edit the Mini-App **code section** (inline JavaScript): use `window.__caocapFirestore` (and optional `window.__caocapFirestoreDefaultPath`) as described in canvas context; use compat-style `collection`/`doc`/`set`/`add`/`update` calls after null-checks.
                 - Every node edit needs a non-empty summary and at least one operation.
                 - Exact operations require a non-empty `target`; append/prepend/replace_all do not.
 
@@ -347,7 +347,7 @@ public final class LLMService {
                     <action id="id" />
                   </pending_actions>
                   <node_edits>
-                    <node_edit nodeId="UUID" role="srs|code|custom" summary="what changes">
+                    <node_edit nodeId="UUID" role="miniApp" section="srs|code" summary="what changes">
                       <operation type="replace_all|replace_exact|insert_before_exact|insert_after_exact|append|prepend">
                         <target>exact text (only for exact operations)</target>
                         <content><![CDATA[new content]]></content>

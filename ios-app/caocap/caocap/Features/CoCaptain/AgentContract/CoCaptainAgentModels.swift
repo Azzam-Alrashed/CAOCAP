@@ -38,14 +38,21 @@ public struct CoCaptainAgentAction: Codable, Hashable {
 }
 
 public struct CoCaptainNodeEditProposal: Codable, Hashable {
+    public enum MiniAppSection: String, Codable, Hashable {
+        case srs
+        case code
+    }
+
     public let nodeID: UUID?
     public let role: NodeRole
+    public let section: MiniAppSection
     public let summary: String
     public let operations: [NodePatchOperation]
 
-    public init(nodeID: UUID? = nil, role: NodeRole, summary: String, operations: [NodePatchOperation]) {
+    public init(nodeID: UUID? = nil, role: NodeRole = .miniApp, section: MiniAppSection = .code, summary: String, operations: [NodePatchOperation]) {
         self.nodeID = nodeID
         self.role = role
+        self.section = section
         self.summary = summary
         self.operations = operations
     }
@@ -53,8 +60,18 @@ public struct CoCaptainNodeEditProposal: Codable, Hashable {
     private enum CodingKeys: String, CodingKey {
         case nodeID = "nodeId"
         case role
+        case section
         case summary
         case operations
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.nodeID = try container.decodeIfPresent(UUID.self, forKey: .nodeID)
+        self.role = try container.decodeIfPresent(NodeRole.self, forKey: .role) ?? .miniApp
+        self.section = try container.decodeIfPresent(MiniAppSection.self, forKey: .section) ?? .code
+        self.summary = try container.decodeIfPresent(String.self, forKey: .summary) ?? ""
+        self.operations = try container.decode([NodePatchOperation].self, forKey: .operations)
     }
 }
 
@@ -169,7 +186,7 @@ public struct CoCaptainProductCTAItem: Identifiable, Hashable {
 
 public enum PendingReviewSource: Hashable {
     case appAction(AppActionID, [String: String]? = nil)
-    case nodeEdit(role: NodeRole, operations: [NodePatchOperation], baseText: String)
+    case nodeEdit(role: NodeRole, section: CoCaptainNodeEditProposal.MiniAppSection, operations: [NodePatchOperation], baseText: String)
 }
 
 public struct PendingReviewItem: Identifiable, Hashable {

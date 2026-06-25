@@ -14,7 +14,7 @@ public enum ProjectTemplate: String, CaseIterable, Identifiable, Codable {
     
     public var description: String {
         switch self {
-        case .helloWorld: return "A simple HTML WebView preview with click interactions and PM/Engineer agents."
+        case .helloWorld: return "A simple runnable Mini-App with click interactions and embedded SRS/code."
         }
     }
     
@@ -43,57 +43,30 @@ public struct ProjectTemplateProvider {
 
     /// Returns a new set of interconnected nodes for the default project template.
     public static var defaultNodes: [SpatialNode] {
-        let webViewId = UUID()
-        let srsId = UUID()
-        let codeId = UUID()
-
         return [
             SpatialNode(
-                id: webViewId,
-                type: .webView,
-                position: CGPoint(x: 360, y: 0),
-                title: "Live Preview",
-                subtitle: "Your current build renders here.",
-                icon: "play.circle.fill",
-                theme: .blue
-            ),
-            SpatialNode(
-                id: srsId,
-                type: .srs,
-                position: CGPoint(x: -420, y: 0),
-                title: "Software Requirements (SRS)",
-                subtitle: "Define intent, people, flow, and success.",
-                icon: "doc.text.fill",
-                theme: .purple,
-                connectedNodeIds: [codeId],
-                textContent: SRSScaffold.defaultText,
-                srsReadinessState: SRSReadinessEvaluator().evaluate(text: SRSScaffold.defaultText, currentState: nil),
+                type: .miniApp,
+                position: CGPoint(x: 0, y: 0),
+                title: "Mini-App",
+                subtitle: "Tap to run, build, and configure this mini-app.",
+                icon: NodeType.miniApp.defaultIcon,
+                theme: .blue,
+                miniApp: MiniAppState(
+                    srsText: SRSScaffold.defaultText,
+                    srsReadinessState: SRSReadinessEvaluator().evaluate(text: SRSScaffold.defaultText, currentState: nil),
+                    codeText: defaultCode,
+                    firebaseConfigText: FirebasePreviewBootstrap.placeholderConfigJSON()
+                ),
                 agentProfile: AgentProfile(
-                    systemPrompt: "You are the Product Manager. Your job is to refine the SRS and product intent. Ensure requirements are clear and executable.",
-                    roleName: "PM Agent",
-                    isAutoTriggerEnabled: false
-                )
-            ),
-            SpatialNode(
-                id: codeId,
-                type: .code,
-                position: CGPoint(x: -30, y: 0),
-                title: "Code",
-                subtitle: "HTML, CSS, and JavaScript in one file.",
-                icon: "chevron.left.slash.chevron.right",
-                theme: .orange,
-                connectedNodeIds: [webViewId],
-                textContent: defaultCode,
-                agentProfile: AgentProfile(
-                    systemPrompt: "You are an expert Frontend Engineer. You receive updates from the PM (SRS node). Your job is to strictly write the HTML/CSS/JS code to implement the requirements.",
-                    roleName: "Engineer Agent",
+                    systemPrompt: "You are a Mini-App builder. Refine this Mini-App's SRS, code, Firebase setup, and runtime behavior while keeping all code changes human-reviewed.",
+                    roleName: "Mini-App Agent",
                     isAutoTriggerEnabled: false
                 )
             )
         ]
     }
 
-    private static let defaultCode = """
+    public static let defaultCode = """
     <!DOCTYPE html>
     <html>
     <head>

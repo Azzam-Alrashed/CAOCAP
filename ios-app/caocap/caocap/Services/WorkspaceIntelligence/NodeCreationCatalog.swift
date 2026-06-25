@@ -19,28 +19,10 @@ public struct NodeCreationOption: Identifiable, Equatable {
 public struct NodeCreationCatalog {
     public static let options: [NodeCreationOption] = [
         NodeCreationOption(
-            id: .code,
-            title: "Create Code Node",
-            icon: "chevron.left.slash.chevron.right",
-            keywords: ["code", "source", "editor"]
-        ),
-        NodeCreationOption(
-            id: .srs,
-            title: "Create SRS Node",
-            icon: "doc.text.fill",
-            keywords: ["srs", "requirements", "spec"]
-        ),
-        NodeCreationOption(
-            id: .webView,
-            title: "Create Live Preview Node",
-            icon: "play.display",
-            keywords: ["preview", "live preview", "web view", "webview"]
-        ),
-        NodeCreationOption(
-            id: .firebase,
-            title: "Create Firebase Node",
-            icon: "flame.fill",
-            keywords: ["firebase", "firestore"]
+            id: .miniApp,
+            title: "Create Mini-App",
+            icon: NodeType.miniApp.defaultIcon,
+            keywords: ["mini-app", "mini app", "app", "preview", "srs", "code", "firebase"]
         ),
         NodeCreationOption(
             id: .subCanvas,

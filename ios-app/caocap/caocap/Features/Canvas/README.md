@@ -1,23 +1,23 @@
 # Canvas Feature
 
-The Canvas feature is CAOCAP's spatial runtime. It renders the infinite workspace, nodes, links, embedded previews, and editor sheets.
+The Canvas feature is CAOCAP's spatial runtime. It renders the infinite workspace, Mini-App nodes, sub-canvases, links, embedded previews, and editor overlays.
 
 ## Ownership
 
-- `ProjectStore` owns durable canvas state: nodes, viewport offset, viewport scale, persistence, and live preview compilation.
+- `ProjectStore` owns durable canvas state: nodes, viewport offset, viewport scale, persistence, and Mini-App preview compilation.
 - `InfiniteCanvasView` owns transient interaction state: active viewport gestures, selected node, node drag offsets, and whether a node is currently being dragged.
 - `ViewportState` owns pan and zoom math. Keep gesture calculations here instead of spreading geometry math through views.
 - `NodeView` renders one node. It should stay presentational.
-- `NodeDetailView` routes a tapped node to the correct sheet-level editor.
-- Providers under `Providers/` create static node graphs for home.
+- `NodeDetailView` opens Mini-App nodes into a full-screen running preview with FAB actions for SRS, Code, Firebase, Agent, Settings, and Back to Canvas.
+- Providers under `Providers/` create static Mini-App starter graphs for home/projects.
 
 ## Data Flow
 
 1. `ContentView` provides an active `ProjectStore` from `AppRouter`.
 2. `InfiniteCanvasView` renders `store.nodes`.
-3. Tapping a normal node opens `NodeDetailView`; tapping an action node calls `onNodeAction`.
-4. Editors call `ProjectStore` mutation methods such as `updateNodeTextContent`.
-5. `ProjectStore` debounces saves and recompiles the WebView payload from the Code node.
+3. Tapping a Mini-App node opens its full-screen running preview; tapping an action node calls `onNodeAction`.
+4. Mini-App tools call `ProjectStore` mutation methods such as `updateMiniAppSRS`, `updateMiniAppCode`, and `updateMiniAppFirebaseConfig`.
+5. `ProjectStore` debounces saves and recompiles each Mini-App preview from its embedded code/Firebase state.
 6. `ConnectionLayer` draws arrows from `nextNodeId` and `connectedNodeIds`.
 
 Views should call store methods rather than mutating `store.nodes` directly.
@@ -37,16 +37,16 @@ When changing gestures or connection rendering, test pan, zoom, drag, and arrow 
 
 - Put reusable node graph construction in `Providers/`, not in `AppRouter` or large views.
 - Keep `NodeView` focused on visual rendering. Put editing behavior in sheet views or store methods.
-- Keep `NodeDetailView` as a router; avoid adding feature logic there.
+- Keep `NodeDetailView` focused on Mini-App preview/tool routing; put persistent mutations in store methods.
 - If adding a node type, update `SpatialNode`, `NodeDetailView`, `ProjectContextBuilder`, and any CoCaptain role/patch behavior that should understand it.
-- Web preview content should flow through `ProjectStore` compilation instead of being assembled in UI components.
+- Mini-App preview content should flow through `ProjectStore` compilation instead of being assembled in UI components.
 
 ## Verification Checklist
 
 - Create/open a project and confirm nodes render at the expected zoom.
 - Drag a node, pan the canvas, pinch zoom, then reopen the project and verify persisted state.
-- Edit the Code node and confirm the Live Preview updates.
-- Open the WebView node full-screen and confirm the same compiled payload renders.
+- Edit a Mini-App's Code tool and confirm the Mini-App preview updates.
+- Open a Mini-App node full-screen and confirm the FAB routes to SRS, Code, Firebase, Agent, Settings, and Back to Canvas.
 - Check connection arrows while dragging nodes and at multiple zoom levels.
 - Verify action nodes on the Home screen navigate to correct destinations.
 
@@ -55,6 +55,6 @@ When changing gestures or connection rendering, test pan, zoom, drag, and arrow 
 Useful test coverage for this feature:
 
 - `ViewportState` pan and zoom math.
-- `ProjectStore` live preview compilation.
+- `ProjectStore` Mini-App preview compilation.
 - save/load of node positions, links, and viewport state.
 - provider output for required home action nodes.

@@ -48,8 +48,10 @@ public struct CoCaptainAgentParser {
         let nodeEdits = extractTagMatches(name: "node_edit", from: xml).compactMap { item -> CoCaptainNodeEditProposal? in
             let content = item.content
             let attrs = item.attributes
-            guard let roleStr = attrs["role"]?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(), 
-                  let role = NodeRole(rawValue: roleStr) else { return nil }
+            let roleStr = attrs["role"]?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            let role = roleStr.flatMap(NodeRole.init(rawValue:)) ?? .miniApp
+            let sectionStr = attrs["section"]?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            let section = sectionStr.flatMap(CoCaptainNodeEditProposal.MiniAppSection.init(rawValue:)) ?? .code
             let nodeID = (attrs["nodeId"] ?? attrs["node_id"] ?? attrs["nodeID"]).flatMap(UUID.init(uuidString:))
             
             let summary = attrs["summary"] ?? ""
@@ -65,7 +67,7 @@ public struct CoCaptainAgentParser {
                 return NodePatchOperation(type: type, target: target, content: body)
             }
             
-            return CoCaptainNodeEditProposal(nodeID: nodeID, role: role, summary: summary, operations: operations)
+            return CoCaptainNodeEditProposal(nodeID: nodeID, role: role, section: section, summary: summary, operations: operations)
         }
 
         let payload = CoCaptainAgentPayload(

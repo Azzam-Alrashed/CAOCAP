@@ -6,12 +6,12 @@ struct AnalysisTests {
 
     @Test func analyzerIdentifiesEmptyCode() throws {
         let nodes = [
-            SpatialNode(type: .code, position: .zero, title: "Code", textContent: "")
+            SpatialNode(type: .miniApp, position: .zero, title: "Mini-App", miniApp: MiniAppState(codeText: ""))
         ]
         let analyzer = ProjectAnalyzer()
         let suggestions = analyzer.analyze(nodes: nodes)
         
-        #expect(suggestions.contains { $0.title == "Code is empty" })
+        #expect(suggestions.contains { $0.title == "Mini-App code is empty" })
     }
 
     @Test func analyzerDoesNotSuggestMissingPreview() throws {

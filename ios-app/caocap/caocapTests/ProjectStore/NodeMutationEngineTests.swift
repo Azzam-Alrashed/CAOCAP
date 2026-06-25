@@ -5,94 +5,68 @@ import SwiftUI
 @MainActor
 final class NodeMutationEngineTests: XCTestCase {
     var engine: NodeMutationEngine!
-    
+
     override func setUp() async throws {
         engine = NodeMutationEngine()
     }
-    
-    func testAddNodeSetsCorrectDefaults() {
+
+    func testAddNodeCreatesMiniAppByDefault() {
         var nodes: [SpatialNode] = []
-        engine.addNode(nodes: &nodes, type: .code)
-        
-        XCTAssertEqual(nodes.count, 1)
-        XCTAssertEqual(nodes[0].type, .code)
-        XCTAssertEqual(nodes[0].theme, .orange)
-        XCTAssertEqual(nodes[0].textContent, "// Start coding here...")
-        XCTAssertEqual(nodes[0].title, "Code")
-        XCTAssertEqual(nodes[0].icon, "chevron.left.slash.chevron.right")
-        XCTAssertEqual(nodes[0].subtitle, "HTML, CSS, and JavaScript in one file.")
-        
-        engine.addNode(nodes: &nodes, type: .srs)
-        XCTAssertEqual(nodes.count, 2)
-        XCTAssertEqual(nodes[1].type, .srs)
-        XCTAssertEqual(nodes[1].theme, .purple)
-        XCTAssertEqual(nodes[1].title, "Software Requirements (SRS)")
-        
-        engine.addNode(nodes: &nodes, type: .firebase)
-        XCTAssertEqual(nodes.count, 3)
-        XCTAssertEqual(nodes[2].type, .firebase)
-        XCTAssertEqual(nodes[2].theme, .pink)
-        XCTAssertEqual(nodes[2].title, "Firebase")
-        XCTAssertEqual(nodes[2].subtitle, "Project settings → Your apps → Web app config")
-    }
-    
-    func testUpdateNodeTypeTriggersCallbacks() {
-        var nodes = [SpatialNode(type: .code, position: .zero, title: "HTML", theme: .orange)]
-        
-        var saveCalled = false
         var compileCalled = false
-        
-        engine.onRequestSave = { _ in saveCalled = true }
         engine.onCompileLivePreview = { _ in compileCalled = true }
-        
-        engine.updateNodeType(nodes: &nodes, id: nodes[0].id, type: .srs, persist: true)
-        
-        XCTAssertEqual(nodes[0].type, .srs)
-        XCTAssertEqual(nodes[0].theme, .purple)
-        XCTAssertTrue(saveCalled)
+
+        engine.addNode(nodes: &nodes)
+
+        XCTAssertEqual(nodes.count, 1)
+        XCTAssertEqual(nodes[0].type, .miniApp)
+        XCTAssertEqual(nodes[0].theme, .blue)
+        XCTAssertEqual(nodes[0].title, "Mini-App")
+        XCTAssertEqual(nodes[0].icon, NodeType.miniApp.defaultIcon)
+        XCTAssertEqual(nodes[0].subtitle, "Tap to run, build, and configure this mini-app.")
+        XCTAssertNotNil(nodes[0].miniApp)
+        XCTAssertFalse(nodes[0].miniApp?.codeText.isEmpty ?? true)
         XCTAssertTrue(compileCalled)
     }
 
-    func testApplyingCanonicalThemeRepairsLegacyBlueNodes() {
-        let srsNode = SpatialNode(type: .srs, position: .zero, title: "SRS", theme: .blue)
-        let previewNode = SpatialNode(type: .webView, position: .zero, title: "Live Preview", theme: .blue)
+    func testUpdateMiniAppSectionsTriggersExpectedCallbacks() {
+        var nodes = [
+            SpatialNode(type: .miniApp, position: .zero, title: "Mini-App", miniApp: MiniAppState())
+        ]
 
-        XCTAssertEqual(srsNode.applyingCanonicalThemeIfNeeded().theme, .purple)
-        XCTAssertEqual(previewNode.applyingCanonicalThemeIfNeeded().theme, .blue)
+        var saveCalled = false
+        var compileCalled = false
+        engine.onRequestSave = { _ in saveCalled = true }
+        engine.onCompileLivePreview = { _ in compileCalled = true }
+
+        engine.updateMiniAppSRS(nodes: &nodes, id: nodes[0].id, text: "# Intent\nShip it.", persist: true)
+        XCTAssertEqual(nodes[0].miniApp?.srsText, "# Intent\nShip it.")
+        XCTAssertTrue(saveCalled)
+
+        engine.updateMiniAppCode(nodes: &nodes, id: nodes[0].id, text: "<h1>Updated</h1>", persist: true)
+        XCTAssertEqual(nodes[0].miniApp?.codeText, "<h1>Updated</h1>")
+        XCTAssertTrue(compileCalled)
     }
 
-    func testApplyingCanonicalThemeRepairsLegacyCodeNodePresentation() {
-        let legacyCode = SpatialNode(
-            type: .code,
-            position: .zero,
-            title: "New Logic",
-            subtitle: "Write your intent here.",
-            icon: "plus.square.fill",
-            theme: .blue
-        )
+    func testApplyingCanonicalThemeRepairsMiniAppTheme() {
+        let miniApp = SpatialNode(type: .miniApp, position: .zero, title: "Mini-App", theme: .orange)
 
-        let repaired = legacyCode.applyingCanonicalThemeIfNeeded()
-
-        XCTAssertEqual(repaired.title, "Code")
-        XCTAssertEqual(repaired.icon, "chevron.left.slash.chevron.right")
-        XCTAssertEqual(repaired.subtitle, "HTML, CSS, and JavaScript in one file.")
-        XCTAssertEqual(repaired.theme, .orange)
+        XCTAssertEqual(miniApp.applyingCanonicalThemeIfNeeded().theme, .orange)
     }
-    
+
     func testDeleteNodeCleansUpConnections() {
-        let node1 = SpatialNode(type: .code, position: .zero, title: "1")
-        var node2 = SpatialNode(type: .code, position: .zero, title: "2")
-        
+        let node1 = SpatialNode(type: .miniApp, position: .zero, title: "1")
+        var node2 = SpatialNode(type: .miniApp, position: .zero, title: "2")
+
         node2.connectedNodeIds = [node1.id]
         node2.nextNodeId = node1.id
-        
+
         var nodes = [node1, node2]
-        
+
         engine.deleteNode(nodes: &nodes, id: node1.id)
-        
+
         XCTAssertEqual(nodes.count, 1)
         let updatedNode2 = nodes[0]
-        
+
         XCTAssertNil(updatedNode2.connectedNodeIds)
         XCTAssertNil(updatedNode2.nextNodeId)
     }

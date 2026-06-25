@@ -11,19 +11,13 @@ public enum NodeAction: String, Codable, Equatable {
 
 public enum NodeType: String, Codable, Equatable, Hashable, CaseIterable {
     case standard
-    case webView
-    case srs
-    case code
-    case firebase
+    case miniApp
     case subCanvas
     
     public var displayName: String {
         switch self {
         case .standard: return "Standard"
-        case .webView: return "Web View"
-        case .srs: return "SRS"
-        case .code: return "Code"
-        case .firebase: return "Firebase"
+        case .miniApp: return "Mini-App"
         case .subCanvas: return "Sub-Canvas"
         }
     }
@@ -31,10 +25,7 @@ public enum NodeType: String, Codable, Equatable, Hashable, CaseIterable {
     /// Default palette theme for each workflow node type on the canvas.
     public var defaultTheme: NodeTheme {
         switch self {
-        case .webView: return .blue
-        case .srs: return .purple
-        case .code: return .orange
-        case .firebase: return .pink
+        case .miniApp: return .blue
         case .subCanvas: return .cyan
         case .standard: return .indigo
         }
@@ -42,10 +33,7 @@ public enum NodeType: String, Codable, Equatable, Hashable, CaseIterable {
 
     public var defaultTitle: String {
         switch self {
-        case .webView: return "Live Preview"
-        case .srs: return "Software Requirements (SRS)"
-        case .code: return "Code"
-        case .firebase: return "Firebase"
+        case .miniApp: return "Mini-App"
         case .subCanvas: return "New Canvas"
         case .standard: return "Standard"
         }
@@ -53,10 +41,7 @@ public enum NodeType: String, Codable, Equatable, Hashable, CaseIterable {
 
     public var defaultSubtitle: String? {
         switch self {
-        case .webView: return "Your current build renders here."
-        case .srs: return "Define intent, people, flow, and success."
-        case .code: return "HTML, CSS, and JavaScript in one file."
-        case .firebase: return "Project settings → Your apps → Web app config"
+        case .miniApp: return "Tap to run, build, and configure this mini-app."
         case .subCanvas: return "Tap to open this canvas"
         case .standard: return nil
         }
@@ -64,13 +49,35 @@ public enum NodeType: String, Codable, Equatable, Hashable, CaseIterable {
 
     public var defaultIcon: String {
         switch self {
-        case .webView: return "play.display"
-        case .srs: return "doc.text.fill"
-        case .code: return "chevron.left.slash.chevron.right"
-        case .firebase: return "flame.fill"
+        case .miniApp: return "app.connected.to.app.below.fill"
         case .subCanvas: return "folder.fill"
         case .standard: return "square.grid.2x2"
         }
+    }
+}
+
+public struct MiniAppState: Codable, Equatable, Hashable {
+    public var srsText: String
+    public var srsReadinessState: SRSReadinessState
+    public var codeText: String
+    public var compiledHTML: String?
+    public var firebaseConfigText: String
+    public var firebaseFirestorePath: String?
+
+    public init(
+        srsText: String = SRSScaffold.defaultText,
+        srsReadinessState: SRSReadinessState? = nil,
+        codeText: String = "",
+        compiledHTML: String? = nil,
+        firebaseConfigText: String = "",
+        firebaseFirestorePath: String? = nil
+    ) {
+        self.srsText = srsText
+        self.srsReadinessState = srsReadinessState ?? .empty
+        self.codeText = codeText
+        self.compiledHTML = compiledHTML
+        self.firebaseConfigText = firebaseConfigText
+        self.firebaseFirestorePath = firebaseFirestorePath
     }
 }
 
@@ -121,11 +128,7 @@ public struct SpatialNode: Identifiable, Codable, Equatable {
     public var nextNodeId: UUID?
     public var connectedNodeIds: [UUID]?
     public var action: NodeAction?
-    public var htmlContent: String?
-    public var textContent: String?
-    /// Persisted readiness state for .srs nodes. Derived by SRSReadinessEvaluator
-    /// and stored so the canvas can display it without re-parsing text.
-    public var srsReadinessState: SRSReadinessState?
+    public var miniApp: MiniAppState?
     
     /// Persisted node-scoped CoCaptain transcript and compact memory.
     public var agentState: NodeAgentState
@@ -133,13 +136,10 @@ public struct SpatialNode: Identifiable, Codable, Equatable {
     /// Programmable identity and behavior rules for this node's agent.
     public var agentProfile: AgentProfile
 
-    /// Optional default Firestore path for preview JS (`window.__caocapFirestoreDefaultPath`).
-    public var firebaseFirestorePath: String?
-    
     /// The filename of the linked canvas for `.subCanvas` nodes.
     public var linkedCanvasFileName: String?
     
-    public init(id: UUID = UUID(), type: NodeType = .standard, position: CGPoint, title: String, subtitle: String? = nil, icon: String? = nil, theme: NodeTheme = .blue, nextNodeId: UUID? = nil, connectedNodeIds: [UUID]? = nil, action: NodeAction? = nil, htmlContent: String? = nil, textContent: String? = nil, srsReadinessState: SRSReadinessState? = nil, agentState: NodeAgentState = NodeAgentState(), agentProfile: AgentProfile = AgentProfile(), firebaseFirestorePath: String? = nil, linkedCanvasFileName: String? = nil) {
+    public init(id: UUID = UUID(), type: NodeType = .standard, position: CGPoint, title: String, subtitle: String? = nil, icon: String? = nil, theme: NodeTheme = .blue, nextNodeId: UUID? = nil, connectedNodeIds: [UUID]? = nil, action: NodeAction? = nil, miniApp: MiniAppState? = nil, agentState: NodeAgentState = NodeAgentState(), agentProfile: AgentProfile = AgentProfile(), linkedCanvasFileName: String? = nil) {
         self.id = id
         self.type = type
         self.position = position
@@ -150,12 +150,9 @@ public struct SpatialNode: Identifiable, Codable, Equatable {
         self.nextNodeId = nextNodeId
         self.connectedNodeIds = connectedNodeIds
         self.action = action
-        self.htmlContent = htmlContent
-        self.textContent = textContent
-        self.srsReadinessState = srsReadinessState
+        self.miniApp = type == .miniApp ? (miniApp ?? MiniAppState()) : miniApp
         self.agentState = agentState
         self.agentProfile = agentProfile
-        self.firebaseFirestorePath = firebaseFirestorePath
         self.linkedCanvasFileName = linkedCanvasFileName
     }
 
@@ -178,12 +175,9 @@ public struct SpatialNode: Identifiable, Codable, Equatable {
         case nextNodeId
         case connectedNodeIds
         case action
-        case htmlContent
-        case textContent
-        case srsReadinessState
+        case miniApp
         case agentState
         case agentProfile
-        case firebaseFirestorePath
         case linkedCanvasFileName
     }
 
@@ -203,12 +197,12 @@ public struct SpatialNode: Identifiable, Codable, Equatable {
         } else {
             self.action = nil
         }
-        self.htmlContent = try container.decodeIfPresent(String.self, forKey: .htmlContent)
-        self.textContent = try container.decodeIfPresent(String.self, forKey: .textContent)
-        self.srsReadinessState = try container.decodeIfPresent(SRSReadinessState.self, forKey: .srsReadinessState)
+        self.miniApp = try container.decodeIfPresent(MiniAppState.self, forKey: .miniApp)
+        if self.type == .miniApp, self.miniApp == nil {
+            self.miniApp = MiniAppState()
+        }
         self.agentState = try container.decodeIfPresent(NodeAgentState.self, forKey: .agentState) ?? NodeAgentState()
         self.agentProfile = try container.decodeIfPresent(AgentProfile.self, forKey: .agentProfile) ?? AgentProfile()
-        self.firebaseFirestorePath = try container.decodeIfPresent(String.self, forKey: .firebaseFirestorePath)
         self.linkedCanvasFileName = try container.decodeIfPresent(String.self, forKey: .linkedCanvasFileName)
     }
 
@@ -217,14 +211,8 @@ public struct SpatialNode: Identifiable, Codable, Equatable {
         guard action == nil, type != .standard else { return self }
 
         var updated = self
-        if theme == .blue, type != .webView {
+        if theme == .blue, type != .miniApp {
             updated.theme = type.defaultTheme
-        }
-
-        if updated.type == .code, updated.title == "New Logic" {
-            updated.title = NodeType.code.defaultTitle
-            updated.subtitle = NodeType.code.defaultSubtitle
-            updated.icon = NodeType.code.defaultIcon
         }
 
         return updated

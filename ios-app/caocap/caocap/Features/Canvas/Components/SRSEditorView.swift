@@ -9,7 +9,7 @@ struct SRSEditorView: View {
     init(node: SpatialNode, store: ProjectStore) {
         self.node = node
         self.store = store
-        self._text = State(initialValue: node.textContent ?? "")
+        self._text = State(initialValue: node.miniApp?.srsText ?? "")
     }
 
     var body: some View {
@@ -31,7 +31,7 @@ struct SRSEditorView: View {
     }
 
     private var analysis: SRSAnalysis {
-        SRSAnalysis(text: text, currentState: node.srsReadinessState)
+        SRSAnalysis(text: text, currentState: node.miniApp?.srsReadinessState)
     }
 
     private var topBar: some View {
@@ -59,18 +59,6 @@ struct SRSEditorView: View {
                                     } label: {
                                         Label(theme.rawValue.capitalized, systemImage: "circle.fill")
                                             .foregroundColor(theme.color)
-                                    }
-                                }
-                            }
-                            
-                            Section("Transform") {
-                                ForEach(NodeType.allCases, id: \.self) { type in
-                                    if type != node.type {
-                                        Button {
-                                            store.updateNodeType(id: node.id, type: type)
-                                        } label: {
-                                            Label(type.displayName, systemImage: "arrow.triangle.2.circlepath")
-                                        }
                                     }
                                 }
                             }
@@ -212,7 +200,7 @@ struct SRSEditorView: View {
     }
 
     private func saveAndDismiss() {
-        store.updateNodeTextContent(id: node.id, text: text, persist: true)
+        store.updateMiniAppSRS(id: node.id, text: text, persist: true)
         dismiss()
     }
 }

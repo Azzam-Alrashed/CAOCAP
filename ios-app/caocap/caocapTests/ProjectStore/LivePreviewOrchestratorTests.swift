@@ -4,59 +4,50 @@ import XCTest
 @MainActor
 final class LivePreviewOrchestratorTests: XCTestCase {
     var orchestrator: LivePreviewOrchestrator!
-    
+
     override func setUp() async throws {
         orchestrator = LivePreviewOrchestrator()
     }
-    
-    func testReturnsFalseWhenNoWebViewNode() {
-        var nodes = [SpatialNode(type: .code, position: .zero, title: "Code", textContent: "<h1>Test</h1>")]
+
+    func testReturnsFalseWhenNoMiniAppNode() {
+        var nodes = [SpatialNode(type: .standard, position: .zero, title: "Note")]
         let modified = orchestrator.compile(nodes: &nodes)
         XCTAssertFalse(modified)
     }
 
-    func testReturnsFalseWhenNoCodeNode() {
-        let webViewNode = SpatialNode(type: .webView, position: .zero, title: "Live Preview")
-        var nodes = [webViewNode]
-        let modified = orchestrator.compile(nodes: &nodes)
-        XCTAssertFalse(modified)
-        XCTAssertNil(nodes.first(where: { $0.type == .webView })?.htmlContent)
-    }
-    
-    func testUpdatesWebViewContentFromCodeNode() {
-        let codeNode = SpatialNode(
-            type: .code,
+    func testUpdatesMiniAppCompiledHTMLFromEmbeddedCode() {
+        let miniAppNode = SpatialNode(
+            type: .miniApp,
             position: .zero,
-            title: "Code",
-            textContent: "<html><head></head><body><h1>Test</h1><style>h1 { color: red; }</style><script>console.log('hi');</script></body></html>"
+            title: "Mini-App",
+            miniApp: MiniAppState(
+                codeText: "<html><head></head><body><h1>Test</h1><style>h1 { color: red; }</style><script>console.log('hi');</script></body></html>"
+            )
         )
-        let webViewNode = SpatialNode(type: .webView, position: .zero, title: "Live Preview")
-        
-        var nodes = [codeNode, webViewNode]
+
+        var nodes = [miniAppNode]
         let modified = orchestrator.compile(nodes: &nodes)
-        
+
         XCTAssertTrue(modified)
-        
-        let updatedWebView = nodes.first(where: { $0.type == .webView })!
-        XCTAssertNotNil(updatedWebView.htmlContent)
-        XCTAssertTrue(updatedWebView.htmlContent!.contains("<h1>Test</h1>"))
-        XCTAssertTrue(updatedWebView.htmlContent!.contains("h1 { color: red; }"))
-        XCTAssertTrue(updatedWebView.htmlContent!.contains("console.log('hi');"))
+        let compiled = nodes[0].miniApp?.compiledHTML
+        XCTAssertNotNil(compiled)
+        XCTAssertTrue(compiled!.contains("<h1>Test</h1>"))
+        XCTAssertTrue(compiled!.contains("h1 { color: red; }"))
+        XCTAssertTrue(compiled!.contains("console.log('hi');"))
     }
-    
+
     func testDoesNotModifyIfNothingChanged() {
-        let codeNode = SpatialNode(
-            type: .code,
+        let miniAppNode = SpatialNode(
+            type: .miniApp,
             position: .zero,
-            title: "Code",
-            textContent: "<html><head></head><body><h1>Test</h1></body></html>"
+            title: "Mini-App",
+            miniApp: MiniAppState(codeText: "<html><head></head><body><h1>Test</h1></body></html>")
         )
-        let webViewNode = SpatialNode(type: .webView, position: .zero, title: "Live Preview")
-        
-        var nodes = [codeNode, webViewNode]
-        
+
+        var nodes = [miniAppNode]
         _ = orchestrator.compile(nodes: &nodes)
         let modified = orchestrator.compile(nodes: &nodes)
+
         XCTAssertFalse(modified)
     }
 }
