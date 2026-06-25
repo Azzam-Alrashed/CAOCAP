@@ -47,26 +47,6 @@ public struct CommandIntentResolver {
                 "عد للخلف",
                 "ارجع للخلف"
             ]
-        case .newProject:
-            return [
-                "new project",
-                "create project",
-                "create a project",
-                "make project",
-                "make a project",
-                "start project",
-                "start a project",
-                "create new project",
-                "مشروع جديد",
-                "انشاء مشروع",
-                "انشاء مشروع جديد",
-                "أنشئ مشروع",
-                "أنشئ مشروع جديد",
-                "سوي مشروع",
-                "سوي مشروع جديد",
-                "اصنع مشروع",
-                "ابدأ مشروع"
-            ]
         case .createNode:
             return [
                 "create node",
@@ -119,11 +99,14 @@ public struct CommandIntentResolver {
                 "اظهر الشبكة",
                 "اخف الشبكة"
             ]
-        case .shareProject:
+        case .shareCanvas:
             return [
+                "share canvas",
                 "share project",
                 "share",
+                "مشاركة اللوحة",
                 "مشاركة المشروع",
+                "شارك اللوحة",
                 "شارك المشروع",
                 "مشاركة"
             ]
@@ -163,17 +146,6 @@ public struct CommandIntentResolver {
                 "الملف الشخصي",
                 "افتح الحساب",
                 "افتح الملف الشخصي"
-            ]
-        case .openProjectExplorer:
-            return [
-                "project explorer",
-                "open projects",
-                "show projects",
-                "projects",
-                "المشاريع",
-                "افتح المشاريع",
-                "اعرض المشاريع",
-                "مستكشف المشاريع"
             ]
         case .help:
             return [

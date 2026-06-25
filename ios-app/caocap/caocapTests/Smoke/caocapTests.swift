@@ -81,18 +81,18 @@ struct caocapTests {
     }
 
     @MainActor
-    @Test func dispatcherBlocksNonAutonomousProjectCreationFromAgentAutomatic() {
+    @Test func dispatcherBlocksNonAutonomousNodeCreationFromAgentAutomatic() {
         let dispatcher = AppActionDispatcher()
-        var createdProject = false
+        var createdNode = false
 
-        dispatcher.register(.newProject) {
-            createdProject = true
+        dispatcher.register(.createNode) {
+            createdNode = true
         }
 
-        let result = dispatcher.perform(.newProject, source: .agentAutomatic)
+        let result = dispatcher.perform(.createNode, source: .agentAutomatic)
 
         #expect(!result.executed)
-        #expect(!createdProject)
+        #expect(!createdNode)
     }
 
     @MainActor

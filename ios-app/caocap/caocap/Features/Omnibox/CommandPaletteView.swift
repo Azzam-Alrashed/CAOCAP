@@ -179,10 +179,10 @@ struct CommandPaletteView: View {
                                                 ForEach(section.items, id: \.action.id) { index, action in
                                                     AppActionRow(
                                                         item: action,
-                                                        isSelected: index == viewModel.selectedIndex
-                                                    ) {
-                                                        viewModel.executeAction(action)
-                                                    }
+                                                        isSelected: index == viewModel.selectedIndex,
+                                                        onSelect: { viewModel.executeAction(action) },
+                                                        onPin: action.canPinToCanvas ? { viewModel.pinAction(action) } : nil
+                                                    )
                                                     .id(action.id.rawValue)
                                                 }
                                             }
@@ -191,10 +191,10 @@ struct CommandPaletteView: View {
                                         ForEach(Array(viewModel.filteredActions.enumerated()), id: \.element.id) { index, action in
                                             AppActionRow(
                                                 item: action,
-                                                isSelected: index == viewModel.selectedIndex
-                                            ) {
-                                                viewModel.executeAction(action)
-                                            }
+                                                isSelected: index == viewModel.selectedIndex,
+                                                onSelect: { viewModel.executeAction(action) },
+                                                onPin: action.canPinToCanvas ? { viewModel.pinAction(action) } : nil
+                                            )
                                             .id(action.id.rawValue)
                                         }
                                     }
@@ -357,10 +357,12 @@ struct CommandPaletteView: View {
                                             ForEach(Array(viewModel.filteredActions.enumerated()), id: \.element.id) { index, action in
                                                 AppActionRow(
                                                     item: action,
-                                                    isSelected: index == viewModel.selectedIndex
-                                                ) {
-                                                    viewModel.executeAction(action)
-                                                }
+                                                    isSelected: index == viewModel.selectedIndex,
+                                                    onSelect: {
+                                                        viewModel.executeAction(action)
+                                                    },
+                                                    onPin: action.canPinToCanvas ? { viewModel.pinAction(action) } : nil
+                                                )
                                                 .id(action.id.rawValue)
                                             }
 
@@ -739,33 +741,50 @@ struct AppActionRow: View {
     let item: AppActionDefinition
     let isSelected: Bool
     let onSelect: () -> Void
+    var onPin: (() -> Void)? = nil
     
     var body: some View {
-        Button(action: onSelect) {
-            HStack(spacing: 12) {
-                Image(systemName: item.icon)
-                    .font(.system(size: 16))
-                    .frame(width: 24)
-                
-                Text(item.localizedTitle)
-                    .font(.system(size: 16))
-                
-                Spacer()
-                
-                if isSelected {
-                    Image(systemName: "return")
-                        .font(.system(size: 12))
-                        .opacity(0.8)
-                        .foregroundColor(.blue)
-                        .transition(.scale.combined(with: .opacity))
+        HStack(spacing: 0) {
+            Button(action: onSelect) {
+                HStack(spacing: 12) {
+                    Image(systemName: item.icon)
+                        .font(.system(size: 16))
+                        .frame(width: 24)
+                    
+                    Text(item.localizedTitle)
+                        .font(.system(size: 16))
+                    
+                    Spacer()
+                    
+                    if isSelected {
+                        Image(systemName: "return")
+                            .font(.system(size: 12))
+                            .opacity(0.8)
+                            .foregroundColor(.blue)
+                            .transition(.scale.combined(with: .opacity))
+                    }
                 }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .contentShape(Rectangle())
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .contentShape(Rectangle())
-            .omniboxRowStyle(isSelected: isSelected)
+            .buttonStyle(.plain)
+
+            if item.canPinToCanvas, let onPin {
+                Button(action: onPin) {
+                    Text(LocalizationManager.shared.localizedString("Add to canvas"))
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.blue)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Color.blue.opacity(0.12))
+                        .cornerRadius(6)
+                }
+                .buttonStyle(.plain)
+                .padding(.trailing, 12)
+            }
         }
-        .buttonStyle(.plain)
+        .omniboxRowStyle(isSelected: isSelected)
     }
 }
 

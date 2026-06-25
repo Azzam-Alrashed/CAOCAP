@@ -355,27 +355,27 @@ struct CoCaptainAgentTests {
     }
 
     @MainActor
-    @Test func commandIntentResolverMatchesEnglishProjectCommands() throws {
+    @Test func commandIntentResolverDoesNotMatchRemovedProjectCommands() throws {
         let resolver = CommandIntentResolver()
         let actions = TestActionDispatcher().availableActions
 
-        #expect(resolver.resolve("create a project", availableActions: actions) == .newProject)
-        #expect(resolver.resolve("please create a project", availableActions: actions) == .newProject)
-        #expect(resolver.resolve("new project", availableActions: actions) == .newProject)
+        #expect(resolver.resolve("create a project", availableActions: actions) == nil)
+        #expect(resolver.resolve("please create a project", availableActions: actions) == nil)
+        #expect(resolver.resolve("new project", availableActions: actions) == nil)
         #expect(resolver.resolve("open settings", availableActions: actions) == .openSettings)
         #expect(resolver.resolve("make a root page", availableActions: actions) == nil)
         #expect(resolver.resolve("do not create a project", availableActions: actions) == nil)
     }
 
     @MainActor
-    @Test func commandIntentResolverMatchesArabicProjectCommands() throws {
+    @Test func commandIntentResolverMatchesArabicSettingsCommands() throws {
         let resolver = CommandIntentResolver()
         let actions = TestActionDispatcher().availableActions
 
-        #expect(resolver.resolve("أنشئ مشروع جديد", availableActions: actions) == .newProject)
-        #expect(resolver.resolve("لو سمحت أنشئ مشروع جديد", availableActions: actions) == .newProject)
+        #expect(resolver.resolve("أنشئ مشروع جديد", availableActions: actions) == nil)
+        #expect(resolver.resolve("لو سمحت أنشئ مشروع جديد", availableActions: actions) == nil)
         #expect(resolver.resolve("افتح الإعدادات", availableActions: actions) == .openSettings)
-        #expect(resolver.resolve("اعرض المشاريع", availableActions: actions) == .openProjectExplorer)
+        #expect(resolver.resolve("اعرض المشاريع", availableActions: actions) == nil)
         #expect(resolver.resolve("لا تنشئ مشروع جديد", availableActions: actions) == nil)
     }
 
@@ -1411,14 +1411,6 @@ private final class TestActionDispatcher: AppActionPerforming {
             title: "Open Settings",
             icon: "gearshape.fill",
             category: .assistant,
-            isMutating: false,
-            allowsAutonomousExecution: true
-        ),
-        AppActionDefinition(
-            id: .openProjectExplorer,
-            title: "Project Explorer",
-            icon: "folder.fill",
-            category: .project,
             isMutating: false,
             allowsAutonomousExecution: true
         ),

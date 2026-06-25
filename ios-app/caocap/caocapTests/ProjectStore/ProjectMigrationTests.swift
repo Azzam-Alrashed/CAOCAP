@@ -197,6 +197,71 @@ struct ProjectMigrationTests {
         #expect(loaded.schemaVersion == ProjectPersistenceService.currentSchemaVersion)
     }
 
+    @Test func legacyNodeActionStringDecodesToNil() throws {
+        let original = SpatialNode(type: .standard, position: .zero, title: "Launcher", action: nil)
+        var data = try JSONEncoder().encode(original)
+        var jsonObject = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        jsonObject["action"] = "createNewProject"
+        data = try JSONSerialization.data(withJSONObject: jsonObject)
+        let decoded = try JSONDecoder().decode(SpatialNode.self, from: data)
+        #expect(decoded.action == nil)
+    }
+
+    @Test func canvasFileNamingMigratesLegacyFileNames() {
+        #expect(CanvasFileNaming.migrateLegacyFileName("project_abc12345.json") == "canvas_abc12345.json")
+        #expect(CanvasFileNaming.migrateLegacyFileName("canvas_abc12345.json") == "canvas_abc12345.json")
+    }
+
+    @Test func canvasFileNamingResolvesLegacyFallback() throws {
+        let tempDirectory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: tempDirectory) }
+        let persistence = ProjectPersistenceService(baseDirectory: tempDirectory)
+        let legacy = "project_deadbeef.json"
+        try persistence.save(ProjectSnapshot(projectName: "Legacy", nodes: []), fileName: legacy)
+
+        let resolved = CanvasFileNaming.resolveExistingFileName("canvas_deadbeef.json", persistence: persistence)
+        #expect(resolved == legacy)
+    }
+
+    @MainActor
+    @Test func canvasWorkspaceMigrationRenamesFilesAndRewritesLinks() throws {
+        let tempDirectory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: tempDirectory) }
+        let persistence = ProjectPersistenceService(baseDirectory: tempDirectory)
+        let migrationKey = "canvasWorkspaceMigration_v1_complete"
+        defer { UserDefaults.standard.removeObject(forKey: migrationKey) }
+        UserDefaults.standard.removeObject(forKey: migrationKey)
+
+        let legacyLinked = "project_abc12345.json"
+        let subCanvasNode = SpatialNode(
+            type: .subCanvas,
+            position: .zero,
+            title: "Child",
+            linkedCanvasFileName: legacyLinked
+        )
+        let launcher = SpatialNode(type: .standard, position: .zero, title: "Settings", action: .openSettings)
+        let rootSnapshot = ProjectSnapshot(
+            projectName: "Root",
+            nodes: [subCanvasNode, launcher],
+            viewportOffset: .zero,
+            viewportScale: 1.0
+        )
+        try persistence.save(rootSnapshot, fileName: CanvasFileNaming.rootFileName)
+        try persistence.save(ProjectSnapshot(projectName: "Child", nodes: []), fileName: legacyLinked)
+
+        #expect(persistence.projectExists(fileName: legacyLinked))
+        #expect(!persistence.projectExists(fileName: "canvas_abc12345.json"))
+
+        CanvasWorkspaceMigration.runIfNeeded(persistence: persistence)
+
+        #expect(!persistence.projectExists(fileName: legacyLinked))
+        #expect(persistence.projectExists(fileName: "canvas_abc12345.json"))
+
+        let root = try persistence.load(fileName: CanvasFileNaming.rootFileName)
+        #expect(root.nodes.first(where: { $0.title == "Child" })?.linkedCanvasFileName == "canvas_abc12345.json")
+        #expect(root.nodes.first(where: { $0.title == "Settings" })?.action == nil)
+    }
+
     private func makeTemporaryDirectory() throws -> URL {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("caocap-tests-\(UUID().uuidString)", isDirectory: true)

@@ -54,7 +54,6 @@ caocap/
 │   │   └── Review/
 │   ├── Launch/
 │   ├── Overlays/
-│   ├── ProjectExplorer/
 │   ├── Settings/
 │   └── Subscription/
 ├── Resources/
@@ -96,7 +95,7 @@ Centralized, type-safe routing. All workspace transitions flow through here — 
 
 | File | Responsibility |
 |---|---|
-| `AppRouter.swift` | `@Observable` class managing `WorkspaceState` (`.home`, `.project`). Owns all `ProjectStore` instances and project creation/resume routing. |
+| `AppRouter.swift` | `@Observable` class managing `WorkspaceState` (`.home`, `.project`). Owns all `ProjectStore` instances, root/sub-canvas navigation stack, and session tracking for the last opened canvas file. |
 
 ---
 
@@ -175,9 +174,10 @@ State management, persistence, checkpoints, and reactive compilation for the spa
 
 | File | Responsibility |
 |---|---|
-| `ProjectStore.swift` | Observable project state owner. Manages `[SpatialNode]`, viewport state, undo wiring, debounced save requests, and Live Preview refresh. |
+| `ProjectStore.swift` | Observable project state owner. Manages `[SpatialNode]`, viewport state, undo wiring, debounced save requests, live preview refresh, and omnibox shortcut pinning. |
 | `ProjectPersistenceService.swift` | Project file URLs, JSON schema decoding/encoding, schema version checks, and atomic writes. |
-| `ProjectManager.swift` | Actor listing and managing saved local project files asynchronously. |
+| `CanvasFileNaming.swift` | Nested workspace file naming (`canvas_*.json`) and legacy `project_*.json` resolution for sub-canvas navigation. |
+| `CanvasWorkspaceMigration.swift` | One-time migration from project-manager filenames and root shortcut nodes to the canvas workspace model. |
 | `ExportService.swift` | Generates shareable exports asynchronously on a background thread. |
 | `CheckpointManager.swift` | Coordinates pre-agent mutation backup checkpoints. |
 | `NodeMutationEngine.swift` | Manages standard node and layout mutations. |
@@ -313,15 +313,6 @@ Browses and restores project checkpoints from saved snapshots directory.
 | File | Responsibility |
 |---|---|
 | `SnapshotBrowserView.swift` | Renders a timeline of available project snapshots with recovery and deletion controls. |
-
----
-
-#### `ProjectExplorer/`
-Saved-project browsing and selection UI backed by `ProjectManager`.
-
-| File | Responsibility |
-|---|---|
-| `ProjectExplorerView.swift` | Saved projects list showing peeks, statistics, and renaming controls. |
 
 ---
 

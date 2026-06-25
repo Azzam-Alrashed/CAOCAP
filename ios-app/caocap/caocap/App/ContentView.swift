@@ -23,7 +23,6 @@ struct ContentView: View {
     @State private var showingSettings = false
     @State private var showingSnapshotBrowser = false
     @State private var showingProfile = false
-    @State private var showingProjectExplorer = false
     @State private var currentScale: CGFloat = 1.0
     @Environment(\.undoManager) var undoManager
     @Environment(\.colorScheme) var colorScheme
@@ -83,7 +82,6 @@ struct ContentView: View {
                     store: router.activeStore,
                     viewportScale: currentScale,
                     onSignInTapped: { showingSignIn = true },
-                    onProjectExplorerTapped: { showingProjectExplorer = true },
                     onCheckpointsTapped: { showingSnapshotBrowser = true }
                 )
             }
@@ -174,11 +172,6 @@ struct ContentView: View {
                     Color.black.opacity(0.95)
                         .background(.ultraThinMaterial)
                 }
-        }
-        .sheet(isPresented: $showingProjectExplorer) {
-            ProjectExplorerView(onSelect: { fileName in
-                router.navigate(to: .project(fileName))
-            })
         }
         .sheet(isPresented: $showingPurchaseSheet) {
             PurchaseView()
@@ -393,16 +386,10 @@ struct ContentView: View {
         case .navigateRoot:
             router.navigate(to: .root, animated: true)
             currentScale = 1.0
-        case .createNewProject:
-            router.createNewProject()
         case .openSettings:
             _ = actionDispatcher.perform(.openSettings, source: .user)
         case .openProfile:
             _ = actionDispatcher.perform(.openProfile, source: .user)
-        case .openProjectExplorer:
-            _ = actionDispatcher.perform(.openProjectExplorer, source: .user)
-        case .resumeLastProject:
-            router.resumeLastProject()
         case .summonCoCaptain:
             _ = actionDispatcher.perform(.summonCoCaptain, source: .user)
         case .proSubscription:
@@ -439,9 +426,6 @@ struct ContentView: View {
         actionDispatcher.register(.goBack) {
             router.goBack()
         }
-        actionDispatcher.register(.newProject) {
-            router.createNewProject()
-        }
         actionDispatcher.register(.createNode) {
             showingNodeCreationMenu = true
         }
@@ -463,7 +447,7 @@ struct ContentView: View {
                 gridOpacity = lastGridOpacity > 0.0 ? lastGridOpacity : 0.1
             }
         }
-        actionDispatcher.register(.shareProject) {
+        actionDispatcher.register(.shareCanvas) {
             Task {
                 if let url = await ExportService.export(from: router.activeStore, format: .webBundle(includeProjectContext: true)) {
                     exportURL = url
@@ -506,9 +490,6 @@ struct ContentView: View {
         }
         actionDispatcher.register(.openProfile) {
             showingProfile = true
-        }
-        actionDispatcher.register(.openProjectExplorer) {
-            showingProjectExplorer = true
         }
         actionDispatcher.register(.openSnapshotBrowser) {
             showingSnapshotBrowser = true
@@ -554,6 +535,11 @@ struct ContentView: View {
         commandPalette.nodes = router.activeStore.nodes
         commandPalette.onExecute = { actionID in
             _ = actionDispatcher.perform(actionID, source: .user)
+        }
+        commandPalette.onPinAction = { actionID in
+            guard let definition = actionDispatcher.definition(for: actionID) else { return }
+            router.activeStore.addShortcutNode(for: actionID, definition: definition)
+            commandPalette.nodes = router.activeStore.nodes
         }
         commandPalette.onFlyToNode = { nodeId in
             guard let node = router.activeStore.nodes.first(where: { $0.id == nodeId }) else { return }
@@ -614,7 +600,7 @@ struct ContentView: View {
                         
                         // Copy or save it under a new project file name
                         let persistence = ProjectPersistenceService()
-                        let newFileName = "project_\(UUID().uuidString).json"
+                        let newFileName = CanvasFileNaming.newCanvasFileName()
                         let targetURL = persistence.fileURL(for: newFileName)
                         
                         try data.write(to: targetURL, options: .atomic)

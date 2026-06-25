@@ -49,7 +49,7 @@ public class ProjectStore {
     public let fileName: String
     
     public init(
-        fileName: String = "project_v1.json",
+        fileName: String = "canvas_v1.json",
         projectName: String = "Untitled Project",
         initialNodes: [SpatialNode]? = nil,
         initialViewportScale: CGFloat = 1.0,
@@ -345,6 +345,17 @@ public class ProjectStore {
     }
     public func addNode(type: NodeType = .code) {
         mutationEngine.addNode(nodes: &nodes, type: type)
+    }
+    public func addShortcutNode(for appAction: AppActionID, definition: AppActionDefinition) {
+        guard let nodeAction = appAction.pinableNodeAction else { return }
+        let center = CGPoint(x: -viewportOffset.width, y: -viewportOffset.height)
+        mutationEngine.addShortcutNode(
+            nodes: &nodes,
+            action: nodeAction,
+            title: definition.title,
+            icon: definition.icon,
+            at: center
+        )
     }
     public func updateNodeTitle(id: UUID, title: String) {
         mutationEngine.updateNodeTitle(nodes: &nodes, id: id, title: title)

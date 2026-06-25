@@ -51,7 +51,7 @@ final class NodeMutationEngine {
                 }
             case .subCanvas:
                 if nodes[index].linkedCanvasFileName == nil {
-                    nodes[index].linkedCanvasFileName = "project_\(UUID().uuidString.prefix(8)).json"
+                    nodes[index].linkedCanvasFileName = CanvasFileNaming.newCanvasFileName()
                 }
             }
             
@@ -156,7 +156,12 @@ final class NodeMutationEngine {
     }
     
     public func addNode(nodes: inout [SpatialNode], type: NodeType = .code) {
-        let baseTitle = type == .code ? "New Logic" : type.displayName
+        let baseTitle: String
+        switch type {
+        case .code: baseTitle = "New Logic"
+        case .subCanvas: baseTitle = "New Canvas"
+        default: baseTitle = type.displayName
+        }
         let uniqueTitle = generateUniqueTitle(nodes: nodes, base: baseTitle)
 
         let subtitle: String?
@@ -176,7 +181,7 @@ final class NodeMutationEngine {
             initialText = nil
         }
 
-        let linkedFileName: String? = type == .subCanvas ? "project_\(UUID().uuidString.prefix(8)).json" : nil
+        let linkedFileName: String? = type == .subCanvas ? CanvasFileNaming.newCanvasFileName() : nil
         let offset = onViewportChange?() ?? .zero
 
         let newNode = SpatialNode(
@@ -191,6 +196,36 @@ final class NodeMutationEngine {
             linkedCanvasFileName: linkedFileName
         )
         
+        undoManager?.registerUndo(withTarget: self) { target in
+            MainActor.assumeIsolated {
+                target.onPerformUndoMutation? { currentNodes in
+                    target.deleteNode(nodes: &currentNodes, id: newNode.id, persist: true)
+                }
+            }
+        }
+        undoStackChanged += 1
+
+        withAnimation(.spring()) {
+            nodes.append(newNode)
+        }
+        onRequestSave?(true)
+    }
+
+    public func addShortcutNode(
+        nodes: inout [SpatialNode],
+        action: NodeAction,
+        title: String,
+        icon: String,
+        at position: CGPoint
+    ) {
+        let newNode = SpatialNode(
+            type: .standard,
+            position: position,
+            title: title,
+            icon: icon,
+            action: action
+        )
+
         undoManager?.registerUndo(withTarget: self) { target in
             MainActor.assumeIsolated {
                 target.onPerformUndoMutation? { currentNodes in
