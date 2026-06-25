@@ -49,6 +49,12 @@ public struct CommandIntentResolver {
             ]
         case .createNode:
             return [
+                "create mini-app",
+                "create mini app",
+                "new mini-app",
+                "new mini app",
+                "add mini-app",
+                "add mini app",
                 "create node",
                 "create a node",
                 "new node",

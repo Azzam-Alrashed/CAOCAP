@@ -33,25 +33,17 @@ final class NodeMutationEngine {
             nodes[index].theme = nodeTheme(for: type)
             nodes[index].icon = nodeIcon(for: type)
             
-            // Type-specific initialization if content is empty
             switch type {
-            case .srs:
-                if nodes[index].textContent?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false {
-                    nodes[index].textContent = SRSScaffold.defaultText
-                }
-                let text = nodes[index].textContent ?? ""
-                nodes[index].srsReadinessState = SRSReadinessEvaluator().evaluate(text: text, currentState: nil)
-            case .code:
-                if nodes[index].textContent?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false {
-                    nodes[index].textContent = "// Write code here..."
-                }
-            case .webView, .standard:
-                break
-            case .firebase:
-                if nodes[index].textContent?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false {
-                    nodes[index].textContent = FirebasePreviewBootstrap.placeholderConfigJSON()
-                }
+            case .miniApp:
+                nodes[index].miniApp = nodes[index].miniApp ?? MiniAppState(
+                    srsReadinessState: SRSReadinessEvaluator().evaluate(text: SRSScaffold.defaultText, currentState: nil),
+                    codeText: ProjectTemplateProvider.defaultCode,
+                    firebaseConfigText: FirebasePreviewBootstrap.placeholderConfigJSON()
+                )
+            case .standard:
+                nodes[index].miniApp = nil
             case .subCanvas:
+                nodes[index].miniApp = nil
                 if nodes[index].linkedCanvasFileName == nil {
                     nodes[index].linkedCanvasFileName = CanvasFileNaming.newCanvasFileName()
                 }
@@ -65,30 +57,78 @@ final class NodeMutationEngine {
     }
     
     public func updateNodeTextContent(nodes: inout [SpatialNode], id: UUID, text: String, persist: Bool = true) {
+        updateMiniAppCode(nodes: &nodes, id: id, text: text, persist: persist)
+    }
+
+    public func updateMiniAppSRS(nodes: inout [SpatialNode], id: UUID, text: String, persist: Bool = true) {
         if let index = nodes.firstIndex(where: { $0.id == id }) {
-            let oldText = nodes[index].textContent ?? ""
-            let oldReadiness = nodes[index].srsReadinessState
+            ensureMiniAppState(for: &nodes[index])
+            let oldText = nodes[index].miniApp?.srsText ?? ""
+            let oldReadiness = nodes[index].miniApp?.srsReadinessState
 
             undoManager?.registerUndo(withTarget: self) { target in
                 MainActor.assumeIsolated {
                     target.onPerformUndoMutation? { currentNodes in
-                        target.updateNodeTextContent(nodes: &currentNodes, id: id, text: oldText, persist: persist)
+                        target.updateMiniAppSRS(nodes: &currentNodes, id: id, text: oldText, persist: persist)
                     }
                 }
             }
             undoStackChanged += 1
 
-            nodes[index].textContent = text
-
-            if nodes[index].type == .srs {
-                let evaluator = SRSReadinessEvaluator()
-                nodes[index].srsReadinessState = evaluator.evaluate(text: text, currentState: oldReadiness)
-            }
+            nodes[index].miniApp?.srsText = text
+            nodes[index].miniApp?.srsReadinessState = SRSReadinessEvaluator().evaluate(text: text, currentState: oldReadiness)
 
             if persist {
                 onRequestSave?(true)
             }
             onTriggerDownstreamAgents?(id, nodes)
+        }
+    }
+
+    public func updateMiniAppCode(nodes: inout [SpatialNode], id: UUID, text: String, persist: Bool = true) {
+        if let index = nodes.firstIndex(where: { $0.id == id }) {
+            ensureMiniAppState(for: &nodes[index])
+            let oldText = nodes[index].miniApp?.codeText ?? ""
+
+            undoManager?.registerUndo(withTarget: self) { target in
+                MainActor.assumeIsolated {
+                    target.onPerformUndoMutation? { currentNodes in
+                        target.updateMiniAppCode(nodes: &currentNodes, id: id, text: oldText, persist: persist)
+                    }
+                }
+            }
+            undoStackChanged += 1
+
+            nodes[index].miniApp?.codeText = text
+            onCompileLivePreview?(&nodes)
+
+            if persist {
+                onRequestSave?(true)
+            }
+            onTriggerDownstreamAgents?(id, nodes)
+        }
+    }
+
+    public func updateMiniAppFirebaseConfig(nodes: inout [SpatialNode], id: UUID, text: String, persist: Bool = true) {
+        if let index = nodes.firstIndex(where: { $0.id == id }) {
+            ensureMiniAppState(for: &nodes[index])
+            let oldText = nodes[index].miniApp?.firebaseConfigText ?? ""
+
+            undoManager?.registerUndo(withTarget: self) { target in
+                MainActor.assumeIsolated {
+                    target.onPerformUndoMutation? { currentNodes in
+                        target.updateMiniAppFirebaseConfig(nodes: &currentNodes, id: id, text: oldText, persist: persist)
+                    }
+                }
+            }
+            undoStackChanged += 1
+
+            nodes[index].miniApp?.firebaseConfigText = text
+            onCompileLivePreview?(&nodes)
+
+            if persist {
+                onRequestSave?(true)
+            }
         }
     }
     
@@ -157,21 +197,16 @@ final class NodeMutationEngine {
         HapticsManager.shared.notification(.success)
     }
     
-    public func addNode(nodes: inout [SpatialNode], type: NodeType = .code) {
+    public func addNode(nodes: inout [SpatialNode], type: NodeType = .miniApp) {
         let uniqueTitle = generateUniqueTitle(nodes: nodes, base: type.defaultTitle)
 
         let subtitle = type.defaultSubtitle
-        let initialText: String?
-        switch type {
-        case .code:
-            initialText = "// Start coding here..."
-        case .firebase:
-            initialText = FirebasePreviewBootstrap.placeholderConfigJSON()
-        default:
-            initialText = nil
-        }
-
         let linkedFileName: String? = type == .subCanvas ? CanvasFileNaming.newCanvasFileName() : nil
+        let miniApp = type == .miniApp ? MiniAppState(
+            srsReadinessState: SRSReadinessEvaluator().evaluate(text: SRSScaffold.defaultText, currentState: nil),
+            codeText: ProjectTemplateProvider.defaultCode,
+            firebaseConfigText: FirebasePreviewBootstrap.placeholderConfigJSON()
+        ) : nil
         let offset = onViewportChange?() ?? .zero
 
         let newNode = SpatialNode(
@@ -182,7 +217,7 @@ final class NodeMutationEngine {
             subtitle: subtitle,
             icon: nodeIcon(for: type),
             theme: nodeTheme(for: type),
-            textContent: initialText,
+            miniApp: miniApp,
             linkedCanvasFileName: linkedFileName
         )
         
@@ -198,6 +233,7 @@ final class NodeMutationEngine {
         withAnimation(.spring()) {
             nodes.append(newNode)
         }
+        onCompileLivePreview?(&nodes)
         onRequestSave?(true)
     }
 
@@ -265,6 +301,20 @@ final class NodeMutationEngine {
             onRequestSave?(true)
         }
     }
+
+    public func updateNodeSubtitle(nodes: inout [SpatialNode], id: UUID, subtitle: String?) {
+        guard let index = nodes.firstIndex(where: { $0.id == id }) else { return }
+        let trimmed = subtitle?.trimmingCharacters(in: .whitespacesAndNewlines)
+        nodes[index].subtitle = trimmed?.isEmpty == true ? nil : trimmed
+        onRequestSave?(true)
+    }
+
+    public func updateNodeIcon(nodes: inout [SpatialNode], id: UUID, icon: String?) {
+        guard let index = nodes.firstIndex(where: { $0.id == id }) else { return }
+        let trimmed = icon?.trimmingCharacters(in: .whitespacesAndNewlines)
+        nodes[index].icon = trimmed?.isEmpty == true ? nil : trimmed
+        onRequestSave?(true)
+    }
     
     public func deleteNode(nodes: inout [SpatialNode], id: UUID, persist: Bool = true) {
         guard let index = nodes.firstIndex(where: { $0.id == id }) else { return }
@@ -312,7 +362,8 @@ final class NodeMutationEngine {
 
     public func updateNodeFirebaseFirestorePath(nodes: inout [SpatialNode], id: UUID, path: String?, persist: Bool = true) {
         if let index = nodes.firstIndex(where: { $0.id == id }) {
-            let oldPath = nodes[index].firebaseFirestorePath
+            ensureMiniAppState(for: &nodes[index])
+            let oldPath = nodes[index].miniApp?.firebaseFirestorePath
             undoManager?.registerUndo(withTarget: self) { target in
                 MainActor.assumeIsolated {
                     target.onPerformUndoMutation? { currentNodes in
@@ -321,11 +372,22 @@ final class NodeMutationEngine {
                 }
             }
             undoStackChanged += 1
-            nodes[index].firebaseFirestorePath = path
+            nodes[index].miniApp?.firebaseFirestorePath = path
             if persist {
                 onRequestSave?(true)
             }
             onCompileLivePreview?(&nodes)
+        }
+    }
+
+    private func ensureMiniAppState(for node: inout SpatialNode) {
+        guard node.type == .miniApp else { return }
+        if node.miniApp == nil {
+            node.miniApp = MiniAppState(
+                srsReadinessState: SRSReadinessEvaluator().evaluate(text: SRSScaffold.defaultText, currentState: nil),
+                codeText: ProjectTemplateProvider.defaultCode,
+                firebaseConfigText: FirebasePreviewBootstrap.placeholderConfigJSON()
+            )
         }
     }
 }

@@ -41,6 +41,7 @@ public class AppRouter {
         self.rootStore = ProjectStore(
             fileName: CanvasFileNaming.rootFileName,
             projectName: "Root",
+            initialNodes: ProjectTemplateProvider.defaultNodes,
             initialViewportScale: 0.5
         )
     }
@@ -84,5 +85,16 @@ public class AppRouter {
     public func navigateToSubCanvas(fileName: String) {
         let resolved = CanvasFileNaming.resolveExistingFileName(fileName)
         navigate(to: .project(resolved), animated: true)
+    }
+
+    public func createFreshMiniAppCanvas() {
+        let fileName = CanvasFileNaming.newCanvasFileName()
+        let store = ProjectStore(
+            fileName: fileName,
+            projectName: "Mini-App Canvas",
+            initialNodes: ProjectTemplateProvider.defaultNodes
+        )
+        projects[fileName] = store
+        navigate(to: .project(fileName), animated: true)
     }
 }

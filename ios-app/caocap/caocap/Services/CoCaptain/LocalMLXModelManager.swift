@@ -290,8 +290,8 @@ public final class LocalMLXModelManager {
         - Append the `cocaptain_actions` block at the end of every response that involves node content changes.
         - Safe actions are only for non-mutating autonomous app actions. Mutating or review-required app actions must use executionMode `pending`.
 
-        Firebase / Firestore (Live Preview):
-        - When the user asks to link JavaScript to Firebase, save/persist/sync data to Firestore, or connect the app to the backend, read the canvas context block about `window.__caocapFirestore` and `window.__caocapFirestoreDefaultPath`.
-        - Implement persistence with **`code` `node_edits`** (inline JavaScript in the single-file HTML document) using the Firestore compat instance on `window.__caocapFirestore` (never invent a second `initializeApp` in JS). If there is no Firebase node yet, propose `create_firebase_node` as a pending app action or tell the user to add the Firebase node and paste Web config from Firebase Console.
+        Firebase / Firestore (Mini-App Preview):
+        - When the user asks to link JavaScript to Firebase, save/persist/sync data to Firestore, or connect the app to the backend, read the Mini-App context block about `window.__caocapFirestore` and `window.__caocapFirestoreDefaultPath`.
+        - Implement persistence with Mini-App `section="code"` `node_edits` using the Firestore compat instance on `window.__caocapFirestore` (never invent a second `initializeApp` in JS). Firebase config lives inside the Mini-App's Firebase tool, not in a separate node.
         """
 }

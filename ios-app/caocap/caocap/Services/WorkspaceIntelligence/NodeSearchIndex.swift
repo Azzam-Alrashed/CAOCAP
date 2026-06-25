@@ -24,7 +24,14 @@ public struct NodeSearchIndex {
             .compactMap { node -> NodeSearchResult? in
                 var score = 0
                 let titleLower = node.title.lowercased()
-                let contentLower = (node.textContent ?? "").lowercased()
+                let miniAppContent = [
+                    node.miniApp?.srsText,
+                    node.miniApp?.codeText,
+                    node.miniApp?.firebaseConfigText
+                ]
+                    .compactMap { $0 }
+                    .joined(separator: "\n")
+                let contentLower = miniAppContent.lowercased()
                 let roleLower = node.role.displayName.lowercased()
                 let typeLower = node.type.displayName.lowercased()
                 let subtitleLower = (node.subtitle ?? "").lowercased()
@@ -53,7 +60,7 @@ public struct NodeSearchIndex {
 
                 guard score > 0 else { return nil }
 
-                let snippet = node.textContent.flatMap {
+                let snippet = (!miniAppContent.isEmpty ? miniAppContent : nil).flatMap {
                     $0.isEmpty ? nil : String($0.prefix(60).replacingOccurrences(of: "\n", with: " "))
                 } ?? node.subtitle ?? ""
 

@@ -7,19 +7,16 @@ struct LivePreviewOrchestrator {
     /// Compiles the live preview and updates node HTML content.
     /// Returns true if any nodes were modified.
     func compile(nodes: inout [SpatialNode]) -> Bool {
-        guard let compilation = compiler.compile(nodes: nodes),
-              let webViewIndex = nodes.firstIndex(where: { $0.id == compilation.webViewNodeID }) else {
-            return false
-        }
-        
         var modified = false
-        
-        // Update the WebView node if the content changed
-        if nodes[webViewIndex].htmlContent != compilation.html {
-            nodes[webViewIndex].htmlContent = compilation.html
-            modified = true
+
+        for index in nodes.indices where nodes[index].type == .miniApp {
+            guard let compilation = compiler.compile(node: nodes[index]) else { continue }
+            if nodes[index].miniApp?.compiledHTML != compilation.html {
+                nodes[index].miniApp?.compiledHTML = compilation.html
+                modified = true
+            }
         }
-        
+
         return modified
     }
 }

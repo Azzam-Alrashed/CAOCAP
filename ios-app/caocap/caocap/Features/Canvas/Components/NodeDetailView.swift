@@ -1,250 +1,214 @@
 import SwiftUI
 
-/// Routes a selected node to the correct full-screen inspector/editor. Adding a
-/// node type should usually update this router and the matching store/context
-/// behavior together.
+/// Opens a canvas node. Mini-App nodes enter a full-screen running preview with
+/// Mini-App tools behind the floating command button.
 struct NodeDetailView: View {
     let node: SpatialNode
     let store: ProjectStore
-    @Environment(\.dismiss) var dismiss
-    @Environment(\.horizontalSizeClass) var horizontalSizeClass
-    @State private var isEditingTitle = false
-    @FocusState private var isTitleFocused: Bool
-    
+
+    @Environment(\.dismiss) private var dismiss
+
     private var currentNode: SpatialNode {
         store.nodes.first(where: { $0.id == node.id }) ?? node
     }
-    
+
     var body: some View {
-        if horizontalSizeClass == .compact {
-            TabView {
-                editorContent
-                    .tabItem {
-                        Label(node.type == .webView ? "Preview" : "Artifact", systemImage: node.type == .webView ? "play.rectangle" : "square.and.pencil")
-                    }
-
-                NavigationStack {
-                    NodeAgentChatView(nodeID: node.id, store: store)
-                }
-                .tabItem {
-                    Label("Agent", systemImage: "sparkles")
-                }
-            }
+        if currentNode.type == .miniApp {
+            MiniAppPreviewShell(node: currentNode, store: store)
         } else {
-            HStack(spacing: 0) {
-                editorContent
-                    .frame(maxWidth: .infinity)
-                
-                Divider()
-                
-                NavigationStack {
-                    NodeAgentChatView(nodeID: node.id, store: store)
-                }
-                .frame(width: 400)
+            MiniAppSettingsView(node: currentNode, store: store) {
+                dismiss()
             }
         }
-    }
-
-    @ViewBuilder
-    private var editorContent: some View {
-        if currentNode.type == .firebase {
-            FirebaseConfigNodeEditorView(node: currentNode, store: store)
-        } else if currentNode.type == .webView {
-            NavigationView {
-                ZStack {
-                    Color(uiColor: .systemBackground).ignoresSafeArea()
-                    
-                    if let html = node.htmlContent {
-                        HTMLWebView(htmlContent: html)
-                            .ignoresSafeArea()
-                    } else {
-                        Text("No content to display.")
-                            .foregroundColor(.gray)
-                    }
-                }
-                .navigationTitle(currentNode.displayTitle)
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button("Done") {
-                            dismiss()
-                        }
-                        .fontWeight(.semibold)
-                    }
-                }
-            }
-        } else if currentNode.type == .code {
-            CodeEditorView(node: currentNode, store: store)
-        } else if currentNode.type == .srs {
-            SRSEditorView(node: currentNode, store: store)
-        } else {
-            NavigationView {
-                ZStack {
-                    // Background
-                    themeColor.opacity(0.05).ignoresSafeArea()
-                    
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 24) {
-                            // Header Section
-                            
-                            Section(header: Text("Agent Profile").font(.caption).foregroundStyle(.secondary)) {
-                                VStack(alignment: .leading, spacing: 12) {
-                                    TextField("Role Name (e.g. QA Agent)", text: Binding(
-                                        get: { node.agentProfile.roleName },
-                                        set: { store.updateNodeAgentProfile(id: node.id, profile: AgentProfile(systemPrompt: node.agentProfile.systemPrompt, roleName: $0, isAutoTriggerEnabled: node.agentProfile.isAutoTriggerEnabled)) }
-                                    ))
-                                    .textFieldStyle(.roundedBorder)
-
-                                    Text("System Prompt")
-                                        .font(.caption2)
-                                        .foregroundColor(.secondary)
-                                    TextEditor(text: Binding(
-                                        get: { node.agentProfile.systemPrompt ?? "" },
-                                        set: { store.updateNodeAgentProfile(id: node.id, profile: AgentProfile(systemPrompt: $0.isEmpty ? nil : $0, roleName: node.agentProfile.roleName, isAutoTriggerEnabled: node.agentProfile.isAutoTriggerEnabled)) }
-                                    ))
-                                    .frame(minHeight: 100)
-                                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.secondary.opacity(0.2)))
-                                    
-                                    Toggle("Auto-Trigger Downstream", isOn: Binding(
-                                        get: { node.agentProfile.isAutoTriggerEnabled },
-                                        set: { store.updateNodeAgentProfile(id: node.id, profile: AgentProfile(systemPrompt: node.agentProfile.systemPrompt, roleName: node.agentProfile.roleName, isAutoTriggerEnabled: $0)) }
-                                    ))
-                                }
-                            }
-                            
-                            HStack(spacing: 20) {
-                                if let icon = node.icon {
-                                    ZStack {
-                                        Circle()
-                                            .fill(themeColor.opacity(0.15))
-                                            .frame(width: 80, height: 80)
-                                        
-                                        Image(systemName: icon)
-                                            .font(.system(size: 32, weight: .bold))
-                                            .foregroundColor(themeColor)
-                                    }
-                                }
-                                
-                                VStack(alignment: .leading, spacing: 4) {
-                                    HStack(spacing: 8) {
-                                        if isEditingTitle {
-                                            TextField("Node Name", text: Binding(
-                                                get: { currentNode.title },
-                                                set: { store.updateNodeTitle(id: node.id, title: $0) }
-                                            ))
-                                            .font(.system(size: 28, weight: .bold, design: .rounded))
-                                            .focused($isTitleFocused)
-                                            .submitLabel(.done)
-                                            .onSubmit { isEditingTitle = false }
-                                        } else {
-                                            Text(currentNode.title)
-                                                .font(.system(size: 28, weight: .bold, design: .rounded))
-                                        }
-                                        
-                                        Button {
-                                            isEditingTitle.toggle()
-                                            isTitleFocused = isEditingTitle
-                                        } label: {
-                                            Image(systemName: isEditingTitle ? "checkmark.circle.fill" : "pencil.line")
-                                                .font(.system(size: 18))
-                                                .foregroundColor(isEditingTitle ? .green : .secondary)
-                                                .opacity(0.8)
-                                        }
-                                    }
-                                    
-                                    Text(currentNode.type.displayName)
-                                        .font(.system(size: 16, weight: .medium))
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-                            .padding(.top, 20)
-                            
-                            Divider()
-                            
-                            // Aesthetics & Role Section (Only for protected/navigation nodes)
-                            if currentNode.isProtected {
-                                Section(header: Text("Configuration").font(.caption).foregroundStyle(.secondary)) {
-                                    HStack(spacing: 12) {
-                                        Picker("Theme", selection: Binding(
-                                            get: { currentNode.theme },
-                                            set: { store.updateNodeTheme(id: node.id, theme: $0) }
-                                        )) {
-                                            ForEach(NodeTheme.allCases, id: \.self) { theme in
-                                                Circle().fill(theme.color).frame(width: 20, height: 20).tag(theme)
-                                            }
-                                        }
-                                        .pickerStyle(.menu)
-                                        .buttonStyle(.bordered)
-                                        
-                                        Picker("Role", selection: Binding(
-                                            get: { currentNode.type },
-                                            set: { store.updateNodeType(id: node.id, type: $0) }
-                                        )) {
-                                            ForEach(NodeType.allCases, id: \.self) { type in
-                                                Text(type.displayName).tag(type)
-                                            }
-                                        }
-                                        .pickerStyle(.menu)
-                                        .buttonStyle(.bordered)
-                                    }
-                                }
-                            }
-                            
-                            if !currentNode.isProtected {
-                                Divider()
-                                
-                                Button(role: .destructive) {
-                                    HapticsManager.shared.notification(.warning)
-                                    store.deleteNode(id: node.id)
-                                    dismiss()
-                                } label: {
-                                    Label("Delete Node", systemImage: "trash")
-                                        .frame(maxWidth: .infinity)
-                                        .padding()
-                                        .background(Color.red.opacity(0.1))
-                                        .cornerRadius(12)
-                                }
-                                .padding(.vertical)
-                            }
-                            
-                            Spacer()
-                        }
-                        .padding(24)
-                    }
-                    .interactiveKeyboardDismiss()
-                }
-                .navigationTitle("Node Inspector")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button("Done") { dismiss() }.fontWeight(.semibold)
-                    }
-                }
-            }
-        }
-    }
-    
-    private var themeColor: Color {
-        currentNode.theme.color
     }
 }
 
-struct DetailTag: View {
-    let label: String
-    let value: String
-    
+private enum MiniAppTool: String, Identifiable {
+    case srs
+    case code
+    case firebase
+    case agent
+    case settings
+
+    var id: String { rawValue }
+}
+
+private struct MiniAppPreviewShell: View {
+    let node: SpatialNode
+    let store: ProjectStore
+
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.undoManager) private var undoManager
+    @State private var showingActions = false
+    @State private var activeTool: MiniAppTool?
+
+    private var currentNode: SpatialNode {
+        store.nodes.first(where: { $0.id == node.id }) ?? node
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(LocalizationManager.shared.localizedString(label).uppercased())
-                .font(.system(size: 10, weight: .bold))
-                .foregroundColor(.secondary)
-            
-            Text(value)
-                .font(.system(size: 14, weight: .semibold))
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(Color.secondary.opacity(0.1))
-                .cornerRadius(8)
+        ZStack {
+            Color(uiColor: .systemBackground).ignoresSafeArea()
+
+            if let html = currentNode.miniApp?.compiledHTML {
+                HTMLWebView(htmlContent: html)
+                    .ignoresSafeArea()
+            } else {
+                Text("No preview to display.")
+                    .foregroundStyle(.secondary)
+            }
+
+            FloatingCommandButton(
+                onTap: { showingActions = true },
+                onUndo: {
+                    undoManager?.undo()
+                    store.undoStackChanged += 1
+                },
+                onSummonCoCaptain: { activeTool = .agent },
+                onRedo: {
+                    undoManager?.redo()
+                    store.undoStackChanged += 1
+                },
+                canUndo: undoManager?.canUndo ?? false,
+                canRedo: undoManager?.canRedo ?? false
+            )
+        }
+        .confirmationDialog("Mini-App", isPresented: $showingActions, titleVisibility: .visible) {
+            Button("SRS") { activeTool = .srs }
+            Button("Code") { activeTool = .code }
+            Button("Firebase") { activeTool = .firebase }
+            Button("Agent") { activeTool = .agent }
+            Button("Settings") { activeTool = .settings }
+            Button("Back to Canvas") { dismiss() }
+            Button("Cancel", role: .cancel) {}
+        }
+        .sheet(item: $activeTool) { tool in
+            switch tool {
+            case .srs:
+                SRSEditorView(node: currentNode, store: store)
+            case .code:
+                CodeEditorView(node: currentNode, store: store)
+            case .firebase:
+                FirebaseConfigNodeEditorView(node: currentNode, store: store)
+            case .agent:
+                NavigationStack {
+                    NodeAgentChatView(nodeID: currentNode.id, store: store)
+                }
+            case .settings:
+                MiniAppSettingsView(node: currentNode, store: store) {
+                    dismiss()
+                }
+            }
+        }
+    }
+}
+
+private struct MiniAppSettingsView: View {
+    let node: SpatialNode
+    let store: ProjectStore
+    let onDelete: () -> Void
+
+    @Environment(\.dismiss) private var dismiss
+
+    private var currentNode: SpatialNode {
+        store.nodes.first(where: { $0.id == node.id }) ?? node
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Identity") {
+                    TextField("Name", text: Binding(
+                        get: { currentNode.title },
+                        set: { store.updateNodeTitle(id: node.id, title: $0) }
+                    ))
+
+                    TextField("Subtitle", text: Binding(
+                        get: { currentNode.subtitle ?? "" },
+                        set: { store.updateNodeSubtitle(id: node.id, subtitle: $0.isEmpty ? nil : $0) }
+                    ))
+
+                    TextField("SF Symbol", text: Binding(
+                        get: { currentNode.icon ?? "" },
+                        set: { store.updateNodeIcon(id: node.id, icon: $0.isEmpty ? nil : $0) }
+                    ))
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+
+                    Picker("Theme", selection: Binding(
+                        get: { currentNode.theme },
+                        set: { store.updateNodeTheme(id: node.id, theme: $0) }
+                    )) {
+                        ForEach(NodeTheme.allCases, id: \.self) { theme in
+                            Text(theme.rawValue.capitalized).tag(theme)
+                        }
+                    }
+                }
+
+                Section("Agent Profile") {
+                    TextField("Role Name", text: Binding(
+                        get: { currentNode.agentProfile.roleName },
+                        set: {
+                            store.updateNodeAgentProfile(
+                                id: node.id,
+                                profile: AgentProfile(
+                                    systemPrompt: currentNode.agentProfile.systemPrompt,
+                                    roleName: $0,
+                                    isAutoTriggerEnabled: currentNode.agentProfile.isAutoTriggerEnabled
+                                )
+                            )
+                        }
+                    ))
+
+                    TextEditor(text: Binding(
+                        get: { currentNode.agentProfile.systemPrompt ?? "" },
+                        set: {
+                            store.updateNodeAgentProfile(
+                                id: node.id,
+                                profile: AgentProfile(
+                                    systemPrompt: $0.isEmpty ? nil : $0,
+                                    roleName: currentNode.agentProfile.roleName,
+                                    isAutoTriggerEnabled: currentNode.agentProfile.isAutoTriggerEnabled
+                                )
+                            )
+                        }
+                    ))
+                    .frame(minHeight: 120)
+
+                    Toggle("Auto-Trigger Downstream", isOn: Binding(
+                        get: { currentNode.agentProfile.isAutoTriggerEnabled },
+                        set: {
+                            store.updateNodeAgentProfile(
+                                id: node.id,
+                                profile: AgentProfile(
+                                    systemPrompt: currentNode.agentProfile.systemPrompt,
+                                    roleName: currentNode.agentProfile.roleName,
+                                    isAutoTriggerEnabled: $0
+                                )
+                            )
+                        }
+                    ))
+                }
+
+                if !currentNode.isProtected {
+                    Section {
+                        Button("Delete Node", role: .destructive) {
+                            HapticsManager.shared.notification(.warning)
+                            store.deleteNode(id: node.id)
+                            dismiss()
+                            onDelete()
+                        }
+                    }
+                }
+            }
+            .navigationTitle(currentNode.type == .miniApp ? "Mini-App Settings" : "Node Settings")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") { dismiss() }
+                        .fontWeight(.semibold)
+                }
+            }
         }
     }
 }

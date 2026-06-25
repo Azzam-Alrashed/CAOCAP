@@ -135,7 +135,7 @@ public final class AppActionDispatcher: AppActionPerforming {
         ),
         AppActionDefinition(
             id: .createNode,
-            title: "Create New Node",
+            title: "Create Mini-App",
             icon: "plus.square",
             category: .project,
             isMutating: true,
@@ -143,8 +143,8 @@ public final class AppActionDispatcher: AppActionPerforming {
         ),
         AppActionDefinition(
             id: .createFirebaseNode,
-            title: "Create Firebase Node",
-            icon: "flame.fill",
+            title: "Create Mini-App",
+            icon: "app.connected.to.app.below.fill",
             category: .project,
             isMutating: true,
             allowsAutonomousExecution: true

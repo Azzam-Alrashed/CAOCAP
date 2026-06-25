@@ -21,18 +21,21 @@ struct InfiniteCanvasView: View {
     var onNodeAction: ((NodeAction) -> Void)? = nil
     
     var onNavigateToSubCanvas: ((String) -> Void)? = nil
+    var onRecoverUnsupportedProject: (() -> Void)? = nil
     
-    init(store: ProjectStore, viewport: Binding<ViewportState>, currentScale: Binding<CGFloat>, onNodeAction: ((NodeAction) -> Void)? = nil, onNavigateToSubCanvas: ((String) -> Void)? = nil) {
+    init(store: ProjectStore, viewport: Binding<ViewportState>, currentScale: Binding<CGFloat>, onNodeAction: ((NodeAction) -> Void)? = nil, onNavigateToSubCanvas: ((String) -> Void)? = nil, onRecoverUnsupportedProject: (() -> Void)? = nil) {
         self.store = store
         self._viewport = viewport
         self._currentScale = currentScale
         self.onNodeAction = onNodeAction
         self.onNavigateToSubCanvas = onNavigateToSubCanvas
+        self.onRecoverUnsupportedProject = onRecoverUnsupportedProject
     }
     
     // Drag offsets stay local until the drag ends so links and nodes can track
     // the finger smoothly without writing every intermediate frame to ProjectStore.
     @State private var selectedNode: SpatialNode?
+    @State private var fullScreenMiniApp: SpatialNode?
     @State private var nodeDragOffsets: [UUID: CGSize] = [:]
     @State private var isDraggingNode = false
     @State private var nodeFrames: [UUID: NodeFrameData] = [:]
@@ -99,6 +102,8 @@ struct InfiniteCanvasView: View {
                                     onNodeAction?(action)
                                 } else if node.type == .subCanvas, let fileName = node.linkedCanvasFileName {
                                     onNavigateToSubCanvas?(fileName)
+                                } else if node.type == .miniApp {
+                                    fullScreenMiniApp = node
                                 } else {
                                     selectedNode = node
                                 }
@@ -153,6 +158,15 @@ struct InfiniteCanvasView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .scaleEffect(viewport.scale)
                 .offset(viewport.offset)
+
+                if let message = store.unsupportedProjectMessage {
+                    UnsupportedProjectCard(
+                        message: message,
+                        onCreateFreshCanvas: { onRecoverUnsupportedProject?() }
+                    )
+                    .frame(maxWidth: 460)
+                    .padding(24)
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .contentShape(Rectangle()) // Ensure the entire area is gesture-sensitive.
@@ -213,6 +227,9 @@ struct InfiniteCanvasView: View {
         .background(backgroundColor)
         .edgesIgnoringSafeArea(.all)
         .sheet(item: $selectedNode) { node in
+            NodeDetailView(node: node, store: store)
+        }
+        .fullScreenCover(item: $fullScreenMiniApp) { node in
             NodeDetailView(node: node, store: store)
         }
         .onAppear {
@@ -287,4 +304,37 @@ private struct TrackpadPanGesture: UIGestureRecognizerRepresentable {
 
 #Preview {
     InfiniteCanvasView(store: ProjectStore(), viewport: .constant(ViewportState()), currentScale: .constant(1.0), onNodeAction: nil)
+}
+
+private struct UnsupportedProjectCard: View {
+    let message: String
+    let onCreateFreshCanvas: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Label("Project format changed", systemImage: "exclamationmark.triangle.fill")
+                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .foregroundStyle(.primary)
+
+            Text(message)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Button(action: onCreateFreshCanvas) {
+                Label("Create Fresh Mini-App Canvas", systemImage: "plus.square.fill")
+                    .font(.system(size: 15, weight: .bold))
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+        }
+        .padding(22)
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(.white.opacity(0.16), lineWidth: 1)
+        }
+        .shadow(color: .black.opacity(0.25), radius: 24, y: 12)
+    }
 }

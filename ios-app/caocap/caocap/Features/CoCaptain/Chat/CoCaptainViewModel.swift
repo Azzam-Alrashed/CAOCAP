@@ -297,7 +297,7 @@ public final class CoCaptainViewModel {
                     )
                 )
             }
-        case .nodeEdit(let role, let operations, let baseText):
+        case .nodeEdit(let role, let section, let operations, let baseText):
             guard let store,
                   let node = patchEngine.resolveNode(nodeID: item.targetNodeID, for: role, in: store) else {
                 item.status = .conflicted
@@ -305,15 +305,28 @@ public final class CoCaptainViewModel {
                 break
             }
 
-            guard (node.textContent ?? "") == baseText else {
+            let currentText: String
+            switch section {
+            case .srs:
+                currentText = node.miniApp?.srsText ?? ""
+            case .code:
+                currentText = node.miniApp?.codeText ?? ""
+            }
+
+            guard currentText == baseText else {
                 item.status = .conflicted
                 item.conflictDescription = LocalizationManager.shared.localizedString("This node was edited after the suggestion was generated. Ask Co-Captain to revise.")
                 break
             }
 
             do {
-                let preview = try patchEngine.preview(nodeID: item.targetNodeID, role: role, operations: operations, in: store)
-                store.updateNodeTextContent(id: node.id, text: preview.resultText, persist: true)
+                let preview = try patchEngine.preview(nodeID: item.targetNodeID, role: role, section: section, operations: operations, in: store)
+                switch section {
+                case .srs:
+                    store.updateMiniAppSRS(id: node.id, text: preview.resultText, persist: true)
+                case .code:
+                    store.updateMiniAppCode(id: node.id, text: preview.resultText, persist: true)
+                }
                 item.status = .applied
                 items.append(
                     CoCaptainTimelineItem(

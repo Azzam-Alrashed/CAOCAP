@@ -15,9 +15,10 @@ struct ProjectTemplateProviderTests {
     
     @Test func nodesForHelloWorldTemplate() {
         let nodes = ProjectTemplateProvider.nodes(for: .helloWorld)
-        #expect(nodes.count == 3)
-        #expect(nodes.contains(where: { $0.type == .srs }))
-        #expect(nodes.contains(where: { $0.type == .code }))
-        #expect(nodes.contains(where: { $0.type == .webView }))
+        #expect(nodes.count == 1)
+        let miniApp = nodes.first
+        #expect(miniApp?.type == .miniApp)
+        #expect(miniApp?.miniApp?.srsText.contains("# Intent") == true)
+        #expect(miniApp?.miniApp?.codeText.contains("Hello World!") == true)
     }
 }

@@ -46,7 +46,7 @@ The model may include one trailing XML block:
     <action id="id" />
   </pending_actions>
   <node_edits>
-    <node_edit role="code" summary="Update headline">
+    <node_edit role="miniApp" section="code" summary="Update headline">
       <operation type="replace_all">
         <content><![CDATA[<h1>New text</h1>]]></content>
       </operation>
@@ -61,7 +61,7 @@ Rules:
 - Malformed XML falls back to visible text with no payload.
 - `safeActions` may only contain available, non-mutating, autonomous actions.
 - `pendingActions` are shown for review before execution and are required for mutating or non-autonomous app actions.
-- `nodeEdits` target `NodeRole` values and `NodePatchOperation` arrays. Editable canonical roles are `srs` and `code`.
+- `nodeEdits` target Mini-App nodes by `nodeId`, `role="miniApp"`, and `section="srs"` or `section="code"`, plus `NodePatchOperation` arrays.
 - Node edits require a non-empty summary and at least one operation.
 - Exact operations require a non-empty target.
 
@@ -73,7 +73,7 @@ If this payload changes, update parser/coordinator tests and the prompt contract
 
 ## Review Safety
 
-Node edits store their original `baseText` when the review bundle is created. On apply, the view model checks that the current node text still matches that base text before applying operations. This prevents silently overwriting user edits made after the model response.
+Node edits store their original section `baseText` when the review bundle is created. On apply, the view model checks that the current Mini-App section text still matches that base text before applying operations. This prevents silently overwriting user edits made after the model response.
 
 Preserve this conflict guard when refactoring review state.
 
@@ -89,7 +89,7 @@ Preserve this conflict guard when refactoring review state.
 - Be careful with cancellation: closing the sheet cancels streaming and removes empty assistant messages.
 - Keep validation near the coordinator boundary. SwiftUI views should render review state, not decide whether model output is safe.
 - Keep raw model wire formats behind output adapters. The coordinator should consume directives, not Firebase/Gemini-specific response parts.
-- Keep app actions in `request_app_action`; keep code/content changes in `nodeEdits`, preferring the Code node for new projects.
+- Keep app actions in `request_app_action`; keep Mini-App SRS/code changes in `nodeEdits`.
 - Keep free-tier quota enforcement in `LLMService`/`TokenUsageLimiter`; CoCaptain UI should only surface quota state when a hard limit blocks a request, then route upgrades through a product CTA. Review bundles are reserved for workspace changes and assistant-proposed app actions.
 
 ## Verification Checklist
@@ -99,7 +99,7 @@ Preserve this conflict guard when refactoring review state.
 - Open the input plus menu and confirm quick prompts send once.
 - Send a direct navigation command and confirm safe actions execute or review appears as expected.
 - Ask for a code change and confirm review items are created rather than auto-applied.
-- Apply a node edit and confirm the target node updates plus Live Preview recompiles.
+- Apply a Mini-App code edit and confirm the target Mini-App section updates plus the preview recompiles.
 - Modify a node after a review bundle is created, then apply the stale review item and confirm it conflicts.
 - Switch projects while streaming and confirm the task cancels and history resets.
 

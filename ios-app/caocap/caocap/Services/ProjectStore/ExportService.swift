@@ -16,7 +16,7 @@ public struct ExportService {
         let projectName = store.projectName
         let fileName = store.fileName
         let nodes = store.nodes
-        let srsText = nodes.first(where: { $0.role == .srs })?.textContent?
+        let srsText = nodes.first(where: { $0.type == .miniApp })?.miniApp?.srsText
             .trimmingCharacters(in: .whitespacesAndNewlines)
             
         return await export(
