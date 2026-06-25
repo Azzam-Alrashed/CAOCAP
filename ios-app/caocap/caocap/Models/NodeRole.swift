@@ -3,9 +3,6 @@ import Foundation
 public enum NodeRole: String, CaseIterable, Codable, Hashable {
     case srs
     case code
-    case html
-    case css
-    case javascript
     case livePreview
     case firebase
     case subCanvas
@@ -13,19 +10,13 @@ public enum NodeRole: String, CaseIterable, Codable, Hashable {
 
     public static let editableCanonicalRoles: [NodeRole] = [
         .srs,
-        .code,
-        .html,
-        .css,
-        .javascript
+        .code
     ]
 
     public var displayName: String {
         switch self {
         case .srs: return "SRS"
         case .code: return "Code"
-        case .html: return "HTML"
-        case .css: return "CSS"
-        case .javascript: return "JavaScript"
         case .livePreview: return "Live Preview"
         case .firebase: return "Firebase"
         case .subCanvas: return "Sub-Canvas"
@@ -54,16 +45,7 @@ public extension SpatialNode {
         case .srs:
             return .srs
         case .code:
-            switch title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
-            case "html":
-                return .html
-            case "css":
-                return .css
-            case "javascript":
-                return .javascript
-            default:
-                return .code
-            }
+            return .code
         case .firebase:
             return .firebase
         case .subCanvas:

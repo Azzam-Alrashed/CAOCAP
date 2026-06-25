@@ -13,7 +13,7 @@ This document tracks the current product milestones for CAOCAP. The near-term pr
 - [x] **Node Linking**: Visual Bezier-curve connections between nodes (1-to-N directed graph).
 - [x] **Live Preview WebView**: 9:16 `WKWebView` node with full-screen immersive sheet.
 - [x] **Native Code Editors**: Syntax-highlighted unified `CodeEditorView` for the Code node + SRS Zen Mode editor.
-- [x] **Live Compilation Engine**: Real-time `SRS -> Code -> WebView` rendering, debounced at 500ms, with legacy HTML/CSS/JS project support.
+- [x] **Live Compilation Engine**: Real-time `SRS -> Code -> WebView` rendering, debounced at 500ms.
 - [x] **Monetization (Pro)**: StoreKit 2 subscription integration.
 - [x] **Firebase Integration**: Authentication (Apple, Google, GitHub) and AI Logic infrastructure.
 - [x] **App Store Compliance**: Privacy Policy, Terms of Service, data usage declarations.
