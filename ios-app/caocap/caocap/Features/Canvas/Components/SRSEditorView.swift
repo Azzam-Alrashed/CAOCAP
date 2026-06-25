@@ -150,6 +150,7 @@ struct SRSEditorView: View {
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
         .background(Color(uiColor: .secondarySystemBackground).opacity(0.65))
+        .dismissKeyboardOnTap()
     }
 
     private var editor: some View {

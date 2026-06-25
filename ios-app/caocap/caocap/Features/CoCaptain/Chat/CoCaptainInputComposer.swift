@@ -15,10 +15,7 @@ struct CoCaptainInputComposer: View {
     
     @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
     @State private var localModelManager = LocalMLXModelManager.shared
-    
-    // Onboarding glow animation states
-    @State private var onboardingGlowScale: CGFloat = 1.0
-    @State private var onboardingGlowOpacity: CGFloat = 0.8
+    @State private var isContextVisible = false
 
     private var isInputValid: Bool {
         !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -26,6 +23,11 @@ struct CoCaptainInputComposer: View {
 
     private var canSend: Bool {
         isInputValid && !isThinking
+    }
+
+    private var isChatOnboardingActive: Bool {
+        guard let onboarding else { return false }
+        return onboarding.currentStep == .chatCoCaptain && onboarding.showPopover
     }
 
     var body: some View {
@@ -63,12 +65,13 @@ struct CoCaptainInputComposer: View {
                 .transition(.move(edge: .top).combined(with: .opacity))
             }
 
-            if let store {
+            if isContextVisible, let store {
                 ContextPill(
                     projectName: store.projectName,
                     fileName: store.fileName,
                     nodeCount: store.nodes.count
                 )
+                .transition(.move(edge: .top).combined(with: .opacity))
             }
 
             HStack(alignment: .bottom, spacing: 8) {
@@ -80,10 +83,25 @@ struct CoCaptainInputComposer: View {
             .padding(.bottom, 10)
         }
         .background(Color.primary.opacity(0.02))
+        .animation(.spring(response: 0.25, dampingFraction: 0.85), value: isContextVisible)
     }
 
     private var quickPromptMenu: some View {
         Menu {
+            if store != nil {
+                Button {
+                    isContextVisible.toggle()
+                } label: {
+                    Label(
+                        isContextVisible ? "Hide Canvas Context" : "Show Canvas Context",
+                        systemImage: "scope"
+                    )
+                }
+                .disabled(isThinking)
+
+                Divider()
+            }
+
             Button {
                 onQuickPrompt("Summarize the current canvas and point out the most important next step.")
             } label: {
@@ -110,6 +128,11 @@ struct CoCaptainInputComposer: View {
                 .foregroundColor(.blue)
                 .shadow(color: .blue.opacity(0.2), radius: 4)
         }
+        .simultaneousGesture(
+            TapGesture().onEnded {
+                isFocused = false
+            }
+        )
         .padding(.bottom, 6)
     }
 
@@ -144,43 +167,20 @@ struct CoCaptainInputComposer: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
         }
-        .background(Color.primary.opacity(0.06))
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color.primary.opacity(0.06))
+        )
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(isFocused ? Color.blue.opacity(0.3) : Color.clear, lineWidth: 1.5)
+                .stroke(
+                    isChatOnboardingActive || isFocused ? Color.blue.opacity(isChatOnboardingActive ? 0.55 : 0.3) : Color.clear,
+                    lineWidth: 1.5
+                )
         )
-        .overlay {
-            if let onboarding, onboarding.currentStep == .chatCoCaptain && onboarding.showPopover {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(
-                        LinearGradient(
-                            colors: [Color(hex: "6C5CE7"), Color(hex: "0984E3")],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 2
-                    )
-                    .scaleEffect(onboardingGlowScale)
-                    .opacity(onboardingGlowOpacity)
-                    .onAppear {
-                        withAnimation(
-                            .easeInOut(duration: 1.5)
-                                .repeatForever(autoreverses: false)
-                        ) {
-                            onboardingGlowScale = 1.08
-                            onboardingGlowOpacity = 0.0
-                        }
-                    }
-            }
-        }
-        .animation(.easeInOut(duration: 0.2), value: isFocused)
         .popover(
             present: Binding(
-                get: {
-                    guard let onboarding else { return false }
-                    return onboarding.currentStep == .chatCoCaptain && onboarding.showPopover
-                },
+                get: { isChatOnboardingActive },
                 set: { newValue in
                     onboarding?.showPopover = newValue
                 }
@@ -207,11 +207,15 @@ struct CoCaptainInputComposer: View {
             }
         ) {
             if let step = onboarding?.currentStep {
-                OnboardingPopoverCard(step: step) {
+                OnboardingPopoverCard(step: step, arrowPlacement: .bottom) {
                     onboarding?.skip()
                 }
+            } else {
+                EmptyView()
             }
         }
+        .animation(.easeInOut(duration: 0.2), value: isFocused)
+        .animation(.easeInOut(duration: 0.2), value: isChatOnboardingActive)
     }
 
     private var sendButton: some View {

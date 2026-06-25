@@ -4,14 +4,11 @@ CoCaptain is the agentic assistant for CAOCAP. It reads the current spatial proj
 
 ## Ownership
 
-- `CoCaptainView` renders the timeline, input, streaming state, and review controls.
-- `CoCaptainViewModel` owns presentation state, timeline items, streaming task lifetime, direct command handling, and review item application.
-- `CoCaptainInputComposer` shows the current project context and prompt controls without persistent quota chrome.
-- `CoCaptainAgentCoordinator` orchestrates the model run: build context, stream text, parse structured actions, execute safe actions, and build review bundles.
-- `CoCaptainAgentOutputAdapter` converts raw model output into a source-agnostic directive for the coordinator.
-- `CoCaptainAgentParser` extracts the trailing structured payload from a `cocaptain-actions` fenced block.
-- `CoCaptainAgentValidator` validates parsed payloads before any app action can execute.
-- `CoCaptainAgentModels` defines timeline, review, action, and node edit domain models.
+- `Chat/` owns the CoCaptain sheet, timeline, bubbles, input composer, streaming task lifetime, direct command handling, and review item application.
+- `AgentContract/` owns the machine-readable agent contract: coordinator, parser, output adapters, validator, and shared agent/review/timeline models.
+- `Review/` owns review bundle and pending edit/action card rendering for human approval.
+- `Analysis/` owns structural parser warnings and project recommendations from the analyzer.
+- `NodeAgent/` owns the embedded node-scoped chat interface.
 
 Supporting services live outside this feature:
 
@@ -82,9 +79,9 @@ Preserve this conflict guard when refactoring review state.
 
 ## Editing Guidance
 
-- Keep UI rendering in `CoCaptainView`; keep timeline and async state in `CoCaptainViewModel`.
+- Keep sheet UI rendering in `Chat/CoCaptainView`; keep timeline and async state in `Chat/CoCaptainViewModel`.
 - Assistant chat bubbles may render Markdown for readable explanations, but raw structured payloads must stay hidden.
-- Keep model orchestration in `CoCaptainAgentCoordinator`.
+- Keep model orchestration in `AgentContract/CoCaptainAgentCoordinator`.
 - Keep payload parsing deterministic and tolerant of malformed model output.
 - Prefer adding new app capabilities through `AppActionDispatcher` and `AppActionID`.
 - Add tests when changing parser fences, action classification, review item states, patch behavior, or retry behavior.

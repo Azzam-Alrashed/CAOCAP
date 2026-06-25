@@ -38,7 +38,6 @@ public struct ProjectAnalyzer {
         let css = nodes.first(where: { $0.role == .css })
         let js = nodes.first(where: { $0.role == .javascript })
         let srs = nodes.first(where: { $0.role == .srs })
-        let preview = nodes.first(where: { $0.role == .livePreview })
 
         // Rule: SRS is empty or blank
         if let srs, srs.textContent?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true {
@@ -98,16 +97,6 @@ public struct ProjectAnalyzer {
                 detail: "Add some JavaScript to make your app interactive.",
                 suggestedPrompt: "Can you suggest some simple JavaScript interactivity for my current HTML and CSS?",
                 severity: .info
-            ))
-        }
-
-        // Rule: No live preview node
-        if preview == nil {
-            suggestions.append(ProjectSuggestion(
-                title: "Missing Preview",
-                detail: "Add a Live Preview node to see your code rendered in real-time.",
-                suggestedPrompt: "I'm missing a Live Preview node. Can you help me add one to the canvas?",
-                severity: .warning
             ))
         }
 

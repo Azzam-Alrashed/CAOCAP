@@ -30,6 +30,7 @@ struct ConsoleNodeView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .dismissKeyboardOnTap()
             }
         }
         .padding(.top, 12)

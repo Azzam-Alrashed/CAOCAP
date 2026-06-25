@@ -75,7 +75,7 @@ Find the phrase "spatial" in `ROADMAP.md`, then map each roadmap feature to a co
 - Spatial Canvas -> `Features/Canvas`
 - CoCaptain UI -> `Features/CoCaptain`
 - Context Engine -> `Services/CoCaptain/ProjectContextBuilder.swift`
-- Agentic Actions -> `Services/AppActionDispatcher.swift`
+- Agentic Actions -> `Services/AppActions/AppActionDispatcher.swift`
 
 The point is to learn that product language and code ownership line up fairly directly.
 
@@ -507,7 +507,7 @@ The generic editor handles nodes like text, number, table, calculation, display,
 - `ios-app/caocap/caocap/Features/Canvas/Components/CodeEditorView.swift`
 - `ios-app/caocap/caocap/Features/Canvas/Components/SRSEditorView.swift`
 - `ios-app/caocap/caocap/Features/Canvas/Components/HTMLWebView.swift`
-- `ios-app/caocap/caocap/Features/CoCaptain/NodeAgentChatView.swift`
+- `ios-app/caocap/caocap/Features/CoCaptain/NodeAgent/NodeAgentChatView.swift`
 
 ## Checkpoint
 
@@ -553,10 +553,10 @@ Console-related services and nodes support runtime feedback from the WebView. Th
 
 ## What To Read
 
-- `ios-app/caocap/caocap/Services/LivePreviewCompiler.swift`
+- `ios-app/caocap/caocap/Services/Runtime/LivePreviewCompiler.swift`
 - `ios-app/caocap/caocap/Services/ProjectStore/LivePreviewOrchestrator.swift`
-- `ios-app/caocap/caocap/Services/FirebasePreviewBootstrap.swift`
-- `ios-app/caocap/caocap/Services/ConsoleLogStore.swift`
+- `ios-app/caocap/caocap/Services/Runtime/FirebasePreviewBootstrap.swift`
+- `ios-app/caocap/caocap/Services/Runtime/ConsoleLogStore.swift`
 - `ios-app/caocap/caocap/Features/Canvas/Components/ConsoleNodeView.swift`
 
 ## Change Exercise
@@ -673,7 +673,7 @@ LLM output / function call
 - `ios-app/caocap/caocap/Features/Omnibox/README.md`
 - `ios-app/caocap/caocap/Features/Omnibox/CommandPaletteView.swift`
 - `ios-app/caocap/caocap/Features/Omnibox/CommandPaletteViewModel.swift`
-- `ios-app/caocap/caocap/Services/AppActionDispatcher.swift`
+- `ios-app/caocap/caocap/Services/AppActions/AppActionDispatcher.swift`
 - `ios-app/caocap/caocap/Services/CoCaptain/CommandIntentResolver.swift`
 
 ## Checkpoint
@@ -758,10 +758,10 @@ If the model is asked to build or edit something but fails to return usable stru
 ## What To Read
 
 - `ios-app/caocap/caocap/Features/CoCaptain/README.md`
-- `ios-app/caocap/caocap/Features/CoCaptain/CoCaptainViewModel.swift`
-- `ios-app/caocap/caocap/Features/CoCaptain/CoCaptainAgentCoordinator.swift`
-- `ios-app/caocap/caocap/Features/CoCaptain/CoCaptainAgentOutputAdapter.swift`
-- `ios-app/caocap/caocap/Features/CoCaptain/CoCaptainAgentValidator.swift`
+- `ios-app/caocap/caocap/Features/CoCaptain/Chat/CoCaptainViewModel.swift`
+- `ios-app/caocap/caocap/Features/CoCaptain/AgentContract/CoCaptainAgentCoordinator.swift`
+- `ios-app/caocap/caocap/Features/CoCaptain/AgentContract/CoCaptainAgentOutputAdapter.swift`
+- `ios-app/caocap/caocap/Features/CoCaptain/AgentContract/CoCaptainAgentValidator.swift`
 - `ios-app/caocap/caocap/Services/CoCaptain/ProjectContextBuilder.swift`
 - `ios-app/caocap/caocap/Services/CoCaptain/LLMService.swift`
 
@@ -808,9 +808,9 @@ This is one of the most important safety properties in the app.
 ## What To Read
 
 - `ios-app/caocap/caocap/Services/CoCaptain/NodePatchEngine.swift`
-- `ios-app/caocap/caocap/Features/CoCaptain/CoCaptainReviewViews.swift`
-- `ios-app/caocap/caocap/Features/CoCaptain/CoCaptainViewModel.swift`
-- tests covering node patch and review behavior in `ios-app/caocap/caocapTests`
+- `ios-app/caocap/caocap/Features/CoCaptain/Review/CoCaptainReviewViews.swift`
+- `ios-app/caocap/caocap/Features/CoCaptain/Chat/CoCaptainViewModel.swift`
+- tests covering node patch and review behavior in `ios-app/caocap/caocapTests/CoCaptain`
 
 ## Change Exercise
 
@@ -861,10 +861,10 @@ Compliance code and docs are not decorative. App Store readiness depends on:
 ## What To Read
 
 - `ios-app/caocap/caocap/Features/Auth/README.md`
-- `ios-app/caocap/caocap/Services/AuthenticationManager.swift`
+- `ios-app/caocap/caocap/Services/Account/AuthenticationManager.swift`
 - `ios-app/caocap/caocap/Features/Auth/SignInView.swift`
 - `ios-app/caocap/caocap/Features/Subscription/README.md`
-- `ios-app/caocap/caocap/Services/SubscriptionManager.swift`
+- `ios-app/caocap/caocap/Services/Account/SubscriptionManager.swift`
 - `ios-app/caocap/caocap/Features/Settings`
 - `ios-app/caocap/caocap/App/PrivacyInfo.xcprivacy`
 - `website/src/app`
@@ -1190,13 +1190,13 @@ SnapshotBrowserView
 | Change canvas gestures | `Features/Canvas/InfiniteCanvasView.swift`, `Features/Canvas/ViewportState.swift` |
 | Change node rendering | `Features/Canvas/Components/NodeView.swift` |
 | Change node editor routing | `Features/Canvas/Components/NodeDetailView.swift` |
-| Change code preview | `Services/LivePreviewCompiler.swift` |
+| Change code preview | `Services/Runtime/LivePreviewCompiler.swift` |
 | Change project save/load | `Services/ProjectStore/ProjectPersistenceService.swift` |
-| Change command palette behavior | `Features/Omnibox`, `Services/AppActionDispatcher.swift` |
-| Change CoCaptain behavior | `Features/CoCaptain/README.md`, `CoCaptainAgentCoordinator.swift` |
+| Change command palette behavior | `Features/Omnibox`, `Services/AppActions/AppActionDispatcher.swift` |
+| Change CoCaptain behavior | `Features/CoCaptain/README.md`, `Features/CoCaptain/AgentContract/CoCaptainAgentCoordinator.swift` |
 | Change assistant patching | `Services/CoCaptain/NodePatchEngine.swift` |
-| Change subscriptions | `Features/Subscription`, `Services/SubscriptionManager.swift` |
-| Change auth | `Features/Auth`, `Services/AuthenticationManager.swift` |
+| Change subscriptions | `Features/Subscription`, `Services/Account/SubscriptionManager.swift` |
+| Change auth | `Features/Auth`, `Services/Account/AuthenticationManager.swift` |
 | Change public policy pages | `website/src/app` |
 
 # Appendix C. Reading Questions

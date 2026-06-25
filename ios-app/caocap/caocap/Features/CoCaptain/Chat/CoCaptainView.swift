@@ -7,8 +7,6 @@ struct CoCaptainView: View {
     @FocusState private var isFocused: Bool
     
     @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
-    @State private var onboardingGlowScale: CGFloat = 1.0
-    @State private var onboardingGlowOpacity: CGFloat = 0.8
 
     var body: some View {
         @Bindable var viewModel = viewModel
@@ -17,7 +15,7 @@ struct CoCaptainView: View {
                 CoCaptainTimelineListView(
                     viewModel: viewModel,
                     lastScrollPosition: $viewModel.lastScrollPosition,
-                    isFocused: isFocused
+                    isFocused: $isFocused
                 )
 
                 CoCaptainInputComposer(
@@ -38,31 +36,8 @@ struct CoCaptainView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
+                        isFocused = false
                         viewModel.setPresented(false)
-                    }
-                    .overlay {
-                        if let onboarding, onboarding.currentStep == .dismissCoCaptain && onboarding.showPopover {
-                            Capsule()
-                                .stroke(
-                                    LinearGradient(
-                                        colors: [Color(hex: "6C5CE7"), Color(hex: "0984E3")],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    ),
-                                    lineWidth: 2
-                                )
-                                .scaleEffect(onboardingGlowScale)
-                                .opacity(onboardingGlowOpacity)
-                                .onAppear {
-                                    withAnimation(
-                                        .easeInOut(duration: 1.5)
-                                            .repeatForever(autoreverses: false)
-                                    ) {
-                                        onboardingGlowScale = 1.3
-                                        onboardingGlowOpacity = 0.0
-                                    }
-                                }
-                        }
                     }
                     .popover(
                         present: Binding(
@@ -132,6 +107,9 @@ struct CoCaptainView: View {
         text = ""
         isFocused = false
         viewModel.sendMessage(prompt)
+        if onboarding?.currentStep == .chatCoCaptain {
+            onboarding?.completeCurrentStep()
+        }
     }
 }
 
