@@ -158,28 +158,16 @@ final class NodeMutationEngine {
     }
     
     public func addNode(nodes: inout [SpatialNode], type: NodeType = .code) {
-        let baseTitle: String
-        switch type {
-        case .code: baseTitle = "New Logic"
-        case .subCanvas: baseTitle = "New Canvas"
-        default: baseTitle = type.displayName
-        }
-        let uniqueTitle = generateUniqueTitle(nodes: nodes, base: baseTitle)
+        let uniqueTitle = generateUniqueTitle(nodes: nodes, base: type.defaultTitle)
 
-        let subtitle: String?
+        let subtitle = type.defaultSubtitle
         let initialText: String?
         switch type {
         case .code:
-            subtitle = "Write your intent here."
             initialText = "// Start coding here..."
         case .firebase:
-            subtitle = "Project settings → Your apps → Web app config"
             initialText = FirebasePreviewBootstrap.placeholderConfigJSON()
-        case .subCanvas:
-            subtitle = "Tap to open this canvas"
-            initialText = nil
         default:
-            subtitle = nil
             initialText = nil
         }
 
@@ -245,14 +233,7 @@ final class NodeMutationEngine {
     }
     
     public func nodeIcon(for type: NodeType) -> String {
-        switch type {
-        case .code: return "plus.square.fill"
-        case .srs: return "doc.text.fill"
-        case .webView: return "play.display"
-        case .standard: return "square.grid.2x2"
-        case .firebase: return "flame.fill"
-        case .subCanvas: return "folder.fill"
-        }
+        type.defaultIcon
     }
 
     public func nodeTheme(for type: NodeType) -> NodeTheme {

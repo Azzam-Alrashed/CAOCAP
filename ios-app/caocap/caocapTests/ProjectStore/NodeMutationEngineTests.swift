@@ -18,13 +18,15 @@ final class NodeMutationEngineTests: XCTestCase {
         XCTAssertEqual(nodes[0].type, .code)
         XCTAssertEqual(nodes[0].theme, .orange)
         XCTAssertEqual(nodes[0].textContent, "// Start coding here...")
-        XCTAssertEqual(nodes[0].title, "New Logic")
+        XCTAssertEqual(nodes[0].title, "Code")
+        XCTAssertEqual(nodes[0].icon, "chevron.left.slash.chevron.right")
+        XCTAssertEqual(nodes[0].subtitle, "HTML, CSS, and JavaScript in one file.")
         
         engine.addNode(nodes: &nodes, type: .srs)
         XCTAssertEqual(nodes.count, 2)
         XCTAssertEqual(nodes[1].type, .srs)
         XCTAssertEqual(nodes[1].theme, .purple)
-        XCTAssertEqual(nodes[1].title, "Software Requirements Specification")
+        XCTAssertEqual(nodes[1].title, "Software Requirements (SRS)")
         
         engine.addNode(nodes: &nodes, type: .firebase)
         XCTAssertEqual(nodes.count, 3)
@@ -57,6 +59,24 @@ final class NodeMutationEngineTests: XCTestCase {
 
         XCTAssertEqual(srsNode.applyingCanonicalThemeIfNeeded().theme, .purple)
         XCTAssertEqual(previewNode.applyingCanonicalThemeIfNeeded().theme, .blue)
+    }
+
+    func testApplyingCanonicalThemeRepairsLegacyCodeNodePresentation() {
+        let legacyCode = SpatialNode(
+            type: .code,
+            position: .zero,
+            title: "New Logic",
+            subtitle: "Write your intent here.",
+            icon: "plus.square.fill",
+            theme: .blue
+        )
+
+        let repaired = legacyCode.applyingCanonicalThemeIfNeeded()
+
+        XCTAssertEqual(repaired.title, "Code")
+        XCTAssertEqual(repaired.icon, "chevron.left.slash.chevron.right")
+        XCTAssertEqual(repaired.subtitle, "HTML, CSS, and JavaScript in one file.")
+        XCTAssertEqual(repaired.theme, .orange)
     }
     
     func testDeleteNodeCleansUpConnections() {
