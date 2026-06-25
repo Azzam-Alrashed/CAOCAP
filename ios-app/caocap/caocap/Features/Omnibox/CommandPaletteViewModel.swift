@@ -137,6 +137,12 @@ public class CommandPaletteViewModel {
     public func executeAction(_ action: AppActionDefinition) {
         logger.info("Executing action: \(action.title)")
         onExecute?(action.id)
+        if action.id == .showActionsList {
+            query = ""
+            selectedIndex = 0
+            setPresented(true, mode: .actionsList)
+            return
+        }
         setPresented(false)
     }
 

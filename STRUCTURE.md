@@ -253,7 +253,6 @@ The spatial runtime — the heart of CAOCAP.
 | `HTMLWebView.swift` | Thin `UIViewRepresentable` wrapping `WKWebView`. Receives compiled HTML payloads and renders them. Scroll disabled for canvas embedding. |
 | `DottedBackground.swift` | The infinite dotted grid. Renders efficiently using `Canvas` and adapts to the current viewport transform. |
 | `FirebaseConfigNodeEditorView.swift` | Sub-view panel for setting up configuration keys for Firebase integrations. |
-| `NodeCreationMenuView.swift` | Selection menu showing all available nodes to construct on the canvas. |
 
 **`Providers/`** — Static node graph factories:
 
