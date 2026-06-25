@@ -61,7 +61,7 @@ Rules:
 - Malformed XML falls back to visible text with no payload.
 - `safeActions` may only contain available, non-mutating, autonomous actions.
 - `pendingActions` are shown for review before execution and are required for mutating or non-autonomous app actions.
-- `nodeEdits` target `NodeRole` values and `NodePatchOperation` arrays. New projects should target the `code` role; legacy `html`, `css`, and `javascript` roles remain supported for older saved projects.
+- `nodeEdits` target `NodeRole` values and `NodePatchOperation` arrays. Editable canonical roles are `srs` and `code`.
 - Node edits require a non-empty summary and at least one operation.
 - Exact operations require a non-empty target.
 

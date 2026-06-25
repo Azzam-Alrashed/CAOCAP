@@ -109,22 +109,18 @@ public class ProjectStore {
         }
         
         do {
-            let result = try persistence.load(fileName: fileName)
-            apply(snapshot: result.snapshot)
-            logger.info("Successfully loaded project (v\(result.sourceSchemaVersion)) from disk.")
-            
-            // If we migrated, schedule a save to modernize the file
-            if result.didMigrate {
-                requestSave(showIndicator: false)
+            let snapshot = try persistence.load(fileName: fileName)
+            apply(snapshot: snapshot)
+            logger.info("Successfully loaded project (v\(snapshot.schemaVersion)) from disk.")
+        } catch ProjectPersistenceError.unsupportedSchemaVersion(let version, let current) {
+            if let version {
+                logger.error("Project schema version \(version) is not supported (expected \(current)). Using defaults without overwriting file.")
+            } else {
+                logger.error("Project is missing schema version (expected \(current)). Using defaults without overwriting file.")
             }
-        } catch ProjectPersistenceError.unsupportedFutureVersion(let version, let current) {
-            logger.error("Project version \(version) is newer than app version \(current). Aborting load to prevent data loss.")
-            // Fallback to defaults to prevent a crash, but log heavily.
             self.nodes = initialNodes ?? []
-            return
         } catch {
             logger.error("Failed to load project: \(error.localizedDescription)")
-            // Fallback to initial nodes if data is corrupted or missing
             self.nodes = initialNodes ?? []
         }
         

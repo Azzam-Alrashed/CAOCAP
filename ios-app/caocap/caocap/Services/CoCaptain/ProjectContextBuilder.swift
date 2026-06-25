@@ -158,11 +158,11 @@ public struct ProjectContextBuilder {
     private static func firebaseWiringRulesBulletList() -> String {
         """
         Wiring rules for you (CoCaptain):
-        - Live Preview loads this config and sets `window.__caocapFirestore` when valid. Check `window.__caocapFirestoreStatus === 'ready'`; if not ready, read `window.__caocapFirestoreLastError` — do **not** call `initializeApp` again in the JavaScript node.
+        - Live Preview loads this config and sets `window.__caocapFirestore` when valid. Check `window.__caocapFirestoreStatus === 'ready'`; if not ready, read `window.__caocapFirestoreLastError` — do **not** call `initializeApp` again in the code node.
         - Always guard: `const db = window.__caocapFirestore; if (!db) { … }`
         - **Firestore compat:** `db.collection('segment')` only accepts a **single** collection id (e.g. `leads`). For nested paths like `users/UID/items`, use `db.collection('users').doc(uid).collection('items')` — never pass a slash string into `collection()`.
         - If `window.__caocapFirestoreDefaultPath` is one segment, `db.collection(window.__caocapFirestoreDefaultPath)` is OK; if it contains `/`, build `doc()` / `collection()` chains instead.
-        - To persist data, emit **`javascript` `node_edits`** using `.add()`, `.set({ merge: true })`, etc., after DOM ready or inside click/submit handlers. Match **real** HTML `id` / `name` attributes from the HTML node.
+        - To persist data, emit **`code` `node_edits`** with inline JavaScript using `.add()`, `.set({ merge: true })`, etc., after DOM ready or inside click/submit handlers. Match **real** HTML `id` / `name` attributes from the code node content.
         - Remind the user: **Firestore Security Rules** must allow the intended client reads/writes (permission-denied often looks like “not saving”).
         """
     }
@@ -178,7 +178,7 @@ public struct ProjectContextBuilder {
         
         var context = "SRS Readiness: \(state.contextLabel)"
         
-        let hasImplementationNodes = store.nodes.contains(where: { $0.role == .code || $0.role == .html || $0.role == .javascript || $0.role == .css })
+        let hasImplementationNodes = store.nodes.contains(where: { $0.role == .code })
         if !hasImplementationNodes {
             context += "\nImplementation State: Blank Canvas (No code nodes exist yet)"
         }

@@ -74,8 +74,7 @@ public actor ProjectManager {
     
     public func renameProject(fileName: String, newName: String) throws {
         let persistence = ProjectPersistenceService()
-        let result = try persistence.load(fileName: fileName)
-        let original = result.snapshot
+        let original = try persistence.load(fileName: fileName)
         let updated = ProjectSnapshot(
             schemaVersion: original.schemaVersion,
             projectName: newName,
@@ -88,8 +87,7 @@ public actor ProjectManager {
     
     public func duplicateProject(fileName: String, newName: String) throws -> String {
         let persistence = ProjectPersistenceService()
-        let result = try persistence.load(fileName: fileName)
-        let original = result.snapshot
+        let original = try persistence.load(fileName: fileName)
         
         let id = UUID().uuidString.prefix(8)
         let newFileName = "project_\(id).json"

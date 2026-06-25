@@ -5,8 +5,7 @@ public struct LivePreviewCompilation: Hashable {
     public let html: String
 }
 
-/// Produces the WebView payload from the canonical Code node, with legacy
-/// support for older projects that still have separate HTML, CSS, and JS nodes.
+/// Produces the WebView payload from the canonical Code node.
 public struct LivePreviewCompiler {
     public init() {}
 
@@ -15,41 +14,18 @@ public struct LivePreviewCompiler {
             return nil
         }
 
-        let hasFirebaseNode = nodes.contains { $0.type == .firebase }
-
-        if let codeNode = nodes.first(where: { $0.role == .code }) {
-            var compiledHTML = codeNode.textContent ?? ""
-            injectFirebaseHead(from: nodes, into: &compiledHTML)
-            injectViewportMeta(into: &compiledHTML)
-            if hasFirebaseNode {
-                injectFirebasePreviewDiagnostics(into: &compiledHTML)
-            }
-            return LivePreviewCompilation(webViewNodeID: webViewNode.id, html: compiledHTML)
-        }
-
-        guard let htmlNode = nodes.first(where: { $0.role == .html }) else {
+        guard let codeNode = nodes.first(where: { $0.role == .code }) else {
             return nil
         }
 
-        var compiledHTML = htmlNode.textContent ?? ""
+        let hasFirebaseNode = nodes.contains { $0.type == .firebase }
+
+        var compiledHTML = codeNode.textContent ?? ""
         injectFirebaseHead(from: nodes, into: &compiledHTML)
-
-        if let cssContent = nodes.first(where: { $0.role == .css })?.textContent,
-           !cssContent.isEmpty {
-            injectCSS(cssContent, into: &compiledHTML)
-        }
-
-        if let jsContent = nodes.first(where: { $0.role == .javascript })?.textContent,
-           !jsContent.isEmpty {
-            injectJavaScript(jsContent, into: &compiledHTML)
-        }
-
+        injectViewportMeta(into: &compiledHTML)
         if hasFirebaseNode {
             injectFirebasePreviewDiagnostics(into: &compiledHTML)
         }
-
-        injectViewportMeta(into: &compiledHTML)
-
         return LivePreviewCompilation(webViewNodeID: webViewNode.id, html: compiledHTML)
     }
 
@@ -95,28 +71,6 @@ public struct LivePreviewCompiler {
         """
     }
 
-    private func injectCSS(_ cssContent: String, into html: inout String) {
-        let styleTag = "\n<style>\n\(cssContent)\n</style>\n"
-        if let headRange = html.range(of: "</head>", options: .caseInsensitive) {
-            html.insert(contentsOf: styleTag, at: headRange.lowerBound)
-        } else if let htmlRange = html.range(of: "<html>", options: .caseInsensitive) {
-            html.insert(contentsOf: "<head>\n\(styleTag)\n</head>\n", at: htmlRange.upperBound)
-        } else {
-            html = styleTag + html
-        }
-    }
-
-    private func injectJavaScript(_ jsContent: String, into html: inout String) {
-        let scriptTag = "\n<script>\n\(jsContent)\n</script>\n"
-        if let bodyRange = html.range(of: "</body>", options: .caseInsensitive) {
-            html.insert(contentsOf: scriptTag, at: bodyRange.lowerBound)
-        } else if let htmlRange = html.range(of: "</html>", options: .caseInsensitive) {
-            html.insert(contentsOf: scriptTag, at: htmlRange.lowerBound)
-        } else {
-            html += scriptTag
-        }
-    }
-
     /// When Firestore is not ready, show a short bar in the WebView so users know to fix the Firebase node / config.
     private func injectFirebasePreviewDiagnostics(into html: inout String) {
         // Use single-quoted JS strings so Swift multiline literal stays valid.
@@ -134,7 +88,7 @@ public struct LivePreviewCompiler {
             var err = (window.__caocapFirestoreLastError || '').trim();
             var msg;
             if (!st && !db) {
-              msg = 'Live Preview: Firebase did not load. If you have more than one Firebase node, only the first valid config in the list is used (stubs are skipped). Paste the real Web app config from Firebase Console (Project settings → Your apps), remove YOUR_… placeholders, then tap Done on HTML / JS / Firebase to refresh.';
+              msg = 'Live Preview: Firebase did not load. If you have more than one Firebase node, only the first valid config in the list is used (stubs are skipped). Paste the real Web app config from Firebase Console (Project settings → Your apps), remove YOUR_… placeholders, then tap Done on Code / Firebase to refresh.';
             } else {
               msg = 'Live Preview: Firebase status is "' + st + '"' + (err ? (' — ' + err) : '') + '. Open the Firebase node and fix the Web config (apiKey + projectId), then refresh.';
             }

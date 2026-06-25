@@ -34,7 +34,7 @@ Use this as a five-day path, or as a reference book when you need to work in a s
 | Node type | The concrete node kind, such as `.code`, `.srs`, `.webView`, `.table`, or `.chart`. |
 | `ProjectStore` | The observable state owner for one project. |
 | Viewport | The canvas offset and zoom level. |
-| Live Preview | The rendered WebView result compiled from code or legacy HTML/CSS/JS nodes. |
+| Live Preview | The rendered WebView result compiled from the canonical Code node. |
 | CoCaptain | The assistant flow that reads the current project, streams responses, and proposes actions or edits. |
 | Review bundle | A user-approved set of assistant-proposed actions or node edits. |
 
@@ -241,7 +241,7 @@ The node type is concrete UI/data shape:
 - `.subCanvas`
 - `.console`
 
-The node role is semantic. `NodeRole` asks, "What job does this node perform in the project?" A `.code` node can be the canonical code artifact. Legacy HTML, CSS, and JavaScript roles are still recognized so old saved projects can compile.
+The node role is semantic. `NodeRole` asks, "What job does this node perform in the project?" The `.code` node is the canonical single-file implementation artifact.
 
 This distinction is important: UI often cares about type, but CoCaptain and live preview often care about role.
 
@@ -530,16 +530,7 @@ Code node textContent
   -> HTMLWebView renders it
 ```
 
-The legacy path still supports older projects with separate HTML, CSS, and JavaScript nodes:
-
-```text
-HTML node
-  + CSS node injected into <style>
-  + JavaScript node injected into <script>
-  -> compiled HTML
-```
-
-This compatibility matters because user projects are local files. A newer app version must not strand older saved projects.
+If no Code node exists, live preview compilation returns nil and the WebView is not updated.
 
 ## Firebase Injection
 
@@ -893,7 +884,7 @@ CAOCAP project files are local JSON snapshots.
 - file URLs,
 - project existence checks,
 - decoding,
-- schema migration,
+- schema version checks,
 - atomic writes,
 - snapshot save/load/delete/list,
 - project directory lookup.
@@ -902,9 +893,8 @@ CAOCAP project files are local JSON snapshots.
 
 `ProjectPersistenceService.currentSchemaVersion` is the current project file format version. When loading a file, the service checks the saved schema version.
 
-- Version 0 means legacy snapshot format.
-- Future versions are rejected to prevent data loss.
-- Older versions are migrated forward.
+- Only the current schema version is accepted.
+- Missing, older, or future schema versions throw `unsupportedSchemaVersion` and `ProjectStore` falls back to in-memory defaults without overwriting the file.
 
 ## Atomic Writes
 
@@ -940,7 +930,7 @@ High-value test areas:
 - parser and structured payload behavior,
 - validator safety rules,
 - node patch operations and conflicts,
-- project persistence and migration,
+- project persistence and schema version checks,
 - live preview compilation,
 - graph recalculation,
 - project store mutations,
@@ -957,7 +947,7 @@ Add tests when changing:
 - project JSON schema,
 - node role inference,
 - live preview compilation,
-- save/load or migration behavior,
+- save/load or schema version behavior,
 - AppAction safety classification,
 - graph and node mutation behavior.
 
@@ -1074,7 +1064,7 @@ Then change the owner of the behavior, not the most convenient caller.
 
 ## 4. Keep Views Thin
 
-SwiftUI views can own presentation state and gestures. They should not own persistence, parsing, LLM orchestration, schema migration, or patch semantics.
+SwiftUI views can own presentation state and gestures. They should not own persistence, parsing, LLM orchestration, schema version checks, or patch semantics.
 
 Good view behavior:
 

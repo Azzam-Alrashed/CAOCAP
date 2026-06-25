@@ -177,11 +177,11 @@ struct ProjectExplorerView: View {
         isLoading = true
         Task {
             let persistence = ProjectPersistenceService()
-            let snapshotResult = await Task.detached(priority: .userInitiated) { () -> ProjectLoadResult? in
+            let snapshot = await Task.detached(priority: .userInitiated) { () -> ProjectSnapshot? in
                 try? persistence.load(fileName: project.id)
             }.value
             
-            guard let snapshot = snapshotResult?.snapshot else {
+            guard let snapshot else {
                 logger.error("Failed to load project snapshot for export.")
                 isLoading = false
                 return

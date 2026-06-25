@@ -107,7 +107,7 @@ Pure domain data. No UI, no persistence, no side effects. These structs define t
 |---|---|
 | `SpatialNode.swift` | The core canvas primitive. Holds `id`, `type` (`.standard`, `.webView`, `.srs`, `.code`, `.firebase`, `.subCanvas`), position, content fields, relationships, agent metadata, Firebase configuration, linked sub-canvas metadata, and theme. |
 | `NodeTheme.swift` | Pure enum for color tokens for the six node themes (blue, purple, green, orange, red, gray). |
-| `NodeRole.swift` | Canonical role inference for SRS, Code, Live Preview, custom nodes, and legacy HTML/CSS/JavaScript nodes. |
+| `NodeRole.swift` | Canonical role inference for SRS, Code, Live Preview, and custom nodes. |
 | `SRSReadinessState.swift` | Domain state for whether an SRS node is empty, structured, drafted, or ready. |
 | `SRSScaffold.swift` | Definition of Software Requirements Specification (SRS) templates and check helpers. |
 
@@ -155,7 +155,7 @@ Live project execution and preview support.
 
 | File | Responsibility |
 |---|---|
-| `LivePreviewCompiler.swift` | Pure compiler that renders the Code node into a WebView payload, with legacy HTML/CSS/JavaScript merging support for older projects. |
+| `LivePreviewCompiler.swift` | Pure compiler that renders the Code node into a WebView payload. |
 | `FirebasePreviewBootstrap.swift` | Handles preview HTML injection and bootstrap configurations for Firebase nodes. |
 
 #### `Services/WorkspaceIntelligence/`
@@ -176,7 +176,7 @@ State management, persistence, checkpoints, and reactive compilation for the spa
 | File | Responsibility |
 |---|---|
 | `ProjectStore.swift` | Observable project state owner. Manages `[SpatialNode]`, viewport state, undo wiring, debounced save requests, and Live Preview refresh. |
-| `ProjectPersistenceService.swift` | Project file URLs, JSON schema decoding/encoding, migrations, and atomic writes. |
+| `ProjectPersistenceService.swift` | Project file URLs, JSON schema decoding/encoding, schema version checks, and atomic writes. |
 | `ProjectManager.swift` | Actor listing and managing saved local project files asynchronously. |
 | `ExportService.swift` | Generates shareable exports asynchronously on a background thread. |
 | `CheckpointManager.swift` | Coordinates pre-agent mutation backup checkpoints. |

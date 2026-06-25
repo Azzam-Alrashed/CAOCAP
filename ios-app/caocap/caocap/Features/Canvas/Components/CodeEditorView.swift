@@ -80,10 +80,7 @@ struct CodeEditorView: View {
     private func fileExtension(for title: String) -> String {
         switch title.lowercased() {
         case "code": return "html"
-        case "html": return "html"
-        case "css": return "css"
-        case "javascript": return "js"
-        default: return "txt"
+        default: return "html"
         }
     }
 
