@@ -60,9 +60,9 @@ public class CommandPaletteViewModel {
     private var actionResultCount: Int { filteredActions.count }
 
     private var nodeResultsStartIndex: Int { 0 }
-    private var nodeCreationResultsStartIndex: Int { nodeResultCount }
-    private var actionsStartIndex: Int { nodeResultCount + nodeCreationResultCount }
-    private var promptRowIndex: Int { nodeResultCount + nodeCreationResultCount + actionResultCount }
+    private var actionsStartIndex: Int { nodeResultCount }
+    private var nodeCreationResultsStartIndex: Int { nodeResultCount + actionResultCount }
+    private var promptRowIndex: Int { nodeResultCount + actionResultCount + nodeCreationResultCount }
 
     public var promptSelectionIndex: Int { promptRowIndex }
     
@@ -121,12 +121,12 @@ public class CommandPaletteViewModel {
         let nodeCreationResults = nodeCreationResults
         let actions = filteredActions
         
-        if selectedIndex >= nodeResultsStartIndex && selectedIndex < nodeCreationResultsStartIndex {
+        if selectedIndex >= nodeResultsStartIndex && selectedIndex < actionsStartIndex {
             flyToNode(nodeResults[selectedIndex - nodeResultsStartIndex])
-        } else if selectedIndex >= nodeCreationResultsStartIndex && selectedIndex < actionsStartIndex {
-            createNode(nodeCreationResults[selectedIndex - nodeCreationResultsStartIndex])
-        } else if selectedIndex >= actionsStartIndex && selectedIndex < promptRowIndex {
+        } else if selectedIndex >= actionsStartIndex && selectedIndex < nodeCreationResultsStartIndex {
             executeAction(actions[selectedIndex - actionsStartIndex])
+        } else if selectedIndex >= nodeCreationResultsStartIndex && selectedIndex < promptRowIndex {
+            createNode(nodeCreationResults[selectedIndex - nodeCreationResultsStartIndex])
         } else if canSubmitPrompt && selectedIndex == promptRowIndex {
             submitPromptIfNeeded()
         }

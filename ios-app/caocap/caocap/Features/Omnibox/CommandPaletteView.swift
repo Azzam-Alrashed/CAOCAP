@@ -589,6 +589,16 @@ private struct OmniboxSearchResultsView: View {
             }
         }
 
+        ForEach(Array(viewModel.filteredActions.enumerated()), id: \.element.id) { index, action in
+            AppActionRow(
+                item: action,
+                isSelected: viewModel.selectionIndex(forActionAt: index) == viewModel.selectedIndex,
+                onSelect: { viewModel.executeAction(action) },
+                onPin: action.canPinToCanvas ? { viewModel.pinAction(action) } : nil
+            )
+            .id(action.id.rawValue)
+        }
+
         if !viewModel.nodeCreationResults.isEmpty {
             sectionHeader("CREATE NODE")
 
@@ -601,16 +611,6 @@ private struct OmniboxSearchResultsView: View {
                 }
                 .id("create-\(option.id.rawValue)")
             }
-        }
-
-        ForEach(Array(viewModel.filteredActions.enumerated()), id: \.element.id) { index, action in
-            AppActionRow(
-                item: action,
-                isSelected: viewModel.selectionIndex(forActionAt: index) == viewModel.selectedIndex,
-                onSelect: { viewModel.executeAction(action) },
-                onPin: action.canPinToCanvas ? { viewModel.pinAction(action) } : nil
-            )
-            .id(action.id.rawValue)
         }
 
         if viewModel.canSubmitPrompt {
@@ -701,13 +701,13 @@ private struct OmniboxSearchResultsView: View {
         withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
             if newIndex >= 0 && newIndex < nodeResults.count {
                 proxy.scrollTo(nodeResults[newIndex].id.uuidString, anchor: .center)
-            } else if newIndex >= nodeResults.count && newIndex < (nodeResults.count + nodeCreationResults.count) {
-                let option = nodeCreationResults[newIndex - nodeResults.count]
-                proxy.scrollTo("create-\(option.id.rawValue)", anchor: .center)
-            } else if newIndex >= (nodeResults.count + nodeCreationResults.count)
-                        && newIndex < (nodeResults.count + nodeCreationResults.count + actions.count) {
-                let action = actions[newIndex - nodeResults.count - nodeCreationResults.count]
+            } else if newIndex >= nodeResults.count && newIndex < (nodeResults.count + actions.count) {
+                let action = actions[newIndex - nodeResults.count]
                 proxy.scrollTo(action.id.rawValue, anchor: .center)
+            } else if newIndex >= (nodeResults.count + actions.count)
+                        && newIndex < (nodeResults.count + actions.count + nodeCreationResults.count) {
+                let option = nodeCreationResults[newIndex - nodeResults.count - actions.count]
+                proxy.scrollTo("create-\(option.id.rawValue)", anchor: .center)
             } else if viewModel.canSubmitPrompt && newIndex == viewModel.promptSelectionIndex {
                 proxy.scrollTo("cocaptain-prompt", anchor: .center)
             }

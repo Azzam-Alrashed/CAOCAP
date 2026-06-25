@@ -40,7 +40,7 @@ public struct NodeCreationCatalog {
             id: .firebase,
             title: "Create Firebase Node",
             icon: "flame.fill",
-            keywords: ["firebase", "backend", "firestore"]
+            keywords: ["firebase", "firestore"]
         ),
         NodeCreationOption(
             id: .subCanvas,
@@ -66,11 +66,19 @@ public struct NodeCreationCatalog {
             if option.id.displayName.lowercased().contains(trimmed) {
                 score += 30
             }
-            if option.keywords.contains(where: { $0.contains(trimmed) || trimmed.contains($0) }) {
+            if option.keywords.contains(where: { Self.keyword($0, matches: trimmed) }) {
                 score += 20
             }
 
             return score > 0 ? option : nil
         }
+    }
+
+    private static func keyword(_ keyword: String, matches query: String) -> Bool {
+        if keyword == query { return true }
+        return keyword
+            .split(separator: " ")
+            .map(String.init)
+            .contains(query)
     }
 }

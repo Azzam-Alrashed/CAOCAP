@@ -39,6 +39,39 @@ public enum NodeType: String, Codable, Equatable, Hashable, CaseIterable {
         case .standard: return .indigo
         }
     }
+
+    public var defaultTitle: String {
+        switch self {
+        case .webView: return "Live Preview"
+        case .srs: return "Software Requirements (SRS)"
+        case .code: return "Code"
+        case .firebase: return "Firebase"
+        case .subCanvas: return "New Canvas"
+        case .standard: return "Standard"
+        }
+    }
+
+    public var defaultSubtitle: String? {
+        switch self {
+        case .webView: return "Your current build renders here."
+        case .srs: return "Define intent, people, flow, and success."
+        case .code: return "HTML, CSS, and JavaScript in one file."
+        case .firebase: return "Project settings → Your apps → Web app config"
+        case .subCanvas: return "Tap to open this canvas"
+        case .standard: return nil
+        }
+    }
+
+    public var defaultIcon: String {
+        switch self {
+        case .webView: return "play.display"
+        case .srs: return "doc.text.fill"
+        case .code: return "chevron.left.slash.chevron.right"
+        case .firebase: return "flame.fill"
+        case .subCanvas: return "folder.fill"
+        case .standard: return "square.grid.2x2"
+        }
+    }
 }
 
 public struct NodeAgentMessage: Identifiable, Codable, Equatable, Hashable {
@@ -179,13 +212,21 @@ public struct SpatialNode: Identifiable, Codable, Equatable {
         self.linkedCanvasFileName = try container.decodeIfPresent(String.self, forKey: .linkedCanvasFileName)
     }
 
-    /// Repairs legacy saves where every workflow node was persisted with the default blue theme.
+    /// Repairs legacy saves where workflow nodes kept outdated titles, icons, or themes.
     public func applyingCanonicalThemeIfNeeded() -> SpatialNode {
         guard action == nil, type != .standard else { return self }
-        guard theme == .blue, type != .webView else { return self }
 
         var updated = self
-        updated.theme = type.defaultTheme
+        if theme == .blue, type != .webView {
+            updated.theme = type.defaultTheme
+        }
+
+        if updated.type == .code, updated.title == "New Logic" {
+            updated.title = NodeType.code.defaultTitle
+            updated.subtitle = NodeType.code.defaultSubtitle
+            updated.icon = NodeType.code.defaultIcon
+        }
+
         return updated
     }
 }

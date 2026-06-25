@@ -23,4 +23,11 @@ struct NodeCreationCatalogTests {
         let catalog = NodeCreationCatalog()
         #expect(catalog.search(query: "   ").isEmpty)
     }
+
+    @Test func catalogDoesNotMatchBackInsideBackendKeyword() {
+        let catalog = NodeCreationCatalog()
+        let results = catalog.search(query: "back")
+
+        #expect(results.isEmpty)
+    }
 }
