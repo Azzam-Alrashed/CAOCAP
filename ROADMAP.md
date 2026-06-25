@@ -13,7 +13,7 @@ This document tracks the current product milestones for CAOCAP. The near-term pr
 - [x] **Node Linking**: Visual Bezier-curve connections between nodes (1-to-N directed graph).
 - [x] **Live Preview WebView**: 9:16 `WKWebView` node with full-screen immersive sheet.
 - [x] **Native Code Editors**: Syntax-highlighted unified `CodeEditorView` for the Code node + SRS Zen Mode editor.
-- [x] **Live Compilation Engine**: Real-time `SRS -> Code -> WebView` rendering, debounced at 500ms, with legacy HTML/CSS/JS project support.
+- [x] **Live Compilation Engine**: Real-time `SRS -> Code -> WebView` rendering, debounced at 500ms.
 - [x] **Monetization (Pro)**: StoreKit 2 subscription integration.
 - [x] **Firebase Integration**: Authentication (Apple, Google, GitHub) and AI Logic infrastructure.
 - [x] **App Store Compliance**: Privacy Policy, Terms of Service, data usage declarations.
@@ -27,9 +27,9 @@ This document tracks the current product milestones for CAOCAP. The near-term pr
     - [x] **Gesture Gates**: Add logic that unlocks the next step only after a specific pan/zoom/tap action.
 - [x] **Spatial Polish**: Hierarchical flow layout, auto-fitting viewport, symmetrical undo/redo, and nested sub-canvases for infinite spatial organization.
 - [x] **Omnibox Redesign**: Floating capsule search interface with actions list mode for the command palette.
-- [x] **Projects Explorer**: Add Search, Create, Rename, Duplicate, Export, and dynamic visual presets for project management.
+- [x] **Projects Explorer**: Add Search, Create, Rename, Duplicate, Export, and dynamic visual presets for project management. *(Superseded by Phase 1 canvas workspace migration: explorer removed; sub-canvas nodes are the canonical way to create nested workspaces.)*
 - [x] **Post-Launch Feedback Loop**: Make user support, issue triage, and release follow-up part of the product rhythm (Addressed via Agent triage and QA skills).
-- [ ] **Release Hardening**: Re-check account deletion, privacy links, subscriptions, restore purchases, onboarding reset, and first project creation after each App Store update.
+- [ ] **Release Hardening**: Re-check account deletion, privacy links, subscriptions, restore purchases, onboarding reset, and first sub-canvas creation after each App Store update.
 
 ---
 
@@ -67,8 +67,8 @@ This document tracks the current product milestones for CAOCAP. The near-term pr
     - [x] **Flight Engine**: Fly the viewport to a selected node from command palette search.
     - [x] **Focus Zoom**: Automatically adjust zoom level to fit the targeted node perfectly.
 - [ ] **Spatial Debugger**: Visualize variable flow, console output, and execution state as canvas overlays.
-- [x] **Console Node**: A dedicated node type that captures `console.log` output from the WebView in real-time.
-- [ ] **Project Templates**: A public library of starter templates (games, landing pages, tools) selectable from the Omnibox.
+- [ ] **Runtime Diagnostics**: Revisit console/log visibility as part of the future Spatial Debugger instead of a standalone canvas node.
+- [ ] **Project Templates**: A focused public library of starter templates (games, landing pages, tools) selectable from the Omnibox.
 - [/] **File System Bridge**: Basic project sharing/export exists; next step is a fuller HTML/CSS/JS bundle and future Git-style export.
     - [x] **Project Import**: Support importing `.caocap` and `.json` project files directly from the file system.
 - [/] **Snapshot Browser**: Checkpoint infrastructure exists; next step is a user-facing browser for inspecting and restoring prior states.

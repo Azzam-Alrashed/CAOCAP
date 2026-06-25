@@ -16,23 +16,28 @@ final class NodeMutationEngineTests: XCTestCase {
         
         XCTAssertEqual(nodes.count, 1)
         XCTAssertEqual(nodes[0].type, .code)
+        XCTAssertEqual(nodes[0].theme, .orange)
         XCTAssertEqual(nodes[0].textContent, "// Start coding here...")
-        XCTAssertEqual(nodes[0].title, "New Logic")
+        XCTAssertEqual(nodes[0].title, "Code")
+        XCTAssertEqual(nodes[0].icon, "chevron.left.slash.chevron.right")
+        XCTAssertEqual(nodes[0].subtitle, "HTML, CSS, and JavaScript in one file.")
         
         engine.addNode(nodes: &nodes, type: .srs)
         XCTAssertEqual(nodes.count, 2)
         XCTAssertEqual(nodes[1].type, .srs)
-        XCTAssertEqual(nodes[1].title, "Software Requirements Specification")
+        XCTAssertEqual(nodes[1].theme, .purple)
+        XCTAssertEqual(nodes[1].title, "Software Requirements (SRS)")
         
-        engine.addNode(nodes: &nodes, type: .console)
+        engine.addNode(nodes: &nodes, type: .firebase)
         XCTAssertEqual(nodes.count, 3)
-        XCTAssertEqual(nodes[2].type, .console)
-        XCTAssertEqual(nodes[2].title, "Console")
-        XCTAssertEqual(nodes[2].subtitle, "Logs and errors from Live Preview")
+        XCTAssertEqual(nodes[2].type, .firebase)
+        XCTAssertEqual(nodes[2].theme, .pink)
+        XCTAssertEqual(nodes[2].title, "Firebase")
+        XCTAssertEqual(nodes[2].subtitle, "Project settings → Your apps → Web app config")
     }
     
     func testUpdateNodeTypeTriggersCallbacks() {
-        var nodes = [SpatialNode(type: .code, position: .zero, title: "HTML")]
+        var nodes = [SpatialNode(type: .code, position: .zero, title: "HTML", theme: .orange)]
         
         var saveCalled = false
         var compileCalled = false
@@ -43,15 +48,41 @@ final class NodeMutationEngineTests: XCTestCase {
         engine.updateNodeType(nodes: &nodes, id: nodes[0].id, type: .srs, persist: true)
         
         XCTAssertEqual(nodes[0].type, .srs)
+        XCTAssertEqual(nodes[0].theme, .purple)
         XCTAssertTrue(saveCalled)
         XCTAssertTrue(compileCalled)
+    }
+
+    func testApplyingCanonicalThemeRepairsLegacyBlueNodes() {
+        let srsNode = SpatialNode(type: .srs, position: .zero, title: "SRS", theme: .blue)
+        let previewNode = SpatialNode(type: .webView, position: .zero, title: "Live Preview", theme: .blue)
+
+        XCTAssertEqual(srsNode.applyingCanonicalThemeIfNeeded().theme, .purple)
+        XCTAssertEqual(previewNode.applyingCanonicalThemeIfNeeded().theme, .blue)
+    }
+
+    func testApplyingCanonicalThemeRepairsLegacyCodeNodePresentation() {
+        let legacyCode = SpatialNode(
+            type: .code,
+            position: .zero,
+            title: "New Logic",
+            subtitle: "Write your intent here.",
+            icon: "plus.square.fill",
+            theme: .blue
+        )
+
+        let repaired = legacyCode.applyingCanonicalThemeIfNeeded()
+
+        XCTAssertEqual(repaired.title, "Code")
+        XCTAssertEqual(repaired.icon, "chevron.left.slash.chevron.right")
+        XCTAssertEqual(repaired.subtitle, "HTML, CSS, and JavaScript in one file.")
+        XCTAssertEqual(repaired.theme, .orange)
     }
     
     func testDeleteNodeCleansUpConnections() {
         let node1 = SpatialNode(type: .code, position: .zero, title: "1")
         var node2 = SpatialNode(type: .code, position: .zero, title: "2")
         
-        node2.inputNodeIds = [node1.id]
         node2.connectedNodeIds = [node1.id]
         node2.nextNodeId = node1.id
         
@@ -62,7 +93,6 @@ final class NodeMutationEngineTests: XCTestCase {
         XCTAssertEqual(nodes.count, 1)
         let updatedNode2 = nodes[0]
         
-        XCTAssertNil(updatedNode2.inputNodeIds)
         XCTAssertNil(updatedNode2.connectedNodeIds)
         XCTAssertNil(updatedNode2.nextNodeId)
     }

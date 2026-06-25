@@ -229,7 +229,7 @@ public final class LLMService {
 
         Firebase / Firestore (Live Preview):
         - When the user asks to link JavaScript to Firebase, save/persist/sync data to Firestore, or connect the app to the backend, read the canvas context block about `window.__caocapFirestore` and `window.__caocapFirestoreDefaultPath`.
-        - Implement persistence with **`javascript` `node_edits`** using the Firestore compat instance on `window.__caocapFirestore` (never invent a second `initializeApp` in JS). If there is no Firebase node yet, propose `create_firebase_node` as a pending app action or tell the user to add the Firebase node and paste Web config from Firebase Console.
+        - Implement persistence with **`code` `node_edits`** (inline JavaScript in the single-file HTML document) using the Firestore compat instance on `window.__caocapFirestore` (never invent a second `initializeApp` in JS). If there is no Firebase node yet, propose `create_firebase_node` as a pending app action or tell the user to add the Firebase node and paste Web config from Firebase Console.
         """
 
     private func makeModel(modelName: String) -> GenerativeModel {
@@ -328,11 +328,11 @@ public final class LLMService {
                 - Never request a non-autonomous action with executionMode `safe`.
 
                 Node edits:
-                - Only target editable source nodes for edits: srs, code, standard text nodes, or legacy html/css/javascript nodes. Legacy projects may expose html, css, and javascript, but prefer code whenever it exists.
-                - Use LOWERCASE role names: srs, code, html, css, javascript, custom.
+                - Only target editable source nodes for edits: srs and code.
+                - Use LOWERCASE role names: srs, code, custom.
                 - In node-scoped sessions, include `nodeId="UUID"` on every `node_edit` whenever the target node is known.
                 - Code/content changes belong in `node_edits`, not app actions.
-                - For Firebase/Firestore persistence, edit the **javascript** role only: use `window.__caocapFirestore` (and optional `window.__caocapFirestoreDefaultPath`) as described in canvas context; use compat-style `collection`/`doc`/`set`/`add`/`update` calls after null-checks.
+                - For Firebase/Firestore persistence, edit the **code** node (inline JavaScript): use `window.__caocapFirestore` (and optional `window.__caocapFirestoreDefaultPath`) as described in canvas context; use compat-style `collection`/`doc`/`set`/`add`/`update` calls after null-checks.
                 - Every node edit needs a non-empty summary and at least one operation.
                 - Exact operations require a non-empty `target`; append/prepend/replace_all do not.
 
@@ -347,7 +347,7 @@ public final class LLMService {
                     <action id="id" />
                   </pending_actions>
                   <node_edits>
-                    <node_edit nodeId="UUID" role="srs|code|html|css|javascript|custom" summary="what changes">
+                    <node_edit nodeId="UUID" role="srs|code|custom" summary="what changes">
                       <operation type="replace_all|replace_exact|insert_before_exact|insert_after_exact|append|prepend">
                         <target>exact text (only for exact operations)</target>
                         <content><![CDATA[new content]]></content>

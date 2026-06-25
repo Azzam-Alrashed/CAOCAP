@@ -19,6 +19,7 @@ public class LocalizationManager {
         "Settings",
         "New Project",
         "Software Requirements (SRS)",
+        "Code",
         "HTML",
         "CSS",
         "JavaScript",
@@ -41,6 +42,9 @@ public class LocalizationManager {
         "Document structure.",
         "Styling and layout.",
         "Interactivity and logic.",
+        "HTML, CSS, and JavaScript in one file.",
+        "Define intent, people, flow, and success.",
+        "Your current build renders here.",
         "Write your intent here."
     ]
     

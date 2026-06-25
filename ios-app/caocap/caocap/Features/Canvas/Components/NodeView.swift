@@ -4,9 +4,6 @@ struct NodeView: View {
     let node: SpatialNode
     var isDragging: Bool = false
     var agentState: AgentExecutionState = .idle
-    var allNodes: [SpatialNode] = []
-    var onUpdateChartX: ((Int?) -> Void)? = nil
-    var onUpdateChartY: ((Int?) -> Void)? = nil
     @State private var isHovering = false
     @State private var isPulsing = false
     @AppStorage(LocalizationManager.languageStorageKey) private var selectedLanguage = "English"
@@ -18,12 +15,24 @@ struct NodeView: View {
                 if let icon = node.icon {
                     ZStack {
                         Circle()
-                            .fill(themeColor.opacity(0.15))
+                            .fill(
+                                LinearGradient(
+                                    colors: gradientColors.map { $0.opacity(0.22) },
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
                             .frame(width: 40, height: 40)
                         
                         Image(systemName: icon)
                             .font(.system(size: 20, weight: .semibold))
-                            .foregroundColor(themeColor)
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: gradientColors,
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
                     }
                 }
                 
@@ -82,10 +91,7 @@ struct NodeView: View {
             NodePreviewContent(
                 node: node,
                 agentState: agentState,
-                themeColor: themeColor,
-                allNodes: allNodes,
-                onUpdateChartX: onUpdateChartX,
-                onUpdateChartY: onUpdateChartY
+                themeColor: themeColor
             )
         }
         .padding(.horizontal, node.type == .webView ? 12 : 20)
@@ -117,6 +123,13 @@ struct NodeView: View {
         return node.theme.color
     }
 
+    private var gradientColors: [Color] {
+        if node.action == .proSubscription && SubscriptionManager.shared.isSubscribed {
+            return [Color(hex: "FACC15"), Color(hex: "F59E0B")]
+        }
+        return node.theme.gradientColors
+    }
+
     private var nodeTitle: String {
         if node.action == .proSubscription && SubscriptionManager.shared.isSubscribed {
             return LocalizationManager.shared.localizedString("CAOCAP Pro")
@@ -135,12 +148,28 @@ struct NodeView: View {
         ZStack {
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(.ultraThinMaterial)
-            
+
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(isDragging ? themeColor.opacity(0.08) : themeColor.opacity(0.03))
+                .fill(
+                    LinearGradient(
+                        colors: gradientColors.map { $0.opacity(isDragging ? 0.16 : 0.09) },
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(
+                    RadialGradient(
+                        colors: [gradientColors.first?.opacity(isDragging ? 0.14 : 0.08) ?? .clear, .clear],
+                        center: .topLeading,
+                        startRadius: 0,
+                        endRadius: 220
+                    )
+                )
         }
         .shadow(
-            color: Color.black.opacity(isDragging ? 0.25 : 0.15),
+            color: (gradientColors.first ?? .black).opacity(isDragging ? 0.28 : 0.18),
             radius: isDragging ? 30 : 20,
             x: 0,
             y: isDragging ? 20 : 10
@@ -153,8 +182,8 @@ struct NodeView: View {
                 LinearGradient(
                     colors: [
                         .white.opacity(isDragging ? 0.6 : 0.3),
-                        .white.opacity(0.05),
-                        themeColor.opacity(isDragging ? 0.6 : 0.3)
+                        gradientColors.last?.opacity(isDragging ? 0.55 : 0.35) ?? themeColor.opacity(0.3),
+                        gradientColors.first?.opacity(isDragging ? 0.45 : 0.25) ?? themeColor.opacity(0.2)
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
@@ -196,9 +225,6 @@ private struct NodePreviewContent: View {
     let node: SpatialNode
     let agentState: AgentExecutionState
     let themeColor: Color
-    let allNodes: [SpatialNode]
-    let onUpdateChartX: ((Int?) -> Void)?
-    let onUpdateChartY: ((Int?) -> Void)?
     
     var body: some View {
         Group {
@@ -216,74 +242,6 @@ private struct NodePreviewContent: View {
                             .cornerRadius(12)
                     }
                     
-                case .number:
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(node.textContent ?? "0")
-                            .font(.system(size: 32, weight: .bold, design: .monospaced))
-                            .foregroundColor(themeColor)
-                        
-                        Text("NUMBER VALUE")
-                            .font(.system(size: 10, weight: .black))
-                            .opacity(0.4)
-                    }
-                    .padding(.top, 12)
-                    
-                case .text:
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(node.textContent ?? "Notes...")
-                            .font(.system(size: 14, weight: .medium))
-                            .lineLimit(4)
-                            .foregroundColor(.primary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        
-                        Text("NOTE PREVIEW")
-                            .font(.system(size: 10, weight: .black))
-                            .opacity(0.4)
-                    }
-                    .padding(.top, 12)
-                    
-                case .table:
-                    TablePreviewView(textContent: node.textContent ?? "", themeColor: themeColor)
-                        .padding(.top, 12)
-                    
-                case .calculation:
-                    HStack(spacing: 12) {
-                        Image(systemName: (node.operation ?? .add).icon)
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(themeColor)
-                        
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(String(format: "%.1f", node.outputValue ?? 0.0))
-                                .font(.system(size: 24, weight: .bold, design: .monospaced))
-                                .foregroundColor(.primary)
-                            
-                            Text("COMPUTING \(node.operation?.rawValue ?? "+")")
-                                .font(.system(size: 9, weight: .bold))
-                                .opacity(0.5)
-                        }
-                    }
-                    .padding(.top, 12)
-                    
-                case .display:
-                    DisplayPreviewView(outputValue: node.outputValue ?? 0.0, displayStyle: node.displayStyle ?? .number, themeColor: themeColor)
-                        .padding(.top, 12)
-                    
-                case .aiAgent:
-                    VStack(alignment: .leading, spacing: 6) {
-                        Label("AGENT OUTPUT", systemImage: "sparkles")
-                            .font(.system(size: 10, weight: .black))
-                            .opacity(0.4)
-                        
-                        Text(node.aiResponse ?? "Ready to process...")
-                            .font(.system(size: 13, weight: .medium, design: .serif))
-                            .foregroundColor(.primary)
-                            .padding(10)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(themeColor.opacity(0.1))
-                            .cornerRadius(8)
-                    }
-                    .padding(.top, 12)
-
                 case .firebase:
                     VStack(alignment: .leading, spacing: 8) {
                         Label("FIREBASE (WEB)", systemImage: "flame.fill")
@@ -297,14 +255,6 @@ private struct NodePreviewContent: View {
                     }
                     .padding(.top, 12)
 
-                case .chart:
-                    ChartNodeView(
-                        node: node,
-                        allNodes: allNodes,
-                        onUpdateX: onUpdateChartX,
-                        onUpdateY: onUpdateChartY
-                    )
-                    
                 case .subCanvas:
                     VStack(alignment: .leading, spacing: 8) {
                         Label("SUB-CANVAS", systemImage: "folder.fill")
@@ -322,102 +272,10 @@ private struct NodePreviewContent: View {
                     }
                     .padding(.top, 12)
                     
-                case .console:
-                    ConsoleNodeView(node: node)
-
                 default:
                     EmptyView()
                 }
             }
-        }
-    }
-}
-
-private struct TablePreviewView: View {
-    let textContent: String
-    let themeColor: Color
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            let rows = textContent.components(separatedBy: "\n").filter { !$0.isEmpty }
-            
-            ForEach(0..<min(rows.count, 5), id: \.self) { rowIndex in
-                let columns = rows[rowIndex].components(separatedBy: ",")
-                HStack(spacing: 0) {
-                    ForEach(0..<min(columns.count, 4), id: \.self) { colIndex in
-                        Text(columns[colIndex].trimmingCharacters(in: .whitespaces))
-                            .font(.system(size: 10, weight: rowIndex == 0 ? .bold : .medium))
-                            .padding(6)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(rowIndex == 0 ? themeColor.opacity(0.15) : (rowIndex % 2 == 0 ? Color.black.opacity(0.05) : Color.clear))
-                            .border(Color.black.opacity(0.05), width: 0.5)
-                    }
-                }
-            }
-            
-            if rows.count > 5 {
-                Text("+ \(rows.count - 5) more rows...")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundColor(.secondary)
-                    .padding(.top, 4)
-            }
-        }
-        .cornerRadius(8)
-    }
-}
-
-private struct DisplayPreviewView: View {
-    let outputValue: Double
-    let displayStyle: DisplayStyle
-    let themeColor: Color
-    
-    var body: some View {
-        VStack(spacing: 8) {
-            switch displayStyle {
-            case .number:
-                Text(String(format: "%.1f", outputValue))
-                    .font(.system(size: 48, weight: .black, design: .rounded))
-                    .foregroundColor(themeColor)
-            
-            case .percentage:
-                Text("\(Int(outputValue))%")
-                    .font(.system(size: 48, weight: .black, design: .rounded))
-                    .foregroundColor(themeColor)
-            
-            case .progress:
-                VStack(spacing: 12) {
-                    ProgressView(value: min(max(outputValue, 0), 100), total: 100)
-                        .tint(themeColor)
-                        .scaleEffect(x: 1, y: 4, anchor: .center)
-                        .padding(.horizontal, 10)
-                    
-                    Text("\(Int(outputValue))/100")
-                        .font(.system(size: 14, weight: .bold, design: .monospaced))
-                        .foregroundColor(themeColor)
-                }
-                .frame(height: 60)
-                
-            case .gauge:
-                ZStack {
-                    Circle()
-                        .stroke(themeColor.opacity(0.1), lineWidth: 12)
-                    
-                    Circle()
-                        .trim(from: 0, to: CGFloat(min(max(outputValue, 0), 100)) / 100.0)
-                        .stroke(themeColor, style: StrokeStyle(lineWidth: 12, lineCap: .round))
-                        .rotationEffect(.degrees(-90))
-                    
-                    Text("\(Int(outputValue))")
-                        .font(.system(size: 24, weight: .black, design: .rounded))
-                        .foregroundColor(themeColor)
-                }
-                .frame(width: 80, height: 80)
-                .padding(.vertical, 8)
-            }
-            
-            Text(displayStyle.displayName.uppercased())
-                .font(.system(size: 10, weight: .black))
-                .opacity(0.4)
         }
     }
 }

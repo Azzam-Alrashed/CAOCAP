@@ -35,7 +35,6 @@ public class ProjectStore {
     private let saveController: ProjectSaveController
     private let checkpointManager: CheckpointManager
     private let livePreviewOrchestrator = LivePreviewOrchestrator()
-    private let reactiveGraphEngine = ReactiveGraphEngine()
     private let mutationEngine = NodeMutationEngine()
     private let agentPipeline = AgentPipelineEngine()
     
@@ -50,7 +49,7 @@ public class ProjectStore {
     public let fileName: String
     
     public init(
-        fileName: String = "project_v1.json",
+        fileName: String = "canvas_v1.json",
         projectName: String = "Untitled Project",
         initialNodes: [SpatialNode]? = nil,
         initialViewportScale: CGFloat = 1.0,
@@ -75,10 +74,6 @@ public class ProjectStore {
         mutationEngine.onCompileLivePreview = { [weak self] nodes in
             guard let self else { return }
             _ = self.livePreviewOrchestrator.compile(nodes: &nodes)
-        }
-        mutationEngine.onRecalculateGraph = { [weak self] nodes in
-            guard let self else { return }
-            _ = self.reactiveGraphEngine.recalculate(nodes: &nodes)
         }
         mutationEngine.onTriggerDownstreamAgents = { [weak self] id, nodes in
             self?.triggerDownstreamAgents(from: id, nodes: nodes)
@@ -114,22 +109,18 @@ public class ProjectStore {
         }
         
         do {
-            let result = try persistence.load(fileName: fileName)
-            apply(snapshot: result.snapshot)
-            logger.info("Successfully loaded project (v\(result.sourceSchemaVersion)) from disk.")
-            
-            // If we migrated, schedule a save to modernize the file
-            if result.didMigrate {
-                requestSave(showIndicator: false)
+            let snapshot = try persistence.load(fileName: fileName)
+            apply(snapshot: snapshot)
+            logger.info("Successfully loaded project (v\(snapshot.schemaVersion)) from disk.")
+        } catch ProjectPersistenceError.unsupportedSchemaVersion(let version, let current) {
+            if let version {
+                logger.error("Project schema version \(version) is not supported (expected \(current)). Using defaults without overwriting file.")
+            } else {
+                logger.error("Project is missing schema version (expected \(current)). Using defaults without overwriting file.")
             }
-        } catch ProjectPersistenceError.unsupportedFutureVersion(let version, let current) {
-            logger.error("Project version \(version) is newer than app version \(current). Aborting load to prevent data loss.")
-            // Fallback to defaults to prevent a crash, but log heavily.
             self.nodes = initialNodes ?? []
-            return
         } catch {
             logger.error("Failed to load project: \(error.localizedDescription)")
-            // Fallback to initial nodes if data is corrupted or missing
             self.nodes = initialNodes ?? []
         }
         
@@ -221,7 +212,7 @@ public class ProjectStore {
 
     private func apply(snapshot: ProjectSnapshot) {
         self.projectName = snapshot.projectName ?? self.projectName
-        self.nodes = snapshot.nodes
+        self.nodes = snapshot.nodes.map { $0.applyingCanonicalThemeIfNeeded() }
         self.viewportOffset = snapshot.viewportOffset
         self.viewportScale = snapshot.viewportScale
     }
@@ -316,21 +307,6 @@ public class ProjectStore {
     public func updateNodeType(id: UUID, type: NodeType, persist: Bool = true) {
         mutationEngine.updateNodeType(nodes: &nodes, id: id, type: type, persist: persist)
     }
-    public func updateNodeChartStyle(id: UUID, style: ChartStyle) {
-        mutationEngine.updateNodeChartStyle(nodes: &nodes, id: id, style: style)
-    }
-    public func updateNodeChartXColumn(id: UUID, index: Int?) {
-        mutationEngine.updateNodeChartXColumn(nodes: &nodes, id: id, index: index)
-    }
-    public func updateNodeChartYColumn(id: UUID, index: Int?) {
-        mutationEngine.updateNodeChartYColumn(nodes: &nodes, id: id, index: index)
-    }
-    public func updateNodeChartHasHeaderRow(id: UUID, hasHeader: Bool) {
-        mutationEngine.updateNodeChartHasHeaderRow(nodes: &nodes, id: id, hasHeader: hasHeader)
-    }
-    public func updateNodeDrawingData(id: UUID, data: Data, persist: Bool = true) {
-        mutationEngine.updateNodeDrawingData(nodes: &nodes, id: id, data: data, persist: persist)
-    }
     public func updateNodeTextContent(id: UUID, text: String, persist: Bool = true) {
         mutationEngine.updateNodeTextContent(nodes: &nodes, id: id, text: text, persist: persist)
     }
@@ -370,36 +346,25 @@ public class ProjectStore {
     public func addNode(type: NodeType = .code) {
         mutationEngine.addNode(nodes: &nodes, type: type)
     }
+    public func addShortcutNode(for appAction: AppActionID, definition: AppActionDefinition) {
+        guard let nodeAction = appAction.pinableNodeAction else { return }
+        let center = CGPoint(x: -viewportOffset.width, y: -viewportOffset.height)
+        mutationEngine.addShortcutNode(
+            nodes: &nodes,
+            action: nodeAction,
+            title: definition.title,
+            icon: definition.icon,
+            at: center
+        )
+    }
     public func updateNodeTitle(id: UUID, title: String) {
         mutationEngine.updateNodeTitle(nodes: &nodes, id: id, title: title)
     }
     public func deleteNode(id: UUID, persist: Bool = true) {
         mutationEngine.deleteNode(nodes: &nodes, id: id, persist: persist)
     }
-    public func updateNodeOperation(id: UUID, operation: ArithmeticOperation, persist: Bool = true) {
-        mutationEngine.updateNodeOperation(nodes: &nodes, id: id, operation: operation, persist: persist)
-    }
-    public func updateNodeInputs(id: UUID, inputNodeIds: [UUID]) {
-        mutationEngine.updateNodeInputs(nodes: &nodes, id: id, inputNodeIds: inputNodeIds)
-    }
-    public func updateNodePrompt(id: UUID, prompt: String) {
-        mutationEngine.updateNodePrompt(nodes: &nodes, id: id, prompt: prompt)
-    }
-    public func updateNodeDisplayStyle(id: UUID, style: DisplayStyle) {
-        mutationEngine.updateNodeDisplayStyle(nodes: &nodes, id: id, style: style)
-    }
     public func updateNodeFirebaseFirestorePath(id: UUID, path: String?, persist: Bool = true) {
         mutationEngine.updateNodeFirebaseFirestorePath(nodes: &nodes, id: id, path: path, persist: persist)
     }
-    public func evaluateAINode(id: UUID) {
-        agentPipeline.evaluateAINode(id: id, store: self)
-    }
 
-    public func recalculateGraph() {
-        _ = reactiveGraphEngine.recalculate(nodes: &nodes)
-    }
-
-    private func findInputs(for nodeId: UUID) -> [SpatialNode] {
-        nodes.filter { $0.nextNodeId == nodeId }
-    }
 }

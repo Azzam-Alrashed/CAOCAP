@@ -99,26 +99,6 @@ struct ProjectMutationTests {
         #expect(!store.isSaving)
     }
 
-    @Test func updatingTextNodeRecalculatesDependentNodes() throws {
-        let inputId = UUID()
-        var input = SpatialNode(id: inputId, type: .text, position: .zero, title: "Input")
-        input.textContent = "10"
-
-        var calculation = SpatialNode(type: .calculation, position: .zero, title: "Double")
-        calculation.operation = .add
-        calculation.inputNodeIds = [inputId, inputId]
-
-        let store = ProjectStore(
-            fileName: UUID().uuidString + ".json",
-            initialNodes: [input, calculation]
-        )
-
-        store.updateNodeTextContent(id: inputId, text: "21", persist: false)
-
-        let updatedCalculation = try #require(store.nodes.first(where: { $0.id == calculation.id }))
-        #expect(updatedCalculation.outputValue == 42)
-    }
-
     @Test func organizeNodesRegistersUndoAndRedo() throws {
         let node1Id = UUID()
         let node2Id = UUID()
@@ -157,8 +137,29 @@ struct ProjectMutationTests {
         #expect(n2PosRedone == n2PosAfter)
     }
 
+    @Test func addShortcutNodeCreatesPinableLauncher() throws {
+        let store = ProjectStore(fileName: UUID().uuidString + ".json")
+        let definition = AppActionDefinition(
+            id: .openSettings,
+            title: "Open Settings",
+            icon: "gearshape.fill",
+            category: .assistant,
+            isMutating: false,
+            allowsAutonomousExecution: true,
+            canPinToCanvas: true
+        )
+
+        store.addShortcutNode(for: .openSettings, definition: definition)
+
+        let shortcut = store.nodes.last
+        #expect(shortcut?.action == .openSettings)
+        #expect(shortcut?.title == "Open Settings")
+        #expect(shortcut?.icon == "gearshape.fill")
+        #expect(shortcut?.type == .standard)
+    }
+
     @Test func organizeNodesResetsRootNodesToDefaults() throws {
-        let node = SpatialNode(id: UUID(), type: .standard, position: CGPoint(x: 999, y: 999), title: "Root Node", action: .createNewProject)
+        let node = SpatialNode(id: UUID(), type: .standard, position: CGPoint(x: 999, y: 999), title: "Root Node")
         let store = ProjectStore(fileName: UUID().uuidString + ".json", initialNodes: [node])
         
         store.organizeNodes()
@@ -171,9 +172,9 @@ struct ProjectMutationTests {
     @Test func organizeNodesProducesHierarchicalFlow() throws {
         let node1Id = UUID()
         let node2Id = UUID()
-        let node1 = SpatialNode(id: node1Id, type: .code, position: CGPoint(x: 100, y: 100), title: "Source")
-        var node2 = SpatialNode(id: node2Id, type: .code, position: CGPoint(x: 0, y: 0), title: "Target")
-        node2.inputNodeIds = [node1Id]
+        var node1 = SpatialNode(id: node1Id, type: .code, position: CGPoint(x: 100, y: 100), title: "Source")
+        let node2 = SpatialNode(id: node2Id, type: .code, position: CGPoint(x: 0, y: 0), title: "Target")
+        node1.connectedNodeIds = [node2Id]
         
         let store = ProjectStore(fileName: UUID().uuidString + ".json", initialNodes: [node1, node2])
         store.organizeNodes()
@@ -190,19 +191,15 @@ struct ProjectMutationTests {
         let node2Id = UUID()
         
         let source = SpatialNode(id: sourceId, type: .code, position: CGPoint(x: -100, y: 0), title: "Source")
-        var node1 = SpatialNode(id: node1Id, type: .webView, position: CGPoint(x: 0, y: 0), title: "WebView 1")
-        var node2 = SpatialNode(id: node2Id, type: .webView, position: CGPoint(x: 100, y: 100), title: "WebView 2")
+        let node1 = SpatialNode(id: node1Id, type: .webView, position: CGPoint(x: 0, y: 0), title: "WebView 1")
+        let node2 = SpatialNode(id: node2Id, type: .webView, position: CGPoint(x: 100, y: 100), title: "WebView 2")
         
         // Connect both to source so they share the same rank and cluster
-        node1.inputNodeIds = [sourceId]
-        node2.inputNodeIds = [sourceId]
+        var linkedSource = source
+        linkedSource.connectedNodeIds = [node1Id, node2Id]
         
-        let store = ProjectStore(fileName: UUID().uuidString + ".json", initialNodes: [source, node1, node2])
+        let store = ProjectStore(fileName: UUID().uuidString + ".json", initialNodes: [linkedSource, node1, node2])
         store.organizeNodes()
-        print("Test nodes:")
-        for n in store.nodes {
-            print("\(n.title): \(n.position), inputs: \(n.inputNodeIds ?? [])")
-        }
         
         let pos1 = store.nodes.first(where: { $0.id == node1Id })!.position
         let pos2 = store.nodes.first(where: { $0.id == node2Id })!.position

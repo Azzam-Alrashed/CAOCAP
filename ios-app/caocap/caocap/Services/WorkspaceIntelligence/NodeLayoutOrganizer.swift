@@ -38,13 +38,12 @@ public struct NodeLayoutOrganizer: Sendable {
                     guard let clusterNode = nodes.first(where: { $0.id == id }) else { continue }
                     
                     // Outgoing connections
-                    var outgoing = clusterNode.inputNodeIds ?? []
+                    var outgoing: [UUID] = []
                     if let next = clusterNode.nextNodeId { outgoing.append(next) }
                     if let connected = clusterNode.connectedNodeIds { outgoing.append(contentsOf: connected) }
                     
                     // Incoming connections
                     let incoming = nodes.filter { target in
-                        (target.inputNodeIds ?? []).contains(id) ||
                         target.nextNodeId == id ||
                         (target.connectedNodeIds ?? []).contains(id)
                     }.map { $0.id }
@@ -83,7 +82,6 @@ public struct NodeLayoutOrganizer: Sendable {
                         
                         let inputs = nodes.filter { A in
                             clusterNodeSet.contains(A.id) && (
-                                (node.inputNodeIds ?? []).contains(A.id) ||
                                 A.nextNodeId == id ||
                                 (A.connectedNodeIds ?? []).contains(id)
                             )
@@ -117,7 +115,7 @@ public struct NodeLayoutOrganizer: Sendable {
                     // Determine vertical spacing dynamically
                     let hasLargeNodes = rankNodes.contains { id in
                         if let node = nodes.first(where: { $0.id == id }) {
-                            return [.webView, .chart, .table, .firebase, .console].contains(node.type)
+                            return [.webView, .firebase].contains(node.type)
                         }
                         return false
                     }

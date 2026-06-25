@@ -47,26 +47,6 @@ public struct CommandIntentResolver {
                 "عد للخلف",
                 "ارجع للخلف"
             ]
-        case .newProject:
-            return [
-                "new project",
-                "create project",
-                "create a project",
-                "make project",
-                "make a project",
-                "start project",
-                "start a project",
-                "create new project",
-                "مشروع جديد",
-                "انشاء مشروع",
-                "انشاء مشروع جديد",
-                "أنشئ مشروع",
-                "أنشئ مشروع جديد",
-                "سوي مشروع",
-                "سوي مشروع جديد",
-                "اصنع مشروع",
-                "ابدأ مشروع"
-            ]
         case .createNode:
             return [
                 "create node",
@@ -81,18 +61,6 @@ public struct CommandIntentResolver {
                 "عقدة جديدة",
                 "سوي عقدة"
             ]
-        case .createTextNode:
-            return ["create text node", "new text node", "add text node", "انشاء عقدة نص", "نص"]
-        case .createCalculationNode:
-            return ["create calculation node", "new calculation node", "add calculation node", "انشاء عقدة حساب", "حساب"]
-        case .createDisplayNode:
-            return ["create display node", "new display node", "add display node", "انشاء عقدة عرض", "عرض"]
-        case .createNumberNode:
-            return ["create number node", "new number node", "add number", "number node", "انشاء عقدة رقم", "رقم", "أضف رقم"]
-        case .createTableNode:
-            return ["create table node", "new table node", "add table", "table node", "excel node", "انشاء عقدة جدول", "جدول", "أضف جدول"]
-        case .createChartNode:
-            return ["create chart node", "new chart", "add chart", "graph node", "analytics node", "visualize", "انشاء عقدة رسم بياني", "رسم بياني", "جدول بياني", "مخطط"]
         case .createFirebaseNode:
             return [
                 "create firebase node",
@@ -105,8 +73,6 @@ public struct CommandIntentResolver {
                 "فايربيس",
                 "عقدة فايربيس"
             ]
-        case .createAiAgentNode:
-            return ["create ai agent", "new ai agent", "add ai agent", "ai agent", "انشاء عقدة ذكاء اصطناعي", "ذكاء اصطناعي", "عميل ذكي"]
         case .summonCoCaptain:
             return [
                 "summon cocaptain",
@@ -133,11 +99,14 @@ public struct CommandIntentResolver {
                 "اظهر الشبكة",
                 "اخف الشبكة"
             ]
-        case .shareProject:
+        case .shareCanvas:
             return [
+                "share canvas",
                 "share project",
                 "share",
+                "مشاركة اللوحة",
                 "مشاركة المشروع",
+                "شارك اللوحة",
                 "شارك المشروع",
                 "مشاركة"
             ]
@@ -177,17 +146,6 @@ public struct CommandIntentResolver {
                 "الملف الشخصي",
                 "افتح الحساب",
                 "افتح الملف الشخصي"
-            ]
-        case .openProjectExplorer:
-            return [
-                "project explorer",
-                "open projects",
-                "show projects",
-                "projects",
-                "المشاريع",
-                "افتح المشاريع",
-                "اعرض المشاريع",
-                "مستكشف المشاريع"
             ]
         case .help:
             return [

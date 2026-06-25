@@ -55,9 +55,7 @@ public struct NodePatchEngine {
     public func resolveNode(nodeID: UUID? = nil, for role: NodeRole, in store: ProjectStore) -> SpatialNode? {
         if let nodeID {
             guard let node = store.nodes.first(where: { $0.id == nodeID }),
-                  node.type != .webView,
-                  node.type != .art,
-                  node.type != .console else {
+                  node.type != .webView else {
                 return nil
             }
             return node
