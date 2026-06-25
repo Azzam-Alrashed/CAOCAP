@@ -445,29 +445,8 @@ struct ContentView: View {
         actionDispatcher.register(.createNode) {
             showingNodeCreationMenu = true
         }
-        actionDispatcher.register(.createTextNode) {
-            router.activeStore.addNode(type: .text)
-        }
-        actionDispatcher.register(.createCalculationNode) {
-            router.activeStore.addNode(type: .calculation)
-        }
-        actionDispatcher.register(.createDisplayNode) {
-            router.activeStore.addNode(type: .display)
-        }
-        actionDispatcher.register(.createNumberNode) {
-            router.activeStore.addNode(type: .number)
-        }
-        actionDispatcher.register(.createTableNode) {
-            router.activeStore.addNode(type: .table)
-        }
-        actionDispatcher.register(.createChartNode) {
-            router.activeStore.addNode(type: .chart)
-        }
         actionDispatcher.register(.createFirebaseNode) {
             router.activeStore.addNode(type: .firebase)
-        }
-        actionDispatcher.register(.createAiAgentNode) {
-            router.activeStore.addNode(type: .aiAgent)
         }
         actionDispatcher.register(.summonCoCaptain) {
             coCaptain.configureProjectSession(store: router.activeStore, dispatcher: actionDispatcher)
@@ -588,8 +567,6 @@ struct ContentView: View {
                     switch node.type {
                     case .webView:
                         size = CGSize(width: 375, height: 667)
-                    case .console:
-                        size = CGSize(width: 360, height: 300)
                     default:
                         size = CGSize(width: 280, height: 180)
                     }

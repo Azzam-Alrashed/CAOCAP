@@ -11,12 +11,6 @@ public enum AppActionID: String, CaseIterable, Identifiable, Codable, Hashable {
     case goBack = "go_back"
     case newProject = "new_project"
     case createNode = "create_node"
-    case createTextNode = "create_text_node"
-    case createCalculationNode = "create_calculation_node"
-    case createDisplayNode = "create_display_node"
-    case createNumberNode = "create_number_node"
-    case createTableNode = "create_table_node"
-    case createChartNode = "create_chart_node"
     case createFirebaseNode = "create_firebase_node"
     case summonCoCaptain = "summon_cocaptain"
     case openFile = "open_file"
@@ -30,7 +24,6 @@ public enum AppActionID: String, CaseIterable, Identifiable, Codable, Hashable {
     case moveNode = "move_node"
     case themeNode = "theme_node"
     case transformNode = "transform_node"
-    case createAiAgentNode = "create_ai_agent_node"
     case help = "help"
     case organizeNodes = "organize_nodes"
     case openSnapshotBrowser = "open_snapshot_browser"
@@ -140,62 +133,6 @@ public final class AppActionDispatcher: AppActionPerforming {
             category: .project,
             isMutating: true,
             allowsAutonomousExecution: false
-        ),
-        AppActionDefinition(
-            id: .createTextNode,
-            title: "Create Text Node",
-            icon: "text.cursor",
-            category: .project,
-            isMutating: true,
-            allowsAutonomousExecution: true
-        ),
-        AppActionDefinition(
-            id: .createCalculationNode,
-            title: "Create Calculation Node",
-            icon: "plus.forwardslash.minus",
-            category: .project,
-            isMutating: true,
-            allowsAutonomousExecution: true
-        ),
-        AppActionDefinition(
-            id: .createDisplayNode,
-            title: "Create Display Node",
-            icon: "opticaldisc.fill",
-            category: .project,
-            isMutating: true,
-            allowsAutonomousExecution: true
-        ),
-        AppActionDefinition(
-            id: .createNumberNode,
-            title: "Create Number Node",
-            icon: "text.cursor",
-            category: .project,
-            isMutating: true,
-            allowsAutonomousExecution: true
-        ),
-        AppActionDefinition(
-            id: .createTableNode,
-            title: "Create Table Node",
-            icon: "tablecells.fill",
-            category: .project,
-            isMutating: true,
-            allowsAutonomousExecution: true
-        ),
-        AppActionDefinition(
-            id: .createChartNode,
-            title: "Create Chart Node",
-            icon: "chart.line.uptrend.xyaxis",
-            category: .project,
-            isMutating: true,
-            allowsAutonomousExecution: true
-        ),
-        AppActionDefinition(
-            id: .createAiAgentNode,
-            title: "Create AI Agent Node",
-            icon: "brain.head.profile.fill",
-            category: .project,
-            isMutating: true,
-            allowsAutonomousExecution: true
         ),
         AppActionDefinition(
             id: .createFirebaseNode,
