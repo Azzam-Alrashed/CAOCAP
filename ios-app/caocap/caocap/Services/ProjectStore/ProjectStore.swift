@@ -212,7 +212,7 @@ public class ProjectStore {
 
     private func apply(snapshot: ProjectSnapshot) {
         self.projectName = snapshot.projectName ?? self.projectName
-        self.nodes = snapshot.nodes
+        self.nodes = snapshot.nodes.map { $0.applyingCanonicalThemeIfNeeded() }
         self.viewportOffset = snapshot.viewportOffset
         self.viewportScale = snapshot.viewportScale
     }

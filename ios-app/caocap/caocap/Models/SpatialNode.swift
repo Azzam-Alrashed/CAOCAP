@@ -27,6 +27,18 @@ public enum NodeType: String, Codable, Equatable, Hashable, CaseIterable {
         case .subCanvas: return "Sub-Canvas"
         }
     }
+
+    /// Default palette theme for each workflow node type on the canvas.
+    public var defaultTheme: NodeTheme {
+        switch self {
+        case .webView: return .blue
+        case .srs: return .purple
+        case .code: return .orange
+        case .firebase: return .pink
+        case .subCanvas: return .cyan
+        case .standard: return .indigo
+        }
+    }
 }
 
 public struct NodeAgentMessage: Identifiable, Codable, Equatable, Hashable {
@@ -165,5 +177,15 @@ public struct SpatialNode: Identifiable, Codable, Equatable {
         self.agentProfile = try container.decodeIfPresent(AgentProfile.self, forKey: .agentProfile) ?? AgentProfile()
         self.firebaseFirestorePath = try container.decodeIfPresent(String.self, forKey: .firebaseFirestorePath)
         self.linkedCanvasFileName = try container.decodeIfPresent(String.self, forKey: .linkedCanvasFileName)
+    }
+
+    /// Repairs legacy saves where every workflow node was persisted with the default blue theme.
+    public func applyingCanonicalThemeIfNeeded() -> SpatialNode {
+        guard action == nil, type != .standard else { return self }
+        guard theme == .blue, type != .webView else { return self }
+
+        var updated = self
+        updated.theme = type.defaultTheme
+        return updated
     }
 }
