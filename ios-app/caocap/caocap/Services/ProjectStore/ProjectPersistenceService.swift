@@ -68,6 +68,10 @@ public struct ProjectPersistenceService: Sendable {
         self.baseDirectory = baseDirectory
     }
 
+    public func workspaceDirectory() -> URL {
+        projectDirectory()
+    }
+
     public func fileURL(for fileName: String) -> URL {
         projectDirectory().appendingPathComponent(fileName)
     }

@@ -9,18 +9,16 @@ public enum AppActionCategory: String, Hashable {
 public enum AppActionID: String, CaseIterable, Identifiable, Codable, Hashable {
     case goRoot = "go_root"
     case goBack = "go_back"
-    case newProject = "new_project"
     case createNode = "create_node"
     case createFirebaseNode = "create_firebase_node"
     case summonCoCaptain = "summon_cocaptain"
     case openFile = "open_file"
     case toggleGrid = "toggle_grid"
-    case shareProject = "share_project"
+    case shareCanvas = "share_canvas"
     case proSubscription = "pro_subscription"
     case signIn = "sign_in"
     case openSettings = "open_settings"
     case openProfile = "open_profile"
-    case openProjectExplorer = "open_project_explorer"
     case moveNode = "move_node"
     case themeNode = "theme_node"
     case transformNode = "transform_node"
@@ -32,6 +30,18 @@ public enum AppActionID: String, CaseIterable, Identifiable, Codable, Hashable {
     case createSubCanvas = "create_sub_canvas"
 
     public var id: String { rawValue }
+
+    /// Maps pin-able app actions to their canvas shortcut `NodeAction`.
+    public var pinableNodeAction: NodeAction? {
+        switch self {
+        case .goRoot: return .navigateRoot
+        case .openSettings: return .openSettings
+        case .openProfile: return .openProfile
+        case .summonCoCaptain: return .summonCoCaptain
+        case .proSubscription: return .proSubscription
+        default: return nil
+        }
+    }
 }
 
 public struct AppActionDefinition: Identifiable, Hashable {
@@ -46,6 +56,8 @@ public struct AppActionDefinition: Identifiable, Hashable {
     /// Indicates whether trusted non-user callers, such as CoCaptain, may run
     /// this action without an explicit review item.
     public let allowsAutonomousExecution: Bool
+    /// When true, the omnibox can place a shortcut node on the active canvas.
+    public let canPinToCanvas: Bool
 
     public init(
         id: AppActionID,
@@ -53,7 +65,8 @@ public struct AppActionDefinition: Identifiable, Hashable {
         icon: String,
         category: AppActionCategory,
         isMutating: Bool,
-        allowsAutonomousExecution: Bool
+        allowsAutonomousExecution: Bool,
+        canPinToCanvas: Bool = false
     ) {
         self.id = id
         self.title = title
@@ -61,6 +74,7 @@ public struct AppActionDefinition: Identifiable, Hashable {
         self.category = category
         self.isMutating = isMutating
         self.allowsAutonomousExecution = allowsAutonomousExecution
+        self.canPinToCanvas = canPinToCanvas
     }
 
     public var localizedTitle: String {
@@ -108,7 +122,8 @@ public final class AppActionDispatcher: AppActionPerforming {
             icon: "house.fill",
             category: .navigation,
             isMutating: false,
-            allowsAutonomousExecution: true
+            allowsAutonomousExecution: true,
+            canPinToCanvas: true
         ),
         AppActionDefinition(
             id: .goBack,
@@ -117,14 +132,6 @@ public final class AppActionDispatcher: AppActionPerforming {
             category: .navigation,
             isMutating: false,
             allowsAutonomousExecution: true
-        ),
-        AppActionDefinition(
-            id: .newProject,
-            title: "New Project",
-            icon: "plus.circle.fill",
-            category: .project,
-            isMutating: true,
-            allowsAutonomousExecution: false
         ),
         AppActionDefinition(
             id: .createNode,
@@ -148,7 +155,8 @@ public final class AppActionDispatcher: AppActionPerforming {
             icon: "sparkles",
             category: .assistant,
             isMutating: false,
-            allowsAutonomousExecution: true
+            allowsAutonomousExecution: true,
+            canPinToCanvas: true
         ),
         AppActionDefinition(
             id: .openFile,
@@ -167,8 +175,8 @@ public final class AppActionDispatcher: AppActionPerforming {
             allowsAutonomousExecution: true
         ),
         AppActionDefinition(
-            id: .shareProject,
-            title: "Share Project",
+            id: .shareCanvas,
+            title: "Share Canvas",
             icon: "square.and.arrow.up",
             category: .project,
             isMutating: false,
@@ -180,7 +188,8 @@ public final class AppActionDispatcher: AppActionPerforming {
             icon: "crown",
             category: .assistant,
             isMutating: false,
-            allowsAutonomousExecution: false
+            allowsAutonomousExecution: false,
+            canPinToCanvas: true
         ),
         AppActionDefinition(
             id: .signIn,
@@ -196,7 +205,8 @@ public final class AppActionDispatcher: AppActionPerforming {
             icon: "gearshape.fill",
             category: .assistant,
             isMutating: false,
-            allowsAutonomousExecution: true
+            allowsAutonomousExecution: true,
+            canPinToCanvas: true
         ),
         AppActionDefinition(
             id: .openProfile,
@@ -204,15 +214,8 @@ public final class AppActionDispatcher: AppActionPerforming {
             icon: "person.fill",
             category: .assistant,
             isMutating: false,
-            allowsAutonomousExecution: true
-        ),
-        AppActionDefinition(
-            id: .openProjectExplorer,
-            title: "Project Explorer",
-            icon: "folder.fill",
-            category: .project,
-            isMutating: false,
-            allowsAutonomousExecution: true
+            allowsAutonomousExecution: true,
+            canPinToCanvas: true
         ),
         AppActionDefinition(
             id: .moveNode,
@@ -280,7 +283,7 @@ public final class AppActionDispatcher: AppActionPerforming {
         ),
         AppActionDefinition(
             id: .createSubCanvas,
-            title: "New Sub-Canvas",
+            title: "New Canvas",
             icon: "folder.fill.badge.plus",
             category: .project,
             isMutating: true,

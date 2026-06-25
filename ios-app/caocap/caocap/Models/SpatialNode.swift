@@ -3,11 +3,8 @@ import CoreGraphics
 
 public enum NodeAction: String, Codable, Equatable {
     case navigateRoot
-    case createNewProject
     case openSettings
     case openProfile
-    case openProjectExplorer
-    case resumeLastProject
     case summonCoCaptain
     case proSubscription
 }
@@ -156,7 +153,11 @@ public struct SpatialNode: Identifiable, Codable, Equatable {
         self.theme = try container.decode(NodeTheme.self, forKey: .theme)
         self.nextNodeId = try container.decodeIfPresent(UUID.self, forKey: .nextNodeId)
         self.connectedNodeIds = try container.decodeIfPresent([UUID].self, forKey: .connectedNodeIds)
-        self.action = try container.decodeIfPresent(NodeAction.self, forKey: .action)
+        if let actionString = try container.decodeIfPresent(String.self, forKey: .action) {
+            self.action = NodeAction(rawValue: actionString)
+        } else {
+            self.action = nil
+        }
         self.htmlContent = try container.decodeIfPresent(String.self, forKey: .htmlContent)
         self.textContent = try container.decodeIfPresent(String.self, forKey: .textContent)
         self.srsReadinessState = try container.decodeIfPresent(SRSReadinessState.self, forKey: .srsReadinessState)

@@ -27,9 +27,9 @@ This document tracks the current product milestones for CAOCAP. The near-term pr
     - [x] **Gesture Gates**: Add logic that unlocks the next step only after a specific pan/zoom/tap action.
 - [x] **Spatial Polish**: Hierarchical flow layout, auto-fitting viewport, symmetrical undo/redo, and nested sub-canvases for infinite spatial organization.
 - [x] **Omnibox Redesign**: Floating capsule search interface with actions list mode for the command palette.
-- [x] **Projects Explorer**: Add Search, Create, Rename, Duplicate, Export, and dynamic visual presets for project management.
+- [x] **Projects Explorer**: Add Search, Create, Rename, Duplicate, Export, and dynamic visual presets for project management. *(Superseded by Phase 1 canvas workspace migration: explorer removed; sub-canvas nodes are the canonical way to create nested workspaces.)*
 - [x] **Post-Launch Feedback Loop**: Make user support, issue triage, and release follow-up part of the product rhythm (Addressed via Agent triage and QA skills).
-- [ ] **Release Hardening**: Re-check account deletion, privacy links, subscriptions, restore purchases, onboarding reset, and first project creation after each App Store update.
+- [ ] **Release Hardening**: Re-check account deletion, privacy links, subscriptions, restore purchases, onboarding reset, and first sub-canvas creation after each App Store update.
 
 ---
 

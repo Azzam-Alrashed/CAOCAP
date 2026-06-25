@@ -53,6 +53,7 @@ public class CommandPaletteViewModel {
     }
     
     public var onExecute: ((AppActionID) -> Void)?
+    public var onPinAction: ((AppActionID) -> Void)?
     public var onFlyToNode: ((UUID) -> Void)?
     public var onSubmitPrompt: ((String) -> Void)?
     
@@ -107,6 +108,12 @@ public class CommandPaletteViewModel {
     public func executeAction(_ action: AppActionDefinition) {
         logger.info("Executing action: \(action.title)")
         onExecute?(action.id)
+        setPresented(false)
+    }
+
+    public func pinAction(_ action: AppActionDefinition) {
+        logger.info("Pinning action to canvas: \(action.title)")
+        onPinAction?(action.id)
         setPresented(false)
     }
 
