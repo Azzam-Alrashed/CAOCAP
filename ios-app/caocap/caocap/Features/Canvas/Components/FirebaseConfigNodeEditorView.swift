@@ -77,6 +77,7 @@ struct FirebaseConfigNodeEditorView: View {
                 }
                 .padding()
             }
+            .interactiveKeyboardDismiss()
             .navigationTitle(currentNode.displayTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

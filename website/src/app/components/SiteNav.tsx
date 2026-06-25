@@ -15,6 +15,9 @@ export function SiteNav({ homeHref = "/", showContribute = true }: SiteNavProps)
         CAOCAP
       </Link>
       <div className="nav-actions">
+        <Link className="nav-link" href="/learn">
+          Learn
+        </Link>
         {showContribute ? (
           <a className="nav-link" href={githubUrl} target="_blank" rel="noreferrer">
             Contribute

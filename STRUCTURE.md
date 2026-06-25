@@ -32,6 +32,13 @@ caocap/
 ├── Navigation/
 ├── Models/
 ├── Services/
+│   ├── Account/
+│   ├── AppActions/
+│   ├── AppEnvironment/
+│   ├── CoCaptain/
+│   ├── ProjectStore/
+│   ├── Runtime/
+│   └── WorkspaceIntelligence/
 ├── Extensions/
 ├── Features/
 │   ├── Auth/
@@ -40,6 +47,11 @@ caocap/
 │   │   └── Providers/
 │   ├── Omnibox/
 │   ├── CoCaptain/
+│   │   ├── AgentContract/
+│   │   ├── Analysis/
+│   │   ├── Chat/
+│   │   ├── NodeAgent/
+│   │   └── Review/
 │   ├── Launch/
 │   ├── Overlays/
 │   ├── ProjectExplorer/
@@ -47,6 +59,20 @@ caocap/
 │   └── Subscription/
 ├── Resources/
 └── Preview Content/
+```
+
+## iOS Test Tree (`ios-app/caocap/caocapTests/`)
+
+```
+caocapTests/
+├── AppEnvironment/
+├── Canvas/
+├── CoCaptain/
+├── Onboarding/
+├── ProjectStore/
+├── Runtime/
+├── Smoke/
+└── WorkspaceIntelligence/
 ```
 
 ---
@@ -90,20 +116,58 @@ Pure domain data. No UI, no persistence, no side effects. These structs define t
 ### `Services/`
 Infrastructure and heavy-lifting. These are long-lived objects that outlive individual views.
 
+| Folder | Responsibility |
+|---|---|
+| `Account/` | Firebase Auth and StoreKit subscription infrastructure. |
+| `AppActions/` | Centralized action registry for app, Omnibox, and agent-triggered actions. |
+| `AppEnvironment/` | App-wide environment helpers such as localization, haptics, and update prompts. |
+| `Runtime/` | Live Preview compilation, preview bootstrapping, and WebView console capture. |
+| `WorkspaceIntelligence/` | Spatial layout, search indexing, project analysis, and SRS readiness evaluation. |
+| `ProjectStore/` | Project state, persistence, checkpoints, exports, and reactive compilation. |
+| `CoCaptain/` | Backend engines and API clients specific to the CoCaptain agentic flow. |
+
+#### `Services/Account/`
+Identity and monetization infrastructure.
+
+| File | Responsibility |
+|---|---|
+| `AuthenticationManager.swift` | Wraps Firebase Auth. Handles anonymous login, account linking, and social provider flows. |
+| `SubscriptionManager.swift` | StoreKit 2 integration. Manages Pro subscription state, purchase flow, and transaction verification. |
+
+#### `Services/AppActions/`
+App action registry and execution.
+
+| File | Responsibility |
+|---|---|
+| `AppActionDispatcher.swift` | Centralized action registry. Allows the app and the AI agent to trigger high-level navigation and project mutations. |
+
+#### `Services/AppEnvironment/`
+App-wide support helpers.
+
+| File | Responsibility |
+|---|---|
+| `AppUpdateService.swift` | Firebase Remote Config minimum-version gate for required App Store update prompts. |
+| `HapticsManager.swift` | Central haptic feedback helper that honors app haptics settings. |
+| `LocalizationManager.swift` | Runtime language selection, localized strings, localized project/node labels, and date formatting. |
+
+#### `Services/Runtime/`
+Live project execution and preview support.
+
 | File | Responsibility |
 |---|---|
 | `LivePreviewCompiler.swift` | Pure compiler that renders the Code node into a WebView payload, with legacy HTML/CSS/JavaScript merging support for older projects. |
-| `AuthenticationManager.swift` | Wraps Firebase Auth. Handles anonymous login, account linking, and social provider flows. |
-| `NodeLayoutOrganizer.swift` | Decoupled node positioning and spatial layout organizer. |
-| `AppActionDispatcher.swift` | Centralized action registry. Allows the app and the AI agent to trigger high-level navigation and project mutations. |
-| `HapticsManager.swift` | Central haptic feedback helper that honors app haptics settings. |
-| `LocalizationManager.swift` | Runtime language selection, localized strings, localized project/node labels, and date formatting. |
-| `AppUpdateService.swift` | Firebase Remote Config minimum-version gate for required App Store update prompts. |
-| `SRSReadinessEvaluator.swift` | Evaluates SRS text completeness and acceptance-check readiness. |
-| `SubscriptionManager.swift` | StoreKit 2 integration. Manages Pro subscription state, purchase flow, and transaction verification. |
 | `FirebasePreviewBootstrap.swift` | Handles preview HTML injection and bootstrap configurations for Firebase nodes. |
+| `ConsoleLogStore.swift` | Captures console output emitted from the live WebView preview. |
+
+#### `Services/WorkspaceIntelligence/`
+Workspace analysis, search, and layout helpers.
+
+| File | Responsibility |
+|---|---|
+| `NodeLayoutOrganizer.swift` | Decoupled node positioning and spatial layout organizer. |
 | `NodeSearchIndex.swift` | Text indexing and ranking provider for workspace search (used by Command Palette). |
 | `ProjectAnalyzer.swift` | Inspects spatial nodes and links to make contextual recommendations. |
+| `SRSReadinessEvaluator.swift` | Evaluates SRS text completeness and acceptance-check readiness. |
 
 ---
 
@@ -148,6 +212,8 @@ Lightweight, reusable Swift and framework extensions. No dependencies on app-spe
 | `Color+Hex.swift` | Hex string → `SwiftUI.Color` conversion utility. |
 | `NodeRole+UI.swift` | View layer mapping for node icons and theme colors. |
 | `NodeTheme+UI.swift` | Computed SwiftUI Color mapping for pure NodeTheme model. |
+| `KeyboardDismisser.swift` | UIKit fallback that resigns the current first responder, for input surfaces without a `@FocusState` binding. |
+| `View+KeyboardDismiss.swift` | Shared opt-in view modifiers (`dismissKeyboardOnTap`, `interactiveKeyboardDismiss`) for consistent keyboard dismissal across text-input surfaces. |
 
 ---
 
@@ -215,22 +281,13 @@ The `Cmd+K` intent-driven command palette. A floating Spotlight-style UI that su
 #### `CoCaptain/`
 The agentic AI companion. A native sheet interface for real-time collaboration.
 
-| File | Responsibility |
+| Folder/File | Responsibility |
 |---|---|
-| `CoCaptainView.swift` | Implements a spatial chat UI with monochromatic gradients and persistent scroll states. |
-| `CoCaptainViewModel.swift` | High-level state management for the CoCaptain UI. |
-| `CoCaptainTimelineListView.swift` | Scrollable chat timeline and scroll restoration behavior. |
-| `CoCaptainInputComposer.swift` | Prompt field, quick prompts, send/stop controls, and active context pill. |
-| `CoCaptainBubbleViews.swift` | Chat bubble, markdown text, bubble shape, and thinking indicator UI. |
-| `CoCaptainReviewViews.swift` | Review bundle and pending edit/action cards for human approval. |
-| `CoCaptainTimelineViews.swift` | Lightweight timeline item routing plus shared context/execution rows. |
-| `CoCaptainAgentCoordinator.swift` | The orchestrator of agentic control. Manages the dual-path execution flow and review bundle generation. |
-| `CoCaptainAgentModels.swift` | Domain models for agent actions, node edits, review items, and the chat timeline. |
-| `CoCaptainAgentOutputAdapter.swift` | Source-agnostic adapter layer that converts Firebase function calls and fenced JSON into directives for validation and execution. |
-| `CoCaptainAgentParser.swift` | Logic to parse raw LLM text into structured `CoCaptainAgentPayload` objects. |
-| `CoCaptainAgentValidator.swift` | Validates parsed agent payloads before any app action execution or review bundle generation. |
-| `CoCaptainAnalysisView.swift` | Lists structural parser warnings and recommendations from the analyzer. |
-| `NodeAgentChatView.swift` | Embedded node chat interface for running quick agent context requests. |
+| `Chat/` | CoCaptain sheet UI, chat timeline, bubbles, prompt composer, and view-model state. |
+| `AgentContract/` | Model-output adapter, XML parser, validator, coordinator, and shared agent/review/timeline models. |
+| `Review/` | Review bundle and pending edit/action cards for human approval. |
+| `Analysis/` | Structural parser warnings and recommendations from the analyzer. |
+| `NodeAgent/` | Embedded node chat interface for running quick agent context requests. |
 
 ---
 

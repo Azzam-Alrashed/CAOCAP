@@ -15,21 +15,31 @@ struct CommandPaletteView: View {
     
     private var isShowPopoverActive: Bool {
         guard let onboarding else { return false }
-        return onboarding.currentStep == .searchBarCoCaptain && onboarding.showPopover
+        return onboarding.showPopover && (
+            onboarding.currentStep == .typeCoCaptainPrompt ||
+            onboarding.currentStep == .submitCoCaptainPrompt
+        )
     }
     
-    private var isCoCaptainRowSelected: Bool {
-        guard isCoCaptainRowVisible else { return false }
-        let offset = viewModel.filteredActions.count + viewModel.nodeResults.count
-        return viewModel.selectedIndex == offset
+    private var isSearchBarGlowActive: Bool {
+        guard let onboarding else { return false }
+        return onboarding.currentStep == .typeCoCaptainPrompt && onboarding.showPopover
     }
-    
-    private var isSearchBarOnboardingActive: Bool {
-        isShowPopoverActive && !isCoCaptainRowSelected
+
+    private var isSearchBarPopoverActive: Bool {
+        isSearchBarGlowActive
     }
     
     private var isCoCaptainRowOnboardingActive: Bool {
-        isShowPopoverActive && isCoCaptainRowSelected
+        guard let onboarding else { return false }
+        return onboarding.currentStep == .submitCoCaptainPrompt &&
+            onboarding.showPopover &&
+            viewModel.canSubmitPrompt &&
+            isCoCaptainRowVisible
+    }
+
+    private var isRowPopoverPresented: Bool {
+        showRowPopoverDelay && isCoCaptainRowOnboardingActive
     }
     
     struct ActionCategorySection {
@@ -63,6 +73,7 @@ struct CommandPaletteView: View {
                 Color.black.opacity(viewModel.mode == .actionsList ? 0.4 : 0.2)
                     .ignoresSafeArea()
                     .onTapGesture {
+                        isFocused = false
                         viewModel.setPresented(false)
                     }
                     .transition(.opacity)
@@ -102,26 +113,16 @@ struct CommandPaletteView: View {
                                 }
                         }
                         .padding(16)
-                        .scaleEffect(isSearchBarOnboardingActive ? (isBreathing ? 1.04 : 1.0) : 1.0)
                         .background(
                             RoundedRectangle(cornerRadius: 12)
                                 .fill(colorScheme == .dark ? Color.white.opacity(0.05) : Color.black.opacity(0.03))
-                                .shadow(
-                                    color: isSearchBarOnboardingActive ? Color(hex: "0066FF").opacity(isBreathing ? 0.8 : 0.4) : Color.clear,
-                                    radius: isSearchBarOnboardingActive ? (isBreathing ? 24 : 10) : 0,
-                                    x: 0,
-                                    y: isSearchBarOnboardingActive ? (isBreathing ? 4 : 5) : 0
-                                )
                         )
+                        .onboardingGlow(isActive: isSearchBarGlowActive, isBreathing: isBreathing)
                         .popover(
                             present: Binding(
-                                get: { isSearchBarOnboardingActive },
+                                get: { isSearchBarPopoverActive },
                                 set: { newValue in
-                                    if !newValue {
-                                        if !isCoCaptainRowSelected && onboarding?.currentStep == .searchBarCoCaptain {
-                                            onboarding?.showPopover = false
-                                        }
-                                    } else {
+                                    if newValue {
                                         onboarding?.showPopover = true
                                     }
                                 }
@@ -235,12 +236,10 @@ struct CommandPaletteView: View {
                                         .id("cocaptain-prompt")
                                         .popover(
                                             present: Binding(
-                                                get: { showRowPopoverDelay },
+                                                get: { isRowPopoverPresented },
                                                 set: { newValue in
                                                     if !newValue {
-                                                        if isCoCaptainRowSelected && onboarding?.currentStep == .searchBarCoCaptain {
-                                                            onboarding?.showPopover = false
-                                                        }
+                                                        showRowPopoverDelay = false
                                                     } else {
                                                         onboarding?.showPopover = true
                                                     }
@@ -268,7 +267,7 @@ struct CommandPaletteView: View {
                                             }
                                         ) {
                                             if let step = onboarding?.currentStep {
-                                                OnboardingPopoverCard(step: step, isSubStep2_1: true, arrowPlacement: .top) {
+                                                OnboardingPopoverCard(step: step, arrowPlacement: .top) {
                                                     onboarding?.skip()
                                                 }
                                             } else {
@@ -280,6 +279,7 @@ struct CommandPaletteView: View {
                                 .padding(.vertical, 8)
                             }
                             .frame(maxHeight: 400)
+                            .interactiveKeyboardDismiss()
                             .onChange(of: viewModel.selectedIndex) { oldIndex, newIndex in
                                 let actions = viewModel.filteredActions
                                 let nodeResults = viewModel.nodeResults
@@ -401,12 +401,10 @@ struct CommandPaletteView: View {
                                                 .id("cocaptain-prompt")
                                                 .popover(
                                                     present: Binding(
-                                                        get: { showRowPopoverDelay },
+                                                        get: { isRowPopoverPresented },
                                                         set: { newValue in
                                                             if !newValue {
-                                                                if isCoCaptainRowSelected && onboarding?.currentStep == .searchBarCoCaptain {
-                                                                    onboarding?.showPopover = false
-                                                                }
+                                                                showRowPopoverDelay = false
                                                             } else {
                                                                 onboarding?.showPopover = true
                                                             }
@@ -434,7 +432,7 @@ struct CommandPaletteView: View {
                                                     }
                                                 ) {
                                                     if let step = onboarding?.currentStep {
-                                                        OnboardingPopoverCard(step: step, isSubStep2_1: true, arrowPlacement: .bottom) {
+                                                        OnboardingPopoverCard(step: step, arrowPlacement: .bottom) {
                                                             onboarding?.skip()
                                                         }
                                                     } else {
@@ -446,6 +444,7 @@ struct CommandPaletteView: View {
                                         .padding(.vertical, 8)
                                     }
                                     .frame(maxHeight: 250)
+                                    .interactiveKeyboardDismiss()
                                     .onChange(of: viewModel.selectedIndex) { oldIndex, newIndex in
                                         let actions = viewModel.filteredActions
                                         let nodeResults = viewModel.nodeResults
@@ -546,22 +545,18 @@ struct CommandPaletteView: View {
                                     lineWidth: 1
                                 )
                         )
-                        .scaleEffect(isSearchBarOnboardingActive ? (isBreathing ? 1.04 : 1.0) : 1.0)
-                        .shadow(
-                            color: isSearchBarOnboardingActive ? Color(hex: "0066FF").opacity(isBreathing ? 0.8 : 0.4) : Color.black.opacity(0.3),
-                            radius: isSearchBarOnboardingActive ? (isBreathing ? 24 : 10) : 15,
-                            x: 0,
-                            y: isSearchBarOnboardingActive ? (isBreathing ? 4 : 5) : 5
+                        .onboardingGlow(
+                            isActive: isSearchBarGlowActive,
+                            isBreathing: isBreathing,
+                            inactiveShadowColor: Color.black.opacity(0.3),
+                            inactiveShadowRadius: 15,
+                            inactiveShadowY: 5
                         )
                         .popover(
                             present: Binding(
-                                get: { isSearchBarOnboardingActive },
+                                get: { isSearchBarPopoverActive },
                                 set: { newValue in
-                                    if !newValue {
-                                        if !isCoCaptainRowSelected && onboarding?.currentStep == .searchBarCoCaptain {
-                                            onboarding?.showPopover = false
-                                        }
-                                    } else {
+                                    if newValue {
                                         onboarding?.showPopover = true
                                     }
                                 }
@@ -660,6 +655,28 @@ struct CommandPaletteView: View {
                 }
             } else {
                 showRowPopoverDelay = false
+            }
+        }
+        .onChange(of: viewModel.query) { _, _ in
+            if !viewModel.canSubmitPrompt {
+                showRowPopoverDelay = false
+                isCoCaptainRowVisible = false
+            }
+        }
+        .onChange(of: viewModel.canSubmitPrompt) { _, canSubmitPrompt in
+            if canSubmitPrompt {
+                if onboarding?.currentStep == .typeCoCaptainPrompt {
+                    viewModel.selectPromptRowIfAvailable()
+                    onboarding?.completeCurrentStep()
+                } else if onboarding?.currentStep == .submitCoCaptainPrompt {
+                    viewModel.selectPromptRowIfAvailable()
+                }
+            } else {
+                showRowPopoverDelay = false
+                isCoCaptainRowVisible = false
+                if viewModel.isPresented && onboarding?.currentStep == .submitCoCaptainPrompt {
+                    onboarding?.moveToStep(.typeCoCaptainPrompt)
+                }
             }
         }
     }
@@ -805,19 +822,31 @@ struct CoCaptainPromptRow: View {
             .omniboxRowStyle(isSelected: isSelected)
         }
         .buttonStyle(.plain)
-        .scaleEffect(isGlowActive ? (isBreathing ? 1.04 : 1.0) : 1.0)
-        .shadow(
-            color: isGlowActive ? Color(hex: "0066FF").opacity(isBreathing ? 0.8 : 0.4) : Color.clear,
-            radius: isGlowActive ? (isBreathing ? 24 : 10) : 0,
-            x: 0,
-            y: isGlowActive ? (isBreathing ? 4 : 5) : 0
-        )
+        .onboardingGlow(isActive: isGlowActive, isBreathing: isBreathing)
         .onAppear {
             isVisible?.wrappedValue = true
         }
         .onDisappear {
             isVisible?.wrappedValue = false
         }
+    }
+}
+
+private extension View {
+    func onboardingGlow(
+        isActive: Bool,
+        isBreathing: Bool,
+        inactiveShadowColor: Color = .clear,
+        inactiveShadowRadius: CGFloat = 0,
+        inactiveShadowY: CGFloat = 0
+    ) -> some View {
+        scaleEffect(isActive ? (isBreathing ? 1.04 : 1.0) : 1.0)
+            .shadow(
+                color: isActive ? Color(hex: "0066FF").opacity(isBreathing ? 0.8 : 0.4) : inactiveShadowColor,
+                radius: isActive ? (isBreathing ? 24 : 10) : inactiveShadowRadius,
+                x: 0,
+                y: isActive ? (isBreathing ? 4 : 5) : inactiveShadowY
+            )
     }
 }
 

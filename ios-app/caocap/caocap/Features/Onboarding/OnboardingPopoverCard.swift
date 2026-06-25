@@ -101,7 +101,6 @@ struct UnifiedBubbleWithArrowShape: Shape {
 /// Matches CAOCAP's dark, material-blurred visual language.
 struct OnboardingPopoverCard: View {
     let step: OnboardingCoordinator.Step
-    var isSubStep2_1: Bool = false
     var arrowOffset: CGFloat = 0
     var arrowPlacement: UnifiedBubbleWithArrowShape.ArrowPlacement = .bottom
     let onSkip: () -> Void
@@ -115,28 +114,12 @@ struct OnboardingPopoverCard: View {
         endPoint: .bottomTrailing
     )
 
-    private var cardTitle: String {
-        isSubStep2_1 ? "Ask CoCaptain" : step.title
-    }
-    
-    private var cardIcon: String {
-        isSubStep2_1 ? "sparkles" : step.icon
-    }
-    
-    private var cardStepLabel: String {
-        step.stepLabel
-    }
-    
-    private var cardMessage: String {
-        isSubStep2_1 ? "Tap the 'Ask CoCaptain' action row or tap the return button on your keyboard to send your message." : step.message
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             // Header: icon + title + step counter
             HStack(spacing: 10) {
                 // Animated icon
-                Image(systemName: cardIcon)
+                Image(systemName: step.icon)
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(accentGradient)
                     .frame(width: 32, height: 32)
@@ -146,13 +129,11 @@ struct OnboardingPopoverCard: View {
                     )
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(cardTitle)
+                    Text(step.title)
                         .font(.system(size: 16, weight: .bold))
                         .foregroundColor(.primary)
 
-                    Text(cardStepLabel)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.secondary)
+                    OnboardingProgressBar(step: step)
                 }
 
                 Spacer()
@@ -177,7 +158,7 @@ struct OnboardingPopoverCard: View {
             }
 
             // Message body
-            Text(cardMessage)
+            Text(step.message)
                 .font(.system(size: 14, weight: .regular))
                 .foregroundColor(.primary.opacity(0.85))
                 .lineSpacing(3)
@@ -208,6 +189,25 @@ struct OnboardingPopoverCard: View {
         )
         .shadow(color: Color.black.opacity(0.35), radius: 20, x: 0, y: 10)
         .shadow(color: Color.blue.opacity(0.08), radius: 30, x: 0, y: 5)
+    }
+}
+
+private struct OnboardingProgressBar: View {
+    let step: OnboardingCoordinator.Step
+
+    private var currentIndex: Int {
+        OnboardingManifest.steps.firstIndex(where: { $0.step == step }) ?? 0
+    }
+
+    var body: some View {
+        HStack(spacing: 3) {
+            ForEach(Array(OnboardingManifest.steps.enumerated()), id: \.element.step.rawValue) { index, _ in
+                Capsule()
+                    .fill(index <= currentIndex ? Color.blue.opacity(0.85) : Color.primary.opacity(0.12))
+                    .frame(width: 16, height: 4)
+            }
+        }
+        .accessibilityLabel(Text(step.stepLabel))
     }
 }
 
