@@ -11,15 +11,19 @@ extension NodeRole {
         case .custom: return "square.grid.2x2.fill"
         }
     }
-    
+
     public var themeColor: Color {
+        matchingNodeType.defaultTheme.color
+    }
+
+    private var matchingNodeType: NodeType {
         switch self {
-        case .srs: return .blue
-        case .code: return .orange
-        case .livePreview: return .green
-        case .firebase: return .orange
-        case .subCanvas: return .cyan
-        case .custom: return .purple
+        case .srs: return .srs
+        case .code: return .code
+        case .livePreview: return .webView
+        case .firebase: return .firebase
+        case .subCanvas: return .subCanvas
+        case .custom: return .standard
         }
     }
 }

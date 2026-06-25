@@ -15,12 +15,24 @@ struct NodeView: View {
                 if let icon = node.icon {
                     ZStack {
                         Circle()
-                            .fill(themeColor.opacity(0.15))
+                            .fill(
+                                LinearGradient(
+                                    colors: gradientColors.map { $0.opacity(0.22) },
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
                             .frame(width: 40, height: 40)
                         
                         Image(systemName: icon)
                             .font(.system(size: 20, weight: .semibold))
-                            .foregroundColor(themeColor)
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: gradientColors,
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
                     }
                 }
                 
@@ -111,6 +123,13 @@ struct NodeView: View {
         return node.theme.color
     }
 
+    private var gradientColors: [Color] {
+        if node.action == .proSubscription && SubscriptionManager.shared.isSubscribed {
+            return [Color(hex: "FACC15"), Color(hex: "F59E0B")]
+        }
+        return node.theme.gradientColors
+    }
+
     private var nodeTitle: String {
         if node.action == .proSubscription && SubscriptionManager.shared.isSubscribed {
             return LocalizationManager.shared.localizedString("CAOCAP Pro")
@@ -129,12 +148,28 @@ struct NodeView: View {
         ZStack {
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(.ultraThinMaterial)
-            
+
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(isDragging ? themeColor.opacity(0.08) : themeColor.opacity(0.03))
+                .fill(
+                    LinearGradient(
+                        colors: gradientColors.map { $0.opacity(isDragging ? 0.16 : 0.09) },
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(
+                    RadialGradient(
+                        colors: [gradientColors.first?.opacity(isDragging ? 0.14 : 0.08) ?? .clear, .clear],
+                        center: .topLeading,
+                        startRadius: 0,
+                        endRadius: 220
+                    )
+                )
         }
         .shadow(
-            color: Color.black.opacity(isDragging ? 0.25 : 0.15),
+            color: (gradientColors.first ?? .black).opacity(isDragging ? 0.28 : 0.18),
             radius: isDragging ? 30 : 20,
             x: 0,
             y: isDragging ? 20 : 10
@@ -147,8 +182,8 @@ struct NodeView: View {
                 LinearGradient(
                     colors: [
                         .white.opacity(isDragging ? 0.6 : 0.3),
-                        .white.opacity(0.05),
-                        themeColor.opacity(isDragging ? 0.6 : 0.3)
+                        gradientColors.last?.opacity(isDragging ? 0.55 : 0.35) ?? themeColor.opacity(0.3),
+                        gradientColors.first?.opacity(isDragging ? 0.45 : 0.25) ?? themeColor.opacity(0.2)
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing

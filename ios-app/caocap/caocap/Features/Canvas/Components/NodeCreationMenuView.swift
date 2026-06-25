@@ -120,14 +120,7 @@ struct NodeCreationMenuView: View {
     }
     
     private func typeColor(for type: NodeType) -> Color {
-        switch type {
-        case .webView: return .blue
-        case .srs: return .purple
-        case .code: return .blue
-        case .firebase: return .orange
-        case .subCanvas: return .cyan
-        default: return .secondary
-        }
+        type.defaultTheme.color
     }
 }
 

@@ -30,6 +30,8 @@ final class NodeMutationEngine {
             undoStackChanged += 1
             
             nodes[index].type = type
+            nodes[index].theme = nodeTheme(for: type)
+            nodes[index].icon = nodeIcon(for: type)
             
             // Type-specific initialization if content is empty
             switch type {
@@ -223,6 +225,7 @@ final class NodeMutationEngine {
             position: position,
             title: title,
             icon: icon,
+            theme: .indigo,
             action: action
         )
 
@@ -253,11 +256,7 @@ final class NodeMutationEngine {
     }
 
     public func nodeTheme(for type: NodeType) -> NodeTheme {
-        switch type {
-        case .firebase: return .orange
-        case .subCanvas: return .cyan
-        default: return .blue
-        }
+        type.defaultTheme
     }
 
     public func generateUniqueTitle(nodes: [SpatialNode], base: String) -> String {
