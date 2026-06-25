@@ -16,7 +16,7 @@ public class AppRouter {
     public var projects: [String: ProjectStore] = [:]
     private var navigationStack: [WorkspaceState] = []
     
-    public let rootStore = ProjectStore(fileName: "root_v6.json", projectName: "Root", initialViewportScale: 0.5)
+    public let rootStore: ProjectStore
     
     /// Returns the store for the current workspace, lazily creating project
     /// stores on cold boot when navigation restores a project filename.
@@ -36,7 +36,13 @@ public class AppRouter {
     }
     
     public init() {
+        CanvasWorkspaceMigration.runIfNeeded()
         self.currentWorkspace = .root
+        self.rootStore = ProjectStore(
+            fileName: CanvasFileNaming.rootFileName,
+            projectName: "Root",
+            initialViewportScale: 0.5
+        )
     }
     
     /// Moves between workspaces and records onboarding completion when the user
@@ -52,9 +58,8 @@ public class AppRouter {
             }
             self.currentWorkspace = workspace
             
-            // Track last project for the Resume shortcut
             if case .project(let fileName) = workspace {
-                UserDefaults.standard.set(fileName, forKey: "lastProjectFileName")
+                UserDefaults.standard.set(fileName, forKey: "lastCanvasFileName")
             }
         }
         
@@ -76,23 +81,8 @@ public class AppRouter {
         navigate(to: .root, animated: true)
     }
     
-    public func createNewProject(template: ProjectTemplate = .helloWorld) {
-        let id = UUID().uuidString.prefix(8)
-        let fileName = "project_\(id).json"
-        
-        let newStore = ProjectStore(fileName: fileName, projectName: "Untitled", initialNodes: ProjectTemplateProvider.nodes(for: template), initialViewportScale: 0.3)
-        projects[fileName] = newStore
-        
-        navigate(to: .project(fileName), animated: true)
-    }
-    
-    public func resumeLastProject() {
-        if let lastFileName = UserDefaults.standard.string(forKey: "lastProjectFileName") {
-            navigate(to: .project(lastFileName), animated: true)
-        }
-    }
-    
     public func navigateToSubCanvas(fileName: String) {
-        navigate(to: .project(fileName), animated: true)
+        let resolved = CanvasFileNaming.resolveExistingFileName(fileName)
+        navigate(to: .project(resolved), animated: true)
     }
 }

@@ -179,124 +179,37 @@ struct CommandPaletteView: View {
                                                 ForEach(section.items, id: \.action.id) { index, action in
                                                     AppActionRow(
                                                         item: action,
-                                                        isSelected: index == viewModel.selectedIndex
-                                                    ) {
-                                                        viewModel.executeAction(action)
-                                                    }
+                                                        isSelected: index == viewModel.selectedIndex,
+                                                        onSelect: { viewModel.executeAction(action) },
+                                                        onPin: action.canPinToCanvas ? { viewModel.pinAction(action) } : nil
+                                                    )
                                                     .id(action.id.rawValue)
                                                 }
                                             }
                                         }
                                     } else {
-                                        ForEach(Array(viewModel.filteredActions.enumerated()), id: \.element.id) { index, action in
-                                            AppActionRow(
-                                                item: action,
-                                                isSelected: index == viewModel.selectedIndex
-                                            ) {
-                                                viewModel.executeAction(action)
-                                            }
-                                            .id(action.id.rawValue)
-                                        }
-                                    }
-
-                                    if !viewModel.nodeResults.isEmpty {
-                                        HStack {
-                                            Text("CANVAS NODES")
-                                                .font(.system(size: 10, weight: .bold))
-                                                .opacity(0.4)
-                                            Spacer()
-                                        }
-                                        .padding(.horizontal, 16)
-                                        .padding(.top, 12)
-                                        .padding(.bottom, 4)
-
-                                        let actionCount = viewModel.filteredActions.count
-                                        ForEach(Array(viewModel.nodeResults.enumerated()), id: \.element.id) { index, nodeResult in
-                                            NodeSearchResultRow(
-                                                result: nodeResult,
-                                                isSelected: (index + actionCount) == viewModel.selectedIndex
-                                            ) {
-                                                viewModel.flyToNode(nodeResult)
-                                            }
-                                            .id(nodeResult.id.uuidString)
-                                        }
-                                    }
-
-                                    if viewModel.canSubmitPrompt {
-                                        let offset = viewModel.filteredActions.count + viewModel.nodeResults.count
-                                        CoCaptainPromptRow(
-                                            prompt: viewModel.query,
-                                            isSelected: offset == viewModel.selectedIndex,
-                                            isGlowActive: isCoCaptainRowOnboardingActive,
+                                        OmniboxSearchResultsView(
+                                            viewModel: viewModel,
+                                            isCoCaptainRowOnboardingActive: isCoCaptainRowOnboardingActive,
                                             isBreathing: isBreathing,
-                                            isVisible: $isCoCaptainRowVisible
-                                        ) {
-                                            viewModel.submitPromptIfNeeded()
-                                        }
-                                        .id("cocaptain-prompt")
-                                        .popover(
-                                            present: Binding(
-                                                get: { isRowPopoverPresented },
-                                                set: { newValue in
-                                                    if !newValue {
-                                                        showRowPopoverDelay = false
-                                                    } else {
-                                                        onboarding?.showPopover = true
-                                                    }
-                                                }
-                                            ),
-                                            attributes: { attributes in
-                                                attributes.position = .absolute(
-                                                    originAnchor: .bottom,
-                                                    popoverAnchor: .top
-                                                )
-                                                attributes.dismissal.mode = .none
-                                                attributes.rubberBandingMode = .none
-                                                attributes.blocksBackgroundTouches = false
-                                                attributes.presentation.animation = .spring(response: 0.4, dampingFraction: 0.8)
-                                                attributes.presentation.transition = .asymmetric(
-                                                    insertion: .scale(scale: 0.85).combined(with: .opacity),
-                                                    removal: .scale(scale: 0.9).combined(with: .opacity)
-                                                )
-                                                attributes.dismissal.animation = .spring(response: 0.3, dampingFraction: 0.8)
-                                                attributes.dismissal.transition = .asymmetric(
-                                                    insertion: .scale(scale: 0.85).combined(with: .opacity),
-                                                    removal: .scale(scale: 0.9).combined(with: .opacity)
-                                                )
-                                                attributes.sourceFrameInset = UIEdgeInsets(top: 8, left: 0, bottom: 0, right: 0)
-                                            }
-                                        ) {
-                                            if let step = onboarding?.currentStep {
-                                                OnboardingPopoverCard(step: step, arrowPlacement: .top) {
-                                                    onboarding?.skip()
-                                                }
-                                            } else {
-                                                EmptyView()
-                                            }
-                                        }
+                                            isCoCaptainRowVisible: $isCoCaptainRowVisible,
+                                            isRowPopoverPresented: isRowPopoverPresented,
+                                            showRowPopoverDelay: $showRowPopoverDelay,
+                                            coCaptainPopoverAbove: true,
+                                            onboarding: onboarding
+                                        )
                                     }
                                 }
                                 .padding(.vertical, 8)
                             }
                             .frame(maxHeight: 400)
                             .interactiveKeyboardDismiss()
-                            .onChange(of: viewModel.selectedIndex) { oldIndex, newIndex in
-                                let actions = viewModel.filteredActions
-                                let nodeResults = viewModel.nodeResults
-                                
-                                if newIndex >= 0 && newIndex < actions.count {
-                                    withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
-                                        proxy.scrollTo(actions[newIndex].id.rawValue, anchor: .center)
-                                    }
-                                } else if newIndex >= actions.count && newIndex < (actions.count + nodeResults.count) {
-                                    withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
-                                        proxy.scrollTo(nodeResults[newIndex - actions.count].id.uuidString, anchor: .center)
-                                    }
-                                } else if viewModel.canSubmitPrompt && newIndex == (actions.count + nodeResults.count) {
-                                    withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
-                                        proxy.scrollTo("cocaptain-prompt", anchor: .center)
-                                    }
-                                }
+                            .onChange(of: viewModel.selectedIndex) { _, newIndex in
+                                OmniboxSearchResultsView.scrollToSelection(
+                                    newIndex: newIndex,
+                                    viewModel: viewModel,
+                                    proxy: proxy
+                                )
                             }
                         }
                         
@@ -346,7 +259,10 @@ struct CommandPaletteView: View {
                         Spacer()
                         
                         // Floating Results Card (Only shown if query is not empty and results exist)
-                        let hasResults = !viewModel.filteredActions.isEmpty || !viewModel.nodeResults.isEmpty || viewModel.canSubmitPrompt
+                        let hasResults = !viewModel.filteredActions.isEmpty
+                            || !viewModel.nodeResults.isEmpty
+                            || !viewModel.nodeCreationResults.isEmpty
+                            || viewModel.canSubmitPrompt
                         let showCard = hasResults && !viewModel.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                         
                         if showCard {
@@ -354,114 +270,27 @@ struct CommandPaletteView: View {
                                 ScrollViewReader { proxy in
                                     ScrollView {
                                         LazyVStack(spacing: 4) {
-                                            ForEach(Array(viewModel.filteredActions.enumerated()), id: \.element.id) { index, action in
-                                                AppActionRow(
-                                                    item: action,
-                                                    isSelected: index == viewModel.selectedIndex
-                                                ) {
-                                                    viewModel.executeAction(action)
-                                                }
-                                                .id(action.id.rawValue)
-                                            }
-
-                                            if !viewModel.nodeResults.isEmpty {
-                                                HStack {
-                                                    Text("CANVAS NODES")
-                                                        .font(.system(size: 10, weight: .bold))
-                                                        .opacity(0.4)
-                                                    Spacer()
-                                                }
-                                                .padding(.horizontal, 16)
-                                                .padding(.top, 12)
-                                                .padding(.bottom, 4)
-
-                                                let actionCount = viewModel.filteredActions.count
-                                                ForEach(Array(viewModel.nodeResults.enumerated()), id: \.element.id) { index, nodeResult in
-                                                    NodeSearchResultRow(
-                                                        result: nodeResult,
-                                                        isSelected: (index + actionCount) == viewModel.selectedIndex
-                                                    ) {
-                                                        viewModel.flyToNode(nodeResult)
-                                                    }
-                                                    .id(nodeResult.id.uuidString)
-                                                }
-                                            }
-
-                                            if viewModel.canSubmitPrompt {
-                                                let offset = viewModel.filteredActions.count + viewModel.nodeResults.count
-                                                CoCaptainPromptRow(
-                                                    prompt: viewModel.query,
-                                                    isSelected: offset == viewModel.selectedIndex,
-                                                    isGlowActive: isCoCaptainRowOnboardingActive,
-                                                    isBreathing: isBreathing,
-                                                    isVisible: $isCoCaptainRowVisible
-                                                ) {
-                                                    viewModel.submitPromptIfNeeded()
-                                                }
-                                                .id("cocaptain-prompt")
-                                                .popover(
-                                                    present: Binding(
-                                                        get: { isRowPopoverPresented },
-                                                        set: { newValue in
-                                                            if !newValue {
-                                                                showRowPopoverDelay = false
-                                                            } else {
-                                                                onboarding?.showPopover = true
-                                                            }
-                                                        }
-                                                    ),
-                                                    attributes: { attributes in
-                                                        attributes.position = .absolute(
-                                                            originAnchor: .top,
-                                                            popoverAnchor: .bottom
-                                                        )
-                                                        attributes.dismissal.mode = .none
-                                                        attributes.rubberBandingMode = .none
-                                                        attributes.blocksBackgroundTouches = false
-                                                        attributes.presentation.animation = .spring(response: 0.4, dampingFraction: 0.8)
-                                                        attributes.presentation.transition = .asymmetric(
-                                                            insertion: .scale(scale: 0.85).combined(with: .opacity),
-                                                            removal: .scale(scale: 0.9).combined(with: .opacity)
-                                                        )
-                                                        attributes.dismissal.animation = .spring(response: 0.3, dampingFraction: 0.8)
-                                                        attributes.dismissal.transition = .asymmetric(
-                                                            insertion: .scale(scale: 0.85).combined(with: .opacity),
-                                                            removal: .scale(scale: 0.9).combined(with: .opacity)
-                                                        )
-                                                        attributes.sourceFrameInset = UIEdgeInsets(top: -8, left: 0, bottom: 0, right: 0)
-                                                    }
-                                                ) {
-                                                    if let step = onboarding?.currentStep {
-                                                        OnboardingPopoverCard(step: step, arrowPlacement: .bottom) {
-                                                            onboarding?.skip()
-                                                        }
-                                                    } else {
-                                                        EmptyView()
-                                                    }
-                                                }
-                                            }
+                                            OmniboxSearchResultsView(
+                                                viewModel: viewModel,
+                                                isCoCaptainRowOnboardingActive: isCoCaptainRowOnboardingActive,
+                                                isBreathing: isBreathing,
+                                                isCoCaptainRowVisible: $isCoCaptainRowVisible,
+                                                isRowPopoverPresented: isRowPopoverPresented,
+                                                showRowPopoverDelay: $showRowPopoverDelay,
+                                                coCaptainPopoverAbove: false,
+                                                onboarding: onboarding
+                                            )
                                         }
                                         .padding(.vertical, 8)
                                     }
                                     .frame(maxHeight: 250)
                                     .interactiveKeyboardDismiss()
-                                    .onChange(of: viewModel.selectedIndex) { oldIndex, newIndex in
-                                        let actions = viewModel.filteredActions
-                                        let nodeResults = viewModel.nodeResults
-                                        
-                                        if newIndex >= 0 && newIndex < actions.count {
-                                            withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
-                                                proxy.scrollTo(actions[newIndex].id.rawValue, anchor: .center)
-                                            }
-                                        } else if newIndex >= actions.count && newIndex < (actions.count + nodeResults.count) {
-                                            withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
-                                                proxy.scrollTo(nodeResults[newIndex - actions.count].id.uuidString, anchor: .center)
-                                            }
-                                        } else if viewModel.canSubmitPrompt && newIndex == (actions.count + nodeResults.count) {
-                                            withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
-                                                proxy.scrollTo("cocaptain-prompt", anchor: .center)
-                                            }
-                                        }
+                                    .onChange(of: viewModel.selectedIndex) { _, newIndex in
+                                        OmniboxSearchResultsView.scrollToSelection(
+                                            newIndex: newIndex,
+                                            viewModel: viewModel,
+                                            proxy: proxy
+                                        )
                                     }
                                 }
                             }
@@ -733,39 +562,209 @@ extension View {
     }
 }
 
+// MARK: - Search Results
+
+private struct OmniboxSearchResultsView: View {
+    @Bindable var viewModel: CommandPaletteViewModel
+    let isCoCaptainRowOnboardingActive: Bool
+    let isBreathing: Bool
+    @Binding var isCoCaptainRowVisible: Bool
+    let isRowPopoverPresented: Bool
+    @Binding var showRowPopoverDelay: Bool
+    let coCaptainPopoverAbove: Bool
+    let onboarding: OnboardingCoordinator?
+
+    var body: some View {
+        if !viewModel.nodeResults.isEmpty {
+            sectionHeader("CANVAS NODES")
+
+            ForEach(Array(viewModel.nodeResults.enumerated()), id: \.element.id) { index, nodeResult in
+                NodeSearchResultRow(
+                    result: nodeResult,
+                    isSelected: viewModel.selectionIndex(forNodeResultAt: index) == viewModel.selectedIndex
+                ) {
+                    viewModel.flyToNode(nodeResult)
+                }
+                .id(nodeResult.id.uuidString)
+            }
+        }
+
+        ForEach(Array(viewModel.filteredActions.enumerated()), id: \.element.id) { index, action in
+            AppActionRow(
+                item: action,
+                isSelected: viewModel.selectionIndex(forActionAt: index) == viewModel.selectedIndex,
+                onSelect: { viewModel.executeAction(action) },
+                onPin: action.canPinToCanvas ? { viewModel.pinAction(action) } : nil
+            )
+            .id(action.id.rawValue)
+        }
+
+        if !viewModel.nodeCreationResults.isEmpty {
+            sectionHeader("CREATE NODE")
+
+            ForEach(Array(viewModel.nodeCreationResults.enumerated()), id: \.element.id) { index, option in
+                NodeCreationOptionRow(
+                    option: option,
+                    isSelected: viewModel.selectionIndex(forNodeCreationResultAt: index) == viewModel.selectedIndex
+                ) {
+                    viewModel.createNode(option)
+                }
+                .id("create-\(option.id.rawValue)")
+            }
+        }
+
+        if viewModel.canSubmitPrompt {
+            CoCaptainPromptRow(
+                prompt: viewModel.query,
+                isSelected: viewModel.selectedIndex == viewModel.promptSelectionIndex,
+                isGlowActive: isCoCaptainRowOnboardingActive,
+                isBreathing: isBreathing,
+                isVisible: $isCoCaptainRowVisible
+            ) {
+                viewModel.submitPromptIfNeeded()
+            }
+            .id("cocaptain-prompt")
+            .popover(
+                present: Binding(
+                    get: { isRowPopoverPresented },
+                    set: { newValue in
+                        if !newValue {
+                            showRowPopoverDelay = false
+                        } else {
+                            onboarding?.showPopover = true
+                        }
+                    }
+                ),
+                attributes: { attributes in
+                    let isTopAnchor = coCaptainPopoverAbove
+                    attributes.position = .absolute(
+                        originAnchor: isTopAnchor ? .bottom : .top,
+                        popoverAnchor: isTopAnchor ? .top : .bottom
+                    )
+                    attributes.dismissal.mode = .none
+                    attributes.rubberBandingMode = .none
+                    attributes.blocksBackgroundTouches = false
+                    attributes.presentation.animation = .spring(response: 0.4, dampingFraction: 0.8)
+                    attributes.presentation.transition = .asymmetric(
+                        insertion: .scale(scale: 0.85).combined(with: .opacity),
+                        removal: .scale(scale: 0.9).combined(with: .opacity)
+                    )
+                    attributes.dismissal.animation = .spring(response: 0.3, dampingFraction: 0.8)
+                    attributes.dismissal.transition = .asymmetric(
+                        insertion: .scale(scale: 0.85).combined(with: .opacity),
+                        removal: .scale(scale: 0.9).combined(with: .opacity)
+                    )
+                    attributes.sourceFrameInset = UIEdgeInsets(
+                        top: isTopAnchor ? 8 : -8,
+                        left: 0,
+                        bottom: 0,
+                        right: 0
+                    )
+                }
+            ) {
+                if let step = onboarding?.currentStep {
+                    OnboardingPopoverCard(
+                        step: step,
+                        arrowPlacement: coCaptainPopoverAbove ? .top : .bottom
+                    ) {
+                        onboarding?.skip()
+                    }
+                } else {
+                    EmptyView()
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func sectionHeader(_ title: String) -> some View {
+        HStack {
+            Text(title)
+                .font(.system(size: 10, weight: .bold))
+                .opacity(0.4)
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 12)
+        .padding(.bottom, 4)
+    }
+
+    static func scrollToSelection(
+        newIndex: Int,
+        viewModel: CommandPaletteViewModel,
+        proxy: ScrollViewProxy
+    ) {
+        let nodeResults = viewModel.nodeResults
+        let nodeCreationResults = viewModel.nodeCreationResults
+        let actions = viewModel.filteredActions
+
+        withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+            if newIndex >= 0 && newIndex < nodeResults.count {
+                proxy.scrollTo(nodeResults[newIndex].id.uuidString, anchor: .center)
+            } else if newIndex >= nodeResults.count && newIndex < (nodeResults.count + actions.count) {
+                let action = actions[newIndex - nodeResults.count]
+                proxy.scrollTo(action.id.rawValue, anchor: .center)
+            } else if newIndex >= (nodeResults.count + actions.count)
+                        && newIndex < (nodeResults.count + actions.count + nodeCreationResults.count) {
+                let option = nodeCreationResults[newIndex - nodeResults.count - actions.count]
+                proxy.scrollTo("create-\(option.id.rawValue)", anchor: .center)
+            } else if viewModel.canSubmitPrompt && newIndex == viewModel.promptSelectionIndex {
+                proxy.scrollTo("cocaptain-prompt", anchor: .center)
+            }
+        }
+    }
+}
+
 // MARK: - Row Component Views
 
 struct AppActionRow: View {
     let item: AppActionDefinition
     let isSelected: Bool
     let onSelect: () -> Void
+    var onPin: (() -> Void)? = nil
     
     var body: some View {
-        Button(action: onSelect) {
-            HStack(spacing: 12) {
-                Image(systemName: item.icon)
-                    .font(.system(size: 16))
-                    .frame(width: 24)
-                
-                Text(item.localizedTitle)
-                    .font(.system(size: 16))
-                
-                Spacer()
-                
-                if isSelected {
-                    Image(systemName: "return")
-                        .font(.system(size: 12))
-                        .opacity(0.8)
-                        .foregroundColor(.blue)
-                        .transition(.scale.combined(with: .opacity))
+        HStack(spacing: 0) {
+            Button(action: onSelect) {
+                HStack(spacing: 12) {
+                    Image(systemName: item.icon)
+                        .font(.system(size: 16))
+                        .frame(width: 24)
+                    
+                    Text(item.localizedTitle)
+                        .font(.system(size: 16))
+                    
+                    Spacer()
+                    
+                    if isSelected {
+                        Image(systemName: "return")
+                            .font(.system(size: 12))
+                            .opacity(0.8)
+                            .foregroundColor(.blue)
+                            .transition(.scale.combined(with: .opacity))
+                    }
                 }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .contentShape(Rectangle())
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .contentShape(Rectangle())
-            .omniboxRowStyle(isSelected: isSelected)
+            .buttonStyle(.plain)
+
+            if item.canPinToCanvas, let onPin {
+                Button(action: onPin) {
+                    Text(LocalizationManager.shared.localizedString("Add to canvas"))
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.blue)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Color.blue.opacity(0.12))
+                        .cornerRadius(6)
+                }
+                .buttonStyle(.plain)
+                .padding(.trailing, 12)
+            }
         }
-        .buttonStyle(.plain)
+        .omniboxRowStyle(isSelected: isSelected)
     }
 }
 
@@ -847,6 +846,41 @@ private extension View {
                 x: 0,
                 y: isActive ? (isBreathing ? 4 : 5) : inactiveShadowY
             )
+    }
+}
+
+struct NodeCreationOptionRow: View {
+    let option: NodeCreationOption
+    let isSelected: Bool
+    let onSelect: () -> Void
+
+    var body: some View {
+        Button(action: onSelect) {
+            HStack(spacing: 12) {
+                Image(systemName: option.icon)
+                    .font(.system(size: 16))
+                    .frame(width: 24)
+                    .foregroundColor(.blue)
+
+                Text(option.title)
+                    .font(.system(size: 16, weight: .medium))
+
+                Spacer()
+
+                if isSelected {
+                    Image(systemName: "return")
+                        .font(.system(size: 12))
+                        .opacity(0.8)
+                        .foregroundColor(.blue)
+                        .transition(.scale.combined(with: .opacity))
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .contentShape(Rectangle())
+            .omniboxRowStyle(isSelected: isSelected)
+        }
+        .buttonStyle(.plain)
     }
 }
 

@@ -177,19 +177,20 @@ struct CoCaptainAgentTests {
     @Test func nodeRoleInferenceRecognizesCanonicalTemplateNodes() {
         #expect(SpatialNode(type: .srs, position: .zero, title: "Software Requirements (SRS)").role == .srs)
         #expect(SpatialNode(type: .code, position: .zero, title: "Code").role == .code)
-        #expect(SpatialNode(type: .code, position: .zero, title: "HTML").role == .html)
-        #expect(SpatialNode(type: .code, position: .zero, title: "CSS").role == .css)
-        #expect(SpatialNode(type: .code, position: .zero, title: "JavaScript").role == .javascript)
+        #expect(SpatialNode(type: .code, position: .zero, title: "HTML").role == .code)
+        #expect(SpatialNode(type: .code, position: .zero, title: "CSS").role == .code)
+        #expect(SpatialNode(type: .code, position: .zero, title: "JavaScript").role == .code)
         #expect(SpatialNode(type: .webView, position: .zero, title: "Live Preview").role == .livePreview)
-        #expect(SpatialNode(type: .code, position: .zero, title: "New Logic").role == .custom)
+        #expect(SpatialNode(type: .code, position: .zero, title: "New Logic").role == .code)
+        #expect(SpatialNode(position: .zero, title: "New Logic").role == .custom)
         #expect(SpatialNode(type: .firebase, position: .zero, title: "Firebase").role == .firebase)
     }
 
     @Test func livePreviewCompilerInjectsFirebaseWhenConfigNodePresent() throws {
-        let htmlNode = SpatialNode(
+        let codeNode = SpatialNode(
             type: .code,
             position: .zero,
-            title: "HTML",
+            title: "Code",
             theme: .orange,
             textContent: "<html><head></head><body><p>x</p></body></html>"
         )
@@ -206,7 +207,7 @@ struct CoCaptainAgentTests {
             theme: .orange,
             textContent: #"{"apiKey":"testKey","authDomain":"t.firebaseapp.com","projectId":"tid","storageBucket":"t.appspot.com","messagingSenderId":"1","appId":"1:1:web:abc"}"#
         )
-        let compilation = try #require(LivePreviewCompiler().compile(nodes: [previewNode, htmlNode, firebaseNode]))
+        let compilation = try #require(LivePreviewCompiler().compile(nodes: [previewNode, codeNode, firebaseNode]))
         #expect(compilation.html.contains("__caocap_fb_b64"))
         #expect(compilation.html.contains("firebase-app-compat.js"))
     }
@@ -246,32 +247,17 @@ struct CoCaptainAgentTests {
         #expect(compilation.html.contains("firebase-app-compat.js"))
     }
 
-    @Test func livePreviewCompilerInjectsCSSAndJavaScriptIntoDocumentTags() throws {
-        let nodes = makePreviewNodes(
-            html: "<html><head></head><body><h1>Hello</h1></body></html>",
-            css: "body { color: white; }",
-            javascript: "console.log('hi');"
-        )
-
-        let compilation = try #require(LivePreviewCompiler().compile(nodes: nodes))
-
-        #expect(compilation.html.contains("<style>\nbody { color: white; }\n</style>"))
-        #expect(compilation.html.contains("<script>\nconsole.log('hi');\n</script>"))
-        #expect(compilation.html.range(of: "<style>")!.lowerBound < compilation.html.range(of: "</head>")!.lowerBound)
-        #expect(compilation.html.range(of: "<script>")!.lowerBound < compilation.html.range(of: "</body>")!.lowerBound)
-    }
-
-    @Test func livePreviewCompilerUsesCombinedCodeNodeWhenPresent() throws {
+    @Test func livePreviewCompilerUsesFirstCodeNodeWhenMultipleExist() throws {
         let nodes = [
             SpatialNode(type: .webView, position: .zero, title: "Live Preview"),
             SpatialNode(type: .code, position: .zero, title: "Code", textContent: "<html><body><h1>Combined</h1></body></html>"),
-            SpatialNode(type: .code, position: .zero, title: "HTML", textContent: "<h1>Legacy</h1>")
+            SpatialNode(type: .code, position: .zero, title: "Other Code", textContent: "<h1>Ignored</h1>")
         ]
 
         let compilation = try #require(LivePreviewCompiler().compile(nodes: nodes))
 
         #expect(compilation.html.contains("Combined"))
-        #expect(!compilation.html.contains("Legacy"))
+        #expect(!compilation.html.contains("Ignored"))
     }
 
     @Test func livePreviewCompilerInjectsFirebaseIntoCombinedCodeNode() throws {
@@ -291,19 +277,6 @@ struct CoCaptainAgentTests {
         #expect(compilation.html.contains("__caocap_fb_b64"))
         #expect(compilation.html.contains("firebase-app-compat.js"))
         #expect(compilation.html.contains("data-caocap-fb-diag"))
-    }
-
-    @Test func livePreviewCompilerHandlesMissingHeadAndBodyTags() throws {
-        let nodes = makePreviewNodes(
-            html: "<main>Hello</main>",
-            css: ".title { color: orange; }",
-            javascript: "window.ready = true;"
-        )
-
-        let compilation = try #require(LivePreviewCompiler().compile(nodes: nodes))
-
-        #expect(compilation.html.hasPrefix("\n<style>\n.title { color: orange; }\n</style>\n"))
-        #expect(compilation.html.hasSuffix("\n<script>\nwindow.ready = true;\n</script>\n"))
     }
 
     @Test func livePreviewCompilerInjectsViewportMetaWhenMissing() throws {
@@ -354,7 +327,7 @@ struct CoCaptainAgentTests {
         #expect(compilationFragment.html.contains("<html><head>"))
     }
 
-    @Test func livePreviewCompilerRequiresPreviewAndCodeOrHTMLNodes() {
+    @Test func livePreviewCompilerRequiresPreviewAndCodeNodes() {
         let compiler = LivePreviewCompiler()
         let codeOnly = [SpatialNode(type: .code, position: .zero, title: "Code", textContent: "<h1>Hello</h1>")]
         let previewOnly = [SpatialNode(type: .webView, position: .zero, title: "Live Preview")]
@@ -382,27 +355,27 @@ struct CoCaptainAgentTests {
     }
 
     @MainActor
-    @Test func commandIntentResolverMatchesEnglishProjectCommands() throws {
+    @Test func commandIntentResolverDoesNotMatchRemovedProjectCommands() throws {
         let resolver = CommandIntentResolver()
         let actions = TestActionDispatcher().availableActions
 
-        #expect(resolver.resolve("create a project", availableActions: actions) == .newProject)
-        #expect(resolver.resolve("please create a project", availableActions: actions) == .newProject)
-        #expect(resolver.resolve("new project", availableActions: actions) == .newProject)
+        #expect(resolver.resolve("create a project", availableActions: actions) == nil)
+        #expect(resolver.resolve("please create a project", availableActions: actions) == nil)
+        #expect(resolver.resolve("new project", availableActions: actions) == nil)
         #expect(resolver.resolve("open settings", availableActions: actions) == .openSettings)
         #expect(resolver.resolve("make a root page", availableActions: actions) == nil)
         #expect(resolver.resolve("do not create a project", availableActions: actions) == nil)
     }
 
     @MainActor
-    @Test func commandIntentResolverMatchesArabicProjectCommands() throws {
+    @Test func commandIntentResolverMatchesArabicSettingsCommands() throws {
         let resolver = CommandIntentResolver()
         let actions = TestActionDispatcher().availableActions
 
-        #expect(resolver.resolve("أنشئ مشروع جديد", availableActions: actions) == .newProject)
-        #expect(resolver.resolve("لو سمحت أنشئ مشروع جديد", availableActions: actions) == .newProject)
+        #expect(resolver.resolve("أنشئ مشروع جديد", availableActions: actions) == nil)
+        #expect(resolver.resolve("لو سمحت أنشئ مشروع جديد", availableActions: actions) == nil)
         #expect(resolver.resolve("افتح الإعدادات", availableActions: actions) == .openSettings)
-        #expect(resolver.resolve("اعرض المشاريع", availableActions: actions) == .openProjectExplorer)
+        #expect(resolver.resolve("اعرض المشاريع", availableActions: actions) == nil)
         #expect(resolver.resolve("لا تنشئ مشروع جديد", availableActions: actions) == nil)
     }
 
@@ -1329,16 +1302,10 @@ struct CoCaptainAgentTests {
         )
     }
 
-    private func makePreviewNodes(
-        html: String,
-        css: String,
-        javascript: String
-    ) -> [SpatialNode] {
+    private func makePreviewNodes(code: String) -> [SpatialNode] {
         [
             SpatialNode(type: .webView, position: .zero, title: "Live Preview"),
-            SpatialNode(type: .code, position: .zero, title: "HTML", textContent: html),
-            SpatialNode(type: .code, position: .zero, title: "CSS", textContent: css),
-            SpatialNode(type: .code, position: .zero, title: "JavaScript", textContent: javascript)
+            SpatialNode(type: .code, position: .zero, title: "Code", textContent: code)
         ]
     }
 }
@@ -1444,14 +1411,6 @@ private final class TestActionDispatcher: AppActionPerforming {
             title: "Open Settings",
             icon: "gearshape.fill",
             category: .assistant,
-            isMutating: false,
-            allowsAutonomousExecution: true
-        ),
-        AppActionDefinition(
-            id: .openProjectExplorer,
-            title: "Project Explorer",
-            icon: "folder.fill",
-            category: .project,
             isMutating: false,
             allowsAutonomousExecution: true
         ),

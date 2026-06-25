@@ -39,46 +39,37 @@ public struct SnapshotMetadata: Codable, Equatable, Identifiable {
     }
 }
 
-public struct ProjectLoadResult: Equatable {
-    public let snapshot: ProjectSnapshot
-    public let sourceSchemaVersion: Int
-
-    public var didMigrate: Bool {
-        sourceSchemaVersion < ProjectPersistenceService.currentSchemaVersion
-    }
-}
-
 public enum ProjectPersistenceError: LocalizedError, Equatable {
-    case unsupportedFutureVersion(Int, current: Int)
+    case unsupportedSchemaVersion(Int?, current: Int)
 
     public var errorDescription: String? {
         switch self {
-        case .unsupportedFutureVersion(let version, let current):
-            return "Project version \(version) is newer than app version \(current)."
+        case .unsupportedSchemaVersion(let version, let current):
+            if let version {
+                return "Project schema version \(version) is not supported. Expected version \(current)."
+            }
+            return "Project is missing schema version. Expected version \(current)."
         }
     }
 }
 
-/// Encapsulates project file layout, schema decoding, migrations, and atomic
-/// JSON writes so ProjectStore can stay focused on observable project state.
+/// Encapsulates project file layout, schema decoding, and atomic JSON writes so
+/// ProjectStore can stay focused on observable project state.
 public struct ProjectPersistenceService: Sendable {
-    public static let currentSchemaVersion = 2
+    public static let currentSchemaVersion = 3
 
     private struct VersionCheck: Codable {
         let schemaVersion: Int?
-    }
-
-    private struct LegacySnapshot: Codable {
-        let projectName: String?
-        let nodes: [SpatialNode]
-        let viewportOffset: CGSize
-        let viewportScale: CGFloat
     }
 
     private let baseDirectory: URL?
 
     public init(baseDirectory: URL? = nil) {
         self.baseDirectory = baseDirectory
+    }
+
+    public func workspaceDirectory() -> URL {
+        projectDirectory()
     }
 
     public func fileURL(for fileName: String) -> URL {
@@ -89,42 +80,12 @@ public struct ProjectPersistenceService: Sendable {
         FileManager.default.fileExists(atPath: fileURL(for: fileName).path)
     }
 
-    public func load(fileName: String) throws -> ProjectLoadResult {
+    public func load(fileName: String) throws -> ProjectSnapshot {
         let data = try Data(contentsOf: fileURL(for: fileName))
         let decoder = JSONDecoder()
         let versionCheck = try? decoder.decode(VersionCheck.self, from: data)
-        let sourceVersion = versionCheck?.schemaVersion ?? 0
-
-        guard sourceVersion <= Self.currentSchemaVersion else {
-            throw ProjectPersistenceError.unsupportedFutureVersion(
-                sourceVersion,
-                current: Self.currentSchemaVersion
-            )
-        }
-
-        let decoded: ProjectSnapshot
-        if sourceVersion == 0 {
-            let legacy = try decoder.decode(LegacySnapshot.self, from: data)
-            decoded = ProjectSnapshot(
-                schemaVersion: 0,
-                projectName: legacy.projectName,
-                nodes: legacy.nodes,
-                viewportOffset: legacy.viewportOffset,
-                viewportScale: legacy.viewportScale
-            )
-        } else {
-            decoded = try decoder.decode(ProjectSnapshot.self, from: data)
-        }
-
-        let migrated = ProjectSnapshot(
-            schemaVersion: Self.currentSchemaVersion,
-            projectName: decoded.projectName,
-            nodes: migrate(nodes: decoded.nodes, from: sourceVersion),
-            viewportOffset: decoded.viewportOffset,
-            viewportScale: decoded.viewportScale
-        )
-
-        return ProjectLoadResult(snapshot: migrated, sourceSchemaVersion: sourceVersion)
+        try requireCurrentSchema(versionCheck?.schemaVersion)
+        return try decoder.decode(ProjectSnapshot.self, from: data)
     }
 
     public func save(_ snapshot: ProjectSnapshot, fileName: String) throws {
@@ -168,7 +129,10 @@ public struct ProjectPersistenceService: Sendable {
             .appendingPathComponent(metadata.fileName)
         
         let data = try Data(contentsOf: url)
-        return try JSONDecoder().decode(ProjectSnapshot.self, from: data)
+        let decoder = JSONDecoder()
+        let versionCheck = try? decoder.decode(VersionCheck.self, from: data)
+        try requireCurrentSchema(versionCheck?.schemaVersion)
+        return try decoder.decode(ProjectSnapshot.self, from: data)
     }
 
     public func deleteSnapshot(metadata: SnapshotMetadata, for projectFileName: String) throws {
@@ -189,13 +153,14 @@ public struct ProjectPersistenceService: Sendable {
         return files.compactMap { url in
             guard url.pathExtension == "json",
                   let data = try? Data(contentsOf: url),
+                  let versionCheck = try? decoder.decode(VersionCheck.self, from: data),
+                  versionCheck.schemaVersion == Self.currentSchemaVersion,
                   let snapshot = try? decoder.decode(ProjectSnapshot.self, from: data),
                   let attributes = try? FileManager.default.attributesOfItem(atPath: url.path),
                   let date = attributes[.creationDate] as? Date else {
                 return nil
             }
             
-            // Reconstruct metadata from file name, contents, and attributes
             return SnapshotMetadata(
                 id: UUID(uuidString: url.deletingPathExtension().lastPathComponent) ?? UUID(),
                 date: date,
@@ -226,41 +191,10 @@ public struct ProjectPersistenceService: Sendable {
         return appSupport
     }
 
-    private func migrate(nodes: [SpatialNode], from sourceVersion: Int) -> [SpatialNode] {
-        var migrated = nodes
-        if sourceVersion < 1 {
-            migrated = migrateV0ToV1(nodes: migrated)
+    private func requireCurrentSchema(_ version: Int?) throws {
+        guard version == Self.currentSchemaVersion else {
+            throw ProjectPersistenceError.unsupportedSchemaVersion(version, current: Self.currentSchemaVersion)
         }
-        if sourceVersion < 2 {
-            migrated = migrateV1ToV2(nodes: migrated)
-        }
-        return migrated
-    }
-
-    private func migrateV0ToV1(nodes: [SpatialNode]) -> [SpatialNode] {
-        var migrated = nodes
-        for i in 0..<migrated.count {
-            if migrated[i].action == nil {
-                switch migrated[i].title {
-                case "Go to the Home workspace", "Go to the Root workspace": migrated[i].action = .navigateRoot
-                case "New Project": migrated[i].action = .createNewProject
-                case "Settings": migrated[i].action = .openSettings
-                case "Profile": migrated[i].action = .openProfile
-                case "Projects": migrated[i].action = .openProjectExplorer
-                case "Ask CoCaptain": migrated[i].action = .summonCoCaptain
-                default: break
-                }
-            }
-        }
-        return migrated
-    }
-
-    private func migrateV1ToV2(nodes: [SpatialNode]) -> [SpatialNode] {
-        var migrated = nodes
-        for i in 0..<migrated.count where migrated[i].agentState.messages.isEmpty {
-            migrated[i].agentState = NodeAgentState()
-        }
-        return migrated
     }
 }
 

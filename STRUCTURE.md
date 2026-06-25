@@ -54,7 +54,6 @@ caocap/
 │   │   └── Review/
 │   ├── Launch/
 │   ├── Overlays/
-│   ├── ProjectExplorer/
 │   ├── Settings/
 │   └── Subscription/
 ├── Resources/
@@ -96,7 +95,7 @@ Centralized, type-safe routing. All workspace transitions flow through here — 
 
 | File | Responsibility |
 |---|---|
-| `AppRouter.swift` | `@Observable` class managing `WorkspaceState` (`.home`, `.project`). Owns all `ProjectStore` instances and project creation/resume routing. |
+| `AppRouter.swift` | `@Observable` class managing `WorkspaceState` (`.home`, `.project`). Owns all `ProjectStore` instances, root/sub-canvas navigation stack, and session tracking for the last opened canvas file. |
 
 ---
 
@@ -105,9 +104,9 @@ Pure domain data. No UI, no persistence, no side effects. These structs define t
 
 | File | Responsibility |
 |---|---|
-| `SpatialNode.swift` | The core canvas primitive. Holds `id`, `type` (`.standard`, `.webView`, `.srs`, `.code`, `.art`, `.text`, `.number`, `.table`, `.calculation`, `.display`, `.aiAgent`, `.chart`), `position`, content fields, drawing data, relationships, agent metadata, chart configuration, and theme. |
+| `SpatialNode.swift` | The core canvas primitive. Holds `id`, `type` (`.standard`, `.webView`, `.srs`, `.code`, `.firebase`, `.subCanvas`), position, content fields, relationships, agent metadata, Firebase configuration, linked sub-canvas metadata, and theme. |
 | `NodeTheme.swift` | Pure enum for color tokens for the six node themes (blue, purple, green, orange, red, gray). |
-| `NodeRole.swift` | Canonical role inference for SRS, Code, Live Preview, custom nodes, and legacy HTML/CSS/JavaScript nodes. |
+| `NodeRole.swift` | Canonical role inference for SRS, Code, Live Preview, and custom nodes. |
 | `SRSReadinessState.swift` | Domain state for whether an SRS node is empty, structured, drafted, or ready. |
 | `SRSScaffold.swift` | Definition of Software Requirements Specification (SRS) templates and check helpers. |
 
@@ -121,7 +120,7 @@ Infrastructure and heavy-lifting. These are long-lived objects that outlive indi
 | `Account/` | Firebase Auth and StoreKit subscription infrastructure. |
 | `AppActions/` | Centralized action registry for app, Omnibox, and agent-triggered actions. |
 | `AppEnvironment/` | App-wide environment helpers such as localization, haptics, and update prompts. |
-| `Runtime/` | Live Preview compilation, preview bootstrapping, and WebView console capture. |
+| `Runtime/` | Live Preview compilation and preview bootstrapping. |
 | `WorkspaceIntelligence/` | Spatial layout, search indexing, project analysis, and SRS readiness evaluation. |
 | `ProjectStore/` | Project state, persistence, checkpoints, exports, and reactive compilation. |
 | `CoCaptain/` | Backend engines and API clients specific to the CoCaptain agentic flow. |
@@ -155,9 +154,8 @@ Live project execution and preview support.
 
 | File | Responsibility |
 |---|---|
-| `LivePreviewCompiler.swift` | Pure compiler that renders the Code node into a WebView payload, with legacy HTML/CSS/JavaScript merging support for older projects. |
+| `LivePreviewCompiler.swift` | Pure compiler that renders the Code node into a WebView payload. |
 | `FirebasePreviewBootstrap.swift` | Handles preview HTML injection and bootstrap configurations for Firebase nodes. |
-| `ConsoleLogStore.swift` | Captures console output emitted from the live WebView preview. |
 
 #### `Services/WorkspaceIntelligence/`
 Workspace analysis, search, and layout helpers.
@@ -176,16 +174,16 @@ State management, persistence, checkpoints, and reactive compilation for the spa
 
 | File | Responsibility |
 |---|---|
-| `ProjectStore.swift` | Observable project state owner. Manages `[SpatialNode]`, viewport state, undo wiring, debounced save requests, and Live Preview refresh. |
-| `ProjectPersistenceService.swift` | Project file URLs, JSON schema decoding/encoding, migrations, and atomic writes. |
-| `ProjectManager.swift` | Actor listing and managing saved local project files asynchronously. |
+| `ProjectStore.swift` | Observable project state owner. Manages `[SpatialNode]`, viewport state, undo wiring, debounced save requests, live preview refresh, and omnibox shortcut pinning. |
+| `ProjectPersistenceService.swift` | Project file URLs, JSON schema decoding/encoding, schema version checks, and atomic writes. |
+| `CanvasFileNaming.swift` | Nested workspace file naming (`canvas_*.json`) and legacy `project_*.json` resolution for sub-canvas navigation. |
+| `CanvasWorkspaceMigration.swift` | One-time migration from project-manager filenames and root shortcut nodes to the canvas workspace model. |
 | `ExportService.swift` | Generates shareable exports asynchronously on a background thread. |
 | `CheckpointManager.swift` | Coordinates pre-agent mutation backup checkpoints. |
 | `NodeMutationEngine.swift` | Manages standard node and layout mutations. |
 | `LivePreviewOrchestrator.swift` | Orchestrates WebView live compiles. |
 | `ProjectSaveController.swift` | Saves projects with debounced JSON serialization. |
-| `AgentPipelineEngine.swift` | Evaluates and triggers local/remote AI agent request turns. |
-| `ReactiveGraphEngine.swift` | Reactive node graph links recalculation engine. |
+| `AgentPipelineEngine.swift` | Triggers node-scoped local/remote AI agent request turns for opted-in downstream nodes. |
 
 ---
 
@@ -247,17 +245,14 @@ The spatial runtime — the heart of CAOCAP.
 |---|---|
 | `NodeView.swift` | Renders a single `SpatialNode` on the canvas. Handles the glassmorphic card, icon, title, and inline WebView embed for `.webView` nodes. |
 | `NodeDetailView.swift` | The sheet-level router. Inspects `node.type` and presents the correct editor: `HTMLWebView` for `.webView`, `CodeEditorView` for `.code`, `SRSEditorView` for `.srs`. |
-| `ChartNodeView.swift` | Swift Charts-powered preview for `.chart` nodes, including table-backed column mapping and bar/line/area styles. |
 | `NodeFrameData.swift` | Preference-key plumbing that reports rendered node frames so connection arrows can target real node centers. |
 | `ConnectionLayer.swift` | Draws Bezier-curve connections for all `connectedNodeIds` relationships. Operates in screen-space to prevent clipping. |
 | `CodeEditorView.swift` | VS Code-style editor sheet for `.code` nodes. Wraps `LineNumberedTextView` with a sleek dark tab bar and file extension label. |
 | `LineNumberedTextView.swift` | `UIViewRepresentable` wrapping a dual-pane `UIView` (gutter + `UITextView`). Implements synchronized scrolling and regex-based syntax highlighting for single-file app code. |
 | `SRSEditorView.swift` | Notion-style "Zen Mode" editor for `.srs` nodes. Serif font, increased line spacing, generous padding, and a branded top bar. |
 | `HTMLWebView.swift` | Thin `UIViewRepresentable` wrapping `WKWebView`. Receives compiled HTML payloads and renders them. Scroll disabled for canvas embedding. |
-| `ArtEditorView.swift` | PencilKit-backed editor for `.art` nodes and freehand visual annotations. |
 | `DottedBackground.swift` | The infinite dotted grid. Renders efficiently using `Canvas` and adapts to the current viewport transform. |
 | `FirebaseConfigNodeEditorView.swift` | Sub-view panel for setting up configuration keys for Firebase integrations. |
-| `NodeCreationMenuView.swift` | Selection menu showing all available nodes to construct on the canvas. |
 
 **`Providers/`** — Static node graph factories:
 
@@ -317,15 +312,6 @@ Browses and restores project checkpoints from saved snapshots directory.
 | File | Responsibility |
 |---|---|
 | `SnapshotBrowserView.swift` | Renders a timeline of available project snapshots with recovery and deletion controls. |
-
----
-
-#### `ProjectExplorer/`
-Saved-project browsing and selection UI backed by `ProjectManager`.
-
-| File | Responsibility |
-|---|---|
-| `ProjectExplorerView.swift` | Saved projects list showing peeks, statistics, and renaming controls. |
 
 ---
 

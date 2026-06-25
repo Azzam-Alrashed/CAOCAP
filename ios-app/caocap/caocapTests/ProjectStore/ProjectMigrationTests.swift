@@ -6,7 +6,7 @@ import Testing
 struct ProjectMigrationTests {
 
     @MainActor
-    @Test func loadingLegacyFileMigratesToV1() throws {
+    @Test func loadThrowsForMissingSchemaVersion() throws {
         let tempDirectory = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: tempDirectory) }
         let persistence = ProjectPersistenceService(baseDirectory: tempDirectory)
@@ -16,28 +16,15 @@ struct ProjectMigrationTests {
             "projectName": "Legacy Project",
             "viewportOffset": {"width": 0, "height": 0},
             "viewportScale": 1.0,
-            "nodes": [
-                {
-                    "id": "A1B2C3D4-E5F6-4A5B-8C9D-0E1F2A3B4C5D",
-                    "type": "srs",
-                    "position": {"x": 0, "y": 0},
-                    "title": "Go to the Home workspace",
-                    "theme": "purple",
-                    "textContent": "Sample"
-                }
-            ]
+            "nodes": []
         }
         """
 
         try legacyJSON.data(using: .utf8)!.write(to: persistence.fileURL(for: fileName))
 
-        let result = try persistence.load(fileName: fileName)
-
-        #expect(result.sourceSchemaVersion == 0)
-        #expect(result.didMigrate)
-        #expect(result.snapshot.projectName == "Legacy Project")
-        #expect(result.snapshot.nodes.count == 1)
-        #expect(result.snapshot.nodes.first?.action == .navigateRoot, "Action should be migrated from title")
+        #expect(throws: ProjectPersistenceError.unsupportedSchemaVersion(nil, current: 3)) {
+            try persistence.load(fileName: fileName)
+        }
     }
 
     @MainActor
@@ -45,29 +32,28 @@ struct ProjectMigrationTests {
         let tempDirectory = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: tempDirectory) }
         let persistence = ProjectPersistenceService(baseDirectory: tempDirectory)
-        let fileName = "v2.json"
-        let v2JSON = """
+        let fileName = "v3.json"
+        let v3JSON = """
         {
-            "schemaVersion": 2,
-            "projectName": "V2 Project",
+            "schemaVersion": 3,
+            "projectName": "V3 Project",
             "viewportOffset": {"width": 10, "height": 20},
             "viewportScale": 0.5,
             "nodes": []
         }
         """
 
-        try v2JSON.data(using: .utf8)!.write(to: persistence.fileURL(for: fileName))
+        try v3JSON.data(using: .utf8)!.write(to: persistence.fileURL(for: fileName))
 
-        let result = try persistence.load(fileName: fileName)
+        let snapshot = try persistence.load(fileName: fileName)
 
-        #expect(result.sourceSchemaVersion == 2)
-        #expect(!result.didMigrate)
-        #expect(result.snapshot.projectName == "V2 Project")
-        #expect(result.snapshot.viewportScale == 0.5)
+        #expect(snapshot.schemaVersion == 3)
+        #expect(snapshot.projectName == "V3 Project")
+        #expect(snapshot.viewportScale == 0.5)
     }
 
     @MainActor
-    @Test func loadingV1ProjectMigratesNodeAgentState() throws {
+    @Test func loadThrowsForOldSchemaVersion() throws {
         let tempDirectory = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: tempDirectory) }
         let persistence = ProjectPersistenceService(baseDirectory: tempDirectory)
@@ -78,26 +64,15 @@ struct ProjectMigrationTests {
             "projectName": "V1 Project",
             "viewportOffset": {"width": 0, "height": 0},
             "viewportScale": 1.0,
-            "nodes": [
-                {
-                    "id": "A1B2C3D4-E5F6-4A5B-8C9D-0E1F2A3B4C5D",
-                    "type": "code",
-                    "position": {"x": 0, "y": 0},
-                    "title": "Code",
-                    "theme": "orange",
-                    "textContent": "<h1>Hello</h1>"
-                }
-            ]
+            "nodes": []
         }
         """
 
         try v1JSON.data(using: .utf8)!.write(to: persistence.fileURL(for: fileName))
 
-        let result = try persistence.load(fileName: fileName)
-
-        #expect(result.sourceSchemaVersion == 1)
-        #expect(result.didMigrate)
-        #expect(result.snapshot.nodes.first?.agentState.messages.isEmpty == true)
+        #expect(throws: ProjectPersistenceError.unsupportedSchemaVersion(1, current: 3)) {
+            try persistence.load(fileName: fileName)
+        }
     }
 
     @MainActor
@@ -118,7 +93,7 @@ struct ProjectMigrationTests {
 
         try v99JSON.data(using: .utf8)!.write(to: persistence.fileURL(for: fileName))
 
-        #expect(throws: ProjectPersistenceError.self) {
+        #expect(throws: ProjectPersistenceError.unsupportedSchemaVersion(99, current: 3)) {
             try persistence.load(fileName: fileName)
         }
     }
@@ -131,7 +106,7 @@ struct ProjectMigrationTests {
         let fileName = "corrupted.json"
         try Data("{not-json}".utf8).write(to: persistence.fileURL(for: fileName))
 
-        let fallbackNode = SpatialNode(type: .code, position: .zero, title: "HTML", textContent: "<h1>Fallback</h1>")
+        let fallbackNode = SpatialNode(type: .code, position: .zero, title: "Code", textContent: "<h1>Fallback</h1>")
         let store = ProjectStore(
             fileName: fileName,
             projectName: "Fallback Project",
@@ -143,6 +118,64 @@ struct ProjectMigrationTests {
         #expect(store.projectName == "Fallback Project")
     }
 
+    @MainActor
+    @Test func storeFallsBackForUnsupportedSchemaWithoutSaving() throws {
+        let tempDirectory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: tempDirectory) }
+        let persistence = ProjectPersistenceService(baseDirectory: tempDirectory)
+        let fileName = "v1-on-disk.json"
+        let v1JSON = """
+        {
+            "schemaVersion": 1,
+            "projectName": "V1 Project",
+            "viewportOffset": {"width": 0, "height": 0},
+            "viewportScale": 1.0,
+            "nodes": []
+        }
+        """
+        try v1JSON.data(using: .utf8)!.write(to: persistence.fileURL(for: fileName))
+
+        let fallbackNode = SpatialNode(type: .code, position: .zero, title: "Code", textContent: "<h1>Fallback</h1>")
+        _ = ProjectStore(
+            fileName: fileName,
+            projectName: "Fallback Project",
+            initialNodes: [fallbackNode],
+            persistence: persistence
+        )
+
+        let diskData = try Data(contentsOf: persistence.fileURL(for: fileName))
+        let diskJSON = String(data: diskData, encoding: .utf8) ?? ""
+        #expect(diskJSON.contains("\"schemaVersion\" : 1") || diskJSON.contains("\"schemaVersion\": 1"))
+    }
+
+    @MainActor
+    @Test func storeFallsBackForMissingSchemaWithoutSaving() throws {
+        let tempDirectory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: tempDirectory) }
+        let persistence = ProjectPersistenceService(baseDirectory: tempDirectory)
+        let fileName = "missing-schema.json"
+        let legacyJSON = """
+        {
+            "projectName": "Legacy Project",
+            "viewportOffset": {"width": 0, "height": 0},
+            "viewportScale": 1.0,
+            "nodes": []
+        }
+        """
+        try legacyJSON.data(using: .utf8)!.write(to: persistence.fileURL(for: fileName))
+
+        let fallbackNode = SpatialNode(type: .code, position: .zero, title: "Code", textContent: "<h1>Fallback</h1>")
+        _ = ProjectStore(
+            fileName: fileName,
+            projectName: "Fallback Project",
+            initialNodes: [fallbackNode],
+            persistence: persistence
+        )
+
+        let diskJSON = String(data: try Data(contentsOf: persistence.fileURL(for: fileName)), encoding: .utf8) ?? ""
+        #expect(!diskJSON.contains("schemaVersion"))
+    }
+
     @Test func persistenceSaveLoadRoundTrip() throws {
         let tempDirectory = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: tempDirectory) }
@@ -151,7 +184,7 @@ struct ProjectMigrationTests {
         let snapshot = ProjectSnapshot(
             projectName: "Round Trip",
             nodes: [
-                SpatialNode(type: .code, position: CGPoint(x: 12, y: 24), title: "HTML", textContent: "<h1>Hello</h1>")
+                SpatialNode(type: .code, position: CGPoint(x: 12, y: 24), title: "Code", textContent: "<h1>Hello</h1>")
             ],
             viewportOffset: CGSize(width: 10, height: 20),
             viewportScale: 0.75
@@ -160,8 +193,73 @@ struct ProjectMigrationTests {
         try persistence.save(snapshot, fileName: fileName)
         let loaded = try persistence.load(fileName: fileName)
 
-        #expect(loaded.snapshot == snapshot)
-        #expect(loaded.sourceSchemaVersion == ProjectPersistenceService.currentSchemaVersion)
+        #expect(loaded == snapshot)
+        #expect(loaded.schemaVersion == ProjectPersistenceService.currentSchemaVersion)
+    }
+
+    @Test func legacyNodeActionStringDecodesToNil() throws {
+        let original = SpatialNode(type: .standard, position: .zero, title: "Launcher", action: nil)
+        var data = try JSONEncoder().encode(original)
+        var jsonObject = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        jsonObject["action"] = "createNewProject"
+        data = try JSONSerialization.data(withJSONObject: jsonObject)
+        let decoded = try JSONDecoder().decode(SpatialNode.self, from: data)
+        #expect(decoded.action == nil)
+    }
+
+    @Test func canvasFileNamingMigratesLegacyFileNames() {
+        #expect(CanvasFileNaming.migrateLegacyFileName("project_abc12345.json") == "canvas_abc12345.json")
+        #expect(CanvasFileNaming.migrateLegacyFileName("canvas_abc12345.json") == "canvas_abc12345.json")
+    }
+
+    @Test func canvasFileNamingResolvesLegacyFallback() throws {
+        let tempDirectory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: tempDirectory) }
+        let persistence = ProjectPersistenceService(baseDirectory: tempDirectory)
+        let legacy = "project_deadbeef.json"
+        try persistence.save(ProjectSnapshot(projectName: "Legacy", nodes: []), fileName: legacy)
+
+        let resolved = CanvasFileNaming.resolveExistingFileName("canvas_deadbeef.json", persistence: persistence)
+        #expect(resolved == legacy)
+    }
+
+    @MainActor
+    @Test func canvasWorkspaceMigrationRenamesFilesAndRewritesLinks() throws {
+        let tempDirectory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: tempDirectory) }
+        let persistence = ProjectPersistenceService(baseDirectory: tempDirectory)
+        let migrationKey = "canvasWorkspaceMigration_v1_complete"
+        defer { UserDefaults.standard.removeObject(forKey: migrationKey) }
+        UserDefaults.standard.removeObject(forKey: migrationKey)
+
+        let legacyLinked = "project_abc12345.json"
+        let subCanvasNode = SpatialNode(
+            type: .subCanvas,
+            position: .zero,
+            title: "Child",
+            linkedCanvasFileName: legacyLinked
+        )
+        let launcher = SpatialNode(type: .standard, position: .zero, title: "Settings", action: .openSettings)
+        let rootSnapshot = ProjectSnapshot(
+            projectName: "Root",
+            nodes: [subCanvasNode, launcher],
+            viewportOffset: .zero,
+            viewportScale: 1.0
+        )
+        try persistence.save(rootSnapshot, fileName: CanvasFileNaming.rootFileName)
+        try persistence.save(ProjectSnapshot(projectName: "Child", nodes: []), fileName: legacyLinked)
+
+        #expect(persistence.projectExists(fileName: legacyLinked))
+        #expect(!persistence.projectExists(fileName: "canvas_abc12345.json"))
+
+        CanvasWorkspaceMigration.runIfNeeded(persistence: persistence)
+
+        #expect(!persistence.projectExists(fileName: legacyLinked))
+        #expect(persistence.projectExists(fileName: "canvas_abc12345.json"))
+
+        let root = try persistence.load(fileName: CanvasFileNaming.rootFileName)
+        #expect(root.nodes.first(where: { $0.title == "Child" })?.linkedCanvasFileName == "canvas_abc12345.json")
+        #expect(root.nodes.first(where: { $0.title == "Settings" })?.action == nil)
     }
 
     private func makeTemporaryDirectory() throws -> URL {

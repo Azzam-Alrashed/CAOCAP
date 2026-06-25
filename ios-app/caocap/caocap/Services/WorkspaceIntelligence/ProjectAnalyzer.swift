@@ -34,9 +34,6 @@ public struct ProjectAnalyzer {
         var suggestions: [ProjectSuggestion] = []
 
         let code = nodes.first(where: { $0.role == .code })
-        let html = nodes.first(where: { $0.role == .html })
-        let css = nodes.first(where: { $0.role == .css })
-        let js = nodes.first(where: { $0.role == .javascript })
         let srs = nodes.first(where: { $0.role == .srs })
 
         // Rule: SRS is empty or blank
@@ -63,41 +60,6 @@ public struct ProjectAnalyzer {
                     severity: .warning
                 ))
             }
-        } else if let html, html.textContent?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true {
-            let detail = srs != nil ? "CoCaptain can generate starter HTML from your SRS." : "Start by adding some HTML structure."
-            let prompt = srs != nil ? "Can you generate a starter HTML structure based on my SRS requirements?" : "Generate a basic HTML boilerplate for me."
-            
-            suggestions.append(ProjectSuggestion(
-                title: "HTML is empty",
-                detail: detail,
-                suggestedPrompt: prompt,
-                severity: .warning
-            ))
-        }
-
-        // Legacy rule: HTML has content but CSS is empty
-        if code == nil,
-           let html, !(html.textContent?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true),
-           let css, css.textContent?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true {
-            suggestions.append(ProjectSuggestion(
-                title: "No styles added",
-                detail: "Your HTML looks good. Want me to generate some CSS for it?",
-                suggestedPrompt: "Based on my current HTML, can you generate some modern CSS styles?",
-                severity: .info
-            ))
-        }
-        
-        // Legacy rule: HTML and CSS exist but JS is empty
-        if code == nil,
-           let html, !(html.textContent?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true),
-           let css, !(css.textContent?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true),
-           let js, js.textContent?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true {
-            suggestions.append(ProjectSuggestion(
-                title: "No interactivity",
-                detail: "Add some JavaScript to make your app interactive.",
-                suggestedPrompt: "Can you suggest some simple JavaScript interactivity for my current HTML and CSS?",
-                severity: .info
-            ))
         }
 
         return suggestions

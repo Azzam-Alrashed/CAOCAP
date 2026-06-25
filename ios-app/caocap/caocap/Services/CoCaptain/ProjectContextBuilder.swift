@@ -90,7 +90,7 @@ public struct ProjectContextBuilder {
             parts.append(
                 """
                 No `firebase` node on this canvas yet.
-                - Tell the user to add **Create Firebase Node** from the command palette (⌘K → Create New Node) or the + menu, then paste the Web `firebaseConfig` object from Firebase Console → Project settings → Your apps.
+                - Tell the user to add a Firebase node from the command palette (⌘K → search "firebase" → Create Firebase Node) and paste the Web `firebaseConfig` object from Firebase Console → Project settings → Your apps.
                 - You may propose a pending app action with id `create_firebase_node` so an empty Firebase node appears for them to fill.
                 """
             )
@@ -158,11 +158,11 @@ public struct ProjectContextBuilder {
     private static func firebaseWiringRulesBulletList() -> String {
         """
         Wiring rules for you (CoCaptain):
-        - Live Preview loads this config and sets `window.__caocapFirestore` when valid. Check `window.__caocapFirestoreStatus === 'ready'`; if not ready, read `window.__caocapFirestoreLastError` and `console` — do **not** call `initializeApp` again in the JavaScript node.
+        - Live Preview loads this config and sets `window.__caocapFirestore` when valid. Check `window.__caocapFirestoreStatus === 'ready'`; if not ready, read `window.__caocapFirestoreLastError` — do **not** call `initializeApp` again in the code node.
         - Always guard: `const db = window.__caocapFirestore; if (!db) { … }`
         - **Firestore compat:** `db.collection('segment')` only accepts a **single** collection id (e.g. `leads`). For nested paths like `users/UID/items`, use `db.collection('users').doc(uid).collection('items')` — never pass a slash string into `collection()`.
         - If `window.__caocapFirestoreDefaultPath` is one segment, `db.collection(window.__caocapFirestoreDefaultPath)` is OK; if it contains `/`, build `doc()` / `collection()` chains instead.
-        - To persist data, emit **`javascript` `node_edits`** using `.add()`, `.set({ merge: true })`, etc., after DOM ready or inside click/submit handlers. Match **real** HTML `id` / `name` attributes from the HTML node.
+        - To persist data, emit **`code` `node_edits`** with inline JavaScript using `.add()`, `.set({ merge: true })`, etc., after DOM ready or inside click/submit handlers. Match **real** HTML `id` / `name` attributes from the code node content.
         - Remind the user: **Firestore Security Rules** must allow the intended client reads/writes (permission-denied often looks like “not saving”).
         """
     }
@@ -178,7 +178,7 @@ public struct ProjectContextBuilder {
         
         var context = "SRS Readiness: \(state.contextLabel)"
         
-        let hasImplementationNodes = store.nodes.contains(where: { $0.role == .code || $0.role == .html || $0.role == .javascript || $0.role == .css })
+        let hasImplementationNodes = store.nodes.contains(where: { $0.role == .code })
         if !hasImplementationNodes {
             context += "\nImplementation State: Blank Canvas (No code nodes exist yet)"
         }
@@ -210,27 +210,14 @@ public struct ProjectContextBuilder {
         switch node.type {
         case .webView:
             return selected ? Self.trimmed(node.htmlContent ?? "", limit: 1600) : Self.trimmed(node.htmlContent ?? "", limit: 500)
-        case .art:
-            return node.drawingData == nil ? "[No drawing data]" : "[Pencil drawing data: \(node.drawingData?.count ?? 0) bytes]"
-        case .standard, .srs, .code, .text, .number, .table:
+        case .standard, .srs, .code:
             return selected ? (node.textContent ?? "") : Self.trimmed(node.textContent ?? "", limit: 500)
-        case .calculation, .display:
-            let val = node.outputValue ?? 0.0
-            return "Output Value: \(val)"
-        case .aiAgent:
-            return node.aiResponse ?? "[No response yet]"
-        case .chart:
-            let style = node.chartStyle?.displayName ?? "Bar Chart"
-            let inputCount = node.inputNodeIds?.count ?? 0
-            return "Chart Style: \(style)\nInput Count: \(inputCount)"
         case .firebase:
             let summary = FirebasePreviewBootstrap.canvasSummaryLine(for: node)
             return selected ? (node.textContent ?? summary) : summary
         case .subCanvas:
             let fileName = node.linkedCanvasFileName ?? "[None]"
             return "Sub-Canvas node linking to file: \(fileName)"
-        case .console:
-            return "[Console log output node]"
         }
     }
 

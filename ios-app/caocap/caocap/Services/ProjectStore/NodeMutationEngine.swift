@@ -12,7 +12,6 @@ final class NodeMutationEngine {
     // Callbacks for side effects:
     var onRequestSave: ((Bool) -> Void)?
     var onCompileLivePreview: ((inout [SpatialNode]) -> Void)?
-    var onRecalculateGraph: ((inout [SpatialNode]) -> Void)?
     var onTriggerDownstreamAgents: ((UUID, [SpatialNode]) -> Void)?
     var onViewportChange: (() -> CGSize)?
     var onPerformUndoMutation: (( @escaping (inout [SpatialNode]) -> Void ) -> Void)?
@@ -31,6 +30,8 @@ final class NodeMutationEngine {
             undoStackChanged += 1
             
             nodes[index].type = type
+            nodes[index].theme = nodeTheme(for: type)
+            nodes[index].icon = nodeIcon(for: type)
             
             // Type-specific initialization if content is empty
             switch type {
@@ -44,94 +45,22 @@ final class NodeMutationEngine {
                 if nodes[index].textContent?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false {
                     nodes[index].textContent = "// Write code here..."
                 }
-            case .webView, .art, .display, .standard:
+            case .webView, .standard:
                 break
-            case .table:
-                if nodes[index].textContent?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false {
-                    nodes[index].textContent = "Header 1, Header 2\nData 1, Data 2"
-                }
-            case .text:
-                if nodes[index].textContent?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false {
-                    nodes[index].textContent = "Write notes here..."
-                }
-            case .number:
-                if nodes[index].textContent?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false {
-                    nodes[index].textContent = "0"
-                }
-            case .calculation:
-                if nodes[index].operation == nil {
-                    nodes[index].operation = .add
-                }
-            case .aiAgent:
-                if nodes[index].promptTemplate == nil {
-                    nodes[index].promptTemplate = "Compare {{input1}} and {{input2}}"
-                }
-            case .chart:
-                if nodes[index].chartStyle == nil {
-                    nodes[index].chartStyle = .bar
-                }
             case .firebase:
                 if nodes[index].textContent?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false {
                     nodes[index].textContent = FirebasePreviewBootstrap.placeholderConfigJSON()
                 }
             case .subCanvas:
                 if nodes[index].linkedCanvasFileName == nil {
-                    nodes[index].linkedCanvasFileName = "project_\(UUID().uuidString.prefix(8)).json"
+                    nodes[index].linkedCanvasFileName = CanvasFileNaming.newCanvasFileName()
                 }
-            case .console:
-                break
             }
             
             if persist {
                 onRequestSave?(true)
             }
             onCompileLivePreview?(&nodes)
-        }
-    }
-    
-    public func updateNodeChartStyle(nodes: inout [SpatialNode], id: UUID, style: ChartStyle) {
-        guard let index = nodes.firstIndex(where: { $0.id == id }) else { return }
-        nodes[index].chartStyle = style
-        onRequestSave?(true)
-    }
-
-    public func updateNodeChartXColumn(nodes: inout [SpatialNode], id: UUID, index: Int?) {
-        guard let nodeIndex = nodes.firstIndex(where: { $0.id == id }) else { return }
-        nodes[nodeIndex].chartXColumnIndex = index
-        onRequestSave?(true)
-    }
-
-    public func updateNodeChartYColumn(nodes: inout [SpatialNode], id: UUID, index: Int?) {
-        guard let nodeIndex = nodes.firstIndex(where: { $0.id == id }) else { return }
-        nodes[nodeIndex].chartYColumnIndex = index
-        onRequestSave?(true)
-    }
-
-    public func updateNodeChartHasHeaderRow(nodes: inout [SpatialNode], id: UUID, hasHeader: Bool) {
-        guard let nodeIndex = nodes.firstIndex(where: { $0.id == id }) else { return }
-        nodes[nodeIndex].chartHasHeaderRow = hasHeader
-        onRequestSave?(true)
-    }
-    
-    public func updateNodeDrawingData(nodes: inout [SpatialNode], id: UUID, data: Data, persist: Bool = true) {
-        if let index = nodes.firstIndex(where: { $0.id == id }) {
-            let oldData = nodes[index].drawingData ?? Data()
-            
-            undoManager?.registerUndo(withTarget: self) { target in
-                MainActor.assumeIsolated {
-                    target.onPerformUndoMutation? { currentNodes in
-                        target.updateNodeDrawingData(nodes: &currentNodes, id: id, data: oldData, persist: persist)
-                    }
-                }
-            }
-            undoStackChanged += 1
-            
-            nodes[index].drawingData = data
-            if persist {
-                onRequestSave?(true)
-            }
-            
-            onRecalculateGraph?(&nodes)
         }
     }
     
@@ -159,7 +88,6 @@ final class NodeMutationEngine {
             if persist {
                 onRequestSave?(true)
             }
-            onRecalculateGraph?(&nodes)
             onTriggerDownstreamAgents?(id, nodes)
         }
     }
@@ -230,30 +158,20 @@ final class NodeMutationEngine {
     }
     
     public func addNode(nodes: inout [SpatialNode], type: NodeType = .code) {
-        let baseTitle = type == .code ? "New Logic" : type.displayName
-        let uniqueTitle = generateUniqueTitle(nodes: nodes, base: baseTitle)
+        let uniqueTitle = generateUniqueTitle(nodes: nodes, base: type.defaultTitle)
 
-        let subtitle: String?
+        let subtitle = type.defaultSubtitle
         let initialText: String?
         switch type {
         case .code:
-            subtitle = "Write your intent here."
             initialText = "// Start coding here..."
         case .firebase:
-            subtitle = "Project settings → Your apps → Web app config"
             initialText = FirebasePreviewBootstrap.placeholderConfigJSON()
-        case .subCanvas:
-            subtitle = "Tap to open this canvas"
-            initialText = nil
-        case .console:
-            subtitle = "Logs and errors from Live Preview"
-            initialText = nil
         default:
-            subtitle = nil
             initialText = nil
         }
 
-        let linkedFileName: String? = type == .subCanvas ? "project_\(UUID().uuidString.prefix(8)).json" : nil
+        let linkedFileName: String? = type == .subCanvas ? CanvasFileNaming.newCanvasFileName() : nil
         let offset = onViewportChange?() ?? .zero
 
         let newNode = SpatialNode(
@@ -265,7 +183,6 @@ final class NodeMutationEngine {
             icon: nodeIcon(for: type),
             theme: nodeTheme(for: type),
             textContent: initialText,
-            chartStyle: type == .chart ? .bar : nil,
             linkedCanvasFileName: linkedFileName
         )
         
@@ -282,43 +199,45 @@ final class NodeMutationEngine {
             nodes.append(newNode)
         }
         onRequestSave?(true)
-        onRecalculateGraph?(&nodes)
+    }
+
+    public func addShortcutNode(
+        nodes: inout [SpatialNode],
+        action: NodeAction,
+        title: String,
+        icon: String,
+        at position: CGPoint
+    ) {
+        let newNode = SpatialNode(
+            type: .standard,
+            position: position,
+            title: title,
+            icon: icon,
+            theme: .indigo,
+            action: action
+        )
+
+        undoManager?.registerUndo(withTarget: self) { target in
+            MainActor.assumeIsolated {
+                target.onPerformUndoMutation? { currentNodes in
+                    target.deleteNode(nodes: &currentNodes, id: newNode.id, persist: true)
+                }
+            }
+        }
+        undoStackChanged += 1
+
+        withAnimation(.spring()) {
+            nodes.append(newNode)
+        }
+        onRequestSave?(true)
     }
     
     public func nodeIcon(for type: NodeType) -> String {
-        switch type {
-        case .code: return "plus.square.fill"
-        case .text: return "text.justify.left"
-        case .number: return "text.cursor"
-        case .table: return "tablecells.fill"
-        case .calculation: return "plus.forwardslash.minus"
-        case .display: return "opticaldisc.fill"
-        case .srs: return "doc.text.fill"
-        case .webView: return "play.display"
-        case .art: return "pencil.tip"
-        case .standard: return "square.grid.2x2"
-        case .aiAgent: return "brain.head.profile.fill"
-        case .chart: return "chart.line.uptrend.xyaxis"
-        case .firebase: return "flame.fill"
-        case .subCanvas: return "folder.fill"
-        case .console: return "terminal.fill"
-        }
+        type.defaultIcon
     }
 
     public func nodeTheme(for type: NodeType) -> NodeTheme {
-        switch type {
-        case .text: return .blue
-        case .number: return .blue
-        case .table: return .cyan
-        case .calculation: return .orange
-        case .display: return .green
-        case .aiAgent: return .indigo
-        case .chart: return .purple
-        case .firebase: return .orange
-        case .subCanvas: return .cyan
-        case .console: return .purple
-        default: return .blue
-        }
+        type.defaultTheme
     }
 
     public func generateUniqueTitle(nodes: [SpatialNode], base: String) -> String {
@@ -383,12 +302,6 @@ final class NodeMutationEngine {
                         nodes[i].connectedNodeIds = nil
                     }
                 }
-                if let inputs = nodes[i].inputNodeIds {
-                    nodes[i].inputNodeIds = inputs.filter { $0 != id }
-                    if nodes[i].inputNodeIds?.isEmpty == true {
-                        nodes[i].inputNodeIds = nil
-                    }
-                }
             }
         }
         
@@ -397,60 +310,6 @@ final class NodeMutationEngine {
         }
     }
 
-    public func updateNodeOperation(nodes: inout [SpatialNode], id: UUID, operation: ArithmeticOperation, persist: Bool = true) {
-        if let index = nodes.firstIndex(where: { $0.id == id }) {
-            let oldOp = nodes[index].operation ?? .add
-            
-            undoManager?.registerUndo(withTarget: self) { target in
-                MainActor.assumeIsolated {
-                    target.onPerformUndoMutation? { currentNodes in
-                        target.updateNodeOperation(nodes: &currentNodes, id: id, operation: oldOp, persist: persist)
-                    }
-                }
-            }
-            undoStackChanged += 1
-            
-            nodes[index].operation = operation
-            if persist {
-                onRequestSave?(true)
-            }
-            onRecalculateGraph?(&nodes)
-        }
-    }
-    
-    public func updateNodeInputs(nodes: inout [SpatialNode], id: UUID, inputNodeIds: [UUID]) {
-        if let index = nodes.firstIndex(where: { $0.id == id }) {
-            let oldInputs = nodes[index].inputNodeIds ?? []
-            
-            undoManager?.registerUndo(withTarget: self) { target in
-                MainActor.assumeIsolated {
-                    target.onPerformUndoMutation? { currentNodes in
-                        target.updateNodeInputs(nodes: &currentNodes, id: id, inputNodeIds: oldInputs)
-                    }
-                }
-            }
-            undoStackChanged += 1
-            
-            nodes[index].inputNodeIds = inputNodeIds
-            onRequestSave?(true)
-            onRecalculateGraph?(&nodes)
-        }
-    }
-    
-    public func updateNodePrompt(nodes: inout [SpatialNode], id: UUID, prompt: String) {
-        if let index = nodes.firstIndex(where: { $0.id == id }) {
-            nodes[index].promptTemplate = prompt
-            onRequestSave?(true)
-        }
-    }
-
-    public func updateNodeDisplayStyle(nodes: inout [SpatialNode], id: UUID, style: DisplayStyle) {
-        if let index = nodes.firstIndex(where: { $0.id == id }) {
-            nodes[index].displayStyle = style
-            onRequestSave?(true)
-        }
-    }
-    
     public func updateNodeFirebaseFirestorePath(nodes: inout [SpatialNode], id: UUID, path: String?, persist: Bool = true) {
         if let index = nodes.firstIndex(where: { $0.id == id }) {
             let oldPath = nodes[index].firebaseFirestorePath

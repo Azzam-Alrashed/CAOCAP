@@ -31,6 +31,15 @@ struct SearchTests {
         #expect(results[0].title == "Live Preview")
     }
 
+    @Test func searchIndexMatchesNodeRole() throws {
+        let codeNode = SpatialNode(id: UUID(), type: .code, position: .zero, title: "App Logic")
+        let index = NodeSearchIndex()
+        let results = index.search(query: "code", in: [codeNode])
+
+        #expect(results.count == 1)
+        #expect(results[0].title == "App Logic")
+    }
+
     @Test func viewportFlyToCalculatesCorrectOffset() throws {
         let viewport = ViewportState()
         let nodePosition = CGPoint(x: 100, y: 200)

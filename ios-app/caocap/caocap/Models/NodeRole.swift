@@ -3,46 +3,23 @@ import Foundation
 public enum NodeRole: String, CaseIterable, Codable, Hashable {
     case srs
     case code
-    case html
-    case css
-    case javascript
     case livePreview
-    case text
-    case calculation
-    case display
-    case aiAgent
-    case chart
     case firebase
     case subCanvas
-    case console
     case custom
 
     public static let editableCanonicalRoles: [NodeRole] = [
         .srs,
-        .code,
-        .html,
-        .css,
-        .javascript,
-        .text,
-        .calculation
+        .code
     ]
 
     public var displayName: String {
         switch self {
         case .srs: return "SRS"
         case .code: return "Code"
-        case .html: return "HTML"
-        case .css: return "CSS"
-        case .javascript: return "JavaScript"
         case .livePreview: return "Live Preview"
-        case .text: return "Text"
-        case .calculation: return "Calculation"
-        case .display: return "Display"
-        case .aiAgent: return "AI Agent"
-        case .chart: return "Chart"
         case .firebase: return "Firebase"
         case .subCanvas: return "Sub-Canvas"
-        case .console: return "Console"
         case .custom: return "Custom"
         }
     }
@@ -67,33 +44,12 @@ public extension SpatialNode {
             return .livePreview
         case .srs:
             return .srs
-        case .text:
-            return .text
-        case .calculation:
-            return .calculation
-        case .display:
-            return .display
-        case .chart:
-            return .chart
         case .code:
-            switch title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
-            case "html":
-                return .html
-            case "css":
-                return .css
-            case "javascript":
-                return .javascript
-            default:
-                return .code
-            }
-        case .aiAgent:
-            return .aiAgent
+            return .code
         case .firebase:
             return .firebase
         case .subCanvas:
             return .subCanvas
-        case .console:
-            return .console
         default:
             return .custom
         }
