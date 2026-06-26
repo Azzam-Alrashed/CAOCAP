@@ -6,9 +6,9 @@ import { BookOpen, Github } from "lucide-react";
 import { SiteNav } from "../components/SiteNav";
 
 export const metadata: Metadata = {
-  title: "CAOCAP Codebase Learning Book",
+  title: "Azzamification of CAOCAP",
   description:
-    "A guided book for understanding CAOCAP's SwiftUI app, spatial canvas, project store, live preview runtime, and CoCaptain agent flow."
+    "The product pivot toward a creative canvas where people learn software by building real apps with an AI mentor."
 };
 
 type Block =
@@ -22,7 +22,7 @@ type Block =
 type Heading = Extract<Block, { type: "heading" }>;
 
 const githubBookUrl =
-  "https://github.com/Azzam-Alrashed/CAOCAP/blob/main/docs/caocap-codebase-learning-book.md";
+  "https://github.com/Azzam-Alrashed/CAOCAP/blob/main/docs/AZZAMIFICATION_OF_CAOCAP.md";
 
 function slugify(text: string) {
   return text
@@ -50,7 +50,7 @@ function inlineText(text: string) {
 
 function readBook() {
   return fs.readFileSync(
-    path.join(process.cwd(), "..", "docs", "caocap-codebase-learning-book.md"),
+    path.join(process.cwd(), "..", "docs", "AZZAMIFICATION_OF_CAOCAP.md"),
     "utf8"
   );
 }
@@ -204,9 +204,7 @@ export default function LearnPage() {
   const { blocks, headings } = parseMarkdown(readBook());
   const titleBlock = blocks[0]?.type === "heading" ? blocks[0] : null;
   const contentBlocks = titleBlock ? blocks.slice(1) : blocks;
-  const chapterLinks = headings.filter(
-    (heading) => heading.text.startsWith("Chapter") || heading.text.startsWith("Appendix")
-  );
+  const chapterLinks = headings.filter((heading) => heading.level === 2);
 
   return (
     <main className="book-page">
@@ -216,18 +214,18 @@ export default function LearnPage() {
         <div className="book-hero-icon">
           <BookOpen aria-hidden="true" size={30} />
         </div>
-        <p className="eyebrow">Codebase guide</p>
-        <h1>{titleBlock?.text ?? "The CAOCAP Codebase Learning Book"}</h1>
+        <p className="eyebrow">Product vision</p>
+        <h1>{titleBlock?.text ?? "Azzamification of CAOCAP"}</h1>
         <p>
-          A guided path through the SwiftUI app shell, spatial canvas, project
-          store, live preview runtime, and CoCaptain agent flow.
+          The pivot toward a creative canvas where people learn software by
+          building real apps with an AI mentor.
         </p>
         <div className="book-actions">
           <a href={githubBookUrl} target="_blank" rel="noreferrer">
             <Github aria-hidden="true" size={18} />
             View source
           </a>
-          <Link href="#chapter-1-big-picture-what-caocap-is">Start reading</Link>
+          <Link href="#the-shift">Start reading</Link>
         </div>
       </section>
 
