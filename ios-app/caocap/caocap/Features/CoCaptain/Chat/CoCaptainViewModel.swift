@@ -35,6 +35,7 @@ public final class CoCaptainViewModel {
     private var streamingTask: Task<Void, Never>?
 
     public var isThinking: Bool = false
+    public private(set) var completedAssistantResponseCount: Int = 0
     public var isAwaitingFirstResponse: Bool {
         guard isThinking,
               let lastMessage,
@@ -180,6 +181,7 @@ public final class CoCaptainViewModel {
                 if let reviewBundle = result.reviewBundle {
                     items.append(CoCaptainTimelineItem(content: .reviewBundle(reviewBundle)))
                 }
+                markAssistantResponseCompleted()
             } catch {
                 if error is CancellationError || Task.isCancelled {
                     removeEmptyMessage(id: aiMessageID)
@@ -199,6 +201,7 @@ public final class CoCaptainViewModel {
                         )
                     )
                 }
+                markAssistantResponseCompleted()
             }
         }
     }
@@ -259,6 +262,7 @@ public final class CoCaptainViewModel {
                     )
                 )
             )
+            markAssistantResponseCompleted()
             return true
         }
 
@@ -268,6 +272,7 @@ public final class CoCaptainViewModel {
                 content: .execution(ExecutionStatusItem(summary: result.message))
             )
         )
+        markAssistantResponseCompleted()
         return true
     }
 
@@ -425,6 +430,10 @@ public final class CoCaptainViewModel {
         }
 
         items.remove(at: index)
+    }
+
+    private func markAssistantResponseCompleted() {
+        completedAssistantResponseCount += 1
     }
 
     private var lastMessage: ChatBubbleItem? {

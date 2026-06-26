@@ -118,6 +118,12 @@ public class OnboardingCoordinator {
         schedulePopover(after: interStepDelay)
     }
 
+    /// Hide the active popover without advancing the onboarding step.
+    public func hidePopoverForCurrentStep() {
+        popoverTask?.cancel()
+        showPopover = false
+    }
+
     /// Skip the entire onboarding.
     public func skip() {
         popoverTask?.cancel()

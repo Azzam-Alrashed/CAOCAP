@@ -8,6 +8,8 @@ struct CommandPaletteView: View {
     @Environment(\.colorScheme) var colorScheme
     
     @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
+    @AppStorage("app.dictationLocale") private var dictationLocaleRawValue = DictationLocaleOption.auto.rawValue
+    @State private var dictation = DictationController()
     @State private var isBreathing: Bool = false
     
     private var isShowPopoverActive: Bool {
@@ -28,6 +30,10 @@ struct CommandPaletteView: View {
         return onboarding.currentStep == .submitCoCaptainPrompt &&
             onboarding.showPopover &&
             viewModel.canSubmitPrompt
+    }
+
+    private var dictationLocaleOption: DictationLocaleOption {
+        DictationLocaleOption(rawValue: dictationLocaleRawValue) ?? .auto
     }
     
     struct ActionCategorySection {
@@ -99,6 +105,13 @@ struct CommandPaletteView: View {
                                     }
                                     return .ignored
                                 }
+
+                            if dictation.isRecording || viewModel.query.isEmpty {
+                                omniboxMicButton
+                            } else {
+                                clearQueryButton
+                                    .font(.system(size: 18))
+                            }
                         }
                         .padding(16)
                         .background(
@@ -107,6 +120,8 @@ struct CommandPaletteView: View {
                         )
                         .onboardingGlow(isActive: isSearchBarGlowActive, isBreathing: isBreathing)
                         .onboardingTooltipAnchor(.omniboxSearchField)
+
+                        dictationErrorView
                         
                         Divider()
                             .background(Color.white.opacity(0.1))
@@ -286,18 +301,11 @@ struct CommandPaletteView: View {
                                     return .ignored
                                 }
                             
-                            if !viewModel.query.isEmpty {
-                                Button {
-                                    viewModel.query = ""
-                                } label: {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .font(.system(size: 18))
-                                        .foregroundColor(.secondary)
-                                }
+                            if dictation.isRecording || viewModel.query.isEmpty {
+                                omniboxMicButton
                             } else {
-                                Image(systemName: "mic.fill")
+                                clearQueryButton
                                     .font(.system(size: 18))
-                                    .foregroundColor(.secondary)
                             }
                         }
                         .padding(.horizontal, 16)
@@ -326,6 +334,8 @@ struct CommandPaletteView: View {
                             inactiveShadowY: 5
                         )
                         .onboardingTooltipAnchor(.omniboxSearchField)
+
+                        dictationErrorView
                     }
                     .frame(width: min(500, UIScreen.main.bounds.width - 32))
                     .padding(.horizontal, 16)
@@ -341,12 +351,18 @@ struct CommandPaletteView: View {
             }
         }
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: viewModel.isPresented)
+        .animation(.easeInOut(duration: 0.2), value: dictation.errorMessage)
+        .onChange(of: dictation.transcript) { _, transcript in
+            viewModel.query = transcript
+        }
         .onChange(of: viewModel.isPresented) { oldPresented, newPresented in
             if newPresented {
                 Task {
                     try? await Task.sleep(for: .seconds(0.1))
                     isFocused = true
                 }
+            } else {
+                dictation.stop()
             }
         }
         .onAppear {
@@ -393,6 +409,78 @@ struct CommandPaletteView: View {
         }
         .onChange(of: onboarding?.currentStep) { _, step in
             viewModel.prefersPromptSubmission = step == .submitCoCaptainPrompt
+        }
+        .onDisappear {
+            dictation.stop()
+        }
+    }
+
+    private var clearQueryButton: some View {
+        Button {
+            viewModel.query = ""
+        } label: {
+            Image(systemName: "xmark.circle.fill")
+                .foregroundColor(.secondary)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Clear Omnibox query")
+    }
+
+    private var omniboxMicButton: some View {
+        Button {
+            if dictation.isRecording {
+                dictation.stop()
+            } else {
+                isFocused = false
+                Task {
+                    await dictation.start(
+                        initialText: viewModel.query,
+                        localeOption: dictationLocaleOption
+                    )
+                }
+            }
+        } label: {
+            Image(systemName: dictation.isRecording ? "mic.circle.fill" : "mic.fill")
+                .font(.system(size: dictation.isRecording ? 22 : 18))
+                .foregroundColor(dictation.isRecording ? .red : .secondary)
+                .frame(width: 28, height: 28)
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(dictation.isRecording ? "Stop dictation" : "Start dictation")
+        .contextMenu {
+            dictationLocaleMenu
+        }
+    }
+
+    @ViewBuilder
+    private var dictationLocaleMenu: some View {
+        ForEach(DictationLocaleOption.allCases) { option in
+            Button {
+                if dictation.isRecording {
+                    dictation.stop()
+                }
+                dictationLocaleRawValue = option.rawValue
+            } label: {
+                if option == dictationLocaleOption {
+                    Label(option.displayName, systemImage: "checkmark")
+                } else {
+                    Label(option.displayName, systemImage: option.systemImageName)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var dictationErrorView: some View {
+        if let errorMessage = dictation.errorMessage {
+            Text(errorMessage)
+                .font(.caption)
+                .foregroundStyle(.red)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .transition(.opacity)
         }
     }
 }
