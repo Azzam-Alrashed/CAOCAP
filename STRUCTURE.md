@@ -45,6 +45,7 @@ caocap/
 │   ├── Canvas/
 │   │   ├── Components/
 │   │   └── Providers/
+│   ├── Intro/
 │   ├── Omnibox/
 │   ├── CoCaptain/
 │   │   ├── AgentContract/
@@ -306,6 +307,18 @@ First-run guided onboarding for the canvas, Omnibox, and CoCaptain flow.
 | `OnboardingPopoverCard.swift` | Central onboarding tooltip presentation. Views publish named `OnboardingTooltipAnchor` frames, and a single `onboardingTooltipOverlay()` renders the active step card. |
 
 Onboarding tooltips must not be presented by feature-local `.popover` modifiers. Feature views should only publish anchors with `onboardingTooltipAnchor(_:)`; the central overlay decides which single tooltip is visible.
+
+---
+
+#### `Intro/`
+First-run full-screen intro screens shown after the launch animation and before the interactive canvas walkthrough.
+
+| File | Responsibility |
+|---|---|
+| `IntroCoordinator.swift` | Observable state and `UserDefaults` persistence for intro completion, skip, and page navigation. |
+| `IntroManifest.swift` | Ordered draft copy and metadata for the five intro screens. |
+| `IntroStepContent.swift` | Value model for one intro page's copy, gradient palette, icon, and CTA label. |
+| `IntroView.swift` | Full-screen paged SwiftUI intro with progress dots, back/skip controls, and CTA handoff into the existing onboarding flow. |
 
 ---
 
