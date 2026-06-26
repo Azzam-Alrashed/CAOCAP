@@ -39,6 +39,7 @@ struct ContentView: View {
     @State private var showExportSheet = false
     
     // Onboarding
+    @State private var intro = IntroCoordinator()
     @State private var onboarding = OnboardingCoordinator()
     @State private var coCaptainDetent: PresentationDetent = .medium
     @State private var coCaptainStartsLarge = false
@@ -131,6 +132,15 @@ struct ContentView: View {
                 LaunchScreenView()
                     .transition(.opacity)
                     .zIndex(100)
+            }
+        }
+        .overlay {
+            if !isLaunching && intro.shouldPresent {
+                IntroView(coordinator: intro) {
+                    onboarding.startIfNeeded()
+                }
+                .transition(.opacity)
+                .zIndex(80)
             }
         }
         .overlay {
@@ -232,8 +242,10 @@ struct ContentView: View {
                 withAnimation(.easeInOut(duration: 0.5)) {
                     isLaunching = false
                 }
-                // Start onboarding after launch screen fades
-                onboarding.startIfNeeded()
+                // Start interactive tutorial after launch, or after intro if it is still pending.
+                if !intro.shouldPresent {
+                    onboarding.startIfNeeded()
+                }
             }
         }
         .task {
