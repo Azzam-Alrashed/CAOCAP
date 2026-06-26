@@ -14,16 +14,16 @@ struct AnalysisTests {
         #expect(suggestions.contains { $0.title == "Mini-App code is empty" })
     }
 
-    @Test func analyzerDoesNotSuggestMissingPreview() throws {
+    @Test func analyzerDoesNotSuggestAnythingForEmptyCanvas() throws {
         let nodes: [SpatialNode] = []
         let analyzer = ProjectAnalyzer()
         let suggestions = analyzer.analyze(nodes: nodes)
         
-        #expect(!suggestions.contains { $0.title == "Missing Preview" })
+        #expect(suggestions.isEmpty)
     }
 
     @MainActor
-    @Test func viewModelUpdatesSuggestionsOnStoreChange() throws {
+    @Test func viewModelDoesNotShowSuggestionsForEmptyCanvas() throws {
         let viewModel = CoCaptainViewModel()
         let store = ProjectStore(fileName: "test_project.json", projectName: "Test")
         
@@ -31,6 +31,6 @@ struct AnalysisTests {
         
         viewModel.store = store
         
-        #expect(!viewModel.analysisItems.isEmpty)
+        #expect(viewModel.analysisItems.isEmpty)
     }
 }

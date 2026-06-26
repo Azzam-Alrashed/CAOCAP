@@ -10,11 +10,17 @@ public class OnboardingCoordinator {
     // MARK: - Step Definition
 
     public enum Step: Int, CaseIterable, Comparable {
+        /// User must tap the floating command button (FAB) to open the command palette.
         case tapFAB = 0
+        /// User must type any text in the omnibox search field.
         case typeCoCaptainPrompt
+        /// User must send the typed text to CoCaptain via the prompt row or Return key.
         case submitCoCaptainPrompt
+        /// User must type a message inside the CoCaptain chat panel.
         case chatCoCaptain
+        /// User must dismiss the CoCaptain panel by tapping Done or dragging it down.
         case dismissCoCaptain
+        /// User must long-press the FAB to reveal the quick-action radial menu.
         case longPressFAB
 
         public static func < (lhs: Step, rhs: Step) -> Bool {
@@ -52,9 +58,15 @@ public class OnboardingCoordinator {
     /// Brief pause between steps so the UI settles before the next popover appears.
     private let interStepDelay: TimeInterval = 0.8
 
+    @ObservationIgnored
+    private var popoverTask: Task<Void, Never>?
+
     // MARK: - Persistence
 
+    /// Versioned key so a future onboarding redesign can show the new flow to existing users.
     private static let completedKey = "onboarding_completed_v2"
+    /// Persists the last in-progress step so the coordinator could resume mid-flow if needed
+    /// (currently always resets to the first step on re-launch for a coherent experience).
     private static let stepKey = "onboarding_current_step_v2"
 
     public var isCompleted: Bool {
@@ -79,8 +91,14 @@ public class OnboardingCoordinator {
         currentStep = firstStep
         UserDefaults.standard.set(firstStep.rawValue, forKey: Self.stepKey)
 
-        Task {
-            try? await Task.sleep(for: .seconds(initialDelay))
+        schedulePopover(after: initialDelay)
+    }
+
+    private func schedulePopover(after delay: TimeInterval) {
+        popoverTask?.cancel()
+        popoverTask = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(delay))
+            guard !Task.isCancelled else { return }
             showPopover = true
         }
     }
@@ -95,10 +113,7 @@ public class OnboardingCoordinator {
         if let next = OnboardingManifest.nextStep(after: step) {
             UserDefaults.standard.set(next.rawValue, forKey: Self.stepKey)
             currentStep = next
-            Task {
-                try? await Task.sleep(for: .seconds(interStepDelay))
-                showPopover = true
-            }
+            schedulePopover(after: interStepDelay)
         } else {
             markComplete()
         }
@@ -109,14 +124,18 @@ public class OnboardingCoordinator {
         showPopover = false
         currentStep = step
         UserDefaults.standard.set(step.rawValue, forKey: Self.stepKey)
-        Task {
-            try? await Task.sleep(for: .seconds(interStepDelay))
-            showPopover = true
-        }
+        schedulePopover(after: interStepDelay)
+    }
+
+    /// Hide the active popover without advancing the onboarding step.
+    public func hidePopoverForCurrentStep() {
+        popoverTask?.cancel()
+        showPopover = false
     }
 
     /// Skip the entire onboarding.
     public func skip() {
+        popoverTask?.cancel()
         showPopover = false
         markComplete()
     }
@@ -127,9 +146,11 @@ public class OnboardingCoordinator {
         UserDefaults.standard.removeObject(forKey: Self.stepKey)
         currentStep = nil
         showPopover = false
+        popoverTask?.cancel()
     }
 
     private func markComplete() {
+        popoverTask?.cancel()
         currentStep = nil
         isCompleted = true
         UserDefaults.standard.removeObject(forKey: Self.stepKey)

@@ -1,5 +1,4 @@
 import SwiftUI
-import Popovers
 
 struct CoCaptainInputComposer: View {
     @Binding var text: String
@@ -14,7 +13,10 @@ struct CoCaptainInputComposer: View {
     let onDismissSuggestion: (ProjectSuggestion) -> Void
     
     @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
+    @AppStorage("app.dictationLocale") private var dictationLocaleRawValue = DictationLocaleOption.auto.rawValue
     @State private var localModelManager = LocalMLXModelManager.shared
+    /// Dictation manager for streaming microphone input and converting it to query text.
+    @State private var dictation = DictationController()
     @State private var isContextVisible = false
 
     private var isInputValid: Bool {
@@ -28,6 +30,11 @@ struct CoCaptainInputComposer: View {
     private var isChatOnboardingActive: Bool {
         guard let onboarding else { return false }
         return onboarding.currentStep == .chatCoCaptain && onboarding.showPopover
+    }
+
+    /// Resolves the current user-selected or automatic dictation locale.
+    private var dictationLocaleOption: DictationLocaleOption {
+        DictationLocaleOption(rawValue: dictationLocaleRawValue) ?? .auto
     }
 
     var body: some View {
@@ -81,9 +88,26 @@ struct CoCaptainInputComposer: View {
             }
             .padding(.horizontal, 12)
             .padding(.bottom, 10)
+
+            if let errorMessage = dictation.errorMessage {
+                Text(errorMessage)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .transition(.opacity)
+            }
         }
         .background(Color.primary.opacity(0.02))
         .animation(.spring(response: 0.25, dampingFraction: 0.85), value: isContextVisible)
+        .animation(.easeInOut(duration: 0.2), value: dictation.errorMessage)
+        .onChange(of: dictation.transcript) { _, transcript in
+            text = transcript
+        }
+        .onDisappear {
+            dictation.stop()
+        }
     }
 
     private var quickPromptMenu: some View {
@@ -144,9 +168,6 @@ struct CoCaptainInputComposer: View {
                 .submitLabel(.send)
                 .onSubmit {
                     onSend()
-                    if onboarding?.currentStep == .chatCoCaptain {
-                        onboarding?.completeCurrentStep()
-                    }
                 }
                 .onKeyPress { press in
                     if press.key == .return {
@@ -155,9 +176,6 @@ struct CoCaptainInputComposer: View {
                         } else {
                             if canSend {
                                 onSend()
-                                if onboarding?.currentStep == .chatCoCaptain {
-                                    onboarding?.completeCurrentStep()
-                                }
                                 return .handled
                             }
                         }
@@ -178,42 +196,7 @@ struct CoCaptainInputComposer: View {
                     lineWidth: 1.5
                 )
         )
-        .popover(
-            present: Binding(
-                get: { isChatOnboardingActive },
-                set: { newValue in
-                    onboarding?.showPopover = newValue
-                }
-            ),
-            attributes: { attributes in
-                attributes.position = .absolute(
-                    originAnchor: .top,
-                    popoverAnchor: .bottom
-                )
-                attributes.dismissal.mode = .none
-                attributes.rubberBandingMode = .none
-                attributes.blocksBackgroundTouches = false
-                attributes.presentation.animation = .spring(response: 0.4, dampingFraction: 0.8)
-                attributes.presentation.transition = .asymmetric(
-                    insertion: .scale(scale: 0.85).combined(with: .opacity),
-                    removal: .scale(scale: 0.9).combined(with: .opacity)
-                )
-                attributes.dismissal.animation = .spring(response: 0.3, dampingFraction: 0.8)
-                attributes.dismissal.transition = .asymmetric(
-                    insertion: .scale(scale: 0.85).combined(with: .opacity),
-                    removal: .scale(scale: 0.9).combined(with: .opacity)
-                )
-                attributes.sourceFrameInset = UIEdgeInsets(top: -8, left: 0, bottom: 0, right: 0)
-            }
-        ) {
-            if let step = onboarding?.currentStep {
-                OnboardingPopoverCard(step: step, arrowPlacement: .bottom) {
-                    onboarding?.skip()
-                }
-            } else {
-                EmptyView()
-            }
-        }
+        .onboardingTooltipAnchor(.coCaptainInput)
         .animation(.easeInOut(duration: 0.2), value: isFocused)
         .animation(.easeInOut(duration: 0.2), value: isChatOnboardingActive)
     }
@@ -222,16 +205,25 @@ struct CoCaptainInputComposer: View {
         Button(action: {
             if isThinking {
                 onStop()
-            } else {
+            } else if dictation.isRecording {
+                dictation.stop()
+            } else if isInputValid {
                 onSend()
-                if onboarding?.currentStep == .chatCoCaptain {
-                    onboarding?.completeCurrentStep()
+            } else {
+                isFocused = false
+                Task {
+                    await dictation.start(initialText: text, localeOption: dictationLocaleOption)
                 }
             }
         }) {
             ZStack {
                 if isThinking {
                     Image(systemName: "stop.circle.fill")
+                        .font(.system(size: 38))
+                        .frame(width: 38, height: 38)
+                        .transition(.scale.combined(with: .opacity))
+                } else if dictation.isRecording {
+                    Image(systemName: "mic.circle.fill")
                         .font(.system(size: 38))
                         .frame(width: 38, height: 38)
                         .transition(.scale.combined(with: .opacity))
@@ -248,12 +240,48 @@ struct CoCaptainInputComposer: View {
                         .clipShape(Circle())
                 }
             }
-            .foregroundColor(.blue)
+            .foregroundColor(dictation.isRecording ? .red : .blue)
             .shadow(color: .blue.opacity(0.3), radius: 6, y: 3)
         }
-        .disabled(!isThinking && !canSend)
+        .accessibilityLabel(sendButtonAccessibilityLabel)
+        .contextMenu {
+            if !isInputValid || dictation.isRecording {
+                dictationLocaleMenu
+            }
+        }
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isInputValid)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isThinking)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: dictation.isRecording)
         .padding(.bottom, 5)
+    }
+
+    @ViewBuilder
+    private var dictationLocaleMenu: some View {
+        ForEach(DictationLocaleOption.allCases) { option in
+            Button {
+                if dictation.isRecording {
+                    dictation.stop()
+                }
+                dictationLocaleRawValue = option.rawValue
+            } label: {
+                if option == dictationLocaleOption {
+                    Label(option.displayName, systemImage: "checkmark")
+                } else {
+                    Label(option.displayName, systemImage: option.systemImageName)
+                }
+            }
+        }
+    }
+
+    private var sendButtonAccessibilityLabel: String {
+        if isThinking {
+            "Stop CoCaptain"
+        } else if dictation.isRecording {
+            "Stop dictation"
+        } else if isInputValid {
+            "Send message"
+        } else {
+            "Start dictation"
+        }
     }
 }

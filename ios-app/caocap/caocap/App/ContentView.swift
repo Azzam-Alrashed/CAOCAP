@@ -2,6 +2,10 @@ import SwiftUI
 import UniformTypeIdentifiers
 import OSLog
 
+/// Notification names used to post app-level commands through `NotificationCenter`.
+/// This pattern lets hardware-keyboard `.commands` (iPadOS/macCatalyst) and
+/// hidden zero-size buttons (iPhone, where `.commands` is ignored) all funnel
+/// into the same action bus without coupling the sources to the view.
 extension Notification.Name {
     static let openCommandPalette = Notification.Name("openCommandPalette")
     static let summonCoCaptain = Notification.Name("summonCoCaptain")
@@ -9,13 +13,28 @@ extension Notification.Name {
     static let performRedo = Notification.Name("performRedo")
 }
 
+/// Root view that owns the entire session state.
+///
+/// `ContentView` sits directly inside the `WindowGroup` and is responsible for:
+/// - Rendering the active `InfiniteCanvasView` based on `AppRouter.currentWorkspace`.
+/// - Hosting the floating command button, command palette overlay, and CoCaptain sheet.
+/// - Bridging the undo/redo stack between `UndoManager` and `ProjectStore`.
+/// - Routing `AppActionDispatcher` actions to concrete UI state mutations.
+/// - Coordinating the launch screen, intro flow, and onboarding tutorial.
 struct ContentView: View {
+    /// Global command palette state; injected down to `CommandPaletteView`.
     @State var commandPalette = CommandPaletteViewModel()
+    /// CoCaptain assistant panel state; injected down to `CoCaptainView`.
     @State var coCaptain = CoCaptainViewModel()
+    /// Central dispatcher that maps action IDs to registered closures.
     @State private var actionDispatcher = AppActionDispatcher()
+    /// Drives workspace navigation; owns root and project `ProjectStore` instances.
     @State private var router = AppRouter()
+    /// Canvas dot-grid opacity, persisted across launches.
     @AppStorage("grid_opacity") private var gridOpacity: Double = 0.1
+    /// Last non-zero grid opacity, stored so toggling the grid off/on restores the prior value.
     @AppStorage("last_grid_opacity") private var lastGridOpacity: Double = 0.1
+    /// Whether the heads-up display (viewport info bar) is currently visible.
     @AppStorage("showing_hud") private var showingHUD: Bool = false
     @State private var showingFileImporter = false
     @State private var showingPurchaseSheet = false
@@ -23,26 +42,41 @@ struct ContentView: View {
     @State private var showingSettings = false
     @State private var showingSnapshotBrowser = false
     @State private var showingProfile = false
+    /// Tracks the current pinch-to-zoom level of the canvas, mirrored from `ViewportState`.
     @State private var currentScale: CGFloat = 1.0
     @Environment(\.undoManager) var undoManager
     @Environment(\.colorScheme) var colorScheme
     @State private var selectedTheme = "System"
+    /// `true` while the animated launch screen is covering the canvas.
     @State private var isLaunching = true
     @State private var appUpdateService = AppUpdateService.shared
+    /// Current canvas scroll/zoom state, kept in sync with the active `ProjectStore`.
     @State private var viewport = ViewportState()
+    /// Reported rendering frames for each node, used by fly-to animation to calculate target scale.
     @State private var nodeFrames: [UUID: NodeFrameData] = [:]
+    /// Snapshot of the geometry container size, updated whenever the window resizes.
     @State private var containerSize: CGSize = .zero
     
     // Export State
     @State private var isExporting = false
+    /// URL of the most recently exported bundle, passed to the share sheet.
     @State private var exportURL: URL?
     @State private var showExportSheet = false
     
     // Onboarding
+    @State private var intro = IntroCoordinator()
     @State private var onboarding = OnboardingCoordinator()
+    /// Active presentation detent for the CoCaptain bottom sheet.
     @State private var coCaptainDetent: PresentationDetent = .medium
+    /// When `true`, the sheet opens at `.large` on iPhone for onboarding steps that
+    /// require the full-height CoCaptain panel.
     @State private var coCaptainStartsLarge = false
+    /// Controls whether the `.medium` detent is available, temporarily locked out when
+    /// the sheet must start large during onboarding.
     @State private var coCaptainAllowsMediumDetent = true
+    /// The baseline count of completed CoCaptain assistant responses. Used during onboarding to wait
+    /// until the assistant successfully responds to the user's initial prompt before advancing the step.
+    @State private var onboardingInitialCoCaptainResponseBaseline: Int?
 
     var body: some View {
         GeometryReader { geometry in
@@ -124,12 +158,22 @@ struct ContentView: View {
             .allowsHitTesting(false)
             .frame(width: 0, height: 0)
         }
+        .onboardingTooltipOverlay()
         .background(Color.black.ignoresSafeArea())
         .overlay {
             if isLaunching {
                 LaunchScreenView()
                     .transition(.opacity)
                     .zIndex(100)
+            }
+        }
+        .overlay {
+            if !isLaunching && intro.shouldPresent {
+                IntroView(coordinator: intro) {
+                    onboarding.startIfNeeded()
+                }
+                .transition(.opacity)
+                .zIndex(80)
             }
         }
         .overlay {
@@ -231,8 +275,10 @@ struct ContentView: View {
                 withAnimation(.easeInOut(duration: 0.5)) {
                     isLaunching = false
                 }
-                // Start onboarding after launch screen fades
-                onboarding.startIfNeeded()
+                // Start interactive tutorial after launch, or after intro if it is still pending.
+                if !intro.shouldPresent {
+                    onboarding.startIfNeeded()
+                }
             }
         }
         .task {
@@ -257,17 +303,19 @@ struct ContentView: View {
         .onChange(of: coCaptain.isPresented) { _, isPresented in
             if isPresented {
                 if onboarding.currentStep == .submitCoCaptainPrompt {
-                    onboarding.completeCurrentStep()
-                } else if onboarding.currentStep == .tapFAB {
-                    onboarding.moveToStep(.chatCoCaptain)
+                    onboarding.hidePopoverForCurrentStep()
                 }
             } else {
+                onboardingInitialCoCaptainResponseBaseline = nil
                 if onboarding.currentStep == .dismissCoCaptain {
                     onboarding.completeCurrentStep()
-                } else if onboarding.currentStep == .chatCoCaptain {
-                    onboarding.moveToStep(.tapFAB)
+                } else if onboarding.currentStep == .submitCoCaptainPrompt || onboarding.currentStep == .chatCoCaptain {
+                    onboarding.moveToStep(.longPressFAB)
                 }
             }
+        }
+        .onChange(of: coCaptain.completedAssistantResponseCount) {
+            advanceInitialCoCaptainOnboardingIfReady()
         }
         .onChange(of: router.currentWorkspace) {
             router.activeStore.undoManager = undoManager
@@ -321,6 +369,11 @@ struct ContentView: View {
     }
 }
 
+    // MARK: - Floating Command Button
+
+    /// Constructs the floating action button positioned over the canvas.
+    /// Wires all FAB interactions (tap, undo, redo, long-press drag) to the action
+    /// dispatcher and onboarding coordinator.
     private var floatingCommandButtonView: some View {
         FloatingCommandButton(
             onTap: {
@@ -349,28 +402,13 @@ struct ContentView: View {
                     onboarding.completeCurrentStep()
                 }
             },
-            showOnboardingPopover: Binding(
-                get: {
-                    guard let step = onboarding.currentStep else { return false }
-                    return onboarding.showPopover && (step == .tapFAB || step == .longPressFAB)
-                },
-                set: { newValue in
-                    onboarding.showPopover = newValue
-                }
-            ),
-            onboardingPopoverContent: { offset in
-                if let step = onboarding.currentStep, (step == .tapFAB || step == .longPressFAB) {
-                    return AnyView(
-                        OnboardingPopoverCard(step: step, arrowOffset: offset) {
-                            onboarding.skip()
-                        }
-                    )
-                }
-                return AnyView(EmptyView())
-            }
+            isOnboardingHighlighted: onboarding.showPopover &&
+                (onboarding.currentStep == .tapFAB || onboarding.currentStep == .longPressFAB)
         )
     }
     
+    /// Maps the locally stored theme string to a `ColorScheme` override.
+    /// Returns `nil` to let the system handle appearance when set to `"System"`.
     private var currentColorScheme: ColorScheme? {
         switch selectedTheme {
         case "Light": return .light
@@ -379,6 +417,8 @@ struct ContentView: View {
         }
     }
 
+    /// Routes `NodeAction` values emitted by canvas node tap/long-press interactions
+    /// to the appropriate `AppActionDispatcher` call or `AppRouter` navigation.
     private func handleNodeAction(_ action: NodeAction) {
         switch action {
         case .navigateRoot:
@@ -395,15 +435,23 @@ struct ContentView: View {
         }
     }
 
+    /// Returns `true` when the CoCaptain sheet should open at `.large` on iPhone
+    /// to give onboarding steps enough vertical space for the chat interface.
     private var shouldOpenCoCaptainLargeForOnboarding: Bool {
         UIDevice.current.userInterfaceIdiom == .phone &&
             (onboarding.currentStep == .submitCoCaptainPrompt || onboarding.currentStep == .chatCoCaptain)
     }
 
+    /// The set of allowed detents for the CoCaptain sheet.
+    /// During onboarding steps that require full-height, `.medium` is temporarily
+    /// removed to prevent the user from collapsing the sheet mid-flow.
     private var coCaptainAvailableDetents: Set<PresentationDetent> {
         coCaptainAllowsMediumDetent ? [.medium, .large] : [.large]
     }
 
+    /// Configures detent and starting-size state before the CoCaptain sheet is presented.
+    /// Locks out the `.medium` detent temporarily when onboarding requires a full-height panel;
+    /// a `Task.yield` in the sheet's `onAppear` re-enables it once the open animation finishes.
     private func prepareCoCaptainPresentation() {
         let startsLarge = shouldOpenCoCaptainLargeForOnboarding
         coCaptainStartsLarge = startsLarge
@@ -411,11 +459,39 @@ struct ContentView: View {
         coCaptainDetent = startsLarge ? .large : .medium
     }
 
+    /// Prepares presentation parameters, then presents the CoCaptain sheet.
     private func presentCoCaptain() {
         prepareCoCaptainPresentation()
         coCaptain.setPresented(true)
     }
 
+    /// Checks if the user is currently on the onboarding step to submit a prompt, and if so,
+    /// records the current response count baseline and hides the onboarding popover.
+    private func beginInitialCoCaptainOnboardingWaitIfNeeded() {
+        guard onboarding.currentStep == .submitCoCaptainPrompt else { return }
+        onboardingInitialCoCaptainResponseBaseline = coCaptain.completedAssistantResponseCount
+        onboarding.hidePopoverForCurrentStep()
+    }
+
+    /// Advances the onboarding flow from the prompt submission step once CoCaptain's response count
+    /// exceeds the recorded baseline (indicating that the model finished its response).
+    private func advanceInitialCoCaptainOnboardingIfReady() {
+        guard let baseline = onboardingInitialCoCaptainResponseBaseline,
+              onboarding.currentStep == .submitCoCaptainPrompt,
+              coCaptain.completedAssistantResponseCount > baseline else {
+            return
+        }
+
+        onboardingInitialCoCaptainResponseBaseline = nil
+        onboarding.completeCurrentStep()
+    }
+
+    /// Registers every app-level action handler with `AppActionDispatcher`.
+    ///
+    /// Called once during `onAppear`. Handlers are closures that mutate view-local state
+    /// (sheets, grid, viewport) or delegate to router/store methods. Arguments for
+    /// parameterised actions (`.moveNode`, `.themeNode`, `.transformNode`) arrive as
+    /// `[String: String]` dictionaries and are parsed defensively with early returns.
     private func configureActionDispatcher() {
         actionDispatcher.register(.goRoot) {
             router.goRoot()
@@ -528,6 +604,12 @@ struct ContentView: View {
         }
     }
 
+    /// Wires the command palette's callbacks to the live router and action dispatcher.
+    ///
+    /// Must be called whenever the active workspace changes so the palette operates
+    /// on the correct `ProjectStore`. Also computes the fly-to scale by preferring
+    /// actual node frame data from `NodeFramePreferenceKey` before falling back to
+    /// canonical default sizes.
     private func setupCommandHandlers() {
         syncCommandPaletteActions()
         commandPalette.nodes = router.activeStore.nodes
@@ -571,11 +653,19 @@ struct ContentView: View {
         }
         commandPalette.onSubmitPrompt = { prompt in
             coCaptain.configureProjectSession(store: router.activeStore, dispatcher: actionDispatcher)
+            beginInitialCoCaptainOnboardingWaitIfNeeded()
             presentCoCaptain()
             coCaptain.sendMessage(prompt)
+            advanceInitialCoCaptainOnboardingIfReady()
         }
     }
 
+    /// Imports a `.caocap` or `.json` project file chosen via the system file picker.
+    ///
+    /// Decoding and file-copy work runs on a detached `userInitiated` task to avoid
+    /// blocking the main actor. The file is validated as a `ProjectSnapshot` before
+    /// being written to the app's project directory. On success, navigates immediately
+    /// to the imported project.
     private func handleFileImport(result: Result<[URL], Error>) {
         let logger = Logger(subsystem: "com.caocap.app", category: "FileImport")
         switch result {
@@ -625,6 +715,8 @@ struct ContentView: View {
         }
     }
 
+    /// Builds the list of actions shown in the command palette, filtering out
+    /// context-irrelevant actions (e.g. "Go to Root" and "Go Back" when already at root).
     private func syncCommandPaletteActions() {
         let isProject: Bool
         if case .project = router.currentWorkspace {

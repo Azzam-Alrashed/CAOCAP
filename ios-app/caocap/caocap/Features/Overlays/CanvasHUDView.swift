@@ -1,5 +1,9 @@
 import SwiftUI
 
+/// A fixed top-bar HUD displayed over the spatial canvas.
+/// Shows the project name, a history-checkpoint shortcut, the current zoom level,
+/// a live/saving status indicator, and an auth badge that pulsates orange for
+/// anonymous sessions (prompting the user to sign in and preserve their work).
 struct CanvasHUDView: View {
     let store: ProjectStore
     let viewportScale: CGFloat
@@ -9,7 +13,9 @@ struct CanvasHUDView: View {
     @Environment(AuthenticationManager.self) private var authManager
     @Environment(\.colorScheme) var colorScheme
 
+    /// Drives the expanding-ring animation on the green LIVE indicator dot.
     @State private var livePulse = false
+    /// Drives the expanding-ring animation on the orange anonymous-session indicator.
     @State private var anonPulse = false
     var body: some View {
         VStack {

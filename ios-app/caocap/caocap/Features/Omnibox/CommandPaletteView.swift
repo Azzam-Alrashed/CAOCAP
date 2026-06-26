@@ -1,5 +1,4 @@
 import SwiftUI
-import Popovers
 
 /// Spotlight-style command surface. Rendering stays here while filtering,
 /// selection, and execution callbacks live in `CommandPaletteViewModel`.
@@ -9,9 +8,9 @@ struct CommandPaletteView: View {
     @Environment(\.colorScheme) var colorScheme
     
     @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
+    @AppStorage("app.dictationLocale") private var dictationLocaleRawValue = DictationLocaleOption.auto.rawValue
+    @State private var dictation = DictationController()
     @State private var isBreathing: Bool = false
-    @State private var showRowPopoverDelay: Bool = false
-    @State private var isCoCaptainRowVisible: Bool = false
     
     private var isShowPopoverActive: Bool {
         guard let onboarding else { return false }
@@ -26,20 +25,15 @@ struct CommandPaletteView: View {
         return onboarding.currentStep == .typeCoCaptainPrompt && onboarding.showPopover
     }
 
-    private var isSearchBarPopoverActive: Bool {
-        isSearchBarGlowActive
-    }
-    
     private var isCoCaptainRowOnboardingActive: Bool {
         guard let onboarding else { return false }
         return onboarding.currentStep == .submitCoCaptainPrompt &&
             onboarding.showPopover &&
-            viewModel.canSubmitPrompt &&
-            isCoCaptainRowVisible
+            viewModel.canSubmitPrompt
     }
 
-    private var isRowPopoverPresented: Bool {
-        showRowPopoverDelay && isCoCaptainRowOnboardingActive
+    private var dictationLocaleOption: DictationLocaleOption {
+        DictationLocaleOption(rawValue: dictationLocaleRawValue) ?? .auto
     }
     
     struct ActionCategorySection {
@@ -111,6 +105,13 @@ struct CommandPaletteView: View {
                                     }
                                     return .ignored
                                 }
+
+                            if dictation.isRecording || viewModel.query.isEmpty {
+                                omniboxMicButton
+                            } else {
+                                clearQueryButton
+                                    .font(.system(size: 18))
+                            }
                         }
                         .padding(16)
                         .background(
@@ -118,44 +119,9 @@ struct CommandPaletteView: View {
                                 .fill(colorScheme == .dark ? Color.white.opacity(0.05) : Color.black.opacity(0.03))
                         )
                         .onboardingGlow(isActive: isSearchBarGlowActive, isBreathing: isBreathing)
-                        .popover(
-                            present: Binding(
-                                get: { isSearchBarPopoverActive },
-                                set: { newValue in
-                                    if newValue {
-                                        onboarding?.showPopover = true
-                                    }
-                                }
-                            ),
-                            attributes: { attributes in
-                                attributes.position = .absolute(
-                                    originAnchor: .bottom,
-                                    popoverAnchor: .top
-                                )
-                                attributes.dismissal.mode = .none
-                                attributes.rubberBandingMode = .none
-                                attributes.blocksBackgroundTouches = false
-                                attributes.presentation.animation = .spring(response: 0.4, dampingFraction: 0.8)
-                                attributes.presentation.transition = .asymmetric(
-                                    insertion: .scale(scale: 0.85).combined(with: .opacity),
-                                    removal: .scale(scale: 0.9).combined(with: .opacity)
-                                )
-                                attributes.dismissal.animation = .spring(response: 0.3, dampingFraction: 0.8)
-                                attributes.dismissal.transition = .asymmetric(
-                                    insertion: .scale(scale: 0.85).combined(with: .opacity),
-                                    removal: .scale(scale: 0.9).combined(with: .opacity)
-                                )
-                                attributes.sourceFrameInset = UIEdgeInsets(top: 8, left: 0, bottom: 0, right: 0)
-                            }
-                        ) {
-                            if let step = onboarding?.currentStep {
-                                OnboardingPopoverCard(step: step, arrowPlacement: .top) {
-                                    onboarding?.skip()
-                                }
-                            } else {
-                                EmptyView()
-                            }
-                        }
+                        .onboardingTooltipAnchor(.omniboxSearchField)
+
+                        dictationErrorView
                         
                         Divider()
                             .background(Color.white.opacity(0.1))
@@ -192,11 +158,7 @@ struct CommandPaletteView: View {
                                             viewModel: viewModel,
                                             isCoCaptainRowOnboardingActive: isCoCaptainRowOnboardingActive,
                                             isBreathing: isBreathing,
-                                            isCoCaptainRowVisible: $isCoCaptainRowVisible,
-                                            isRowPopoverPresented: isRowPopoverPresented,
-                                            showRowPopoverDelay: $showRowPopoverDelay,
-                                            coCaptainPopoverAbove: true,
-                                            onboarding: onboarding
+                                            promptRowAnchor: .omniboxPromptRow
                                         )
                                     }
                                 }
@@ -274,14 +236,11 @@ struct CommandPaletteView: View {
                                                 viewModel: viewModel,
                                                 isCoCaptainRowOnboardingActive: isCoCaptainRowOnboardingActive,
                                                 isBreathing: isBreathing,
-                                                isCoCaptainRowVisible: $isCoCaptainRowVisible,
-                                                isRowPopoverPresented: isRowPopoverPresented,
-                                                showRowPopoverDelay: $showRowPopoverDelay,
-                                                coCaptainPopoverAbove: false,
-                                                onboarding: onboarding
+                                                promptRowAnchor: .omniboxPromptRow
                                             )
                                         }
-                                        .padding(.vertical, 8)
+                                        .padding(.top, isCoCaptainRowOnboardingActive ? 20 : 12)
+                                        .padding(.bottom, 8)
                                     }
                                     .frame(maxHeight: 250)
                                     .interactiveKeyboardDismiss()
@@ -342,18 +301,11 @@ struct CommandPaletteView: View {
                                     return .ignored
                                 }
                             
-                            if !viewModel.query.isEmpty {
-                                Button {
-                                    viewModel.query = ""
-                                } label: {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .font(.system(size: 18))
-                                        .foregroundColor(.secondary)
-                                }
+                            if dictation.isRecording || viewModel.query.isEmpty {
+                                omniboxMicButton
                             } else {
-                                Image(systemName: "mic.fill")
+                                clearQueryButton
                                     .font(.system(size: 18))
-                                    .foregroundColor(.secondary)
                             }
                         }
                         .padding(.horizontal, 16)
@@ -381,44 +333,9 @@ struct CommandPaletteView: View {
                             inactiveShadowRadius: 15,
                             inactiveShadowY: 5
                         )
-                        .popover(
-                            present: Binding(
-                                get: { isSearchBarPopoverActive },
-                                set: { newValue in
-                                    if newValue {
-                                        onboarding?.showPopover = true
-                                    }
-                                }
-                            ),
-                            attributes: { attributes in
-                                attributes.position = .absolute(
-                                    originAnchor: .top,
-                                    popoverAnchor: .bottom
-                                )
-                                attributes.dismissal.mode = .none
-                                attributes.rubberBandingMode = .none
-                                attributes.blocksBackgroundTouches = false
-                                attributes.presentation.animation = .spring(response: 0.4, dampingFraction: 0.8)
-                                attributes.presentation.transition = .asymmetric(
-                                    insertion: .scale(scale: 0.85).combined(with: .opacity),
-                                    removal: .scale(scale: 0.9).combined(with: .opacity)
-                                )
-                                attributes.dismissal.animation = .spring(response: 0.3, dampingFraction: 0.8)
-                                attributes.dismissal.transition = .asymmetric(
-                                    insertion: .scale(scale: 0.85).combined(with: .opacity),
-                                    removal: .scale(scale: 0.9).combined(with: .opacity)
-                                )
-                                attributes.sourceFrameInset = UIEdgeInsets(top: -8, left: 0, bottom: 0, right: 0)
-                            }
-                        ) {
-                            if let step = onboarding?.currentStep {
-                                OnboardingPopoverCard(step: step, arrowPlacement: .bottom) {
-                                    onboarding?.skip()
-                                }
-                            } else {
-                                EmptyView()
-                            }
-                        }
+                        .onboardingTooltipAnchor(.omniboxSearchField)
+
+                        dictationErrorView
                     }
                     .frame(width: min(500, UIScreen.main.bounds.width - 32))
                     .padding(.horizontal, 16)
@@ -434,29 +351,28 @@ struct CommandPaletteView: View {
             }
         }
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: viewModel.isPresented)
+        .animation(.easeInOut(duration: 0.2), value: dictation.errorMessage)
+        .onChange(of: dictation.transcript) { _, transcript in
+            viewModel.query = transcript
+        }
         .onChange(of: viewModel.isPresented) { oldPresented, newPresented in
             if newPresented {
                 Task {
                     try? await Task.sleep(for: .seconds(0.1))
                     isFocused = true
                 }
+            } else {
+                dictation.stop()
             }
         }
         .onAppear {
+            viewModel.prefersPromptSubmission = onboarding?.currentStep == .submitCoCaptainPrompt
             if isShowPopoverActive {
                 withAnimation(
                     .easeInOut(duration: 1.8)
                         .repeatForever(autoreverses: true)
                 ) {
                     isBreathing = true
-                }
-            }
-            if isCoCaptainRowOnboardingActive {
-                Task {
-                    try? await Task.sleep(for: .milliseconds(150))
-                    if isCoCaptainRowOnboardingActive {
-                        showRowPopoverDelay = true
-                    }
                 }
             }
         }
@@ -474,23 +390,8 @@ struct CommandPaletteView: View {
                 }
             }
         }
-        .onChange(of: isCoCaptainRowOnboardingActive) { _, newValue in
-            if newValue {
-                Task {
-                    try? await Task.sleep(for: .milliseconds(150))
-                    if isCoCaptainRowOnboardingActive {
-                        showRowPopoverDelay = true
-                    }
-                }
-            } else {
-                showRowPopoverDelay = false
-            }
-        }
         .onChange(of: viewModel.query) { _, _ in
-            if !viewModel.canSubmitPrompt {
-                showRowPopoverDelay = false
-                isCoCaptainRowVisible = false
-            }
+            viewModel.prefersPromptSubmission = onboarding?.currentStep == .submitCoCaptainPrompt
         }
         .onChange(of: viewModel.canSubmitPrompt) { _, canSubmitPrompt in
             if canSubmitPrompt {
@@ -501,12 +402,90 @@ struct CommandPaletteView: View {
                     viewModel.selectPromptRowIfAvailable()
                 }
             } else {
-                showRowPopoverDelay = false
-                isCoCaptainRowVisible = false
                 if viewModel.isPresented && onboarding?.currentStep == .submitCoCaptainPrompt {
                     onboarding?.moveToStep(.typeCoCaptainPrompt)
                 }
             }
+        }
+        .onChange(of: onboarding?.currentStep) { _, step in
+            viewModel.prefersPromptSubmission = step == .submitCoCaptainPrompt
+        }
+        .onDisappear {
+            dictation.stop()
+        }
+    }
+
+    /// A button that clears the current query text in the Omnibox.
+    private var clearQueryButton: some View {
+        Button {
+            viewModel.query = ""
+        } label: {
+            Image(systemName: "xmark.circle.fill")
+                .foregroundColor(.secondary)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Clear Omnibox query")
+    }
+
+    /// A button that toggles speech dictation (recording/stopping) for the Omnibox query.
+    private var omniboxMicButton: some View {
+        Button {
+            if dictation.isRecording {
+                dictation.stop()
+            } else {
+                // Remove focus from the keyboard search bar to avoid conflict with dictation input
+                isFocused = false
+                Task {
+                    await dictation.start(
+                        initialText: viewModel.query,
+                        localeOption: dictationLocaleOption
+                    )
+                }
+            }
+        } label: {
+            Image(systemName: dictation.isRecording ? "mic.circle.fill" : "mic.fill")
+                .font(.system(size: dictation.isRecording ? 22 : 18))
+                .foregroundColor(dictation.isRecording ? .red : .secondary)
+                .frame(width: 28, height: 28)
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(dictation.isRecording ? "Stop dictation" : "Start dictation")
+        .contextMenu {
+            dictationLocaleMenu
+        }
+    }
+
+    /// A context menu view listing the available localization languages for speech recognition.
+    @ViewBuilder
+    private var dictationLocaleMenu: some View {
+        ForEach(DictationLocaleOption.allCases) { option in
+            Button {
+                if dictation.isRecording {
+                    dictation.stop()
+                }
+                dictationLocaleRawValue = option.rawValue
+            } label: {
+                if option == dictationLocaleOption {
+                    Label(option.displayName, systemImage: "checkmark")
+                } else {
+                    Label(option.displayName, systemImage: option.systemImageName)
+                }
+            }
+        }
+    }
+
+    /// A label displaying dictation error messages when permissions are missing or service is unavailable.
+    @ViewBuilder
+    private var dictationErrorView: some View {
+        if let errorMessage = dictation.errorMessage {
+            Text(errorMessage)
+                .font(.caption)
+                .foregroundStyle(.red)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .transition(.opacity)
         }
     }
 }
@@ -568,11 +547,7 @@ private struct OmniboxSearchResultsView: View {
     @Bindable var viewModel: CommandPaletteViewModel
     let isCoCaptainRowOnboardingActive: Bool
     let isBreathing: Bool
-    @Binding var isCoCaptainRowVisible: Bool
-    let isRowPopoverPresented: Bool
-    @Binding var showRowPopoverDelay: Bool
-    let coCaptainPopoverAbove: Bool
-    let onboarding: OnboardingCoordinator?
+    let promptRowAnchor: OnboardingTooltipAnchor
 
     var body: some View {
         if !viewModel.nodeResults.isEmpty {
@@ -618,61 +593,12 @@ private struct OmniboxSearchResultsView: View {
                 prompt: viewModel.query,
                 isSelected: viewModel.selectedIndex == viewModel.promptSelectionIndex,
                 isGlowActive: isCoCaptainRowOnboardingActive,
-                isBreathing: isBreathing,
-                isVisible: $isCoCaptainRowVisible
+                isBreathing: isBreathing
             ) {
                 viewModel.submitPromptIfNeeded()
             }
+            .onboardingTooltipAnchor(promptRowAnchor)
             .id("cocaptain-prompt")
-            .popover(
-                present: Binding(
-                    get: { isRowPopoverPresented },
-                    set: { newValue in
-                        if !newValue {
-                            showRowPopoverDelay = false
-                        } else {
-                            onboarding?.showPopover = true
-                        }
-                    }
-                ),
-                attributes: { attributes in
-                    let isTopAnchor = coCaptainPopoverAbove
-                    attributes.position = .absolute(
-                        originAnchor: isTopAnchor ? .bottom : .top,
-                        popoverAnchor: isTopAnchor ? .top : .bottom
-                    )
-                    attributes.dismissal.mode = .none
-                    attributes.rubberBandingMode = .none
-                    attributes.blocksBackgroundTouches = false
-                    attributes.presentation.animation = .spring(response: 0.4, dampingFraction: 0.8)
-                    attributes.presentation.transition = .asymmetric(
-                        insertion: .scale(scale: 0.85).combined(with: .opacity),
-                        removal: .scale(scale: 0.9).combined(with: .opacity)
-                    )
-                    attributes.dismissal.animation = .spring(response: 0.3, dampingFraction: 0.8)
-                    attributes.dismissal.transition = .asymmetric(
-                        insertion: .scale(scale: 0.85).combined(with: .opacity),
-                        removal: .scale(scale: 0.9).combined(with: .opacity)
-                    )
-                    attributes.sourceFrameInset = UIEdgeInsets(
-                        top: isTopAnchor ? 8 : -8,
-                        left: 0,
-                        bottom: 0,
-                        right: 0
-                    )
-                }
-            ) {
-                if let step = onboarding?.currentStep {
-                    OnboardingPopoverCard(
-                        step: step,
-                        arrowPlacement: coCaptainPopoverAbove ? .top : .bottom
-                    ) {
-                        onboarding?.skip()
-                    }
-                } else {
-                    EmptyView()
-                }
-            }
         }
     }
 
@@ -773,7 +699,6 @@ struct CoCaptainPromptRow: View {
     let isSelected: Bool
     var isGlowActive: Bool = false
     var isBreathing: Bool = false
-    var isVisible: Binding<Bool>? = nil
     let onSelect: () -> Void
 
     private var trimmedPrompt: String {
@@ -822,12 +747,6 @@ struct CoCaptainPromptRow: View {
         }
         .buttonStyle(.plain)
         .onboardingGlow(isActive: isGlowActive, isBreathing: isBreathing)
-        .onAppear {
-            isVisible?.wrappedValue = true
-        }
-        .onDisappear {
-            isVisible?.wrappedValue = false
-        }
     }
 }
 

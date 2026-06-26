@@ -11,6 +11,7 @@ public struct ProjectSuggestion: Identifiable, Equatable {
     public let suggestedPrompt: String
     public let severity: Severity
 
+    /// The urgency or impact level of the suggestion.
     public enum Severity {
         case info
         case warning
@@ -34,15 +35,6 @@ public struct ProjectAnalyzer {
         var suggestions: [ProjectSuggestion] = []
 
         let miniApps = nodes.filter { $0.type == .miniApp }
-
-        if miniApps.isEmpty {
-            suggestions.append(ProjectSuggestion(
-                title: "No Mini-App yet",
-                detail: "Create a Mini-App to start building directly on the canvas.",
-                suggestedPrompt: "Create a Mini-App for a simple web app idea.",
-                severity: .warning
-            ))
-        }
 
         for miniAppNode in miniApps {
             let srsText = miniAppNode.miniApp?.srsText.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""

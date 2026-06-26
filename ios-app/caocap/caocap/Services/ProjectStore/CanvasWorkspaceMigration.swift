@@ -8,7 +8,10 @@ enum CanvasWorkspaceMigration {
     private static let legacyLastProjectFileNameKey = "lastProjectFileName"
     private static let logger = Logger(subsystem: "com.caocap.app", category: "CanvasWorkspaceMigration")
 
+    /// Runs all migration steps, then sets a `UserDefaults` flag so subsequent
+    /// launches skip this work entirely. Safe to call on every app launch.
     static func runIfNeeded(persistence: ProjectPersistenceService = ProjectPersistenceService()) {
+        // Short-circuit if this migration has already been applied on this device.
         guard !UserDefaults.standard.bool(forKey: migrationCompleteKey) else { return }
 
         let directory = persistence.workspaceDirectory()
@@ -21,6 +24,9 @@ enum CanvasWorkspaceMigration {
         logger.info("Canvas workspace migration completed.")
     }
 
+    /// Renames any `project_*.json` files in the workspace directory to the
+    /// canonical `canvas_*.json` naming scheme. Skips files where the target
+    /// already exists to avoid overwriting data.
     private static func renameLegacyProjectFiles(in directory: URL) {
         guard let files = try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil) else {
             return
@@ -41,6 +47,9 @@ enum CanvasWorkspaceMigration {
         }
     }
 
+    /// Removes any `NodeAction` values that were stored on sub-canvas nodes in
+    /// the root canvas file. Actions were moved out of nodes in a previous refactor
+    /// and leftover values can cause unexpected behaviour.
     private static func stripRootShortcutActions(persistence: ProjectPersistenceService) {
         let rootFileName = CanvasFileNaming.rootFileName
         guard persistence.projectExists(fileName: rootFileName) else { return }
@@ -71,6 +80,9 @@ enum CanvasWorkspaceMigration {
         }
     }
 
+    /// Updates `linkedCanvasFileName` references inside all canvas JSON files to
+    /// use the canonical `canvas_*` prefix, replacing any surviving `project_*` values
+    /// left over from before the rename step.
     private static func rewriteLinkedCanvasFileNames(
         persistence: ProjectPersistenceService,
         in directory: URL
@@ -114,6 +126,9 @@ enum CanvasWorkspaceMigration {
         }
     }
 
+    /// Migrates the "last opened" file name stored in `UserDefaults` from the
+    /// legacy `lastProjectFileName` key to the new `lastCanvasFileName` key,
+    /// applying the `project_` → `canvas_` rename in the process.
     private static func migrateLastOpenedFileName() {
         let defaults = UserDefaults.standard
         if let legacy = defaults.string(forKey: legacyLastProjectFileNameKey) {

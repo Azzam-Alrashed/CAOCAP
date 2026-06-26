@@ -1,5 +1,7 @@
 import SwiftUI
 
+/// A vertically scrolling list of all conversation items (messages, actions, reviews)
+/// that auto-scrolls to the latest item when the assistant is typing or thinking.
 struct CoCaptainTimelineListView: View {
     let viewModel: CoCaptainViewModel
     @Binding var lastScrollPosition: UUID?
@@ -62,6 +64,8 @@ struct CoCaptainTimelineListView: View {
         }
     }
 
+    /// Restores the scroll position when the view appears, falling back to the bottom
+    /// if no previous scroll anchor was saved.
     private func restoreScrollPosition(proxy: ScrollViewProxy) {
         if let lastScrollPosition {
             Task { @MainActor in
@@ -78,6 +82,7 @@ struct CoCaptainTimelineListView: View {
         }
     }
 
+    /// Animates the scroll view down to the newest item or the thinking indicator.
     private func scrollToBottom(proxy: ScrollViewProxy) {
         if viewModel.isAwaitingFirstResponse {
             withAnimation {

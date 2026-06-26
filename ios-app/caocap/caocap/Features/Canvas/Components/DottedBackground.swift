@@ -2,12 +2,18 @@ import SwiftUI
 
 /// A highly optimized canvas view that renders a procedural nested dotted grid with LOD.
 struct DottedBackground: View {
+    /// User-configurable base opacity for the grid, stored in `UserDefaults`.
+    /// The rendered per-level opacities are derived from this value.
     @AppStorage("grid_opacity") private var gridOpacity: Double = 0.1
     @Environment(\.colorScheme) var colorScheme
+    /// The current pan offset of the canvas, used to scroll the dot pattern in sync.
     let offset: CGSize
+    /// The current zoom level, used both to scale dot spacing and to fade levels in/out.
     let scale: CGFloat
     
+    /// The logical spacing between dots at 1× scale in points.
     let dotSpacing: CGFloat = 30
+    /// The diameter of each rendered dot in points.
     let dotSize: CGFloat = 2
     
     var body: some View {

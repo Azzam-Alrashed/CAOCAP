@@ -1,10 +1,15 @@
 import SwiftUI
 
+/// Rendering properties that map each `NodeTheme` to concrete SwiftUI colors.
 extension NodeTheme {
+    /// The primary representative color of this theme — the first gradient stop.
+    /// Falls back to `.blue` if `gradientColors` is ever unexpectedly empty.
     public var color: Color {
         gradientColors.first ?? .blue
     }
 
+    /// Two-stop gradient pair used for node card backgrounds and glow effects.
+    /// Colors are defined in sRGB hex for design-system consistency.
     public var gradientColors: [Color] {
         switch self {
         case .purple:
@@ -26,6 +31,9 @@ extension NodeTheme {
         }
     }
 
+    /// Opacity used for the ambient glow rendered behind a node card.
+    /// `.secondary` uses a much lower opacity because its muted greys
+    /// would look heavy at the standard 0.15 level.
     public var glowOpacity: Double {
         switch self {
         case .secondary: return 0.05
@@ -34,7 +42,10 @@ extension NodeTheme {
     }
 }
 
+/// Canvas-level gradient convenience for `NodeType`.
 extension NodeType {
+    /// Gradient colors for this node type's canonical theme, used when rendering
+    /// canvas backgrounds or type-picker swatches.
     public var canvasGradientColors: [Color] {
         defaultTheme.gradientColors
     }

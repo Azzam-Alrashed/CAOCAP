@@ -1,5 +1,7 @@
 import SwiftUI
 
+/// A container view that groups multiple related code edits (review items)
+/// into a single visual bundle, allowing batch approval or rejection.
 struct ReviewBundleView: View {
     let bundle: ReviewBundleItem
     let viewModel: CoCaptainViewModel
@@ -43,11 +45,14 @@ struct ReviewBundleView: View {
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
+    /// Returns `true` if at least one item in the bundle has not yet been resolved.
     private var hasPendingItems: Bool {
         bundle.items.contains { $0.status == .pending }
     }
 }
 
+/// A detailed card displaying a single proposed code edit, showing the target node,
+/// summary, a diff/preview, and interactive Apply/Reject controls.
 struct ReviewCardView: View {
     let item: PendingReviewItem
     let onApply: () -> Void
@@ -114,6 +119,7 @@ struct ReviewCardView: View {
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
+    /// Maps the current review status to a semantic UI color.
     private var statusColor: Color {
         switch item.status {
         case .pending: return .orange

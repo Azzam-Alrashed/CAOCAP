@@ -6,6 +6,8 @@ import UIKit
 /// Prefer `View.dismissKeyboardOnTap(isFocused:)` whenever a parent already
 /// tracks focus; this resigns whatever responder is currently first.
 enum KeyboardDismisser {
+    /// Resigns the first responder synchronously on the main thread,
+    /// causing the software keyboard to retract.
     @MainActor
     static func dismiss() {
         UIApplication.shared.sendAction(

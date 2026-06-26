@@ -1,7 +1,9 @@
 import Foundation
 import CoreGraphics
 
+/// Available templates for populating a new or empty project.
 public enum ProjectTemplate: String, CaseIterable, Identifiable, Codable {
+    /// A single node containing the default "Hello World" generative UI boilerplate.
     case helloWorld = "hello_world"
     
     public var id: String { rawValue }
@@ -33,7 +35,7 @@ public enum ProjectTemplate: String, CaseIterable, Identifiable, Codable {
 
 public struct ProjectTemplateProvider {
 
-    /// Returns the nodes configuration for the given template.
+    /// Returns the initial array of nodes for the given template.
     public static func nodes(for template: ProjectTemplate) -> [SpatialNode] {
         switch template {
         case .helloWorld:
@@ -41,31 +43,12 @@ public struct ProjectTemplateProvider {
         }
     }
 
-    /// Returns a new set of interconnected nodes for the default project template.
+    /// The default canvas starts clean; users add Mini-Apps when they are ready.
     public static var defaultNodes: [SpatialNode] {
-        return [
-            SpatialNode(
-                type: .miniApp,
-                position: CGPoint(x: 0, y: 0),
-                title: "Mini-App",
-                subtitle: "Tap to run, build, and configure this mini-app.",
-                icon: NodeType.miniApp.defaultIcon,
-                theme: .blue,
-                miniApp: MiniAppState(
-                    srsText: SRSScaffold.defaultText,
-                    srsReadinessState: SRSReadinessEvaluator().evaluate(text: SRSScaffold.defaultText, currentState: nil),
-                    codeText: defaultCode,
-                    firebaseConfigText: FirebasePreviewBootstrap.placeholderConfigJSON()
-                ),
-                agentProfile: AgentProfile(
-                    systemPrompt: "You are a Mini-App builder. Refine this Mini-App's SRS, code, Firebase setup, and runtime behavior while keeping all code changes human-reviewed.",
-                    roleName: "Mini-App Agent",
-                    isAutoTriggerEnabled: false
-                )
-            )
-        ]
+        []
     }
 
+    /// The canonical "Hello World" HTML boilerplate used as a fallback or starting point.
     public static let defaultCode = """
     <!DOCTYPE html>
     <html>

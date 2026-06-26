@@ -1,16 +1,31 @@
 import Foundation
 
+/// Identifies which wire format the model used to deliver its structured
+/// output in a given turn. Used for diagnostics and telemetry.
 public enum CoCaptainAgentOutputSource: String, Hashable {
+    /// The model wrapped actions in a `<cocaptain_actions>` XML block in text.
     case xml = "xml"
+    /// The model used Gemini function-calling to invoke `request_app_action`.
     case functionCall = "function_call"
+    /// Both mechanisms fired in the same turn and were merged.
     case combined = "combined"
 }
 
+/// The normalised, adapter-independent output of one model turn, ready for
+/// the coordinator to validate and route into the review pipeline.
 public struct CoCaptainAgentDirective: Hashable {
+    /// The conversational text that precedes the structured action block.
     public let preamble: String
+    /// The chat-visible text, equal to `preamble` for XML responses or the
+    /// function-call visible text when no XML block is present.
     public let visibleText: String
+    /// The decoded, actionable payload, or `nil` when the model produced no
+    /// structured output for this turn.
     public let payload: CoCaptainAgentPayload?
+    /// Validation or parsing errors discovered while processing the response.
+    /// A non-empty array causes the coordinator to attempt an agentic retry.
     public let diagnostics: [String]
+    /// Which adapter produced this directive.
     public let source: CoCaptainAgentOutputSource
 
     public init(
@@ -32,16 +47,31 @@ public struct CoCaptainAgentDirective: Hashable {
 /// execute. Future Gemini function-call or structured-output adapters should
 /// produce this same directive so orchestration stays independent of wire shape.
 public protocol CoCaptainAgentOutputAdapting {
+    /// Extracts the conversational visible text from a raw response string.
+    /// - Parameter response: The raw text returned by the model.
+    /// - Returns: The text content intended for display.
     func visibleText(from response: String) -> String
+    /// Converts a raw response and optional function calls into a directive.
+    /// - Parameters:
+    ///   - response: The raw text returned by the model.
+    ///   - functionCalls: A list of function calls triggered by the model.
+    /// - Returns: A fully formed `CoCaptainAgentDirective`.
     func directive(from response: String, functionCalls: [CoCaptainAgentFunctionCall]) -> CoCaptainAgentDirective
 }
 
 public extension CoCaptainAgentOutputAdapting {
-    func directive(from response: String) -> CoCaptainAgentDirective {
+    /// Convenience overload for callers that have no function-call events,
+    /// defaulting to an empty array so they don't need to pass it explicitly.
+    public func directive(from response: String) -> CoCaptainAgentDirective {
         directive(from: response, functionCalls: [])
     }
 }
 
+/// Adapter that decodes the `<cocaptain_actions>` XML fenced format.
+///
+/// Delegates all XML parsing to `CoCaptainAgentParser` and wraps the result
+/// in a `CoCaptainAgentDirective`. Function calls are ignored by this adapter;
+/// use `CoCaptainCompositeAgentAdapter` to handle both formats.
 public struct CoCaptainXMLAgentAdapter: CoCaptainAgentOutputAdapting {
     private let parser: CoCaptainAgentParser
 
@@ -59,17 +89,29 @@ public struct CoCaptainXMLAgentAdapter: CoCaptainAgentOutputAdapting {
             preamble: parsed.preamble,
             visibleText: parsed.visibleText,
             payload: parsed.payload,
+            // Wrap single diagnostic in an array for uniform handling downstream.
             diagnostics: parsed.diagnostic.map { [$0] } ?? [],
             source: .xml
         )
     }
 }
 
+/// Adapter that converts Gemini native function-call events into a directive.
+///
+/// Only `request_app_action` calls are understood. Each call must carry an
+/// `actionId` argument and an optional `executionMode` of `"safe"` or
+/// `"pending"` (defaults to `"pending"` when absent).
 public struct CoCaptainFunctionCallAgentAdapter {
+    /// The Gemini tool name the model must invoke for app actions.
     public static let requestAppActionName = "request_app_action"
 
     public init() {}
 
+    /// Converts an array of raw function-call events into a directive.
+    ///
+    /// Unknown function names and malformed arguments are collected as
+    /// diagnostics rather than silently dropped, so the validator can
+    /// feed them back to the model via an agentic retry.
     public func directive(
         from functionCalls: [CoCaptainAgentFunctionCall],
         visibleText: String = ""
@@ -89,6 +131,7 @@ public struct CoCaptainFunctionCallAgentAdapter {
                 continue
             }
 
+            // Default to pending so unknown modes don't silently auto-execute.
             let executionMode = nonEmptyArgument("executionMode", in: functionCall) ?? "pending"
             let action = CoCaptainAgentAction(actionID: actionID)
 
@@ -102,6 +145,9 @@ public struct CoCaptainFunctionCallAgentAdapter {
             }
         }
 
+        // Only build a payload when at least one valid action was decoded;
+        // an empty payload is represented as nil so the coordinator knows
+        // the model produced no executable intent.
         let payload = safeActions.isEmpty && pendingActions.isEmpty
             ? nil
             : CoCaptainAgentPayload(
@@ -120,6 +166,8 @@ public struct CoCaptainFunctionCallAgentAdapter {
         )
     }
 
+    /// Returns a trimmed, non-empty argument value, or `nil` if the key is
+    /// absent or the value is blank after trimming whitespace.
     private func nonEmptyArgument(_ key: String, in functionCall: CoCaptainAgentFunctionCall) -> String? {
         guard let value = functionCall.arguments[key]?.trimmingCharacters(in: .whitespacesAndNewlines),
               !value.isEmpty else {
@@ -129,6 +177,12 @@ public struct CoCaptainFunctionCallAgentAdapter {
     }
 }
 
+/// Merges XML-fenced and Gemini function-call output into a single directive.
+///
+/// When the model produces both an XML block and native function calls in the
+/// same turn, their actions are combined: function calls supply `safeActions`
+/// and `pendingActions`; the XML block supplies `nodeEdits` and
+/// `assistantMessage`. Diagnostics from both adapters are concatenated.
 public struct CoCaptainCompositeAgentAdapter: CoCaptainAgentOutputAdapting {
     private let xmlAdapter: CoCaptainXMLAgentAdapter
     private let functionCallAdapter: CoCaptainFunctionCallAgentAdapter
@@ -147,6 +201,8 @@ public struct CoCaptainCompositeAgentAdapter: CoCaptainAgentOutputAdapting {
 
     public func directive(from response: String, functionCalls: [CoCaptainAgentFunctionCall]) -> CoCaptainAgentDirective {
         let fencedDirective = xmlAdapter.directive(from: response, functionCalls: [])
+        // If there are no function calls, return the XML directive directly to
+        // avoid building a redundant combined payload.
         guard !functionCalls.isEmpty else { return fencedDirective }
 
         let functionDirective = functionCallAdapter.directive(
@@ -160,10 +216,17 @@ public struct CoCaptainCompositeAgentAdapter: CoCaptainAgentOutputAdapting {
             visibleText: fencedDirective.visibleText,
             payload: payload,
             diagnostics: functionDirective.diagnostics + fencedDirective.diagnostics,
+            // Source is .combined only when the XML adapter also yielded a payload;
+            // otherwise the function-call adapter is the sole source.
             source: fencedDirective.payload == nil ? .functionCall : .combined
         )
     }
 
+    /// Merges two optional payloads, taking safe/pending actions from the
+    /// function-call side and node edits from the XML side.
+    ///
+    /// `assistantMessage` comes from the XML payload (richer prose) if present;
+    /// falls back to the function-call visible text.
     private func combine(
         _ functionPayload: CoCaptainAgentPayload?,
         _ fencedPayload: CoCaptainAgentPayload?

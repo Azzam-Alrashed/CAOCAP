@@ -13,12 +13,12 @@ struct ProjectTemplateProviderTests {
         }
     }
     
-    @Test func nodesForHelloWorldTemplate() {
+    @Test func defaultTemplateStartsWithCleanCanvas() {
         let nodes = ProjectTemplateProvider.nodes(for: .helloWorld)
-        #expect(nodes.count == 1)
-        let miniApp = nodes.first
-        #expect(miniApp?.type == .miniApp)
-        #expect(miniApp?.miniApp?.srsText.contains("# Intent") == true)
-        #expect(miniApp?.miniApp?.codeText.contains("Hello World!") == true)
+        #expect(nodes.isEmpty)
+    }
+
+    @Test func defaultMiniAppCodeRemainsAvailableForManualCreation() {
+        #expect(ProjectTemplateProvider.defaultCode.contains("Hello World!"))
     }
 }

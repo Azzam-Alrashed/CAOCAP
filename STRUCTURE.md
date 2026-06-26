@@ -45,6 +45,7 @@ caocap/
 │   ├── Canvas/
 │   │   ├── Components/
 │   │   └── Providers/
+│   ├── Intro/
 │   ├── Omnibox/
 │   ├── CoCaptain/
 │   │   ├── AgentContract/
@@ -146,6 +147,7 @@ App-wide support helpers.
 | File | Responsibility |
 |---|---|
 | `AppUpdateService.swift` | Firebase Remote Config minimum-version gate for required App Store update prompts. |
+| `DictationController.swift` | Shared speech-to-text dictation controller for app input surfaces, including CoCaptain and the Omnibox. |
 | `HapticsManager.swift` | Central haptic feedback helper that honors app haptics settings. |
 | `LocalizationManager.swift` | Runtime language selection, localized strings, localized project/node labels, and date formatting. |
 
@@ -293,6 +295,31 @@ Launch transition and global launch-time prompts shown by the root app shell.
 |---|---|
 | `LaunchScreenView.swift` | Branded launch transition overlay presented while the app shell warms up. |
 | `AppUpdatePromptView.swift` | Blocking required-update prompt shown when Remote Config says the installed app version is unsupported. |
+
+---
+
+#### `Onboarding/`
+First-run guided onboarding for the canvas, Omnibox, and CoCaptain flow.
+
+| File | Responsibility |
+|---|---|
+| `OnboardingCoordinator.swift` | Observable state machine for the active onboarding step, popover visibility, delayed presentation, and completion/skipping persistence. |
+| `OnboardingManifest.swift` | Manifest-backed copy, icon, and ordering for every onboarding step. |
+| `OnboardingPopoverCard.swift` | Central onboarding tooltip presentation. Views publish named `OnboardingTooltipAnchor` frames, and a single `onboardingTooltipOverlay()` renders the active step card. |
+
+Onboarding tooltips must not be presented by feature-local `.popover` modifiers. Feature views should only publish anchors with `onboardingTooltipAnchor(_:)`; the central overlay decides which single tooltip is visible.
+
+---
+
+#### `Intro/`
+First-run full-screen intro screens shown after the launch animation and before the interactive canvas walkthrough.
+
+| File | Responsibility |
+|---|---|
+| `IntroCoordinator.swift` | Observable state and `UserDefaults` persistence for intro completion, skip, and page navigation. |
+| `IntroManifest.swift` | Ordered draft copy and metadata for the five intro screens. |
+| `IntroStepContent.swift` | Value model for one intro page's copy, gradient palette, icon, and CTA label. |
+| `IntroView.swift` | Full-screen paged SwiftUI intro with progress dots, back/skip controls, and CTA handoff into the existing onboarding flow. |
 
 ---
 

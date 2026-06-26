@@ -97,6 +97,172 @@ struct UnifiedBubbleWithArrowShape: Shape {
     }
 }
 
+enum OnboardingTooltipAnchor: Hashable {
+    /// Anchored to the floating command button (FAB) at the bottom of the canvas.
+    case floatingCommandButton
+    /// Anchored to the omnibox search text field.
+    case omniboxSearchField
+    /// Anchored to the "Ask CoCaptain" prompt row inside the omnibox.
+    case omniboxPromptRow
+    /// Anchored to the CoCaptain chat input field.
+    case coCaptainInput
+    /// Anchored to the CoCaptain panel's Done/dismiss button.
+    case coCaptainDoneButton
+}
+
+/// Collects layout anchors for each named onboarding target so the tooltip overlay
+/// can position itself relative to any annotated view in the hierarchy.
+private struct OnboardingTooltipAnchorPreferenceKey: PreferenceKey {
+    static var defaultValue: [OnboardingTooltipAnchor: Anchor<CGRect>] = [:]
+
+    static func reduce(
+        value: inout [OnboardingTooltipAnchor: Anchor<CGRect>],
+        nextValue: () -> [OnboardingTooltipAnchor: Anchor<CGRect>]
+    ) {
+        value.merge(nextValue(), uniquingKeysWith: { _, new in new })
+    }
+}
+
+/// Tracks the rendered size of the tooltip card so `tooltipCenter` can clamp position
+/// correctly before the card is actually measured for the first time.
+private struct OnboardingTooltipSizePreferenceKey: PreferenceKey {
+    static var defaultValue: CGSize = CGSize(width: 290, height: 180)
+
+    static func reduce(value: inout CGSize, nextValue: () -> CGSize) {
+        value = nextValue()
+    }
+}
+
+extension View {
+    /// Tags a view with an onboarding anchor so the tooltip overlay knows where to point.
+    func onboardingTooltipAnchor(_ anchor: OnboardingTooltipAnchor) -> some View {
+        anchorPreference(key: OnboardingTooltipAnchorPreferenceKey.self, value: .bounds) {
+            [anchor: $0]
+        }
+    }
+
+    /// Reads all accumulated anchors and renders the tooltip overlay in a single pass,
+    /// avoiding multiple layout passes that could cause jitter.
+    func onboardingTooltipOverlay() -> some View {
+        overlayPreferenceValue(OnboardingTooltipAnchorPreferenceKey.self) { anchors in
+            OnboardingTooltipOverlay(anchors: anchors)
+        }
+    }
+}
+
+extension OnboardingCoordinator.Step {
+    var tooltipAnchor: OnboardingTooltipAnchor {
+        switch self {
+        case .tapFAB, .longPressFAB:
+            return .floatingCommandButton
+        case .typeCoCaptainPrompt:
+            return .omniboxSearchField
+        case .submitCoCaptainPrompt:
+            return .omniboxPromptRow
+        case .chatCoCaptain:
+            return .coCaptainInput
+        case .dismissCoCaptain:
+            return .coCaptainDoneButton
+        }
+    }
+
+    var tooltipArrowPlacement: UnifiedBubbleWithArrowShape.ArrowPlacement {
+        switch self {
+        case .dismissCoCaptain:
+            return .top
+        case .tapFAB, .typeCoCaptainPrompt, .submitCoCaptainPrompt, .chatCoCaptain, .longPressFAB:
+            return .bottom
+        }
+    }
+}
+
+/// An overlay view that reads the registered anchor frames and positions a
+/// `OnboardingPopoverCard` relative to the currently active step's target.
+/// The tooltip is positioned to stay within safe area margins and transitions
+/// with a spring scale-plus-fade animation.
+private struct OnboardingTooltipOverlay: View {
+    let anchors: [OnboardingTooltipAnchor: Anchor<CGRect>]
+
+    @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
+    @State private var cardSize = CGSize(width: 290, height: 180)
+
+    var body: some View {
+        GeometryReader { proxy in
+            if let onboarding,
+               let step = onboarding.currentStep,
+               onboarding.showPopover,
+               let anchor = anchors[step.tooltipAnchor] {
+                let targetFrame = proxy[anchor]
+                let tooltipCenter = tooltipCenter(
+                    for: targetFrame,
+                    placement: step.tooltipArrowPlacement,
+                    cardSize: cardSize,
+                    containerSize: proxy.size
+                )
+                let arrowOffset = targetFrame.midX - tooltipCenter.x
+
+                OnboardingPopoverCard(
+                    step: step,
+                    arrowOffset: arrowOffset,
+                    arrowPlacement: step.tooltipArrowPlacement
+                ) {
+                    onboarding.skip()
+                }
+                .background(
+                    GeometryReader { cardProxy in
+                        Color.clear.preference(
+                            key: OnboardingTooltipSizePreferenceKey.self,
+                            value: cardProxy.size
+                        )
+                    }
+                )
+                .onPreferenceChange(OnboardingTooltipSizePreferenceKey.self) { newSize in
+                    cardSize = newSize
+                }
+                .position(tooltipCenter)
+                .transition(.scale(scale: 0.92).combined(with: .opacity))
+                .zIndex(1000)
+            }
+        }
+        .animation(.spring(response: 0.35, dampingFraction: 0.82), value: onboarding?.currentStep)
+        .animation(.spring(response: 0.35, dampingFraction: 0.82), value: onboarding?.showPopover)
+    }
+
+    /// Computes the center point for the tooltip card, keeping it inset from screen edges
+    /// and on the correct side of the target frame based on arrow placement.
+    private func tooltipCenter(
+        for targetFrame: CGRect,
+        placement: UnifiedBubbleWithArrowShape.ArrowPlacement,
+        cardSize: CGSize,
+        containerSize: CGSize
+    ) -> CGPoint {
+        let safetyMargin: CGFloat = 16
+        let spacing: CGFloat = 8
+        let halfWidth = cardSize.width / 2
+        let halfHeight = cardSize.height / 2
+
+        let x = min(
+            max(targetFrame.midX, safetyMargin + halfWidth),
+            max(safetyMargin + halfWidth, containerSize.width - safetyMargin - halfWidth)
+        )
+
+        let unclampedY: CGFloat
+        switch placement {
+        case .bottom:
+            unclampedY = targetFrame.minY - spacing - halfHeight
+        case .top:
+            unclampedY = targetFrame.maxY + spacing + halfHeight
+        }
+
+        let y = min(
+            max(unclampedY, safetyMargin + halfHeight),
+            max(safetyMargin + halfHeight, containerSize.height - safetyMargin - halfHeight)
+        )
+
+        return CGPoint(x: x, y: y)
+    }
+}
+
 /// A premium glassmorphic popover card used for onboarding tooltips.
 /// Matches CAOCAP's dark, material-blurred visual language.
 struct OnboardingPopoverCard: View {
@@ -192,6 +358,8 @@ struct OnboardingPopoverCard: View {
     }
 }
 
+/// A step-progress bar that fills from the left as the user advances through onboarding.
+/// Completed and current steps are shown in blue; future steps use a muted primary.
 private struct OnboardingProgressBar: View {
     let step: OnboardingCoordinator.Step
 

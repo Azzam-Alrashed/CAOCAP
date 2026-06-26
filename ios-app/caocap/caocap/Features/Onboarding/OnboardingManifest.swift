@@ -1,12 +1,21 @@
 import Foundation
 
+/// Content data for a single onboarding step shown inside `OnboardingPopoverCard`.
 struct OnboardingStepContent: Equatable {
+    /// The onboarding step this content belongs to; used for lookup in `OnboardingManifest`.
     let step: OnboardingCoordinator.Step
+    /// Short headline shown in bold at the top of the popover card.
     let title: String
+    /// Descriptive body copy explaining what the user should do on this step.
     let message: String
+    /// SF Symbol name for the step icon displayed in the card header.
     let icon: String
 }
 
+/// Static registry of all first-run onboarding steps.
+/// Each step has its content defined here; `OnboardingCoordinator` drives the sequence.
+/// To add a new step: add the case to `OnboardingCoordinator.Step`, add the content here,
+/// and handle the new anchor in `OnboardingPopoverCard`.
 enum OnboardingManifest {
     static let steps: [OnboardingStepContent] = [
         OnboardingStepContent(
@@ -47,10 +56,13 @@ enum OnboardingManifest {
         )
     ]
 
+    /// The step to show first; `nil` if the steps array is somehow empty.
     static var firstStep: OnboardingCoordinator.Step? {
         steps.first?.step
     }
 
+    /// Returns the content for a given step. Crashes with a `preconditionFailure` if
+    /// the manifest is missing a step entry, which would indicate a programming error.
     static func content(for step: OnboardingCoordinator.Step) -> OnboardingStepContent {
         guard let content = steps.first(where: { $0.step == step }) else {
             preconditionFailure("Missing onboarding manifest content for \(step)")
@@ -58,6 +70,7 @@ enum OnboardingManifest {
         return content
     }
 
+    /// Returns the next step after the given one, or `nil` if `step` is the last.
     static func nextStep(after step: OnboardingCoordinator.Step) -> OnboardingCoordinator.Step? {
         guard let index = steps.firstIndex(where: { $0.step == step }) else { return nil }
         let nextIndex = steps.index(after: index)
@@ -65,6 +78,7 @@ enum OnboardingManifest {
         return steps[nextIndex].step
     }
 
+    /// Human-readable progress label such as "3 of 6" used for accessibility and the progress bar.
     static func stepLabel(for step: OnboardingCoordinator.Step) -> String {
         guard let index = steps.firstIndex(where: { $0.step == step }) else {
             return ""

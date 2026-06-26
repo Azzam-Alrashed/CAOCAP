@@ -2,20 +2,31 @@ import Foundation
 import OSLog
 import SwiftUI
 
+/// The output format for a project export.
 public enum ExportFormat {
+    /// A single self-contained HTML file containing the compiled Mini-App preview.
     case html
+    /// A ZIP archive containing `index.html` and an optional `README.md` with the
+    /// project's SRS text. Set `includeProjectContext: false` to omit the README.
     case webBundle(includeProjectContext: Bool = true)
+    /// A raw copy of the project's `.json` file renamed with the `.caocap` extension
+    /// for sharing and re-importing in another CAOCAP installation.
     case caocap
 }
 
+/// Produces shareable export artefacts from a `ProjectStore` in multiple formats.
+/// All heavy I/O is dispatched on a detached background task to avoid blocking the main actor.
 public struct ExportService {
     private static let logger = Logger(subsystem: "com.caocap.app", category: "ExportService")
 
+    /// Convenience entry point that pulls required state from a live `ProjectStore`
+    /// on the main actor, then hands off to the background-safe overload.
     @MainActor
     public static func export(from store: ProjectStore, format: ExportFormat) async -> URL? {
         let projectName = store.projectName
         let fileName = store.fileName
         let nodes = store.nodes
+        // Use the first Mini-App's SRS text as the README content.
         let srsText = nodes.first(where: { $0.type == .miniApp })?.miniApp?.srsText
             .trimmingCharacters(in: .whitespacesAndNewlines)
             
@@ -28,6 +39,14 @@ public struct ExportService {
         )
     }
 
+    /// Performs the actual export work off the main actor.
+    /// - Parameters:
+    ///   - projectName: Used to derive the output file name (spaces → underscores).
+    ///   - fileName: The project's on-disk file name, needed for `.caocap` export.
+    ///   - nodes: The canvas nodes to compile or copy.
+    ///   - srsText: Optional SRS content written into the `README.md` of a web bundle.
+    ///   - format: The desired output format.
+    /// - Returns: A temporary-directory URL pointing to the exported file, or `nil` on failure.
     public static func export(
         projectName: String,
         fileName: String,
@@ -94,7 +113,8 @@ public struct ExportService {
                         )
                     }
                     
-                    // Natively zip the folder using NSFileCoordinator
+                    // Use NSFileCoordinator to produce a ZIP without spawning a process.
+                    // The system provides a temporary zipped URL inside the coordinator block.
                     var coordinatorError: NSError?
                     var zipURL: URL?
                     let coordinator = NSFileCoordinator()
@@ -142,7 +162,10 @@ public struct ExportService {
     }
 }
 
+/// Thin `UIViewControllerRepresentable` wrapper around `UIActivityViewController`
+/// so SwiftUI views can present the system share sheet with arbitrary activity items.
 public struct ActivityView: UIViewControllerRepresentable {
+    /// Items to share (URLs, strings, images, etc.).
     public let activityItems: [Any]
     public let applicationActivities: [UIActivity]? = nil
 
