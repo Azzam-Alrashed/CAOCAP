@@ -35,15 +35,6 @@ public struct ProjectAnalyzer {
 
         let miniApps = nodes.filter { $0.type == .miniApp }
 
-        if miniApps.isEmpty {
-            suggestions.append(ProjectSuggestion(
-                title: "No Mini-App yet",
-                detail: "Create a Mini-App to start building directly on the canvas.",
-                suggestedPrompt: "Create a Mini-App for a simple web app idea.",
-                severity: .warning
-            ))
-        }
-
         for miniAppNode in miniApps {
             let srsText = miniAppNode.miniApp?.srsText.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             if srsText.isEmpty {
