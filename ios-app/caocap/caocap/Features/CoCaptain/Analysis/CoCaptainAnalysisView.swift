@@ -23,9 +23,14 @@ struct CoCaptainAnalysisView: View {
     }
 }
 
+/// An interactive pill that displays a single actionable suggestion or warning
+/// from the workspace analysis engine.
 private struct SuggestionChip: View {
+    /// The suggestion domain data.
     let suggestion: ProjectSuggestion
+    /// Callback triggered when the user taps to apply this suggestion.
     let onTap: () -> Void
+    /// Callback triggered when the user taps the 'x' button.
     let onDismiss: () -> Void
     
     var body: some View {

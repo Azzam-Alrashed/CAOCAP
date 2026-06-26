@@ -90,6 +90,11 @@ public struct CoCaptainAgentParser {
 
     // MARK: - XML Extraction Helpers
 
+    /// Extracts the inner content of the first matching XML tag.
+    /// - Parameters:
+    ///   - name: The name of the XML tag to find.
+    ///   - text: The raw text containing XML.
+    /// - Returns: The trimmed inner content, or `nil` if the tag is not found.
     private func extractTag(name: String, from text: String) -> String? {
         let pattern = "<\(name)>(.*?)</\(name)>"
         let regex = try? NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators])
@@ -102,11 +107,16 @@ public struct CoCaptainAgentParser {
         return nil
     }
 
+    /// Represents a matched XML tag including its inner content and parsed attributes.
     private struct TagMatch {
+        /// The inner text content of the tag.
         let content: String
+        /// Dictionary of all key-value attributes parsed from the opening tag.
         let attributes: [String: String]
     }
 
+    /// Extracts the inner content of all occurrences of a specified XML tag.
+    /// - Returns: An array of trimmed strings for every matching tag.
     private func extractTags(name: String, from text: String) -> [String] {
         let pattern = "<\(name)[^>]*>(.*?)</\(name)>"
         let regex = try? NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators])
@@ -120,6 +130,8 @@ public struct CoCaptainAgentParser {
         }
     }
 
+    /// Extracts all occurrences of a specified XML tag, parsing both attributes and inner content.
+    /// - Returns: An array of `TagMatch` objects containing the parsed data.
     private func extractTagMatches(name: String, from text: String) -> [TagMatch] {
         let pattern = "<\(name)([^>]*)>(.*?)</\(name)>"
         let regex = try? NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators])
@@ -137,6 +149,8 @@ public struct CoCaptainAgentParser {
         }
     }
 
+    /// Extracts the attributes from all self-closing occurrences of a specified XML tag.
+    /// - Returns: An array of attribute dictionaries for each matching tag.
     private func extractSelfClosingTags(name: String, from text: String) -> [[String: String]] {
         let pattern = "<\(name)\\s+([^>]*?)/>"
         let regex = try? NSRegularExpression(pattern: pattern, options: [])
@@ -150,6 +164,7 @@ public struct CoCaptainAgentParser {
         }
     }
 
+    /// Parses raw attribute strings (e.g. `key="value" key='value' key=value`) into a dictionary.
     private func parseAttributes(_ attrString: String) -> [String: String] {
         var attributes: [String: String] = [:]
         // Robust attribute parsing: handles key="val", key='val', or key=val (unquoted)
@@ -171,6 +186,7 @@ public struct CoCaptainAgentParser {
         return attributes
     }
 
+    /// Extracts the raw text from the first `<![CDATA[...]]>` section in the string.
     private func extractCDATA(from text: String) -> String? {
         let pattern = "<!\\[CDATA\\[(.*?)\\]\\]>"
         let regex = try? NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators])
