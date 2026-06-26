@@ -147,6 +147,7 @@ App-wide support helpers.
 | File | Responsibility |
 |---|---|
 | `AppUpdateService.swift` | Firebase Remote Config minimum-version gate for required App Store update prompts. |
+| `DictationController.swift` | Shared speech-to-text dictation controller for app input surfaces, including CoCaptain and the Omnibox. |
 | `HapticsManager.swift` | Central haptic feedback helper that honors app haptics settings. |
 | `LocalizationManager.swift` | Runtime language selection, localized strings, localized project/node labels, and date formatting. |
 

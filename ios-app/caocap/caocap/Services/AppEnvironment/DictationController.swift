@@ -5,7 +5,7 @@ import Speech
 
 @MainActor
 @Observable
-final class CoCaptainDictationController {
+final class DictationController {
     var isRecording = false
     var transcript = ""
     var errorMessage: String?
@@ -14,11 +14,15 @@ final class CoCaptainDictationController {
     @ObservationIgnored private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     @ObservationIgnored private var recognitionTask: SFSpeechRecognitionTask?
     private var hasInstalledAudioTap = false
+    private var hasEndedAudio = false
+    private var activeSessionID = UUID()
     private var seedText = ""
 
-    func start(initialText: String, localeOption: CoCaptainDictationLocaleOption = .auto) async {
+    func start(initialText: String, localeOption: DictationLocaleOption = .auto) async {
         stop(cancelRecognition: true)
         errorMessage = nil
+        let sessionID = UUID()
+        activeSessionID = sessionID
 
         let recognitionLocale = localeOption.recognitionLocale(for: initialText)
         let speechRecognizer = SFSpeechRecognizer(locale: recognitionLocale)
@@ -40,6 +44,7 @@ final class CoCaptainDictationController {
         let request = SFSpeechAudioBufferRecognitionRequest()
         request.shouldReportPartialResults = true
         recognitionRequest = request
+        hasEndedAudio = false
         seedText = initialText.trimmingCharacters(in: .whitespacesAndNewlines)
 
         do {
@@ -47,6 +52,7 @@ final class CoCaptainDictationController {
             recognitionTask = speechRecognizer.recognitionTask(with: request) { [weak self] result, error in
                 Task { @MainActor in
                     guard let self else { return }
+                    guard self.activeSessionID == sessionID else { return }
 
                     if let result {
                         self.transcript = self.composedTranscript(
@@ -55,7 +61,7 @@ final class CoCaptainDictationController {
                     }
 
                     if error != nil || result?.isFinal == true {
-                        self.stop(cancelRecognition: false)
+                        self.finishRecognition(sessionID: sessionID)
                     }
                 }
             }
@@ -72,6 +78,35 @@ final class CoCaptainDictationController {
     }
 
     private func stop(cancelRecognition: Bool) {
+        stopAudioCapture()
+
+        if cancelRecognition {
+            recognitionTask?.cancel()
+            recognitionRequest = nil
+            recognitionTask = nil
+            hasEndedAudio = false
+            activeSessionID = UUID()
+        } else if !hasEndedAudio {
+            recognitionRequest?.endAudio()
+            hasEndedAudio = true
+        }
+
+        isRecording = false
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+    }
+
+    private func finishRecognition(sessionID: UUID) {
+        guard activeSessionID == sessionID else { return }
+        stopAudioCapture()
+        recognitionRequest = nil
+        recognitionTask = nil
+        hasEndedAudio = false
+        activeSessionID = UUID()
+        isRecording = false
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+    }
+
+    private func stopAudioCapture() {
         if audioEngine.isRunning {
             audioEngine.stop()
         }
@@ -80,17 +115,6 @@ final class CoCaptainDictationController {
             audioEngine.inputNode.removeTap(onBus: 0)
             hasInstalledAudioTap = false
         }
-
-        if cancelRecognition {
-            recognitionTask?.cancel()
-        } else {
-            recognitionRequest?.endAudio()
-        }
-
-        recognitionRequest = nil
-        recognitionTask = nil
-        isRecording = false
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 
     private func configureAudioSession(with request: SFSpeechAudioBufferRecognitionRequest) throws {
@@ -132,7 +156,7 @@ final class CoCaptainDictationController {
     }
 }
 
-enum CoCaptainDictationLocaleOption: String, CaseIterable, Identifiable {
+enum DictationLocaleOption: String, CaseIterable, Identifiable {
     case auto
     case arabicSaudiArabia
     case englishUnitedStates

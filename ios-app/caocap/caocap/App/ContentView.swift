@@ -44,6 +44,7 @@ struct ContentView: View {
     @State private var coCaptainDetent: PresentationDetent = .medium
     @State private var coCaptainStartsLarge = false
     @State private var coCaptainAllowsMediumDetent = true
+    @State private var onboardingInitialCoCaptainResponseBaseline: Int?
 
     var body: some View {
         GeometryReader { geometry in
@@ -270,17 +271,19 @@ struct ContentView: View {
         .onChange(of: coCaptain.isPresented) { _, isPresented in
             if isPresented {
                 if onboarding.currentStep == .submitCoCaptainPrompt {
-                    onboarding.completeCurrentStep()
-                } else if onboarding.currentStep == .tapFAB {
-                    onboarding.moveToStep(.chatCoCaptain)
+                    onboarding.hidePopoverForCurrentStep()
                 }
             } else {
+                onboardingInitialCoCaptainResponseBaseline = nil
                 if onboarding.currentStep == .dismissCoCaptain {
                     onboarding.completeCurrentStep()
-                } else if onboarding.currentStep == .chatCoCaptain {
-                    onboarding.moveToStep(.tapFAB)
+                } else if onboarding.currentStep == .submitCoCaptainPrompt || onboarding.currentStep == .chatCoCaptain {
+                    onboarding.moveToStep(.longPressFAB)
                 }
             }
+        }
+        .onChange(of: coCaptain.completedAssistantResponseCount) {
+            advanceInitialCoCaptainOnboardingIfReady()
         }
         .onChange(of: router.currentWorkspace) {
             router.activeStore.undoManager = undoManager
@@ -410,6 +413,23 @@ struct ContentView: View {
     private func presentCoCaptain() {
         prepareCoCaptainPresentation()
         coCaptain.setPresented(true)
+    }
+
+    private func beginInitialCoCaptainOnboardingWaitIfNeeded() {
+        guard onboarding.currentStep == .submitCoCaptainPrompt else { return }
+        onboardingInitialCoCaptainResponseBaseline = coCaptain.completedAssistantResponseCount
+        onboarding.hidePopoverForCurrentStep()
+    }
+
+    private func advanceInitialCoCaptainOnboardingIfReady() {
+        guard let baseline = onboardingInitialCoCaptainResponseBaseline,
+              onboarding.currentStep == .submitCoCaptainPrompt,
+              coCaptain.completedAssistantResponseCount > baseline else {
+            return
+        }
+
+        onboardingInitialCoCaptainResponseBaseline = nil
+        onboarding.completeCurrentStep()
     }
 
     private func configureActionDispatcher() {
@@ -567,8 +587,10 @@ struct ContentView: View {
         }
         commandPalette.onSubmitPrompt = { prompt in
             coCaptain.configureProjectSession(store: router.activeStore, dispatcher: actionDispatcher)
+            beginInitialCoCaptainOnboardingWaitIfNeeded()
             presentCoCaptain()
             coCaptain.sendMessage(prompt)
+            advanceInitialCoCaptainOnboardingIfReady()
         }
     }
 

@@ -42,4 +42,16 @@ struct OnboardingManifestTests {
         #expect(OnboardingCoordinator.Step.dismissCoCaptain.tooltipAnchor == .coCaptainDoneButton)
         #expect(OnboardingCoordinator.Step.longPressFAB.tooltipAnchor == .floatingCommandButton)
     }
+
+    @MainActor
+    @Test func hidingPopoverDoesNotAdvanceCurrentStep() {
+        let onboarding = OnboardingCoordinator()
+        onboarding.currentStep = .chatCoCaptain
+        onboarding.showPopover = true
+
+        onboarding.hidePopoverForCurrentStep()
+
+        #expect(onboarding.currentStep == .chatCoCaptain)
+        #expect(!onboarding.showPopover)
+    }
 }

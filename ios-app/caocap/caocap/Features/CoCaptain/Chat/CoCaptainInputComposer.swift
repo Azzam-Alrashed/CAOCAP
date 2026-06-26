@@ -13,9 +13,9 @@ struct CoCaptainInputComposer: View {
     let onDismissSuggestion: (ProjectSuggestion) -> Void
     
     @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
-    @AppStorage("cocaptain.dictationLocale") private var dictationLocaleRawValue = CoCaptainDictationLocaleOption.auto.rawValue
+    @AppStorage("app.dictationLocale") private var dictationLocaleRawValue = DictationLocaleOption.auto.rawValue
     @State private var localModelManager = LocalMLXModelManager.shared
-    @State private var dictation = CoCaptainDictationController()
+    @State private var dictation = DictationController()
     @State private var isContextVisible = false
 
     private var isInputValid: Bool {
@@ -31,8 +31,8 @@ struct CoCaptainInputComposer: View {
         return onboarding.currentStep == .chatCoCaptain && onboarding.showPopover
     }
 
-    private var dictationLocaleOption: CoCaptainDictationLocaleOption {
-        CoCaptainDictationLocaleOption(rawValue: dictationLocaleRawValue) ?? .auto
+    private var dictationLocaleOption: DictationLocaleOption {
+        DictationLocaleOption(rawValue: dictationLocaleRawValue) ?? .auto
     }
 
     var body: some View {
@@ -166,9 +166,6 @@ struct CoCaptainInputComposer: View {
                 .submitLabel(.send)
                 .onSubmit {
                     onSend()
-                    if onboarding?.currentStep == .chatCoCaptain {
-                        onboarding?.completeCurrentStep()
-                    }
                 }
                 .onKeyPress { press in
                     if press.key == .return {
@@ -177,9 +174,6 @@ struct CoCaptainInputComposer: View {
                         } else {
                             if canSend {
                                 onSend()
-                                if onboarding?.currentStep == .chatCoCaptain {
-                                    onboarding?.completeCurrentStep()
-                                }
                                 return .handled
                             }
                         }
@@ -213,11 +207,8 @@ struct CoCaptainInputComposer: View {
                 dictation.stop()
             } else if isInputValid {
                 onSend()
-                if onboarding?.currentStep == .chatCoCaptain {
-                    onboarding?.completeCurrentStep()
-                }
             } else {
-                isFocused = true
+                isFocused = false
                 Task {
                     await dictation.start(initialText: text, localeOption: dictationLocaleOption)
                 }
@@ -264,7 +255,7 @@ struct CoCaptainInputComposer: View {
 
     @ViewBuilder
     private var dictationLocaleMenu: some View {
-        ForEach(CoCaptainDictationLocaleOption.allCases) { option in
+        ForEach(DictationLocaleOption.allCases) { option in
             Button {
                 if dictation.isRecording {
                     dictation.stop()
