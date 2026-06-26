@@ -13,6 +13,7 @@ struct CoCaptainInputComposer: View {
     let onDismissSuggestion: (ProjectSuggestion) -> Void
     
     @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
+    @AppStorage("cocaptain.dictationLocale") private var dictationLocaleRawValue = CoCaptainDictationLocaleOption.auto.rawValue
     @State private var localModelManager = LocalMLXModelManager.shared
     @State private var dictation = CoCaptainDictationController()
     @State private var isContextVisible = false
@@ -28,6 +29,10 @@ struct CoCaptainInputComposer: View {
     private var isChatOnboardingActive: Bool {
         guard let onboarding else { return false }
         return onboarding.currentStep == .chatCoCaptain && onboarding.showPopover
+    }
+
+    private var dictationLocaleOption: CoCaptainDictationLocaleOption {
+        CoCaptainDictationLocaleOption(rawValue: dictationLocaleRawValue) ?? .auto
     }
 
     var body: some View {
@@ -214,7 +219,7 @@ struct CoCaptainInputComposer: View {
             } else {
                 isFocused = true
                 Task {
-                    await dictation.start(initialText: text)
+                    await dictation.start(initialText: text, localeOption: dictationLocaleOption)
                 }
             }
         }) {
@@ -246,10 +251,33 @@ struct CoCaptainInputComposer: View {
             .shadow(color: .blue.opacity(0.3), radius: 6, y: 3)
         }
         .accessibilityLabel(sendButtonAccessibilityLabel)
+        .contextMenu {
+            if !isInputValid || dictation.isRecording {
+                dictationLocaleMenu
+            }
+        }
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isInputValid)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isThinking)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: dictation.isRecording)
         .padding(.bottom, 5)
+    }
+
+    @ViewBuilder
+    private var dictationLocaleMenu: some View {
+        ForEach(CoCaptainDictationLocaleOption.allCases) { option in
+            Button {
+                if dictation.isRecording {
+                    dictation.stop()
+                }
+                dictationLocaleRawValue = option.rawValue
+            } label: {
+                if option == dictationLocaleOption {
+                    Label(option.displayName, systemImage: "checkmark")
+                } else {
+                    Label(option.displayName, systemImage: option.systemImageName)
+                }
+            }
+        }
     }
 
     private var sendButtonAccessibilityLabel: String {

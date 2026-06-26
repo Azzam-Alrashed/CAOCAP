@@ -13,16 +13,17 @@ final class CoCaptainDictationController {
     @ObservationIgnored private let audioEngine = AVAudioEngine()
     @ObservationIgnored private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     @ObservationIgnored private var recognitionTask: SFSpeechRecognitionTask?
-    @ObservationIgnored private var speechRecognizer = SFSpeechRecognizer(locale: .current)
     private var hasInstalledAudioTap = false
     private var seedText = ""
 
-    func start(initialText: String) async {
+    func start(initialText: String, localeOption: CoCaptainDictationLocaleOption = .auto) async {
         stop(cancelRecognition: true)
         errorMessage = nil
 
+        let recognitionLocale = localeOption.recognitionLocale(for: initialText)
+        let speechRecognizer = SFSpeechRecognizer(locale: recognitionLocale)
         guard let speechRecognizer, speechRecognizer.isAvailable else {
-            errorMessage = "Dictation is not available right now."
+            errorMessage = "\(localeOption.displayName) dictation is not available right now."
             return
         }
 
@@ -127,6 +128,63 @@ final class CoCaptainDictationController {
             AVAudioSession.sharedInstance().requestRecordPermission { isGranted in
                 continuation.resume(returning: isGranted)
             }
+        }
+    }
+}
+
+enum CoCaptainDictationLocaleOption: String, CaseIterable, Identifiable {
+    case auto
+    case arabicSaudiArabia
+    case englishUnitedStates
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .auto:
+            "Auto"
+        case .arabicSaudiArabia:
+            "Arabic (Saudi Arabia)"
+        case .englishUnitedStates:
+            "English (US)"
+        }
+    }
+
+    var systemImageName: String {
+        switch self {
+        case .auto:
+            "wand.and.stars"
+        case .arabicSaudiArabia:
+            "textformat"
+        case .englishUnitedStates:
+            "character.cursor.ibeam"
+        }
+    }
+
+    func recognitionLocale(for text: String) -> Locale {
+        switch self {
+        case .auto:
+            if text.containsArabicScalars || Locale.preferredLanguages.contains(where: { $0.hasPrefix("ar") }) {
+                return Locale(identifier: "ar-SA")
+            }
+
+            return .autoupdatingCurrent
+        case .arabicSaudiArabia:
+            return Locale(identifier: "ar-SA")
+        case .englishUnitedStates:
+            return Locale(identifier: "en-US")
+        }
+    }
+}
+
+private extension String {
+    var containsArabicScalars: Bool {
+        unicodeScalars.contains { scalar in
+            (0x0600...0x06FF).contains(scalar.value)
+            || (0x0750...0x077F).contains(scalar.value)
+            || (0x08A0...0x08FF).contains(scalar.value)
+            || (0xFB50...0xFDFF).contains(scalar.value)
+            || (0xFE70...0xFEFF).contains(scalar.value)
         }
     }
 }
