@@ -14,6 +14,7 @@ struct CoCaptainInputComposer: View {
     
     @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
     @State private var localModelManager = LocalMLXModelManager.shared
+    @State private var dictation = CoCaptainDictationController()
     @State private var isContextVisible = false
 
     private var isInputValid: Bool {
@@ -80,9 +81,26 @@ struct CoCaptainInputComposer: View {
             }
             .padding(.horizontal, 12)
             .padding(.bottom, 10)
+
+            if let errorMessage = dictation.errorMessage {
+                Text(errorMessage)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .transition(.opacity)
+            }
         }
         .background(Color.primary.opacity(0.02))
         .animation(.spring(response: 0.25, dampingFraction: 0.85), value: isContextVisible)
+        .animation(.easeInOut(duration: 0.2), value: dictation.errorMessage)
+        .onChange(of: dictation.transcript) { _, transcript in
+            text = transcript
+        }
+        .onDisappear {
+            dictation.stop()
+        }
     }
 
     private var quickPromptMenu: some View {
@@ -186,16 +204,28 @@ struct CoCaptainInputComposer: View {
         Button(action: {
             if isThinking {
                 onStop()
-            } else {
+            } else if dictation.isRecording {
+                dictation.stop()
+            } else if isInputValid {
                 onSend()
                 if onboarding?.currentStep == .chatCoCaptain {
                     onboarding?.completeCurrentStep()
+                }
+            } else {
+                isFocused = true
+                Task {
+                    await dictation.start(initialText: text)
                 }
             }
         }) {
             ZStack {
                 if isThinking {
                     Image(systemName: "stop.circle.fill")
+                        .font(.system(size: 38))
+                        .frame(width: 38, height: 38)
+                        .transition(.scale.combined(with: .opacity))
+                } else if dictation.isRecording {
+                    Image(systemName: "mic.circle.fill")
                         .font(.system(size: 38))
                         .frame(width: 38, height: 38)
                         .transition(.scale.combined(with: .opacity))
@@ -212,12 +242,25 @@ struct CoCaptainInputComposer: View {
                         .clipShape(Circle())
                 }
             }
-            .foregroundColor(.blue)
+            .foregroundColor(dictation.isRecording ? .red : .blue)
             .shadow(color: .blue.opacity(0.3), radius: 6, y: 3)
         }
-        .disabled(!isThinking && !canSend)
+        .accessibilityLabel(sendButtonAccessibilityLabel)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isInputValid)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isThinking)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: dictation.isRecording)
         .padding(.bottom, 5)
+    }
+
+    private var sendButtonAccessibilityLabel: String {
+        if isThinking {
+            "Stop CoCaptain"
+        } else if dictation.isRecording {
+            "Stop dictation"
+        } else if isInputValid {
+            "Send message"
+        } else {
+            "Start dictation"
+        }
     }
 }
