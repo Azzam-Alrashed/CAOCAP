@@ -34,10 +34,16 @@ struct InfiniteCanvasView: View {
     
     // Drag offsets stay local until the drag ends so links and nodes can track
     // the finger smoothly without writing every intermediate frame to ProjectStore.
+    
+    /// The node currently presented in the detail sheet context menu/inspector.
     @State private var selectedNode: SpatialNode?
+    /// The mini-app node currently presented in a full-screen editing experience.
     @State private var fullScreenMiniApp: SpatialNode?
+    /// Temporary translation offsets applied to nodes currently being dragged.
     @State private var nodeDragOffsets: [UUID: CGSize] = [:]
+    /// Flag indicating an active node drag, used to disable canvas panning during the gesture.
     @State private var isDraggingNode = false
+    /// Caches rendered dimensions of nodes to calculate precise fly-to padding.
     @State private var nodeFrames: [UUID: NodeFrameData] = [:]
     
     var body: some View {
@@ -237,10 +243,12 @@ struct InfiniteCanvasView: View {
         }
     }
     
+    /// Resolves the color of the infinite canvas background grid.
     private var backgroundColor: Color {
         colorScheme == .dark ? Color(white: 0.05) : Color(white: 0.95)
     }
 
+    /// Flushes the transient gesture scale and offset to the `ProjectStore`.
     private func persistViewportIfNeeded() {
         store.updateViewport(
             offset: viewport.offset,
@@ -249,6 +257,11 @@ struct InfiniteCanvasView: View {
         )
     }
 
+    /// Computes the exact zoom level required to fit a specific node within the screen bounds.
+    /// - Parameters:
+    ///   - nodeId: The ID of the node to frame.
+    ///   - containerSize: The physical screen dimensions available.
+    /// - Returns: A zoom scale factor capped at 1.2x.
     private func computeTargetScale(for nodeId: UUID, containerSize: CGSize) -> CGFloat {
         guard let frameData = nodeFrames[nodeId], containerSize != .zero else {
             return 1.0
@@ -260,6 +273,7 @@ struct InfiniteCanvasView: View {
     }
 }
 
+/// A custom UIKit pan gesture wrapper specifically for two-finger trackpad panning on iPadOS/macOS.
 private struct TrackpadPanGesture: UIGestureRecognizerRepresentable {
     var onChanged: (CGSize) -> Void
     var onEnded: () -> Void
@@ -306,6 +320,8 @@ private struct TrackpadPanGesture: UIGestureRecognizerRepresentable {
     InfiniteCanvasView(store: ProjectStore(), viewport: .constant(ViewportState()), currentScale: .constant(1.0), onNodeAction: nil)
 }
 
+/// An overlay view displayed when the current project file contains schema elements
+/// this version of CAOCAP does not understand, offering the user a safe escape hatch.
 private struct UnsupportedProjectCard: View {
     let message: String
     let onCreateFreshCanvas: () -> Void

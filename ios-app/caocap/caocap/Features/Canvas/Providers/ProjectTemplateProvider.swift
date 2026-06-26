@@ -1,7 +1,9 @@
 import Foundation
 import CoreGraphics
 
+/// Available templates for populating a new or empty project.
 public enum ProjectTemplate: String, CaseIterable, Identifiable, Codable {
+    /// A single node containing the default "Hello World" generative UI boilerplate.
     case helloWorld = "hello_world"
     
     public var id: String { rawValue }
@@ -33,7 +35,7 @@ public enum ProjectTemplate: String, CaseIterable, Identifiable, Codable {
 
 public struct ProjectTemplateProvider {
 
-    /// Returns the nodes configuration for the given template.
+    /// Returns the initial array of nodes for the given template.
     public static func nodes(for template: ProjectTemplate) -> [SpatialNode] {
         switch template {
         case .helloWorld:
@@ -46,6 +48,7 @@ public struct ProjectTemplateProvider {
         []
     }
 
+    /// The canonical "Hello World" HTML boilerplate used as a fallback or starting point.
     public static let defaultCode = """
     <!DOCTYPE html>
     <html>

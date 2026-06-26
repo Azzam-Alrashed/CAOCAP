@@ -17,7 +17,9 @@ public class ViewportState {
     /// The zoom level at the end of the previous magnification gesture.
     public var lastScale: CGFloat = 1.0
     
+    /// The furthest the canvas is permitted to zoom out.
     public let minScale: CGFloat = 0.1
+    /// The closest the canvas is permitted to zoom in.
     public let maxScale: CGFloat = 2.0
     
     public init(offset: CGSize = .zero, scale: CGFloat = 1.0) {
@@ -35,7 +37,7 @@ public class ViewportState {
         )
     }
 
-    /// Updates the current offset based on the translation of an active drag gesture.
+    /// Forwards a SwiftUI `DragGesture.Value` translation into the state.
     public func handleDragChanged(_ value: DragGesture.Value) {
         handleDragTranslation(value.translation)
     }
