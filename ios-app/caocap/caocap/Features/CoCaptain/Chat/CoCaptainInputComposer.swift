@@ -15,6 +15,7 @@ struct CoCaptainInputComposer: View {
     @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
     @AppStorage("app.dictationLocale") private var dictationLocaleRawValue = DictationLocaleOption.auto.rawValue
     @State private var localModelManager = LocalMLXModelManager.shared
+    /// Dictation manager for streaming microphone input and converting it to query text.
     @State private var dictation = DictationController()
     @State private var isContextVisible = false
 
@@ -31,6 +32,7 @@ struct CoCaptainInputComposer: View {
         return onboarding.currentStep == .chatCoCaptain && onboarding.showPopover
     }
 
+    /// Resolves the current user-selected or automatic dictation locale.
     private var dictationLocaleOption: DictationLocaleOption {
         DictationLocaleOption(rawValue: dictationLocaleRawValue) ?? .auto
     }

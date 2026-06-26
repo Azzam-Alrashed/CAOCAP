@@ -3,6 +3,8 @@ import SwiftUI
 struct CoCaptainView: View {
     var viewModel: CoCaptainViewModel
     @State private var text: String = ""
+    /// The baseline count of completed CoCaptain responses, used to wait for the assistant's
+    /// response to complete before advancing the active onboarding step.
     @State private var onboardingChatResponseBaseline: Int?
     @FocusState private var isFocused: Bool
     
@@ -92,6 +94,7 @@ struct CoCaptainView: View {
         advanceChatOnboardingIfResponseFinished()
     }
 
+    /// Hides the onboarding tooltip if the user begins typing a message in the text field.
     private func hideChatOnboardingWhenTypingChanges(from oldValue: String, to newValue: String) {
         guard onboarding?.currentStep == .chatCoCaptain else { return }
 
@@ -102,6 +105,7 @@ struct CoCaptainView: View {
         }
     }
 
+    /// Hides the onboarding tooltip if there is already text present in the chat input composer when appearing.
     private func hideChatOnboardingIfTextIsPresent() {
         guard onboarding?.currentStep == .chatCoCaptain,
               !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
@@ -111,6 +115,8 @@ struct CoCaptainView: View {
         onboarding?.hidePopoverForCurrentStep()
     }
 
+    /// Stores the current assistant response count baseline and hides the popover, starting the wait
+    /// for CoCaptain's response.
     private func beginChatOnboardingResponseWaitIfNeeded() {
         guard onboarding?.currentStep == .chatCoCaptain else { return }
 
@@ -118,6 +124,7 @@ struct CoCaptainView: View {
         onboarding?.hidePopoverForCurrentStep()
     }
 
+    /// Completes the chat onboarding step if the assistant's response count baseline has been exceeded.
     private func advanceChatOnboardingIfResponseFinished() {
         guard let baseline = onboardingChatResponseBaseline,
               onboarding?.currentStep == .chatCoCaptain,
