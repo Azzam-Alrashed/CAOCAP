@@ -1,5 +1,4 @@
 import SwiftUI
-import Popovers
 
 struct CoCaptainInputComposer: View {
     @Binding var text: String
@@ -178,42 +177,7 @@ struct CoCaptainInputComposer: View {
                     lineWidth: 1.5
                 )
         )
-        .popover(
-            present: Binding(
-                get: { isChatOnboardingActive },
-                set: { newValue in
-                    onboarding?.showPopover = newValue
-                }
-            ),
-            attributes: { attributes in
-                attributes.position = .absolute(
-                    originAnchor: .top,
-                    popoverAnchor: .bottom
-                )
-                attributes.dismissal.mode = .none
-                attributes.rubberBandingMode = .none
-                attributes.blocksBackgroundTouches = false
-                attributes.presentation.animation = .spring(response: 0.4, dampingFraction: 0.8)
-                attributes.presentation.transition = .asymmetric(
-                    insertion: .scale(scale: 0.85).combined(with: .opacity),
-                    removal: .scale(scale: 0.9).combined(with: .opacity)
-                )
-                attributes.dismissal.animation = .spring(response: 0.3, dampingFraction: 0.8)
-                attributes.dismissal.transition = .asymmetric(
-                    insertion: .scale(scale: 0.85).combined(with: .opacity),
-                    removal: .scale(scale: 0.9).combined(with: .opacity)
-                )
-                attributes.sourceFrameInset = UIEdgeInsets(top: -8, left: 0, bottom: 0, right: 0)
-            }
-        ) {
-            if let step = onboarding?.currentStep {
-                OnboardingPopoverCard(step: step, arrowPlacement: .bottom) {
-                    onboarding?.skip()
-                }
-            } else {
-                EmptyView()
-            }
-        }
+        .onboardingTooltipAnchor(.coCaptainInput)
         .animation(.easeInOut(duration: 0.2), value: isFocused)
         .animation(.easeInOut(duration: 0.2), value: isChatOnboardingActive)
     }

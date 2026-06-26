@@ -52,6 +52,9 @@ public class OnboardingCoordinator {
     /// Brief pause between steps so the UI settles before the next popover appears.
     private let interStepDelay: TimeInterval = 0.8
 
+    @ObservationIgnored
+    private var popoverTask: Task<Void, Never>?
+
     // MARK: - Persistence
 
     private static let completedKey = "onboarding_completed_v2"
@@ -79,8 +82,14 @@ public class OnboardingCoordinator {
         currentStep = firstStep
         UserDefaults.standard.set(firstStep.rawValue, forKey: Self.stepKey)
 
-        Task {
-            try? await Task.sleep(for: .seconds(initialDelay))
+        schedulePopover(after: initialDelay)
+    }
+
+    private func schedulePopover(after delay: TimeInterval) {
+        popoverTask?.cancel()
+        popoverTask = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(delay))
+            guard !Task.isCancelled else { return }
             showPopover = true
         }
     }
@@ -95,10 +104,7 @@ public class OnboardingCoordinator {
         if let next = OnboardingManifest.nextStep(after: step) {
             UserDefaults.standard.set(next.rawValue, forKey: Self.stepKey)
             currentStep = next
-            Task {
-                try? await Task.sleep(for: .seconds(interStepDelay))
-                showPopover = true
-            }
+            schedulePopover(after: interStepDelay)
         } else {
             markComplete()
         }
@@ -109,14 +115,12 @@ public class OnboardingCoordinator {
         showPopover = false
         currentStep = step
         UserDefaults.standard.set(step.rawValue, forKey: Self.stepKey)
-        Task {
-            try? await Task.sleep(for: .seconds(interStepDelay))
-            showPopover = true
-        }
+        schedulePopover(after: interStepDelay)
     }
 
     /// Skip the entire onboarding.
     public func skip() {
+        popoverTask?.cancel()
         showPopover = false
         markComplete()
     }
@@ -127,9 +131,11 @@ public class OnboardingCoordinator {
         UserDefaults.standard.removeObject(forKey: Self.stepKey)
         currentStep = nil
         showPopover = false
+        popoverTask?.cancel()
     }
 
     private func markComplete() {
+        popoverTask?.cancel()
         currentStep = nil
         isCompleted = true
         UserDefaults.standard.removeObject(forKey: Self.stepKey)

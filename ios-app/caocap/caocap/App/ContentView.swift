@@ -124,6 +124,7 @@ struct ContentView: View {
             .allowsHitTesting(false)
             .frame(width: 0, height: 0)
         }
+        .onboardingTooltipOverlay()
         .background(Color.black.ignoresSafeArea())
         .overlay {
             if isLaunching {
@@ -349,25 +350,8 @@ struct ContentView: View {
                     onboarding.completeCurrentStep()
                 }
             },
-            showOnboardingPopover: Binding(
-                get: {
-                    guard let step = onboarding.currentStep else { return false }
-                    return onboarding.showPopover && (step == .tapFAB || step == .longPressFAB)
-                },
-                set: { newValue in
-                    onboarding.showPopover = newValue
-                }
-            ),
-            onboardingPopoverContent: { offset in
-                if let step = onboarding.currentStep, (step == .tapFAB || step == .longPressFAB) {
-                    return AnyView(
-                        OnboardingPopoverCard(step: step, arrowOffset: offset) {
-                            onboarding.skip()
-                        }
-                    )
-                }
-                return AnyView(EmptyView())
-            }
+            isOnboardingHighlighted: onboarding.showPopover &&
+                (onboarding.currentStep == .tapFAB || onboarding.currentStep == .longPressFAB)
         )
     }
     
