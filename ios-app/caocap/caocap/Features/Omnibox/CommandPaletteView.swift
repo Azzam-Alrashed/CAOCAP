@@ -281,7 +281,8 @@ struct CommandPaletteView: View {
                                                 onboarding: onboarding
                                             )
                                         }
-                                        .padding(.vertical, 8)
+                                        .padding(.top, isCoCaptainRowOnboardingActive ? 20 : 12)
+                                        .padding(.bottom, 8)
                                     }
                                     .frame(maxHeight: 250)
                                     .interactiveKeyboardDismiss()
@@ -443,6 +444,7 @@ struct CommandPaletteView: View {
             }
         }
         .onAppear {
+            viewModel.prefersPromptSubmission = onboarding?.currentStep == .submitCoCaptainPrompt
             if isShowPopoverActive {
                 withAnimation(
                     .easeInOut(duration: 1.8)
@@ -487,6 +489,7 @@ struct CommandPaletteView: View {
             }
         }
         .onChange(of: viewModel.query) { _, _ in
+            viewModel.prefersPromptSubmission = onboarding?.currentStep == .submitCoCaptainPrompt
             if !viewModel.canSubmitPrompt {
                 showRowPopoverDelay = false
                 isCoCaptainRowVisible = false
@@ -507,6 +510,9 @@ struct CommandPaletteView: View {
                     onboarding?.moveToStep(.typeCoCaptainPrompt)
                 }
             }
+        }
+        .onChange(of: onboarding?.currentStep) { _, step in
+            viewModel.prefersPromptSubmission = step == .submitCoCaptainPrompt
         }
     }
 }

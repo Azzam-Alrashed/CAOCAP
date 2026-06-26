@@ -390,6 +390,33 @@ struct CoCaptainAgentTests {
     }
 
     @MainActor
+    @Test func commandPaletteKeepsPromptSelectedDuringOnboardingTyping() {
+        let viewModel = CommandPaletteViewModel()
+        viewModel.actions = TestActionDispatcher().availableActions
+        viewModel.nodes = [
+            SpatialNode(type: .standard, position: .zero, title: "Hi from the canvas")
+        ]
+
+        viewModel.query = "h"
+        viewModel.selectPromptRowIfAvailable()
+        viewModel.prefersPromptSubmission = true
+        viewModel.query = "hi"
+
+        var submittedPrompt: String?
+        var flownNodeID: UUID?
+        viewModel.onSubmitPrompt = { submittedPrompt = $0 }
+        viewModel.onFlyToNode = { flownNodeID = $0 }
+
+        #expect(viewModel.nodeResults.count == 1)
+        #expect(viewModel.selectedIndex == viewModel.promptSelectionIndex)
+
+        viewModel.confirmSelection()
+
+        #expect(submittedPrompt == "hi")
+        #expect(flownNodeID == nil)
+    }
+
+    @MainActor
     @Test func commandPaletteArrowNavigationWraparound() {
         let viewModel = CommandPaletteViewModel()
         viewModel.actions = TestActionDispatcher().availableActions

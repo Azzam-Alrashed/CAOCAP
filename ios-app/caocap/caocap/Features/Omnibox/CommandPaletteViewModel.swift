@@ -19,7 +19,11 @@ public class CommandPaletteViewModel {
             // so that pressing Enter (which can re-trigger didSet with the
             // same value) doesn't clobber the arrow-key selection.
             guard query != oldValue else { return }
-            selectedIndex = 0
+            if prefersPromptSubmission {
+                selectPromptRowIfAvailable()
+            } else {
+                selectedIndex = 0
+            }
         }
     }
     public var isPresented: Bool = false
@@ -27,6 +31,14 @@ public class CommandPaletteViewModel {
     public var actions: [AppActionDefinition] = []
     public var nodes: [SpatialNode] = []
     public var mode: CommandPaletteMode = .search
+    public var prefersPromptSubmission: Bool = false {
+        didSet {
+            guard prefersPromptSubmission != oldValue else { return }
+            if prefersPromptSubmission {
+                selectPromptRowIfAvailable()
+            }
+        }
+    }
     
     /// Filters against localized and canonical titles so command search works
     /// in the UI language while still matching stable English action names.
