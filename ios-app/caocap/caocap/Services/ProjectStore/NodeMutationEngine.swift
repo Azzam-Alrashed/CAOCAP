@@ -36,8 +36,7 @@ final class NodeMutationEngine {
             switch type {
             case .miniApp:
                 nodes[index].miniApp = nodes[index].miniApp ?? MiniAppState(
-                    srsText: ProjectTemplateProvider.defaultSRSText,
-                    srsReadinessState: SRSReadinessEvaluator().evaluate(text: ProjectTemplateProvider.defaultSRSText, currentState: nil),
+                    srsReadinessState: SRSReadinessEvaluator().evaluate(text: SRSScaffold.defaultText, currentState: nil),
                     codeText: ProjectTemplateProvider.defaultCode,
                     firebaseConfigText: FirebasePreviewBootstrap.placeholderConfigJSON()
                 )
@@ -204,8 +203,7 @@ final class NodeMutationEngine {
         let subtitle = type.defaultSubtitle
         let linkedFileName: String? = type == .subCanvas ? CanvasFileNaming.newCanvasFileName() : nil
         let miniApp = type == .miniApp ? MiniAppState(
-            srsText: ProjectTemplateProvider.defaultSRSText,
-            srsReadinessState: SRSReadinessEvaluator().evaluate(text: ProjectTemplateProvider.defaultSRSText, currentState: nil),
+            srsReadinessState: SRSReadinessEvaluator().evaluate(text: SRSScaffold.defaultText, currentState: nil),
             codeText: ProjectTemplateProvider.defaultCode,
             firebaseConfigText: FirebasePreviewBootstrap.placeholderConfigJSON()
         ) : nil
@@ -386,8 +384,7 @@ final class NodeMutationEngine {
         guard node.type == .miniApp else { return }
         if node.miniApp == nil {
             node.miniApp = MiniAppState(
-                srsText: ProjectTemplateProvider.defaultSRSText,
-                srsReadinessState: SRSReadinessEvaluator().evaluate(text: ProjectTemplateProvider.defaultSRSText, currentState: nil),
+                srsReadinessState: SRSReadinessEvaluator().evaluate(text: SRSScaffold.defaultText, currentState: nil),
                 codeText: ProjectTemplateProvider.defaultCode,
                 firebaseConfigText: FirebasePreviewBootstrap.placeholderConfigJSON()
             )

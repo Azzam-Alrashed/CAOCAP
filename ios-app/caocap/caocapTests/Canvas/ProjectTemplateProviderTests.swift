@@ -13,20 +13,12 @@ struct ProjectTemplateProviderTests {
         }
     }
     
-    @Test func nodesForMakeItRememberTemplate() {
+    @Test func defaultTemplateStartsWithCleanCanvas() {
         let nodes = ProjectTemplateProvider.nodes(for: .helloWorld)
-        #expect(nodes.count == 1)
-        let miniApp = nodes.first
-        #expect(miniApp?.type == .miniApp)
-        #expect(ProjectTemplate.helloWorld.displayName == "Make It Remember")
-        #expect(miniApp?.title == "Make It Remember")
-        #expect(miniApp?.subtitle?.contains("remember") == true)
-        #expect(miniApp?.miniApp?.srsText.contains("# Intent") == true)
-        #expect(miniApp?.miniApp?.srsText.contains("Make this button remember") == true)
-        #expect(miniApp?.miniApp?.srsText.contains("state") == true)
-        #expect(miniApp?.miniApp?.codeText.contains("Make It Remember") == true)
-        #expect(miniApp?.miniApp?.codeText.contains("tapCount") == true)
-        #expect(miniApp?.miniApp?.codeText.contains("taps remembered") == true)
-        #expect(miniApp?.agentProfile.roleName == "Mini-App Mentor")
+        #expect(nodes.isEmpty)
+    }
+
+    @Test func defaultMiniAppCodeRemainsAvailableForManualCreation() {
+        #expect(ProjectTemplateProvider.defaultCode.contains("Hello World!"))
     }
 }

@@ -11,26 +11,26 @@ enum OnboardingManifest {
     static let steps: [OnboardingStepContent] = [
         OnboardingStepContent(
             step: .tapFAB,
-            title: "Start the Mission",
-            message: "Tap this button to open the command palette. Your first mission is Make It Remember.",
+            title: "Your Command Center",
+            message: "Tap this button to open the command palette, your gateway to every action in CAOCAP.",
             icon: "hand.tap"
         ),
         OnboardingStepContent(
             step: .typeCoCaptainPrompt,
             title: "Ask CoCaptain",
-            message: "Type \"help me make the button remember taps\" to ask your AI mentor for mission help.",
+            message: "Type a message like \"hi\" here to turn the command palette into an AI prompt.",
             icon: "keyboard"
         ),
         OnboardingStepContent(
             step: .submitCoCaptainPrompt,
             title: "Send to CoCaptain",
-            message: "Tap the Ask CoCaptain row or press return. CoCaptain should explain the next change before you apply it.",
+            message: "Tap the Ask CoCaptain row or press return to send your message.",
             icon: "sparkles"
         ),
         OnboardingStepContent(
             step: .chatCoCaptain,
             title: "Meet Your CoCaptain",
-            message: "CoCaptain is your AI mentor. Ask it to help you understand state while keeping code edits ready for review.",
+            message: "CoCaptain is here. Type a message here to build, refine, or explain code.",
             icon: "bubble.left.and.text.bubble.right"
         ),
         OnboardingStepContent(

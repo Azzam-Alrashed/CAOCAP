@@ -55,7 +55,7 @@ The first product loop is short guided building missions on the spatial canvas.
 6. Let CoCaptain explain the concept at the moment it matters.
 7. Leave with a stronger app and one more piece of software literacy.
 
-The learning should arrive because the user needs it. Not "today we study state." Instead: "you want the button to remember clicks, so now state matters."
+The learning should arrive because the user needs it. Not "today we study a concept." Instead: "you want the app to do something new, so now this idea matters."
 
 ## Product Principles
 
@@ -68,10 +68,6 @@ The learning should arrive because the user needs it. Not "today we study state.
 
 ## First Proof
 
-The first proof is one magical learning mission, not a whole curriculum.
+The first proof should be one magical learning loop, not a whole curriculum.
 
-Working title: Make It Remember.
-
-The user modifies a tiny Mini-App so a button remembers how many times it was tapped. The concept is state, but the mission should speak in plain human terms first: make the app remember.
-
-If that loop feels good, CAOCAP has a path. If it feels generic, the pivot should be revised before adding more lessons.
+The exact first mission is still open. It should be small, real, emotionally clear, and native to CAOCAP's canvas. If the first loop feels good, CAOCAP has a path. If it feels generic, the pivot should be revised before adding more lessons.

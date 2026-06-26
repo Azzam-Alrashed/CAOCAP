@@ -39,8 +39,6 @@ The next pivot is documented in [Azzamification of CAOCAP](docs/AZZAMIFICATION_O
 
 CAOCAP is moving away from being another prompt-to-app tool and toward being a software learning studio for creative builders. You still build real Mini-Apps with CoCaptain, but the deeper promise is that you leave more capable than you arrived.
 
-The first proof of this direction is [Make It Remember](docs/MAKE_IT_REMEMBER_MISSION.md), a tiny mission about state: make a button remember how many times it was tapped.
-
 ```
 function CAOCAP(idea) {
   const app = new Software();
