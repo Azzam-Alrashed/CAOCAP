@@ -1,5 +1,7 @@
 import SwiftUI
 
+/// A polymorphic wrapper that routes a generic timeline item to its specific
+/// SwiftUI representation (chat bubble, execution summary, CTA, or review bundle).
 struct TimelineItemView: View {
     let item: CoCaptainTimelineItem
     let viewModel: CoCaptainViewModel
@@ -21,6 +23,7 @@ struct TimelineItemView: View {
 }
 
 extension CoCaptainTimelineItem {
+    /// True if this item is an assistant chat message that hasn't received any text yet.
     var isEmptyAssistantMessage: Bool {
         guard case .message(let bubble) = content,
               !bubble.isUser else {
@@ -31,6 +34,7 @@ extension CoCaptainTimelineItem {
     }
 }
 
+/// A small pill indicating the current project and node context implicitly passed to the LLM.
 struct ContextPill: View {
     let projectName: String
     let fileName: String
@@ -59,6 +63,7 @@ struct ContextPill: View {
     }
 }
 
+/// A discreet success indicator shown when the agent executes an app action without requiring review.
 struct ExecutionSummaryView: View {
     let status: ExecutionStatusItem
 
@@ -77,6 +82,7 @@ struct ExecutionSummaryView: View {
     }
 }
 
+/// A stylized banner emitted by the assistant to prompt the user to upgrade or subscribe.
 struct ProductCTAView: View {
     let item: CoCaptainProductCTAItem
     let onPrimaryAction: () -> Void
