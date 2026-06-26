@@ -2,22 +2,22 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "CAOCAP | Mindmap Your HTML",
+  title: "CAOCAP | Learn Software by Building",
   description:
-    "CAOCAP is a spatial, mindmap-driven way to build HTML, CSS, and JavaScript on iOS and iPadOS.",
+    "CAOCAP is a creative canvas where people learn software by building real apps with an AI mentor.",
   openGraph: {
-    title: "CAOCAP | Mindmap Your HTML",
+    title: "CAOCAP | Learn Software by Building",
     description:
-      "Build web ideas through spatial nodes, live previews, and an AI companion on iOS and iPadOS.",
+      "Learn software by building real Mini-Apps through spatial nodes, live previews, and an AI mentor on iOS and iPadOS.",
     type: "website",
     url: "https://caocap.com",
     siteName: "CAOCAP"
   },
   twitter: {
     card: "summary_large_image",
-    title: "CAOCAP | Mindmap Your HTML",
+    title: "CAOCAP | Learn Software by Building",
     description:
-      "A spatial, mindmap-driven way to build HTML, CSS, and JavaScript on iOS and iPadOS."
+      "A creative canvas where people learn software by building real apps with an AI mentor."
   }
 };
 
