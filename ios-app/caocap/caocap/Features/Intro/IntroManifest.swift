@@ -1,5 +1,8 @@
 import Foundation
 
+/// Static catalogue of every intro step shown during the first-launch product tour.
+/// Adding, removing, or reordering steps here automatically updates `IntroCoordinator`
+/// and `IntroView` without touching any other file.
 enum IntroManifest {
     static let steps: [IntroStepContent] = [
         IntroStepContent(
@@ -54,6 +57,7 @@ enum IntroManifest {
         )
     ]
 
+    /// Convenience for bounds-safe access when computing the last valid `TabView` page.
     static var lastIndex: Int {
         max(steps.count - 1, 0)
     }

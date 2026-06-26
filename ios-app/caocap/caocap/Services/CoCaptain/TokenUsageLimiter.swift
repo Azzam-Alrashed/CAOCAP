@@ -1,18 +1,28 @@
 import Foundation
 
+/// A snapshot of token consumption for the current billing period.
 public struct TokenUsageStatus: Equatable {
+    /// A `"YYYY-MM"` key identifying the calendar month this status covers.
     public let periodKey: String
+    /// Estimated tokens consumed so far this month.
     public let usedTokens: Int
+    /// The maximum tokens allowed this month for the current tier.
     public let limitTokens: Int
 
+    /// How many more tokens the user can spend before hitting the monthly cap.
     public var remainingTokens: Int {
         max(0, limitTokens - usedTokens)
     }
 }
 
+/// Thrown by `TokenUsageLimiter.preflight` when the incoming request
+/// would push usage past the monthly free-tier cap.
 public struct TokenUsageLimitError: LocalizedError, Equatable {
+    /// The configured monthly token ceiling.
     public let limitTokens: Int
+    /// Tokens already consumed this period before this request.
     public let usedTokens: Int
+    /// Estimated cost of the incoming prompt plus the response reserve.
     public let requestedTokens: Int
 
     public var errorDescription: String? {
@@ -41,6 +51,8 @@ public final class TokenUsageLimiter {
         self.calendar = calendar
     }
 
+    /// Returns the current usage snapshot, resetting the counter automatically
+    /// when the calendar month has rolled over.
     public func status(
         limitTokens: Int = TokenUsageLimiter.freeMonthlyTokenLimit,
         now: Date = Date()
@@ -53,6 +65,19 @@ public final class TokenUsageLimiter {
         )
     }
 
+    /// Guards a pending LLM call against the monthly cap before the request is sent.
+    ///
+    /// Subscribers bypass the check entirely. For free-tier users the prompt's estimated
+    /// token cost plus `responseReserveTokens` is added to current usage; if the sum
+    /// exceeds the limit, a `TokenUsageLimitError` is returned so the caller can surface
+    /// an upgrade prompt instead of sending the request.
+    ///
+    /// - Parameters:
+    ///   - prompt: The full prompt string that will be sent to the model.
+    ///   - isSubscribed: Skip enforcement when the user holds an active Pro subscription.
+    ///   - limitTokens: Monthly cap; defaults to `freeMonthlyTokenLimit`.
+    ///   - responseReserveTokens: Extra tokens reserved for the expected model reply.
+    ///   - now: Injection point for the current date (useful in tests).
     public func preflight(
         prompt: String,
         isSubscribed: Bool,
@@ -78,6 +103,11 @@ public final class TokenUsageLimiter {
         return .success(())
     }
 
+    /// Records token usage after a completed LLM exchange.
+    ///
+    /// Call this once the full model response has been streamed so both
+    /// the prompt and the actual response length are known. Subscribers
+    /// are exempt from tracking.
     public func record(
         prompt: String,
         response: String,
@@ -92,11 +122,17 @@ public final class TokenUsageLimiter {
         defaults.set(usedTokens + usage, forKey: usedTokensStorageKey)
     }
 
+    /// Resets the usage counter for the given date's period and writes the new period key.
+    /// Normally called automatically by `resetIfNeeded`; exposed publicly for testing.
     public func reset(now: Date = Date()) {
         defaults.set(periodKey(for: now), forKey: periodKeyStorageKey)
         defaults.set(0, forKey: usedTokensStorageKey)
     }
 
+    /// Estimates the token count of `text` using a 4-characters-per-token heuristic.
+    ///
+    /// Firebase AI Logic doesn't expose exact usage through the CAOCAP app boundary,
+    /// so a conservative approximation is used to stay within the free-tier envelope.
     public func estimateTokens(in text: String) -> Int {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return 0 }

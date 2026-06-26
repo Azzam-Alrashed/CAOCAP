@@ -1,10 +1,20 @@
 import SwiftUI
 
+/// The primary card-shaped visual representation of a `SpatialNode` on the canvas.
+/// Renders the node's icon, title, subtitle, SRS readiness badge, and — for
+/// Mini-App nodes — a scaled live HTML preview. Applies glass-morphism styling and
+/// animated overlays that reflect the current CoCaptain agent execution state.
 struct NodeView: View {
+    /// The underlying domain model whose data is displayed.
     let node: SpatialNode
+    /// `true` while the user is actively dragging this node; drives slightly
+    /// elevated scale and shadow to convey "lifted" state.
     var isDragging: Bool = false
+    /// Current agent execution state for this node, controls badge icons and
+    /// pulsing border overlays.
     var agentState: AgentExecutionState = .idle
     @State private var isHovering = false
+    /// Drives the repeating animation of the "thinking" state border overlay.
     @State private var isPulsing = false
     @AppStorage(LocalizationManager.languageStorageKey) private var selectedLanguage = "English"
     
@@ -115,6 +125,9 @@ struct NodeView: View {
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isHovering)
     }
     
+    /// The accent color used for badge tinting, border gradients, and icon fills.
+    /// Overrides the node's theme color with yellow when the user holds an active
+    /// Pro subscription and this is the Pro upsell node.
     private var themeColor: Color {
         if node.action == .proSubscription && SubscriptionManager.shared.isSubscribed {
             return .yellow
@@ -122,6 +135,8 @@ struct NodeView: View {
         return node.theme.color
     }
 
+    /// Gradient color pair used for the icon background, card gradient, and shadow.
+    /// Uses gold tones for the Pro upsell node when the user is already subscribed.
     private var gradientColors: [Color] {
         if node.action == .proSubscription && SubscriptionManager.shared.isSubscribed {
             return [Color(hex: "FACC15"), Color(hex: "F59E0B")]
@@ -129,6 +144,8 @@ struct NodeView: View {
         return node.theme.gradientColors
     }
 
+    /// The text shown in the title row, overridden for the Pro upsell node when
+    /// the user is already subscribed (to show "CAOCAP Pro" instead of the raw title).
     private var nodeTitle: String {
         if node.action == .proSubscription && SubscriptionManager.shared.isSubscribed {
             return LocalizationManager.shared.localizedString("CAOCAP Pro")
@@ -136,6 +153,8 @@ struct NodeView: View {
         return node.displayTitle
     }
     
+    /// The text shown below the title, overridden for the Pro upsell node when
+    /// the user is already subscribed (to show "Manage Subscription").
     private var nodeSubtitle: String? {
         if node.action == .proSubscription && SubscriptionManager.shared.isSubscribed {
             return LocalizationManager.shared.localizedString("Manage Subscription")
@@ -143,6 +162,9 @@ struct NodeView: View {
         return node.displaySubtitle
     }
 
+    /// Layered background: frosted glass base + theme-tinted linear gradient +
+    /// radial highlight from the top-leading corner. All color intensities increase
+    /// while the node is being dragged to reinforce the lifted appearance.
     private var backgroundStack: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 24, style: .continuous)
@@ -175,6 +197,8 @@ struct NodeView: View {
         )
     }
 
+    /// A rounded-rectangle stroke whose gradient colors and line width intensify
+    /// during a drag to emphasise the node boundary.
     private var borderOverlay: some View {
         RoundedRectangle(cornerRadius: 24, style: .continuous)
             .stroke(
@@ -191,6 +215,11 @@ struct NodeView: View {
             )
     }
 
+    /// Applies a colored, animated border ring that reflects the current agent state:
+    /// - Blue pulsing border while the agent is **thinking**.
+    /// - Solid green border while the agent is **applying** a patch.
+    /// - Orange border while a review bundle is **awaiting** user approval.
+    /// - Red border when an **error** occurred.
     private var statusOverlay: some View {
         Group {
             if agentState == .thinking {
@@ -220,6 +249,10 @@ struct NodeView: View {
     }
 }
 
+/// Renders supplementary content beneath the header row of a `NodeView`.
+/// For Mini-App nodes, shows a scaled-down live HTML thumbnail (375×667 ➝ 240px wide).
+/// For sub-canvas nodes, shows a "Tap to open" affordance. Action nodes and plain
+/// nodes render nothing (the header row is sufficient).
 private struct NodePreviewContent: View {
     let node: SpatialNode
     let agentState: AgentExecutionState

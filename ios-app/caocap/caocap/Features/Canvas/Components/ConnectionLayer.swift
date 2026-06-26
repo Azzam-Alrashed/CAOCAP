@@ -4,12 +4,24 @@ import SwiftUI
 /// are not placed inside the scaled node layer because large curves can clip
 /// when their endpoints sit far apart on the infinite canvas.
 struct ConnectionLayer: View {
+    /// User-facing preference that controls whether connections are drawn as
+    /// `"Solid"`, `"Dashed"` (default), or `"Neon"`.
     @AppStorage("connection_style") private var connectionStyle = "Dashed"
+    /// The current snapshot of all spatial nodes in the project.
     let nodes: [SpatialNode]
+    /// Live per-node translation offsets during a drag gesture, used to move
+    /// connection endpoints in sync with a dragged node before the position is
+    /// committed to the store.
     let dragOffsets: [UUID: CGSize]
+    /// Current pan/zoom state, used to convert canvas coordinates to screen points.
     let viewport: ViewportState
+    /// The screen-space midpoint of the canvas view, acting as the coordinate origin.
     let center: CGPoint
+    /// Live agent execution states, keyed by node ID, used to style connections
+    /// differently when a downstream agent is actively running.
     let activeAgentStates: [UUID: AgentExecutionState]
+    /// Actual rendered frame data for each node, populated via preference keys.
+    /// Preferred over the mathematical fallback when available.
     let nodeFrames: [UUID: NodeFrameData]
     
     var body: some View {
@@ -41,6 +53,11 @@ struct ConnectionLayer: View {
         .allowsHitTesting(false)
     }
 
+    /// Converts a node's canvas-space position to a screen-space point.
+    /// Prefers the measured frame center reported via `NodeFramePreferenceKey`
+    /// because it accounts for the node's actual rendered size. Falls back to a
+    /// mathematical transform when the preference data is not yet available
+    /// (e.g., on the first layout pass).
     private func screenPoint(for node: SpatialNode) -> CGPoint {
         if let frameData = nodeFrames[node.id] {
             return frameData.center
@@ -119,6 +136,9 @@ struct ConnectionLayer: View {
         arrowContext.fill(path, with: .color(color))
     }
     
+    /// Returns the angle (in radians) a line segment makes with the positive x-axis,
+    /// used to orient the arrowhead so it points in the same direction as the curve's
+    /// terminal tangent.
     private func calculateDirection(from: CGPoint, to: CGPoint) -> CGFloat {
         atan2(to.y - from.y, to.x - from.x)
     }

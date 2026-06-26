@@ -3,11 +3,17 @@ import SwiftUI
 /// Opens a canvas node. Mini-App nodes enter a full-screen running preview with
 /// Mini-App tools behind the floating command button.
 struct NodeDetailView: View {
+    /// The canvas node whose detail is being shown. Used as the initial value;
+    /// the live version is always read from `store.nodes`.
     let node: SpatialNode
+    /// The owning project store, passed through to child sheets.
     let store: ProjectStore
 
     @Environment(\.dismiss) private var dismiss
 
+    /// Always reads the node from the store so that any edits made inside a
+    /// child sheet (e.g. title change in settings) are reflected here without
+    /// needing to re-open the detail view.
     private var currentNode: SpatialNode {
         store.nodes.first(where: { $0.id == node.id }) ?? node
     }
@@ -23,25 +29,38 @@ struct NodeDetailView: View {
     }
 }
 
+/// Identifies which tool sheet should be presented over the live Mini-App preview.
 private enum MiniAppTool: String, Identifiable {
+    /// Software Requirements Specification editor.
     case srs
+    /// HTML/JS source code editor.
     case code
+    /// Firebase Web SDK configuration editor.
     case firebase
+    /// CoCaptain agent chat panel.
     case agent
+    /// Node identity and agent profile settings form.
     case settings
 
     var id: String { rawValue }
 }
 
+/// Full-screen shell that hosts the live Mini-App HTML preview and surfaces all
+/// Mini-App tools (SRS, code, Firebase, agent, settings) behind a single floating
+/// command button and a confirmation dialog.
 private struct MiniAppPreviewShell: View {
     let node: SpatialNode
     let store: ProjectStore
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.undoManager) private var undoManager
+    /// Controls visibility of the tool selection confirmation dialog.
     @State private var showingActions = false
+    /// Drives which tool sheet is currently presented.
     @State private var activeTool: MiniAppTool?
 
+    /// Live-refreshed node so any background store mutation (e.g. CoCaptain applying
+    /// a patch) is immediately reflected in the preview without dismissing the sheet.
     private var currentNode: SpatialNode {
         store.nodes.first(where: { $0.id == node.id }) ?? node
     }
@@ -103,9 +122,14 @@ private struct MiniAppPreviewShell: View {
     }
 }
 
+/// A navigation-wrapped `Form` for editing a node's identity (name, subtitle, icon,
+/// theme), agent profile (role, system prompt, auto-trigger flag), and — for
+/// non-protected nodes — a destructive delete action.
 private struct MiniAppSettingsView: View {
     let node: SpatialNode
     let store: ProjectStore
+    /// Invoked after the user confirms node deletion so the caller (e.g.,
+    /// `InfiniteCanvasView`) can dismiss the sheet that was showing this detail.
     let onDelete: () -> Void
 
     @Environment(\.dismiss) private var dismiss

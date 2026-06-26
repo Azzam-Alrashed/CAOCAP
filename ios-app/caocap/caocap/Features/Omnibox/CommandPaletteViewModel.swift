@@ -7,12 +7,15 @@ import OSLog
 @Observable
 public class CommandPaletteViewModel {
     public enum CommandPaletteMode {
+        /// Standard mode: shows node results, action commands, and node-creation options.
         case search
+        /// Dedicated actions-only list, entered via the "Show all actions" shortcut.
         case actionsList
     }
     
     private let logger = Logger(subsystem: "CAOCAP", category: "CommandPalette")
     
+    /// Bound to the search field; resets keyboard selection whenever the value changes.
     public var query: String = "" {
         didSet {
             // Only reset keyboard selection when the query actually changed,
@@ -27,10 +30,15 @@ public class CommandPaletteViewModel {
         }
     }
     public var isPresented: Bool = false
+    /// Flat index across all result sections (node results → actions → node creation → prompt row).
     public var selectedIndex: Int = 0
+    /// Full list of registered app actions; filtered by `filteredActions` before display.
     public var actions: [AppActionDefinition] = []
+    /// The current canvas nodes; searched by `nodeResults` when the query is non-empty.
     public var nodes: [SpatialNode] = []
     public var mode: CommandPaletteMode = .search
+    /// When `true` the palette automatically moves the selection to the CoCaptain prompt row
+    /// instead of the first command, letting the user hit Return to send a message immediately.
     public var prefersPromptSubmission: Bool = false {
         didSet {
             guard prefersPromptSubmission != oldValue else { return }
@@ -78,10 +86,15 @@ public class CommandPaletteViewModel {
 
     public var promptSelectionIndex: Int { promptRowIndex }
     
+    /// Called by the host when an action should be executed; avoids duplicating dispatch logic here.
     public var onExecute: ((AppActionID) -> Void)?
+    /// Called when the user requests to pin an action shortcut onto the canvas.
     public var onPinAction: ((AppActionID) -> Void)?
+    /// Called when the user selects a node result, asking the canvas to fly to that node.
     public var onFlyToNode: ((UUID) -> Void)?
+    /// Called when the user picks a node-creation option from the palette.
     public var onCreateNode: ((NodeType) -> Void)?
+    /// Called when the user submits a free-text query that didn't match any command or node.
     public var onSubmitPrompt: ((String) -> Void)?
     
     @ObservationIgnored
@@ -176,14 +189,17 @@ public class CommandPaletteViewModel {
         setPresented(false)
     }
 
+    /// Maps a node-result list index into the unified `selectedIndex` space.
     public func selectionIndex(forNodeResultAt index: Int) -> Int {
         nodeResultsStartIndex + index
     }
 
+    /// Maps a node-creation list index into the unified `selectedIndex` space.
     public func selectionIndex(forNodeCreationResultAt index: Int) -> Int {
         nodeCreationResultsStartIndex + index
     }
 
+    /// Maps an action list index into the unified `selectedIndex` space.
     public func selectionIndex(forActionAt index: Int) -> Int {
         actionsStartIndex + index
     }
@@ -205,6 +221,9 @@ public class CommandPaletteViewModel {
     }
     
     public enum Direction {
-        case up, down
+        /// Move the keyboard highlight upward through results, wrapping from the top.
+        case up
+        /// Move the keyboard highlight downward through results, wrapping from the bottom.
+        case down
     }
 }
