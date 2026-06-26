@@ -98,13 +98,20 @@ struct UnifiedBubbleWithArrowShape: Shape {
 }
 
 enum OnboardingTooltipAnchor: Hashable {
+    /// Anchored to the floating command button (FAB) at the bottom of the canvas.
     case floatingCommandButton
+    /// Anchored to the omnibox search text field.
     case omniboxSearchField
+    /// Anchored to the "Ask CoCaptain" prompt row inside the omnibox.
     case omniboxPromptRow
+    /// Anchored to the CoCaptain chat input field.
     case coCaptainInput
+    /// Anchored to the CoCaptain panel's Done/dismiss button.
     case coCaptainDoneButton
 }
 
+/// Collects layout anchors for each named onboarding target so the tooltip overlay
+/// can position itself relative to any annotated view in the hierarchy.
 private struct OnboardingTooltipAnchorPreferenceKey: PreferenceKey {
     static var defaultValue: [OnboardingTooltipAnchor: Anchor<CGRect>] = [:]
 
@@ -116,6 +123,8 @@ private struct OnboardingTooltipAnchorPreferenceKey: PreferenceKey {
     }
 }
 
+/// Tracks the rendered size of the tooltip card so `tooltipCenter` can clamp position
+/// correctly before the card is actually measured for the first time.
 private struct OnboardingTooltipSizePreferenceKey: PreferenceKey {
     static var defaultValue: CGSize = CGSize(width: 290, height: 180)
 
@@ -125,12 +134,15 @@ private struct OnboardingTooltipSizePreferenceKey: PreferenceKey {
 }
 
 extension View {
+    /// Tags a view with an onboarding anchor so the tooltip overlay knows where to point.
     func onboardingTooltipAnchor(_ anchor: OnboardingTooltipAnchor) -> some View {
         anchorPreference(key: OnboardingTooltipAnchorPreferenceKey.self, value: .bounds) {
             [anchor: $0]
         }
     }
 
+    /// Reads all accumulated anchors and renders the tooltip overlay in a single pass,
+    /// avoiding multiple layout passes that could cause jitter.
     func onboardingTooltipOverlay() -> some View {
         overlayPreferenceValue(OnboardingTooltipAnchorPreferenceKey.self) { anchors in
             OnboardingTooltipOverlay(anchors: anchors)
@@ -164,6 +176,10 @@ extension OnboardingCoordinator.Step {
     }
 }
 
+/// An overlay view that reads the registered anchor frames and positions a
+/// `OnboardingPopoverCard` relative to the currently active step's target.
+/// The tooltip is positioned to stay within safe area margins and transitions
+/// with a spring scale-plus-fade animation.
 private struct OnboardingTooltipOverlay: View {
     let anchors: [OnboardingTooltipAnchor: Anchor<CGRect>]
 
@@ -212,6 +228,8 @@ private struct OnboardingTooltipOverlay: View {
         .animation(.spring(response: 0.35, dampingFraction: 0.82), value: onboarding?.showPopover)
     }
 
+    /// Computes the center point for the tooltip card, keeping it inset from screen edges
+    /// and on the correct side of the target frame based on arrow placement.
     private func tooltipCenter(
         for targetFrame: CGRect,
         placement: UnifiedBubbleWithArrowShape.ArrowPlacement,
@@ -340,6 +358,8 @@ struct OnboardingPopoverCard: View {
     }
 }
 
+/// A step-progress bar that fills from the left as the user advances through onboarding.
+/// Completed and current steps are shown in blue; future steps use a muted primary.
 private struct OnboardingProgressBar: View {
     let step: OnboardingCoordinator.Step
 

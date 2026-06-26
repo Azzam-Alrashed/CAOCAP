@@ -2,10 +2,18 @@ import Foundation
 import SwiftUI
 import OSLog
 
+/// Manages autonomous, event-driven agent invocations that fan out from
+/// upstream node mutations to connected downstream nodes.
+///
+/// Downstream triggers are debounced so rapid edits don't spam the LLM.
+/// This engine is only active when the experimental agent pipes feature flag
+/// is enabled in `UserDefaults`.
 @Observable
 @MainActor
 public final class AgentPipelineEngine {
+    /// Keyed by node ID; tracks the current execution state of each in-flight agent run.
     public var activeAgentStates: [UUID: AgentExecutionState] = [:]
+    /// One cancellable task per source node, used to debounce rapid upstream edits.
     private var agentTriggerTasks: [UUID: Task<Void, Never>] = [:]
     
     private let logger = Logger(subsystem: "com.caocap.AgentPipelineEngine", category: "Engine")
@@ -18,6 +26,8 @@ public final class AgentPipelineEngine {
             return
         }
 
+        // Cancel any pending trigger for this source node so a burst of edits
+        // only fires a single agent run after the user stops typing.
         agentTriggerTasks[sourceNodeID]?.cancel()
         
         agentTriggerTasks[sourceNodeID] = Task { @MainActor [weak self] in
@@ -29,6 +39,8 @@ public final class AgentPipelineEngine {
             guard let sourceNode = nodes.first(where: { $0.id == sourceNodeID }) else { return }
             let title = sourceNode.displayTitle
             
+            // A downstream node qualifies if auto-trigger is on AND it is directly
+            // linked to the source via any edge direction or the nextNodeId pointer.
             let downstreamNodes = nodes.filter { node in
                 node.agentProfile.isAutoTriggerEnabled &&
                 (node.connectedNodeIds?.contains(sourceNodeID) == true || sourceNode.connectedNodeIds?.contains(node.id) == true || sourceNode.nextNodeId == node.id)

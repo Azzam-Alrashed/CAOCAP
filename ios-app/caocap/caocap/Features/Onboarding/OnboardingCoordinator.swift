@@ -10,11 +10,17 @@ public class OnboardingCoordinator {
     // MARK: - Step Definition
 
     public enum Step: Int, CaseIterable, Comparable {
+        /// User must tap the floating command button (FAB) to open the command palette.
         case tapFAB = 0
+        /// User must type any text in the omnibox search field.
         case typeCoCaptainPrompt
+        /// User must send the typed text to CoCaptain via the prompt row or Return key.
         case submitCoCaptainPrompt
+        /// User must type a message inside the CoCaptain chat panel.
         case chatCoCaptain
+        /// User must dismiss the CoCaptain panel by tapping Done or dragging it down.
         case dismissCoCaptain
+        /// User must long-press the FAB to reveal the quick-action radial menu.
         case longPressFAB
 
         public static func < (lhs: Step, rhs: Step) -> Bool {
@@ -57,7 +63,10 @@ public class OnboardingCoordinator {
 
     // MARK: - Persistence
 
+    /// Versioned key so a future onboarding redesign can show the new flow to existing users.
     private static let completedKey = "onboarding_completed_v2"
+    /// Persists the last in-progress step so the coordinator could resume mid-flow if needed
+    /// (currently always resets to the first step on re-launch for a coherent experience).
     private static let stepKey = "onboarding_current_step_v2"
 
     public var isCompleted: Bool {

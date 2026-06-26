@@ -1,5 +1,13 @@
 import SwiftUI
 
+/// A draggable, long-press-expandable floating action button that anchors at the
+/// bottom-trailing corner of the canvas and snaps to a 3×3 edge grid on release.
+///
+/// **Interaction modes:**
+/// - **Tap** – opens the command palette.
+/// - **Long-press** – expands a radial quick-action menu (undo / CoCaptain / redo).
+/// - **Drag** – repositions the button; on release it snaps to the nearest grid point.
+/// - **Drag while expanded** – gestures toward a bubble to highlight and select it.
 struct FloatingCommandButton: View {
     @State private var position: CGPoint = .zero
     @State private var startPosition: CGPoint = .zero 
@@ -8,7 +16,12 @@ struct FloatingCommandButton: View {
     @State private var activeAction: CommandAction? = nil
     
     enum CommandAction {
-        case undo, summon, redo
+        /// Undo the last canvas change.
+        case undo
+        /// Open CoCaptain (via the quick-action bubble or the drag-summon path).
+        case summon
+        /// Redo the last undone canvas change.
+        case redo
     }
     
     @Environment(\.colorScheme) var colorScheme
@@ -209,6 +222,8 @@ struct FloatingCommandButton: View {
         .ignoresSafeArea()
     }
     
+    /// Renders the three radial quick-action bubbles, each offset from the button center
+    /// in a direction pointing towards the screen centre so they never overlap the edge.
     @ViewBuilder
     private func quickActionBubbles(around pos: CGPoint, in size: CGSize) -> some View {
         let direction = sproutDirection(for: pos, in: size)
@@ -269,6 +284,8 @@ struct FloatingCommandButton: View {
         .position(pos)
     }
     
+    /// Hit-tests the drag location against each bubble's world position and sets
+    /// `activeAction` accordingly, firing a light haptic on each transition.
     private func updateActiveAction(at location: CGPoint, center: CGPoint, size: CGSize) {
         let direction = sproutDirection(for: center, in: size)
         let distance: CGFloat = 75
@@ -320,6 +337,8 @@ struct FloatingCommandButton: View {
         }
     }
     
+    /// Computes the unit vector from the button's current position toward the screen
+    /// centre. Bubbles sprout in this direction so they always face inward.
     private func sproutDirection(for pos: CGPoint, in size: CGSize) -> CGPoint {
         let centerX = size.width / 2
         let centerY = size.height / 2
@@ -339,6 +358,8 @@ struct FloatingCommandButton: View {
         )
     }
     
+    /// Snaps the button position to the nearest point in a fixed 3×3 grid of
+    /// edge/corner/midpoint anchors, providing predictable docking behaviour.
     private func snapToNearestPoint(in size: CGSize) {
         let minX = padding + buttonSize/2
         let maxX = size.width - padding - buttonSize/2
@@ -369,6 +390,9 @@ struct FloatingCommandButton: View {
     }
 }
 
+/// A single bubble in the radial quick-action menu expanded from the FAB.
+/// Scales from near-zero to full size when `isExpanded` becomes `true`,
+/// and highlights with a coloured ring and a 1.25× scale when the user drags over it.
 struct QuickActionBubble: View {
     let icon: String
     let color: Color
@@ -406,6 +430,8 @@ struct QuickActionBubble: View {
 }
 
 extension CGPoint {
+    /// Rotates this point (treated as a 2-D unit vector) by the given number of degrees.
+    /// Used to spread quick-action bubbles at ±45° from the main sprout direction.
     func rotated(by degrees: CGFloat) -> CGPoint {
         let radians = degrees * .pi / 180
         let sinTheta = sin(radians)

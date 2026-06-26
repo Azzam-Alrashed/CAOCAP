@@ -1,8 +1,26 @@
 import Foundation
 
+/// The interface through which `CoCaptainAgentCoordinator` communicates with
+/// the underlying language model.
+///
+/// Abstracting the LLM behind this protocol allows unit tests to inject a
+/// lightweight stub without touching `LLMService` or Firebase AI Logic.
 @MainActor
 public protocol CoCaptainLLMClient: AnyObject {
+    /// Clears the model's conversation history for the given scope, starting a
+    /// fresh chat session. Called when the user taps "Clear" in the chat UI.
     func resetChat(scope: CoCaptainAgentScope)
+    /// Streams incremental model output for one user turn.
+    ///
+    /// - Parameters:
+    ///   - userMessage: The raw text entered by the user.
+    ///   - context: A serialised snapshot of the active canvas, or `nil` when
+    ///     running in reduced / fallback mode.
+    ///   - expectsStructuredResponse: When `true` the system prompt instructs the
+    ///     model to wrap executable output in a `cocaptain_actions` XML block.
+    ///   - availableActions: The set of `AppActionDefinition`s the model may call
+    ///     via `request_app_action`. Sent as tool declarations in each turn.
+    ///   - scope: Whether this turn targets the whole project or a single node.
     func streamAgentEvents(
         for userMessage: String,
         context: String?,
@@ -14,12 +32,24 @@ public protocol CoCaptainLLMClient: AnyObject {
 
 extension LLMService: CoCaptainLLMClient {}
 
+/// The complete result of one CoCaptain assistant turn, ready for the view
+/// model to splice into the conversation timeline.
 public struct CoCaptainAgentRunResult: Hashable {
+    /// The text that appeared before the structured `cocaptain_actions` block,
+    /// i.e. the model's conversational prose.
     public let preamble: String
+    /// The chat text extracted from inside the structured payload, if present.
     public let payloadMessage: String?
+    /// A confirmation item to append when one or more safe actions were executed.
     public let executionSummary: ExecutionStatusItem?
+    /// A set of node edits or pending actions the user must review before they
+    /// take effect, or `nil` when the model produced no reviewable changes.
     public let reviewBundle: ReviewBundleItem?
 
+    /// The text the chat bubble should display.
+    ///
+    /// Prefers the preamble because it is the richer, prose form. Falls back to
+    /// `payloadMessage` when the model placed all its text inside the XML block.
     public var visibleText: String {
         if preamble.isEmpty { return payloadMessage ?? "" }
         return preamble
@@ -36,6 +66,10 @@ public final class CoCaptainAgentCoordinator {
     private let outputAdapter: any CoCaptainAgentOutputAdapting
     private let validator: CoCaptainAgentValidator
 
+    /// Creates a coordinator with optional dependency overrides for testing.
+    ///
+    /// All parameters have sensible production defaults; only supply non-nil
+    /// values when you need to inject stubs or alternative implementations.
     public init(
         llmClient: (any CoCaptainLLMClient)? = nil,
         contextBuilder: ProjectContextBuilder = ProjectContextBuilder(),
@@ -47,12 +81,16 @@ public final class CoCaptainAgentCoordinator {
         self.llmClient = llmClient ?? LLMService.shared
         self.contextBuilder = contextBuilder
         self.patchEngine = patchEngine
+        // Wrap the XML adapter in the composite so function-call responses are
+        // merged with fenced-XML responses when both arrive in the same turn.
         self.outputAdapter = outputAdapter ?? CoCaptainCompositeAgentAdapter(
             xmlAdapter: CoCaptainXMLAgentAdapter(parser: parser)
         )
         self.validator = validator
     }
 
+    /// Resets the chat history for the given scope, forwarding directly to the
+    /// LLM client. Defaults to the project scope for callers that don't track scope.
     public func resetChat(scope: CoCaptainAgentScope = .project) {
         llmClient.resetChat(scope: scope)
     }
@@ -102,6 +140,12 @@ public final class CoCaptainAgentCoordinator {
         }
     }
 
+    /// Executes one full LLM round-trip and processes the response.
+    ///
+    /// - Parameters:
+    ///   - allowAgenticRetry: When `true` the method may recursively call itself
+    ///     once with a corrective system message if the model's output fails
+    ///     validation. The recursive call always passes `false` to prevent loops.
     private func runOnce(
         userMessage: String,
         context: String?,
@@ -239,6 +283,11 @@ public final class CoCaptainAgentCoordinator {
         )
     }
 
+    /// Returns `true` when the user's message contains a keyword that implies
+    /// the model should produce executable output (actions or node edits).
+    ///
+    /// Used to decide whether a chat-only model response is treated as a
+    /// contract violation that warrants an agentic retry.
     private func shouldRequireAgenticWork(for userMessage: String) -> Bool {
         let lowercased = userMessage.lowercased()
         let triggers = [
@@ -268,6 +317,9 @@ public final class CoCaptainAgentCoordinator {
         return triggers.contains { lowercased.contains($0) }
     }
 
+    /// Builds a corrective system message that feeds validation issues back to
+    /// the model along with the original request, giving it a second chance to
+    /// produce a conforming `cocaptain_actions` XML block.
     private func agenticRetryMessage(for userMessage: String, validationIssues: [String]) -> String {
         let issueList = validationIssues.map { "- \($0)" }.joined(separator: "\n")
 
@@ -292,6 +344,11 @@ public final class CoCaptainAgentCoordinator {
         """
     }
 
+    /// Guards against duplicate function-call events that can be emitted by the
+    /// streaming SDK when a turn is retried or partially flushed.
+    ///
+    /// Function calls without an `id` are always accepted because they cannot
+    /// be reliably deduplicated.
     private func shouldAppend(
         functionCall: CoCaptainAgentFunctionCall,
         seenIDs: inout Set<String>
@@ -300,6 +357,9 @@ public final class CoCaptainAgentCoordinator {
         return seenIDs.insert(id).inserted
     }
 
+    /// Wraps a list of validation issue strings into a conflicted `ReviewBundleItem`
+    /// so the user can see *why* the model's response was rejected rather than
+    /// receiving a silent failure or a confusing empty chat bubble.
     private func validationReviewBundle(issues: [String]) -> ReviewBundleItem {
         ReviewBundleItem(
             title: LocalizationManager.shared.localizedString("CoCaptain action needs revision"),
@@ -315,6 +375,11 @@ public final class CoCaptainAgentCoordinator {
         )
     }
 
+    /// Executes all safe (autonomous) actions immediately and returns a
+    /// summary item to display in the timeline.
+    ///
+    /// A store checkpoint is created before execution so the user can revert
+    /// a batch of automatic changes in one step if needed.
     private func executeSafeActions(
         _ actions: [CoCaptainAgentAction],
         dispatcher: (any AppActionPerforming)?,
@@ -416,6 +481,9 @@ public final class CoCaptainAgentCoordinator {
         return items.isEmpty ? nil : ReviewBundleItem(items: items)
     }
 
+    /// Trims whitespace and caps the preview at 280 characters to keep the
+    /// review card compact. The `[TRUNCATED]` suffix signals that additional
+    /// content exists in the full node text.
     private func previewSnippet(for text: String) -> String {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.count > 280 else { return trimmed }

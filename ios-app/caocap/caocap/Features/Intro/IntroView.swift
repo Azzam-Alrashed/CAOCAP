@@ -1,5 +1,9 @@
 import SwiftUI
 
+/// Full-screen intro tour that wraps an `IntroCoordinator`.
+/// Steps are displayed in a paged `TabView` and the user can navigate forwards,
+/// backwards, or skip entirely. A continuous "breathing" scale animation runs on
+/// the icon and backdrop provided reduce-motion is not active.
 struct IntroView: View {
     @Bindable var coordinator: IntroCoordinator
     let onFinish: () -> Void
@@ -40,6 +44,8 @@ struct IntroView: View {
         }
     }
 
+    /// Clamps the coordinator index to valid manifest bounds before deriving
+    /// step-specific colors, guarding against a briefly out-of-range index during animation.
     private var currentStep: IntroStepContent {
         IntroManifest.steps[
             min(max(coordinator.currentIndex, 0), IntroManifest.lastIndex)
@@ -143,6 +149,8 @@ struct IntroView: View {
         .padding(.bottom, 14)
     }
 
+    /// Calls the appropriate coordinator method depending on whether the user
+    /// tapped Skip vs reached the end naturally, then invokes the parent callback.
     private func finishIntro(skipping: Bool) {
         if skipping {
             coordinator.skip()
@@ -153,6 +161,9 @@ struct IntroView: View {
     }
 }
 
+/// Full-bleed background layer for each intro step.
+/// Combines a solid base, a linear color wash derived from the step's accent palette,
+/// a semi-transparent spatial sketch texture, and a radial vignette that breathes.
 private struct IntroBackdrop: View {
     let step: IntroStepContent
     let isBreathing: Bool
@@ -220,6 +231,7 @@ private struct IntroBackdrop: View {
     }
 }
 
+/// Scrollable page content for a single intro step: hero icon above, title and body below.
 private struct IntroPageView: View {
     let step: IntroStepContent
     let isBreathing: Bool
@@ -263,6 +275,9 @@ private struct IntroPageView: View {
     }
 }
 
+/// Glassmorphic icon card used as the hero visual on each intro page.
+/// The SF Symbol is rendered with a gradient fill and optionally breathes when
+/// the parent passes `isBreathing: true`.
 private struct IntroSymbolHero: View {
     let step: IntroStepContent
     let isBreathing: Bool
@@ -309,6 +324,9 @@ private struct IntroSymbolHero: View {
     }
 }
 
+/// A row of capsule dots that track the current page.
+/// The active dot is wider and filled with the step's accent gradient;
+/// inactive dots use a muted primary color.
 private struct IntroProgressDots: View {
     let count: Int
     let currentIndex: Int
@@ -327,6 +345,7 @@ private struct IntroProgressDots: View {
         .frame(height: 12)
     }
 
+    /// Returns the gradient fill for the active dot and a flat muted fill for all others.
     private func dotFill(for index: Int) -> some ShapeStyle {
         if index == currentIndex {
             return AnyShapeStyle(

@@ -1,5 +1,8 @@
 import SwiftUI
 
+/// A `ViewModifier` that sweeps a diagonal highlight across the content,
+/// creating a shimmer / shine loop animation. Applied to the wordmark on the
+/// launch screen to suggest motion before the app finishes initialising.
 struct ShimmerEffect: ViewModifier {
     @State private var isInitialState = true
 
@@ -25,11 +28,15 @@ struct ShimmerEffect: ViewModifier {
 }
 
 extension View {
+    /// Applies the `ShimmerEffect` modifier to any view.
     func shimmer() -> some View {
         modifier(ShimmerEffect())
     }
 }
 
+/// The animated launch screen displayed while the app initialises Firebase and local state.
+/// Shows the CAOCAP wordmark with a shimmer effect, a slow parallax spatial-sketch background,
+/// a radial blue glow, and a soft haptic bump when the entrance animation settles.
 public struct LaunchScreenView: View {
     @Environment(\.colorScheme) var colorScheme
     @State private var opacity: Double = 0.0

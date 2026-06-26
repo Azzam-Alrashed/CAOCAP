@@ -1,7 +1,11 @@
 import SwiftUI
 import UIKit
 
+/// A `UIViewRepresentable` that wraps `CodeEditorContainer` — a custom `UIView`
+/// combining a gutter (line numbers) and a `UITextView` — to provide a
+/// monospaced, syntax-highlighted code editor with synchronised scrolling.
 struct LineNumberedTextView: UIViewRepresentable {
+    /// The text binding that is kept in sync with the underlying `UITextView`.
     @Binding var text: String
     
     func makeUIView(context: Context) -> CodeEditorContainer {
@@ -11,6 +15,8 @@ struct LineNumberedTextView: UIViewRepresentable {
         return container
     }
     
+    /// Pushes external text changes (e.g. from store updates) into the view,
+    /// guarded by an equality check to avoid triggering a redundant highlight pass.
     func updateUIView(_ uiView: CodeEditorContainer, context: Context) {
         if uiView.text != text {
             uiView.text = text
@@ -21,6 +27,7 @@ struct LineNumberedTextView: UIViewRepresentable {
         Coordinator(self)
     }
     
+    /// Bridges `UITextView` change events back to the SwiftUI binding.
     class Coordinator: NSObject, CodeEditorContainerDelegate {
         var parent: LineNumberedTextView
         
@@ -34,19 +41,35 @@ struct LineNumberedTextView: UIViewRepresentable {
     }
 }
 
+/// Callback protocol through which `CodeEditorContainer` notifies its owner of
+/// text changes without retaining the owner (weak reference in the container).
 protocol CodeEditorContainerDelegate: AnyObject {
+    /// Called on every keystroke after line numbers and syntax highlighting have
+    /// been updated.
     func textDidChange(_ text: String)
 }
 
+/// A `UIView` subclass that pairs a non-interactive gutter (`UITextView` displaying
+/// line numbers) with an editable `UITextView` for the actual code. The two scroll
+/// views are kept in sync so line numbers always align with their corresponding
+/// lines. Syntax highlighting is applied after every edit using a set of
+/// pre-compiled `NSRegularExpression` objects stored in `RegexCache`.
 class CodeEditorContainer: UIView, UITextViewDelegate {
     weak var delegate: CodeEditorContainerDelegate?
     
+    /// The read-only gutter that displays line numbers, coloured dark-gray.
     private let gutterView = UITextView()
+    /// The main editable text view where the user types code.
     private let textView = UITextView()
     
+    /// Shared monospaced font used by both the gutter and the editor to keep
+    /// line heights identical.
     private let font = UIFont.monospacedSystemFont(ofSize: 15, weight: .regular)
+    /// Width reserved for the gutter column in points.
     private let gutterWidth: CGFloat = 45
     
+    /// Gets or sets the editor's text, triggering a line-number refresh and
+    /// a syntax-highlight pass whenever the value changes.
     var text: String {
         get { textView.text }
         set {

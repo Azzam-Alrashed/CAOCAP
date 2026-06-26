@@ -1,14 +1,22 @@
 import SwiftUI
 
+/// Full-screen editor for a Mini-App node's Software Requirements Specification.
+/// Provides a rich-text-style `TextEditor`, a readiness panel that scores section
+/// completion in real time, and a structure button that injects scaffold headings.
 struct SRSEditorView: View {
+    /// The canvas node whose SRS is being edited.
     let node: SpatialNode
+    /// The project store used to persist the SRS text when the user taps Done.
     let store: ProjectStore
     @Environment(\.dismiss) private var dismiss
+    /// Local draft of the SRS text, seeded from the node's stored SRS and persisted
+    /// only when the user explicitly taps Done.
     @State private var text: String
 
     init(node: SpatialNode, store: ProjectStore) {
         self.node = node
         self.store = store
+        // Fall back to empty string for nodes that have never had SRS text.
         self._text = State(initialValue: node.miniApp?.srsText ?? "")
     }
 
@@ -30,6 +38,9 @@ struct SRSEditorView: View {
         }
     }
 
+    /// Computes a fresh `SRSAnalysis` from the current draft text on every render.
+    /// Passing the node's stored readiness state allows the evaluator to account
+    /// for hysteresis — preventing oscillation between states while the user types.
     private var analysis: SRSAnalysis {
         SRSAnalysis(text: text, currentState: node.miniApp?.srsReadinessState)
     }
@@ -195,20 +206,31 @@ struct SRSEditorView: View {
         }
     }
 
+    /// Populates the editor with a structured scaffold derived from the current text.
+    /// Existing content is preserved where it already matches a section heading;
+    /// missing sections are appended with placeholder prompts.
     private func applyStructure() {
         text = SRSScaffold.structuredText(from: text)
     }
 
+    /// Persists the current draft text to the store and dismisses the sheet.
     private func saveAndDismiss() {
         store.updateMiniAppSRS(id: node.id, text: text, persist: true)
         dismiss()
     }
 }
 
+/// Computes readiness metrics from a raw SRS text string. Intended to be
+/// recalculated on every render from the current draft text so the readiness
+/// panel always reflects what is on screen without requiring a separate observable.
 private struct SRSAnalysis {
+    /// Total number of whitespace-separated tokens in the text.
     let wordCount: Int
+    /// The set of scaffold sections whose headings were detected in the text.
     let completedSectionsSet: Set<SRSScaffoldSection>
+    /// Sections that are present in the scaffold definition but absent from the text.
     let missingSections: [SRSScaffoldSection]
+    /// The current readiness level, incorporating hysteresis from the previous state.
     let readinessState: SRSReadinessState
 
     init(text: String, currentState: SRSReadinessState? = nil) {
@@ -218,20 +240,25 @@ private struct SRSAnalysis {
         self.readinessState = SRSReadinessEvaluator().evaluate(text: text, currentState: currentState)
     }
 
+    /// The count of scaffold sections whose headings are present in the draft.
     var completedSections: Int {
         completedSectionsSet.count
     }
 
+    /// The total number of sections in the canonical SRS scaffold.
     var totalSections: Int {
         SRSScaffoldSection.allCases.count
     }
 
+    /// A value in `[0, 1]` representing what fraction of sections are complete.
     var completionRatio: Double {
         guard totalSections > 0 else { return 0 }
         return Double(completedSections) / Double(totalSections)
     }
 }
 
+/// A pill-shaped chip displaying a single SRS scaffold section's completion status.
+/// Filled with the node's theme tint when the section is complete, muted otherwise.
 private struct SRSSectionChip: View {
     let title: String
     let icon: String
@@ -256,6 +283,8 @@ private struct SRSSectionChip: View {
     }
 }
 
+/// A small pill-shaped metric badge used in the footer bar to show a numeric
+/// value (word count or completed section count) with a label and SF Symbol icon.
 private struct SRSMetricPill: View {
     let icon: String
     let value: String

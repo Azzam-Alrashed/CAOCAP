@@ -2,20 +2,47 @@ import Foundation
 import SwiftUI
 import os
 
+/// Performs all mutable node operations on behalf of `ProjectStore`.
+///
+/// `NodeMutationEngine` is deliberately decoupled from `ProjectStore` so its
+/// mutation logic can be tested in isolation. Side effects (saving, recompiling
+/// the live preview, triggering downstream agents) are routed back to the store
+/// through a set of closure callbacks that are wired up once during initialisation.
+///
+/// All methods are `@MainActor`-isolated because they mutate `inout [SpatialNode]`
+/// arrays that are observed by SwiftUI.
 @Observable
 @MainActor
 final class NodeMutationEngine {
+    /// The undo manager injected by the view layer; `nil` when no responder chain undo is available.
     var undoManager: UndoManager?
+    /// Incremented whenever an undo entry is registered, allowing views to invalidate undo/redo state.
     var undoStackChanged: Int = 0
     private let logger = Logger(subsystem: "com.caocap.App", category: "NodeMutationEngine")
     
-    // Callbacks for side effects:
+    // MARK: - Side-effect callbacks (wired by ProjectStore)
+
+    /// Called when the mutation should trigger a project save. The `Bool` indicates
+    /// whether the saving indicator should be shown to the user.
     var onRequestSave: ((Bool) -> Void)?
+    /// Called when node code or Firebase config changes require recompiling the live HTML preview.
     var onCompileLivePreview: ((inout [SpatialNode]) -> Void)?
+    /// Called when an upstream node's SRS or code changes and connected downstream
+    /// nodes with auto-trigger enabled should be notified.
     var onTriggerDownstreamAgents: ((UUID, [SpatialNode]) -> Void)?
+    /// Returns the current canvas viewport offset so newly created nodes can be
+    /// placed at the visible centre rather than at the canvas origin.
     var onViewportChange: (() -> CGSize)?
+    /// Executes a node-array mutation closure and then persists the result.
+    /// Used by undo closures to apply inverse mutations through `ProjectStore`
+    /// rather than holding a direct reference back to it.
     var onPerformUndoMutation: (( @escaping (inout [SpatialNode]) -> Void ) -> Void)?
     
+    /// Changes a node's fundamental type and initialises type-specific state.
+    ///
+    /// Switching to `.miniApp` bootstraps a `MiniAppState` with default SRS and code text.
+    /// Switching to `.subCanvas` generates a new canvas file name if one doesn't exist yet.
+    /// Switching to `.standard` clears any `MiniAppState` from the node.
     public func updateNodeType(nodes: inout [SpatialNode], id: UUID, type: NodeType, persist: Bool = true) {
         if let index = nodes.firstIndex(where: { $0.id == id }) {
             let oldType = nodes[index].type
@@ -56,10 +83,14 @@ final class NodeMutationEngine {
         }
     }
     
+    /// Convenience alias that forwards to `updateMiniAppCode`.
+    /// Exists so callers can treat any node as having generic text content.
     public func updateNodeTextContent(nodes: inout [SpatialNode], id: UUID, text: String, persist: Bool = true) {
         updateMiniAppCode(nodes: &nodes, id: id, text: text, persist: persist)
     }
 
+    /// Updates the Software Requirements Specification (SRS) text for a Mini-App node
+    /// and re-evaluates its readiness state. Also notifies downstream agents.
     public func updateMiniAppSRS(nodes: inout [SpatialNode], id: UUID, text: String, persist: Bool = true) {
         if let index = nodes.firstIndex(where: { $0.id == id }) {
             ensureMiniAppState(for: &nodes[index])
@@ -85,6 +116,8 @@ final class NodeMutationEngine {
         }
     }
 
+    /// Replaces the runnable HTML/JS source of a Mini-App node and triggers a
+    /// live preview recompile as well as downstream agent notifications.
     public func updateMiniAppCode(nodes: inout [SpatialNode], id: UUID, text: String, persist: Bool = true) {
         if let index = nodes.firstIndex(where: { $0.id == id }) {
             ensureMiniAppState(for: &nodes[index])
@@ -109,6 +142,8 @@ final class NodeMutationEngine {
         }
     }
 
+    /// Replaces the Firebase Web config JSON embedded in a Mini-App node and
+    /// triggers a live preview recompile so the new credentials take effect immediately.
     public func updateMiniAppFirebaseConfig(nodes: inout [SpatialNode], id: UUID, text: String, persist: Bool = true) {
         if let index = nodes.firstIndex(where: { $0.id == id }) {
             ensureMiniAppState(for: &nodes[index])
@@ -132,6 +167,8 @@ final class NodeMutationEngine {
         }
     }
     
+    /// Replaces the agent execution state of a node (e.g. `.thinking`, `.idle`).
+    /// Does not register an undo entry — agent state is considered transient.
     public func updateNodeAgentState(nodes: inout [SpatialNode], id: UUID, agentState: NodeAgentState, persist: Bool = true) {
         guard let index = nodes.firstIndex(where: { $0.id == id }) else { return }
         nodes[index].agentState = agentState
@@ -140,6 +177,7 @@ final class NodeMutationEngine {
         }
     }
 
+    /// Appends a single agent message to the node's conversation history.
     public func appendNodeAgentMessage(nodes: inout [SpatialNode], id: UUID, message: NodeAgentMessage, persist: Bool = true) {
         guard let index = nodes.firstIndex(where: { $0.id == id }) else { return }
         nodes[index].agentState.messages.append(message)
@@ -148,6 +186,7 @@ final class NodeMutationEngine {
         }
     }
 
+    /// Clears all agent messages from a node's conversation history.
     public func clearNodeAgentMessages(nodes: inout [SpatialNode], id: UUID, persist: Bool = true) {
         guard let index = nodes.firstIndex(where: { $0.id == id }) else { return }
         nodes[index].agentState.messages = []
@@ -156,6 +195,9 @@ final class NodeMutationEngine {
         }
     }
     
+    /// Applies a batch of position updates in one undo-registered operation.
+    /// The undo closure restores all previous positions simultaneously, which
+    /// prevents partial-revert artifacts when multiple nodes are moved together.
     public func updateNodePositions(nodes: inout [SpatialNode], _ positions: [UUID: CGPoint], animated: Bool = true) {
         let oldPositions = Dictionary(uniqueKeysWithValues: nodes.map { ($0.id, $0.position) })
         
@@ -187,6 +229,8 @@ final class NodeMutationEngine {
         onRequestSave?(true)
     }
     
+    /// Lays out all nodes using `NodeLayoutOrganizer` and triggers a haptic
+    /// success notification when complete.
     public func organizeNodes(nodes: inout [SpatialNode]) {
         guard !nodes.isEmpty else { return }
         
@@ -197,6 +241,9 @@ final class NodeMutationEngine {
         HapticsManager.shared.notification(.success)
     }
     
+    /// Creates a new node of the given type and appends it to the canvas.
+    /// The new node is placed at the current viewport centre, given a unique title,
+    /// and appropriate type-specific state is bootstrapped automatically.
     public func addNode(nodes: inout [SpatialNode], type: NodeType = .miniApp) {
         let uniqueTitle = generateUniqueTitle(nodes: nodes, base: type.defaultTitle)
 
@@ -237,6 +284,9 @@ final class NodeMutationEngine {
         onRequestSave?(true)
     }
 
+    /// Creates a `.standard` shortcut node pinned to a specific canvas action,
+    /// placed at the given position. Used when the user pins an action from the
+    /// command palette to their canvas.
     public func addShortcutNode(
         nodes: inout [SpatialNode],
         action: NodeAction,
@@ -276,6 +326,8 @@ final class NodeMutationEngine {
         type.defaultTheme
     }
 
+    /// Returns a title derived from `base` that is not already used by another node.
+    /// If `base` is taken it tries "base 1", "base 2", etc. Case-insensitive.
     public func generateUniqueTitle(nodes: [SpatialNode], base: String) -> String {
         var candidate = base
         var count = 1
@@ -288,10 +340,13 @@ final class NodeMutationEngine {
         return candidate
     }
 
+    /// Renames a node, silently discarding the rename when the title is blank
+    /// or is already used by a different node (case-insensitive).
     public func updateNodeTitle(nodes: inout [SpatialNode], id: UUID, title: String) {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         
+        // Prevent duplicate titles across the canvas.
         if nodes.contains(where: { $0.id != id && $0.title.lowercased() == trimmed.lowercased() }) {
             return 
         }
@@ -302,6 +357,7 @@ final class NodeMutationEngine {
         }
     }
 
+    /// Updates a node's subtitle, coercing an empty or whitespace-only string to `nil`.
     public func updateNodeSubtitle(nodes: inout [SpatialNode], id: UUID, subtitle: String?) {
         guard let index = nodes.firstIndex(where: { $0.id == id }) else { return }
         let trimmed = subtitle?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -309,6 +365,7 @@ final class NodeMutationEngine {
         onRequestSave?(true)
     }
 
+    /// Updates a node's SF Symbol icon name, coercing an empty or whitespace-only string to `nil`.
     public func updateNodeIcon(nodes: inout [SpatialNode], id: UUID, icon: String?) {
         guard let index = nodes.firstIndex(where: { $0.id == id }) else { return }
         let trimmed = icon?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -316,6 +373,12 @@ final class NodeMutationEngine {
         onRequestSave?(true)
     }
     
+    /// Removes a node from the canvas and cleans up all references to it in other
+    /// nodes' `nextNodeId` and `connectedNodeIds` fields.
+    ///
+    /// Protected nodes (e.g. pinned system nodes) are silently skipped.
+    /// The undo operation restores the full pre-deletion node array rather than
+    /// re-inserting at the original index, which is simpler and avoids index drift.
     public func deleteNode(nodes: inout [SpatialNode], id: UUID, persist: Bool = true) {
         guard let index = nodes.firstIndex(where: { $0.id == id }) else { return }
         
@@ -360,6 +423,8 @@ final class NodeMutationEngine {
         }
     }
 
+    /// Updates the Firestore collection/document path embedded in a Mini-App node.
+    /// Triggers a live preview recompile so the new path is reflected immediately.
     public func updateNodeFirebaseFirestorePath(nodes: inout [SpatialNode], id: UUID, path: String?, persist: Bool = true) {
         if let index = nodes.firstIndex(where: { $0.id == id }) {
             ensureMiniAppState(for: &nodes[index])
@@ -380,6 +445,8 @@ final class NodeMutationEngine {
         }
     }
 
+    /// Lazily bootstraps a `MiniAppState` on a `.miniApp` node if it is missing.
+    /// Guards against operating on non-Mini-App node types.
     private func ensureMiniAppState(for node: inout SpatialNode) {
         guard node.type == .miniApp else { return }
         if node.miniApp == nil {

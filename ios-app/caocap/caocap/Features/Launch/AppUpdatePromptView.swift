@@ -1,5 +1,9 @@
 import SwiftUI
 
+/// A blocking modal overlay displayed when the running app version is below
+/// `AppUpdateInfo.minimumRequiredVersion`. The user can only dismiss by tapping
+/// "Update Now", which opens the App Store and calls `onUpdate`.
+/// Designed to sit above all other content via a `ZStack` or `.overlay`.
 struct AppUpdatePromptView: View {
     let update: AppUpdateInfo
     let onUpdate: () -> Void

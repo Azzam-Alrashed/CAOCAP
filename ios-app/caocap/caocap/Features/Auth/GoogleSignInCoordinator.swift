@@ -48,6 +48,8 @@ final class GoogleSignInCoordinator {
         return topmostViewController(from: root)
     }
 
+    /// Recursively walks the UIKit view controller hierarchy — presented controllers,
+    /// navigation stacks, and tab selections — to reach the leaf that is visually on top.
     private func topmostViewController(from vc: UIViewController) -> UIViewController {
         if let presented = vc.presentedViewController {
             return topmostViewController(from: presented)
@@ -65,5 +67,7 @@ final class GoogleSignInCoordinator {
 // MARK: - AuthError Extension
 
 extension AuthError {
+    /// Reuses the Apple credential error case because both providers share the same
+    /// "credential data was missing or malformed" failure mode.
     static var invalidGoogleCredential: AuthError { .invalidAppleCredential }
 }

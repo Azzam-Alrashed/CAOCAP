@@ -1,10 +1,24 @@
 import Foundation
 
+/// Serializes the current canvas state into a structured plain-text block
+/// suitable for injection into the LLM prompt context.
+///
+/// Both methods produce a snapshot of the project's node graph; the
+/// node-scoped variant additionally highlights the selected node and its
+/// immediate neighbors so the agent can reason more precisely about a
+/// single Mini-App without losing awareness of the broader canvas.
 public struct ProjectContextBuilder {
+    /// Maximum characters allowed for the Firebase config section of a prompt.
+    /// Config objects can be large JSON; truncation keeps the prompt within model limits.
     private static let maxFirebaseConfigChars = 4_000
 
     public init() {}
 
+    /// Builds a full-project context string from every node on the canvas.
+    ///
+    /// The returned string includes a node inventory listing, per-Mini-App
+    /// SRS + code sections (with character budgets), and the Firebase wiring
+    /// rules so the agent always has them in context.
     @MainActor
     public func buildPromptContext(from store: ProjectStore) -> String {
         let miniApps = store.nodes.filter { $0.type == .miniApp }
@@ -24,6 +38,12 @@ public struct ProjectContextBuilder {
         .joined(separator: "\n\n")
     }
 
+    /// Builds a node-scoped context string that emphasises a specific node.
+    ///
+    /// The selected node is rendered with expanded character budgets (3 000 for
+    /// SRS, 6 000 for code) while linked neighbors are shown at a reduced budget
+    /// to stay within prompt limits. Falls back to the full-project context if
+    /// the requested `nodeID` is not found.
     @MainActor
     public func buildNodePromptContext(from store: ProjectStore, nodeID: UUID) -> String {
         guard let selectedNode = store.nodes.first(where: { $0.id == nodeID }) else {
@@ -51,6 +71,8 @@ public struct ProjectContextBuilder {
         .joined(separator: "\n\n")
     }
 
+    /// A one-liner inventory of all canvas nodes showing title, type, ID, and
+    /// number of outgoing and incoming connections.
     private func nodeInventory(_ nodes: [SpatialNode]) -> String {
         nodes.map { node in
             let linkCount = (node.connectedNodeIds?.count ?? 0) + (node.nextNodeId == nil ? 0 : 1)
@@ -58,6 +80,11 @@ public struct ProjectContextBuilder {
         }.joined(separator: "\n")
     }
 
+    /// Renders a context block for a single node.
+    ///
+    /// `selected` controls the character budget: the focused node gets a larger
+    /// window so the agent can read its full SRS and enough code to reason about
+    /// it, while neighbor nodes are capped to a brief summary to save prompt space.
     private func miniAppContext(for node: SpatialNode, selected: Bool) -> String {
         guard node.type == .miniApp, let miniApp = node.miniApp else {
             if node.type == .subCanvas {
@@ -88,6 +115,9 @@ public struct ProjectContextBuilder {
         """
     }
 
+    /// Collects all nodes that are directly linked to `selectedNode` in either
+    /// direction — outgoing (`nextNodeId`, `connectedNodeIds`) and incoming (any
+    /// node whose links point at `selectedNode`'s ID).
     private func linkedNeighbors(of selectedNode: SpatialNode, in nodes: [SpatialNode]) -> [SpatialNode] {
         var ids = Set<UUID>()
         if let nextNodeId = selectedNode.nextNodeId {
@@ -102,6 +132,8 @@ public struct ProjectContextBuilder {
         return nodes.filter { ids.contains($0.id) }
     }
 
+    /// Attempts to pretty-print raw Firebase config JSON so it's easier for
+    /// the model to read; falls back to the raw string if parsing fails.
     private static func formatFirebaseConfigForPrompt(_ raw: String) -> String {
         guard let data = raw.data(using: .utf8) else {
             return trimmed(raw, limit: maxFirebaseConfigChars)
