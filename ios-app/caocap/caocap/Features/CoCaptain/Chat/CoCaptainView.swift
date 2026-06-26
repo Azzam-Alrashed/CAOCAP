@@ -1,9 +1,11 @@
 import SwiftUI
-import Popovers
 
 struct CoCaptainView: View {
     var viewModel: CoCaptainViewModel
     @State private var text: String = ""
+    /// The baseline count of completed CoCaptain responses, used to wait for the assistant's
+    /// response to complete before advancing the active onboarding step.
+    @State private var onboardingChatResponseBaseline: Int?
     @FocusState private var isFocused: Bool
     
     @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
@@ -39,45 +41,7 @@ struct CoCaptainView: View {
                         isFocused = false
                         viewModel.setPresented(false)
                     }
-                    .popover(
-                        present: Binding(
-                            get: {
-                                guard let onboarding else { return false }
-                                return onboarding.currentStep == .dismissCoCaptain && onboarding.showPopover
-                            },
-                            set: { newValue in
-                                onboarding?.showPopover = newValue
-                            }
-                        ),
-                        attributes: { attributes in
-                            attributes.position = .absolute(
-                                originAnchor: .bottom,
-                                popoverAnchor: .top
-                            )
-                            attributes.dismissal.mode = .none
-                            attributes.rubberBandingMode = .none
-                            attributes.blocksBackgroundTouches = false
-                            attributes.presentation.animation = .spring(response: 0.4, dampingFraction: 0.8)
-                            attributes.presentation.transition = .asymmetric(
-                                insertion: .scale(scale: 0.85).combined(with: .opacity),
-                                removal: .scale(scale: 0.9).combined(with: .opacity)
-                            )
-                            attributes.dismissal.animation = .spring(response: 0.3, dampingFraction: 0.8)
-                            attributes.dismissal.transition = .asymmetric(
-                                insertion: .scale(scale: 0.85).combined(with: .opacity),
-                                removal: .scale(scale: 0.9).combined(with: .opacity)
-                            )
-                            attributes.sourceFrameInset = UIEdgeInsets(top: 8, left: 0, bottom: 0, right: 0)
-                        }
-                    ) {
-                        if let step = onboarding?.currentStep {
-                            OnboardingPopoverCard(step: step, arrowOffset: 125, arrowPlacement: .top) {
-                                onboarding?.skip()
-                            }
-                        } else {
-                            EmptyView()
-                        }
-                    }
+                    .onboardingTooltipAnchor(.coCaptainDoneButton)
                 }
 
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -90,15 +54,34 @@ struct CoCaptainView: View {
                 }
             }
         }
+        .onboardingTooltipOverlay()
+        .onChange(of: text) { oldValue, newValue in
+            hideChatOnboardingWhenTypingChanges(from: oldValue, to: newValue)
+        }
+        .onChange(of: viewModel.completedAssistantResponseCount) {
+            advanceChatOnboardingIfResponseFinished()
+        }
+        .onChange(of: onboarding?.currentStep) { _, step in
+            if step == .chatCoCaptain {
+                hideChatOnboardingIfTextIsPresent()
+            } else {
+                onboardingChatResponseBaseline = nil
+            }
+        }
+        .onAppear {
+            hideChatOnboardingIfTextIsPresent()
+        }
     }
 
     private func sendCurrentMessage() {
         let prompt = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !prompt.isEmpty, !viewModel.isThinking else { return }
 
+        beginChatOnboardingResponseWaitIfNeeded()
         viewModel.sendMessage(prompt)
         text = ""
         isFocused = false
+        advanceChatOnboardingIfResponseFinished()
     }
 
     private func sendQuickPrompt(_ prompt: String) {
@@ -106,10 +89,51 @@ struct CoCaptainView: View {
 
         text = ""
         isFocused = false
+        beginChatOnboardingResponseWaitIfNeeded()
         viewModel.sendMessage(prompt)
-        if onboarding?.currentStep == .chatCoCaptain {
-            onboarding?.completeCurrentStep()
+        advanceChatOnboardingIfResponseFinished()
+    }
+
+    /// Hides the onboarding tooltip if the user begins typing a message in the text field.
+    private func hideChatOnboardingWhenTypingChanges(from oldValue: String, to newValue: String) {
+        guard onboarding?.currentStep == .chatCoCaptain else { return }
+
+        let wasEmpty = oldValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let isTyping = !newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        if wasEmpty && isTyping {
+            onboarding?.hidePopoverForCurrentStep()
         }
+    }
+
+    /// Hides the onboarding tooltip if there is already text present in the chat input composer when appearing.
+    private func hideChatOnboardingIfTextIsPresent() {
+        guard onboarding?.currentStep == .chatCoCaptain,
+              !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return
+        }
+
+        onboarding?.hidePopoverForCurrentStep()
+    }
+
+    /// Stores the current assistant response count baseline and hides the popover, starting the wait
+    /// for CoCaptain's response.
+    private func beginChatOnboardingResponseWaitIfNeeded() {
+        guard onboarding?.currentStep == .chatCoCaptain else { return }
+
+        onboardingChatResponseBaseline = viewModel.completedAssistantResponseCount
+        onboarding?.hidePopoverForCurrentStep()
+    }
+
+    /// Completes the chat onboarding step if the assistant's response count baseline has been exceeded.
+    private func advanceChatOnboardingIfResponseFinished() {
+        guard let baseline = onboardingChatResponseBaseline,
+              onboarding?.currentStep == .chatCoCaptain,
+              viewModel.completedAssistantResponseCount > baseline else {
+            return
+        }
+
+        onboardingChatResponseBaseline = nil
+        onboarding?.completeCurrentStep()
     }
 }
 

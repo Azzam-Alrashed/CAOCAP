@@ -2,6 +2,10 @@ import Foundation
 import Observation
 import SwiftUI
 
+/// Identifies the currently active workspace in the navigation hierarchy.
+///
+/// - `root`: The home canvas containing the user's project nodes.
+/// - `project(String)`: A named project canvas identified by its filename.
 public enum WorkspaceState: Equatable {
     case root
     case project(String) // filename
@@ -12,8 +16,12 @@ public enum WorkspaceState: Equatable {
 @MainActor
 @Observable
 public class AppRouter {
+    /// The currently active workspace. SwiftUI views observe this via `@Observable`.
     public var currentWorkspace: WorkspaceState
+    /// Cache of `ProjectStore` instances keyed by filename. Stores are created lazily
+    /// on first access and retained for the lifetime of the router.
     public var projects: [String: ProjectStore] = [:]
+    /// Stack of previously visited workspaces, supporting `goBack()` navigation.
     private var navigationStack: [WorkspaceState] = []
     
     public let rootStore: ProjectStore
@@ -35,6 +43,8 @@ public class AppRouter {
         }
     }
     
+    /// Initializes the router, runs any pending workspace migrations, and creates
+    /// the root canvas with its default node template and a zoomed-out initial scale.
     public init() {
         CanvasWorkspaceMigration.runIfNeeded()
         self.currentWorkspace = .root
@@ -73,20 +83,28 @@ public class AppRouter {
         }
     }
     
+    /// Pops the navigation stack and returns to the previous workspace.
+    /// No-ops if the stack is empty (i.e., already at the first visited workspace).
     public func goBack() {
         guard let previous = navigationStack.popLast() else { return }
         navigate(to: previous, addToStack: false, animated: true)
     }
     
+    /// Navigates to the root workspace without recording the transition in the back stack.
     public func goRoot() {
         navigate(to: .root, animated: true)
     }
     
+    /// Resolves an existing canvas filename and navigates into the corresponding project.
+    /// `CanvasFileNaming.resolveExistingFileName` normalises legacy filename formats.
     public func navigateToSubCanvas(fileName: String) {
         let resolved = CanvasFileNaming.resolveExistingFileName(fileName)
         navigate(to: .project(resolved), animated: true)
     }
 
+    /// Creates a brand-new project canvas with the default node template and immediately
+    /// navigates to it. Used as a recovery path when an imported or linked canvas cannot
+    /// be loaded.
     public func createFreshMiniAppCanvas() {
         let fileName = CanvasFileNaming.newCanvasFileName()
         let store = ProjectStore(

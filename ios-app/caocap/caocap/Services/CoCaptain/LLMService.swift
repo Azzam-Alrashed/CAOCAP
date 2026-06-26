@@ -85,6 +85,23 @@ public final class LLMService {
         }
     }
 
+    /// The primary API for CoCaptain: streams structured agent events for the given message.
+    ///
+    /// The method:
+    /// 1. Builds the full prompt (context + instructions + user message).
+    /// 2. Runs a preflight token-budget check before touching the network.
+    /// 3. Routes to the local MLX model when `gemma-4-local` is selected,
+    ///    otherwise delegates to the Firebase AI Logic Gemini session.
+    /// 4. Yields `.text` chunks as they arrive and `.functionCalls` when the
+    ///    model uses the `request_app_action` tool.
+    ///
+    /// - Parameters:
+    ///   - userMessage: The raw message entered by the user.
+    ///   - context: Optional serialized canvas context from `ProjectContextBuilder`.
+    ///   - expectsStructuredResponse: When `true`, the full agent contract and
+    ///     XML schema are appended to the prompt so the model knows to emit actions.
+    ///   - availableActions: Actions the model may reference in its response.
+    ///   - scope: Whether the session is project-wide or scoped to a single node.
     public func streamAgentEvents(
         for userMessage: String,
         context: String?,
@@ -208,6 +225,8 @@ public final class LLMService {
         }
     }
 
+    /// The base system instruction loaded into the Gemini context window.
+    /// Dictates the persona, rules of engagement, and XML output schemas.
     private static let systemInstructionText = """
         You are Co-Captain, a spatial programming assistant for the CAOCAP platform.
         You can request app actions with the `request_app_action` function and request node edits with a `cocaptain_actions` XML block. The app validates every requested action before execution.
@@ -232,6 +251,8 @@ public final class LLMService {
         - Implement persistence with Mini-App `section="code"` `node_edits` using the Firestore compat instance on `window.__caocapFirestore` (never invent a second `initializeApp` in JS). Firebase config lives inside the Mini-App's Firebase tool, not in a separate node.
         """
 
+    /// Creates and configures a new `GenerativeModel` instance with the required
+    /// tools and system instructions for CoCaptain agent execution.
     private func makeModel(modelName: String) -> GenerativeModel {
         FirebaseAI.firebaseAI(backend: .googleAI()).generativeModel(
             modelName: modelName,
@@ -246,6 +267,7 @@ public final class LLMService {
         )
     }
 
+    /// The tool definition that exposes local CAOCAP app actions to the LLM.
     private static let requestAppActionDeclaration = FunctionDeclaration(
         name: CoCaptainFunctionCallAgentAdapter.requestAppActionName,
         description: "Requests a CAOCAP app action. The app validates and either executes or stages the action for user review.",
@@ -260,6 +282,12 @@ public final class LLMService {
         optionalParameters: ["reason"]
     )
 
+    /// Assembles the final prompt string sent to the model.
+    ///
+    /// Sections are joined in order: canvas context (when provided), the agent
+    /// contract (when `expectsStructuredResponse` is `true`), and the user request.
+    /// The agent contract includes scope-specific instructions, the XML schema for
+    /// `cocaptain_actions`, and the split list of autonomous vs. review-required actions.
     private func buildPrompt(
         userMessage: String,
         context: String?,
@@ -364,6 +392,9 @@ public final class LLMService {
     }
 }
 
+/// Convenience initialiser that maps a Firebase SDK `FunctionCallPart` into
+/// the app's internal `CoCaptainAgentFunctionCall` value type, flattening
+/// all argument values to plain strings.
 private extension CoCaptainAgentFunctionCall {
     init(_ functionCall: FunctionCallPart) {
         self.init(
@@ -374,6 +405,9 @@ private extension CoCaptainAgentFunctionCall {
     }
 }
 
+/// Extracts a plain `String` from any scalar `JSONValue` produced by the model.
+/// Compound types (object, array) are not meaningful as argument values and
+/// return `nil` so they are silently dropped by `compactMapValues`.
 private extension FirebaseAILogic.JSONValue {
     var cocaptainStringValue: String? {
         switch self {

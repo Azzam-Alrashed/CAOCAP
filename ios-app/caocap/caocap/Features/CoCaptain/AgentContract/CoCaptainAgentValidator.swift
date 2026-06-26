@@ -1,8 +1,11 @@
 import Foundation
 
+/// The outcome of a payload validation pass.
 public struct CoCaptainAgentValidationResult: Hashable {
+    /// A list of descriptive errors explaining why the payload cannot be safely executed.
     public let issues: [String]
 
+    /// `true` if the payload has no structural or semantic errors.
     public var isValid: Bool {
         issues.isEmpty
     }
@@ -14,6 +17,8 @@ public struct CoCaptainAgentValidationResult: Hashable {
 public struct CoCaptainAgentValidator {
     public init() {}
 
+    /// Validates the extracted model payload against the live capabilities of the application.
+    /// Ensures requested actions exist and node edits have the correct structure.
     @MainActor
     public func validate(
         payload: CoCaptainAgentPayload,
@@ -73,6 +78,7 @@ public struct CoCaptainAgentValidator {
         return CoCaptainAgentValidationResult(issues: issues)
     }
 
+    /// Validates an individual patch operation to ensure it meets constraints for its type.
     private func validate(
         operation: NodePatchOperation,
         role: NodeRole,

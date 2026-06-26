@@ -306,6 +306,9 @@ private struct GitHubLogoView: View {
 
 // MARK: - SignInButton
 
+/// A full-width pill button used for each sign-in provider.
+/// The leading view slot accepts any branded logo so the layout stays uniform
+/// while the visual identity differs per provider.
 private struct SignInButton<LeadingView: View>: View {
     let label: LocalizedStringKey
     let foreground: Color
@@ -350,6 +353,8 @@ private struct SignInButton<LeadingView: View>: View {
 
 // MARK: - PressableButtonStyle
 
+/// Bridges SwiftUI's `ButtonStyleConfiguration.isPressed` into a `@Binding`
+/// so that the parent view can read the press state to drive its own animations.
 private struct PressableButtonStyle: ButtonStyle {
     @Binding var isPressed: Bool
     func makeBody(configuration: Configuration) -> some View {

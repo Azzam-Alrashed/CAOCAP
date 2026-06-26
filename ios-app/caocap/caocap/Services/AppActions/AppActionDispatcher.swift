@@ -1,8 +1,12 @@
 import Foundation
 
+/// Top-level grouping for app actions surfaced in the command palette and agent.
 public enum AppActionCategory: String, Hashable {
+    /// Actions that navigate between workspaces or canvas levels.
     case navigation
+    /// Actions that mutate project structure (nodes, canvas, files).
     case project
+    /// Actions related to the AI assistant or the user's account.
     case assistant
 }
 
@@ -77,21 +81,31 @@ public struct AppActionDefinition: Identifiable, Hashable {
         self.canPinToCanvas = canPinToCanvas
     }
 
+    /// The stable, localised title of the action, resolved via `LocalizationManager`.
     public var localizedTitle: String {
         LocalizationManager.shared.localizedString(title)
     }
 }
 
+/// Distinguishes who is requesting an action, which controls whether
+/// autonomous-execution restrictions are enforced.
 public enum AppActionSource: Hashable {
+    /// The user triggered the action directly (e.g. tapped a button).
     case user
+    /// The agent triggered the action autonomously without user review.
     case agentAutomatic
+    /// The agent proposed the action and the user approved it.
     case agentApproved
 }
 
+/// The result of attempting to execute an action, including whether it ran
+/// and any message to surface to the agent or the UI.
 public struct AppActionResult: Hashable {
     public let actionID: AppActionID
     public let title: String
+    /// `true` when the handler was found and ran; `false` on any failure.
     public let executed: Bool
+    /// Human-readable outcome message, either from the handler or a default.
     public let message: String
 
     public init(actionID: AppActionID, title: String, executed: Bool, message: String) {

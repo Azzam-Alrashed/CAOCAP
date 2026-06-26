@@ -390,6 +390,33 @@ struct CoCaptainAgentTests {
     }
 
     @MainActor
+    @Test func commandPaletteKeepsPromptSelectedDuringOnboardingTyping() {
+        let viewModel = CommandPaletteViewModel()
+        viewModel.actions = TestActionDispatcher().availableActions
+        viewModel.nodes = [
+            SpatialNode(type: .standard, position: .zero, title: "Hi from the canvas")
+        ]
+
+        viewModel.query = "h"
+        viewModel.selectPromptRowIfAvailable()
+        viewModel.prefersPromptSubmission = true
+        viewModel.query = "hi"
+
+        var submittedPrompt: String?
+        var flownNodeID: UUID?
+        viewModel.onSubmitPrompt = { submittedPrompt = $0 }
+        viewModel.onFlyToNode = { flownNodeID = $0 }
+
+        #expect(viewModel.nodeResults.count == 1)
+        #expect(viewModel.selectedIndex == viewModel.promptSelectionIndex)
+
+        viewModel.confirmSelection()
+
+        #expect(submittedPrompt == "hi")
+        #expect(flownNodeID == nil)
+    }
+
+    @MainActor
     @Test func commandPaletteArrowNavigationWraparound() {
         let viewModel = CommandPaletteViewModel()
         viewModel.actions = TestActionDispatcher().availableActions
@@ -1168,6 +1195,7 @@ struct CoCaptainAgentTests {
         }
 
         #expect(!vm.isThinking)
+        #expect(vm.completedAssistantResponseCount == 1)
 
         let assistantMessage = vm.items.compactMap { item -> ChatBubbleItem? in
             guard case .message(let bubble) = item.content, !bubble.isUser else { return nil }
@@ -1206,6 +1234,46 @@ struct CoCaptainAgentTests {
     }
 
     @MainActor
+    @Test func completedAssistantResponseCountAdvancesAfterSuccessfulAgentTurn() async throws {
+        let dispatcher = TestActionDispatcher()
+        let llm = TestLLMClient(
+            response: "Opening settings.",
+            functionCalls: [[
+                CoCaptainAgentFunctionCall(
+                    name: CoCaptainFunctionCallAgentAdapter.requestAppActionName,
+                    arguments: ["actionId": "open_settings", "executionMode": "safe"]
+                )
+            ]]
+        )
+        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
+        let vm = CoCaptainViewModel(agentCoordinator: coordinator)
+        vm.store = makeStore()
+        vm.actionDispatcher = dispatcher
+
+        vm.sendMessage("help me from the model")
+
+        for _ in 0..<20 where vm.isThinking {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+
+        #expect(!vm.isThinking)
+        #expect(vm.completedAssistantResponseCount == 1)
+        #expect(dispatcher.executedActionIDs == [.openSettings])
+    }
+
+    @MainActor
+    @Test func completedAssistantResponseCountAdvancesForDirectCommandResponses() {
+        let dispatcher = TestActionDispatcher()
+        let vm = CoCaptainViewModel()
+        vm.actionDispatcher = dispatcher
+
+        vm.sendMessage("open settings")
+
+        #expect(vm.completedAssistantResponseCount == 1)
+        #expect(dispatcher.executedActionIDs == [.openSettings])
+    }
+
+    @MainActor
     @Test func cancelledAgentTurnClearsThinkingState() async throws {
         let coordinator = CoCaptainAgentCoordinator(llmClient: ThrowingLLMClient(error: CancellationError()))
         let vm = CoCaptainViewModel(agentCoordinator: coordinator)
@@ -1217,6 +1285,7 @@ struct CoCaptainAgentTests {
         }
 
         #expect(!vm.isThinking)
+        #expect(vm.completedAssistantResponseCount == 0)
     }
 
     @MainActor

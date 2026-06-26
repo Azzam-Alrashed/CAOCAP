@@ -1,11 +1,19 @@
 import Foundation
 import SwiftUI
 
+/// Resolves localised strings and layout metadata for the app's two supported
+/// languages (English and Arabic).
+///
+/// The manager reads the persisted language selection from `UserDefaults` and
+/// vends the appropriate `.lproj` bundle for string lookup. Arabic switches the
+/// SwiftUI layout to RTL via `layoutDirection(for:)`.
 public class LocalizationManager {
     public static let shared = LocalizationManager()
     public static let supportedLanguages = ["English", "Arabic"]
     public static let languageStorageKey = "app_language"
     private let newProjectPrefix = "New Project "
+    /// Titles of nodes whose content is shipped with the app and therefore
+    /// needs to be translated rather than treated as user-supplied text.
     private let appOwnedNodeTitles: Set<String> = [
         "Welcome to CAOCAP",
         "The Infinite Canvas",
@@ -25,6 +33,8 @@ public class LocalizationManager {
         "JavaScript",
         "New Logic"
     ]
+    /// Subtitles of app-owned nodes. Only strings in this set are passed through
+    /// the localization lookup; user-authored subtitles are returned verbatim.
     private let appOwnedNodeSubtitles: Set<String> = [
         "The spatial landscape for agentic software design.",
         "Break free from the file tree. Pan and zoom to navigate your architecture.",
@@ -50,6 +60,8 @@ public class LocalizationManager {
     
     private init() {}
 
+    /// The current in-app language resolved from `UserDefaults`.
+    /// Falls back to `"English"` when the stored value is absent or unsupported.
     public var currentLanguage: String {
         let storedLanguage = UserDefaults.standard.string(forKey: Self.languageStorageKey) ?? "English"
         return Self.supportedLanguages.contains(storedLanguage) ? storedLanguage : "English"
@@ -70,10 +82,13 @@ public class LocalizationManager {
         }
     }
     
+    /// Returns a `Locale` suitable for number/date formatting in the given language.
     public func locale(for language: String) -> Locale {
         Locale(identifier: localeIdentifier(for: language))
     }
 
+    /// Returns the SwiftUI `LayoutDirection` for the given language.
+    /// Arabic uses RTL; all other languages default to LTR.
     public func layoutDirection(for language: String) -> LayoutDirection {
         switch language {
         case "Arabic":
@@ -83,6 +98,9 @@ public class LocalizationManager {
         }
     }
 
+    /// Returns the `.lproj` bundle for `language`.
+    /// Falls back to `Bundle.main` when no matching `.lproj` directory is found,
+    /// which gracefully handles unsupported locales.
     public func bundle(for language: String? = nil) -> Bundle {
         let resolvedLanguage = language ?? currentLanguage
         let identifier = localeIdentifier(for: resolvedLanguage)
@@ -93,6 +111,12 @@ public class LocalizationManager {
         return bundle
     }
 
+    /// Returns the localised string for `key` in the given `language`.
+    ///
+    /// Resolution order:
+    /// 1. The language-specific `.lproj` bundle.
+    /// 2. `Bundle.main` as a fallback when the key is absent from the language bundle.
+    /// 3. The raw `key` itself when neither bundle contains an entry.
     public func localizedString(_ key: String, language: String? = nil) -> String {
         let localized = bundle(for: language).localizedString(forKey: key, value: key, table: nil)
         if localized != key {
@@ -101,12 +125,22 @@ public class LocalizationManager {
         return Bundle.main.localizedString(forKey: key, value: key, table: nil)
     }
 
+    /// Returns a formatted string by resolving `key` and applying `arguments`
+    /// with the locale of `language` so that number/punctuation separators match.
     public func localizedString(_ key: String, arguments: [CVarArg], language: String? = nil) -> String {
         let resolvedLanguage = language ?? currentLanguage
         let format = localizedString(key, language: resolvedLanguage)
         return String(format: format, locale: locale(for: resolvedLanguage), arguments: arguments)
     }
 
+    /// Returns the localised display name for a project.
+    ///
+    /// Handles three special cases:
+    /// - The root/home workspace file is always translated as `"Root"`.
+    /// - `"Untitled Project"` is translated via the strings table.
+    /// - Projects named `"New Project <8-hex-char-suffix>"` use the
+    ///   `"project.generatedName"` format string with the suffix as the argument.
+    /// - All other names are returned verbatim (user-authored).
     public func localizedProjectName(_ name: String, fileName: String? = nil, language: String? = nil) -> String {
         if fileName == "root_v6.json" || fileName == "home_v6.json" || fileName == "home_v2.json" || name == "Root" || name == "Home" {
             return localizedString("Root", language: language)
@@ -128,6 +162,9 @@ public class LocalizationManager {
         return name
     }
 
+    /// Returns a localised title for the node, but only when the title belongs
+    /// to app-owned onboarding or system nodes. User-authored titles are returned
+    /// unchanged to preserve intent.
     public func localizedNodeTitle(_ title: String, language: String? = nil) -> String {
         guard appOwnedNodeTitles.contains(title) else {
             return title
@@ -136,6 +173,8 @@ public class LocalizationManager {
         return localizedString(title, language: language)
     }
 
+    /// Returns a localised subtitle for the node, guarded by the same
+    /// app-owned-subtitle allowlist as `localizedNodeTitle`.
     public func localizedNodeSubtitle(_ subtitle: String, language: String? = nil) -> String {
         guard appOwnedNodeSubtitles.contains(subtitle) else {
             return subtitle
@@ -144,6 +183,8 @@ public class LocalizationManager {
         return localizedString(subtitle, language: language)
     }
 
+    /// Returns a human-readable relative date string (e.g. `"2 hours ago"`).
+    /// The string is formatted using the locale of the specified language.
     public func relativeDateString(for date: Date, relativeTo referenceDate: Date = Date(), language: String? = nil) -> String {
         let resolvedLanguage = language ?? currentLanguage
         let formatter = RelativeDateTimeFormatter()

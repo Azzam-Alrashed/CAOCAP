@@ -39,24 +39,24 @@ const ctas = [
 
 const features = [
   {
-    title: "Map the interface",
-    body: "Create pages as connected ideas instead of buried files, with requirements, structure, style, behavior, and preview visible together."
+    title: "Learn by making",
+    body: "Start from tiny real Mini-Apps, change what they do, and understand the software idea at the moment it becomes useful."
   },
   {
-    title: "Build in motion",
-    body: "Shape HTML, CSS, and JavaScript on a spatial canvas that keeps the live result close enough to guide every decision."
+    title: "Keep software visible",
+    body: "Use the spatial canvas to keep requirements, code, behavior, and live preview close enough to inspect as one working system."
   },
   {
-    title: "Keep the context",
-    body: "CAOCAP keeps the project graph readable, so the next change starts from the whole idea rather than a blank editor tab."
+    title: "Build with a mentor",
+    body: "CoCaptain can help write, revise, debug, and explain while keeping meaningful code changes ready for human review."
   }
 ];
 
 const stats = [
   "Native iOS and iPadOS",
   "Live WebKit preview",
-  "Open source roadmap",
-  "Built for spatial thinking"
+  "Human-reviewed AI edits",
+  "Built for creative builders"
 ];
 
 function CtaButtons() {
@@ -109,26 +109,26 @@ function CanvasMockup() {
 
         <article className="node node-srs">
           <span>SRS</span>
-          <strong>What should this become?</strong>
-          <p>Capture the intent before the interface hardens.</p>
+          <strong>What should this teach?</strong>
+          <p>Capture the mission before the code hardens.</p>
         </article>
 
         <article className="node node-html">
           <span>HTML</span>
-          <strong>Structure</strong>
-          <p>&lt;main&gt; ideas into place.</p>
+          <strong>Screen</strong>
+          <p>Put the visible parts into place.</p>
         </article>
 
         <article className="node node-css">
           <span>CSS</span>
           <strong>Feel</strong>
-          <p>Shape hierarchy, rhythm, and tone.</p>
+          <p>Shape rhythm, hierarchy, and tone.</p>
         </article>
 
         <article className="node node-js">
           <span>JS</span>
           <strong>Behavior</strong>
-          <p>Make the canvas respond.</p>
+          <p>Make the app remember and respond.</p>
         </article>
 
         <article className="preview-node">
@@ -154,11 +154,11 @@ export default function Home() {
 
         <div className="hero-grid" id="top">
           <div className="hero-copy">
-            <p className="eyebrow">Mindmap your HTML</p>
+            <p className="eyebrow">Learn software by building</p>
             <h1>CAOCAP</h1>
             <p className="hero-lede">
-              A spatial, mindmap-driven way to build HTML, CSS, and JavaScript
-              on iOS and iPadOS.
+              A creative canvas where people build real Mini-Apps, learn how
+              software works, and grow with an AI mentor beside them.
             </p>
             <CtaButtons />
           </div>
@@ -168,8 +168,8 @@ export default function Home() {
 
       <section className="section-panel">
         <div className="section-heading">
-          <p className="eyebrow">Spatial development</p>
-          <h2>Build with nodes that keep the idea visible.</h2>
+          <p className="eyebrow">Creative software learning</p>
+          <h2>Build real things while the ideas become visible.</h2>
         </div>
         <div className="feature-grid">
           {features.map((feature) => (
@@ -185,17 +185,18 @@ export default function Home() {
       <section className="split-section">
         <div>
           <p className="eyebrow">CoCaptain</p>
-          <h2>An AI companion that sees the whole project graph.</h2>
+          <h2>An AI mentor that sees the whole project graph.</h2>
         </div>
         <div className="assistant-panel">
           <div className="assistant-icon">
             <Bot aria-hidden="true" size={28} />
           </div>
           <p>
-            CAOCAP is being shaped around grounded assistance: requirements,
-            code nodes, relationships, and previews in one context window.
+            CAOCAP is being shaped around grounded mentorship: requirements,
+            code, relationships, and previews in one context window, with
+            meaningful edits staged for review.
           </p>
-          <span>Review, apply, keep building.</span>
+          <span>Build, understand, keep going.</span>
         </div>
       </section>
 
@@ -205,7 +206,7 @@ export default function Home() {
           <h2>Designed for touch, canvas thinking, and real devices.</h2>
           <p>
             CAOCAP is built natively for iPhone and iPad, using WebKit for live
-            previews and an open GitHub roadmap for the work ahead.
+            previews and a spatial canvas for learning by making.
           </p>
         </div>
         <div className="status-grid" aria-label="CAOCAP status">
@@ -220,22 +221,22 @@ export default function Home() {
 
       <section className="learn-section">
         <div>
-          <p className="eyebrow">Open source guide</p>
-          <h2>Learn the codebase as a working system.</h2>
+          <p className="eyebrow">Azzamification</p>
+          <h2>Read the pivot behind the next chapter.</h2>
         </div>
         <Link className="learn-card" href="/learn">
           <BookOpen aria-hidden="true" size={28} />
-          <span>Read the CAOCAP Codebase Learning Book</span>
+          <span>Read the Azzamification vision</span>
           <ArrowUpRight aria-hidden="true" size={18} />
         </Link>
       </section>
 
       <section className="final-cta">
         <Code2 aria-hidden="true" size={30} />
-        <h2>Start building through the map.</h2>
+        <h2>Start learning through the canvas.</h2>
         <p>
-          Download CAOCAP, join the TestFlight, or help shape the future in
-          public on GitHub.
+          Download CAOCAP, join the TestFlight, or help shape a more creative
+          way into software on GitHub.
         </p>
         <CtaButtons />
       </section>

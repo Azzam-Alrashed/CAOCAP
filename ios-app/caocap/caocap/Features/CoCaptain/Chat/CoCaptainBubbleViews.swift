@@ -1,5 +1,7 @@
 import SwiftUI
 
+/// An animated, pulsating three-dot indicator shown when the AI assistant
+/// is processing a response but hasn't started streaming tokens yet.
 struct ThinkingIndicator: View {
     @State private var dotScale: CGFloat = 0.5
 
@@ -28,6 +30,8 @@ struct ThinkingIndicator: View {
     }
 }
 
+/// A composite view that renders a single message in the chat timeline,
+/// including the avatar (if assistant), the message bubble, and trailing icons (if user).
 struct ChatBubbleView: View {
     let message: ChatBubbleItem
 
@@ -104,6 +108,8 @@ struct ChatBubbleView: View {
     }
 }
 
+/// Renders the Markdown payload of a chat bubble, applying special styling
+/// to inline code blocks so they stand out against the bubble gradient.
 struct ChatBubbleText: View {
     let message: ChatBubbleItem
 
@@ -135,6 +141,8 @@ struct ChatBubbleText: View {
     }
 }
 
+/// A custom path shape that creates iOS-style chat bubbles with one sharp corner
+/// pointing toward the sender's avatar.
 struct MessageBubbleShape: Shape {
     var isUser: Bool
     var radius: CGFloat = 18

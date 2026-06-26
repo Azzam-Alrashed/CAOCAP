@@ -2,10 +2,15 @@ import SwiftUI
 
 /// Full-screen editor for the Firebase Web config node.
 struct FirebaseConfigNodeEditorView: View {
+    /// The canvas node representing the Firebase config block.
     let node: SpatialNode
+    /// The project store used to save the config and path when the user taps Done.
     let store: ProjectStore
     @Environment(\.dismiss) private var dismiss
+    /// Local draft of the Firebase Web SDK config JSON. Persisted on Done.
     @State private var jsonText: String
+    /// Optional Firestore collection or document path exposed to the Mini-App's JS
+    /// environment as `window.__caocapFirestoreDefaultPath`. Persisted on Done.
     @State private var collectionPath: String
 
     init(node: SpatialNode, store: ProjectStore) {
@@ -15,6 +20,9 @@ struct FirebaseConfigNodeEditorView: View {
         _collectionPath = State(initialValue: node.miniApp?.firebaseFirestorePath ?? "")
     }
 
+    /// Always fetches the latest version of the node from the store so that the
+    /// navigation title stays in sync even if the node title was changed elsewhere
+    /// while the sheet was open.
     private var currentNode: SpatialNode {
         store.nodes.first(where: { $0.id == node.id }) ?? node
     }

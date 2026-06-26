@@ -38,22 +38,12 @@ struct caocapTests {
         #expect(viewport.lastOffset == CGSize(width: 50, height: 12))
     }
 
-    @Test func defaultProjectStartsWithStructuredSRS() throws {
-        let miniAppNode = try #require(ProjectTemplateProvider.defaultNodes.first { $0.type == .miniApp })
-        let miniApp = try #require(miniAppNode.miniApp)
-        let text = miniApp.srsText
-
-        #expect(text.contains("# Intent"))
-        #expect(text.contains("## Why It Matters"))
-        #expect(text.contains("## Core Flow"))
-        #expect(text.contains("## Acceptance Checks"))
-        #expect(text.contains("CoCaptain has enough context"))
-        #expect(miniApp.srsReadinessState == .needsClarification)
+    @Test func defaultProjectStartsWithCleanCanvas() {
+        #expect(ProjectTemplateProvider.defaultNodes.isEmpty)
     }
 
-    @Test func defaultProjectDoesNotAutoTriggerNodeAgents() throws {
-        let miniAppNode = try #require(ProjectTemplateProvider.defaultNodes.first { $0.type == .miniApp })
-        #expect(miniAppNode.agentProfile.isAutoTriggerEnabled == false)
+    @Test func defaultMiniAppCodeRemainsAvailableForManualCreation() {
+        #expect(ProjectTemplateProvider.defaultCode.contains("Hello World!"))
     }
 
     @Test func srsScaffoldPreservesDraftAndAddsMissingSections() {
@@ -101,7 +91,17 @@ struct caocapTests {
         let store = ProjectStore(
             fileName: "onboarding-export-test-\(UUID().uuidString).json",
             projectName: "Export Test",
-            initialNodes: ProjectTemplateProvider.defaultNodes
+            initialNodes: [
+                SpatialNode(
+                    type: .miniApp,
+                    position: .zero,
+                    title: "Mini-App",
+                    miniApp: MiniAppState(
+                        srsText: SRSScaffold.defaultText,
+                        codeText: ProjectTemplateProvider.defaultCode
+                    )
+                )
+            ]
         )
 
         let exportURL = try await #require(ExportService.export(from: store, format: .webBundle(includeProjectContext: true)))

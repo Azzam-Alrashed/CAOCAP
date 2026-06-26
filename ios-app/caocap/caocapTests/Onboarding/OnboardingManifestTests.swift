@@ -33,4 +33,25 @@ struct OnboardingManifestTests {
             #expect(content.step == step)
         }
     }
+
+    @Test func everyOnboardingStepDeclaresASingleTooltipAnchor() {
+        #expect(OnboardingCoordinator.Step.tapFAB.tooltipAnchor == .floatingCommandButton)
+        #expect(OnboardingCoordinator.Step.typeCoCaptainPrompt.tooltipAnchor == .omniboxSearchField)
+        #expect(OnboardingCoordinator.Step.submitCoCaptainPrompt.tooltipAnchor == .omniboxPromptRow)
+        #expect(OnboardingCoordinator.Step.chatCoCaptain.tooltipAnchor == .coCaptainInput)
+        #expect(OnboardingCoordinator.Step.dismissCoCaptain.tooltipAnchor == .coCaptainDoneButton)
+        #expect(OnboardingCoordinator.Step.longPressFAB.tooltipAnchor == .floatingCommandButton)
+    }
+
+    @MainActor
+    @Test func hidingPopoverDoesNotAdvanceCurrentStep() {
+        let onboarding = OnboardingCoordinator()
+        onboarding.currentStep = .chatCoCaptain
+        onboarding.showPopover = true
+
+        onboarding.hidePopoverForCurrentStep()
+
+        #expect(onboarding.currentStep == .chatCoCaptain)
+        #expect(!onboarding.showPopover)
+    }
 }
