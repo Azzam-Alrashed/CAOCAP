@@ -11,6 +11,7 @@ public struct ProjectSuggestion: Identifiable, Equatable {
     public let suggestedPrompt: String
     public let severity: Severity
 
+    /// The urgency or impact level of the suggestion.
     public enum Severity {
         case info
         case warning
