@@ -46,12 +46,18 @@ final class AppleSignInCoordinator: NSObject {
     // MARK: - Nonce Helpers
 
     /// Generates the raw nonce Firebase will later verify against Apple's token.
+    /// Generates the raw nonce Firebase will later verify against Apple's token.
+    /// - Parameter length: The byte length of the nonce. Defaults to 32.
+    /// - Returns: A hex-encoded string representation of the random bytes.
     private func randomNonce(length: Int = 32) -> String {
         var randomBytes = [UInt8](repeating: 0, count: length)
         _ = SecRandomCopyBytes(kSecRandomDefault, randomBytes.count, &randomBytes)
         return randomBytes.map { String(format: "%02x", $0) }.joined()
     }
 
+    /// Computes the SHA-256 hash of a given string.
+    /// - Parameter input: The string to hash (e.g. the raw nonce).
+    /// - Returns: A hex-encoded string of the computed hash.
     private func sha256(_ input: String) -> String {
         let data = Data(input.utf8)
         let hashed = SHA256.hash(data: data)
@@ -63,6 +69,8 @@ final class AppleSignInCoordinator: NSObject {
 
 extension AppleSignInCoordinator: ASAuthorizationControllerDelegate {
 
+    /// Invoked when the Apple Sign-In flow completes successfully.
+    /// Validates the returned credentials and resumes the continuation with a Firebase `OAuthCredential`.
     nonisolated func authorizationController(
         controller: ASAuthorizationController,
         didCompleteWithAuthorization authorization: ASAuthorization
@@ -91,6 +99,8 @@ extension AppleSignInCoordinator: ASAuthorizationControllerDelegate {
         }
     }
 
+    /// Invoked when the Apple Sign-In flow fails or is canceled by the user.
+    /// Resumes the continuation by throwing the encountered error.
     nonisolated func authorizationController(
         controller: ASAuthorizationController,
         didCompleteWithError error: Error
@@ -119,8 +129,11 @@ extension AppleSignInCoordinator: ASAuthorizationControllerPresentationContextPr
 
 // MARK: - AuthError
 
+/// Custom errors thrown during the Apple Sign-In orchestration.
 enum AuthError: LocalizedError {
+    /// Thrown when Apple returns an incomplete or unparseable credential.
     case invalidAppleCredential
+    /// Thrown when no foreground window scene is available to present the ASAuthorizationController.
     case missingPresentingViewController
 
     var errorDescription: String? {

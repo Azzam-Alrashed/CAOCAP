@@ -42,6 +42,8 @@ final class AppConfiguration {
 
     // MARK: - Firebase
 
+    /// Configures the core FirebaseApp instance.
+    /// Ensures `FirebaseApp.configure()` is only called once to prevent runtime crashes.
     private func configureFirebase() {
         guard FirebaseApp.app() == nil else {
             logger.warning("Firebase already configured — skipping duplicate call.")
@@ -53,6 +55,8 @@ final class AppConfiguration {
 
     // MARK: - Google Sign-In
 
+    /// Configures Google Sign-In with the client ID from Firebase.
+    /// Extracts the ID from the active `FirebaseApp` options and injects it into `GIDSignIn`.
     private func configureGoogleSignIn() {
         guard let clientID = FirebaseApp.app()?.options.clientID else {
             logger.error("Google Sign-In: missing clientID in GoogleService-Info.plist.")
