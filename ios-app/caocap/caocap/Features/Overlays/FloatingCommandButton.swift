@@ -1,5 +1,4 @@
 import SwiftUI
-import Popovers
 
 struct FloatingCommandButton: View {
     @State private var position: CGPoint = .zero
@@ -25,9 +24,7 @@ struct FloatingCommandButton: View {
     var onExpand: (() -> Void)? = nil
     var onDragSummon: (() -> Void)? = nil
     
-    // Onboarding popover state
-    var showOnboardingPopover: Binding<Bool> = .constant(false)
-    var onboardingPopoverContent: ((CGFloat) -> AnyView)? = nil
+    var isOnboardingHighlighted: Bool = false
     
     // Onboarding breathing animation state
     @State private var isBreathing: Bool = false
@@ -42,30 +39,13 @@ struct FloatingCommandButton: View {
             let size = geometry.size
             let currentPos = position == .zero ? initialPosition(in: size) : position
             
-            // Calculate popover arrow offset dynamically relative to screen boundaries:
-            let arrowOffset: CGFloat = {
-                let cardWidth: CGFloat = 290
-                let safetyMargin: CGFloat = 16
-                let halfCard = cardWidth / 2
-                
-                let cardCenter: CGFloat
-                if currentPos.x - halfCard < safetyMargin {
-                    cardCenter = safetyMargin + halfCard
-                } else if currentPos.x + halfCard > size.width - safetyMargin {
-                    cardCenter = size.width - safetyMargin - halfCard
-                } else {
-                    cardCenter = currentPos.x
-                }
-                return currentPos.x - cardCenter
-            }()
-            
             // Breathing calculations for scale and glow
             let buttonScale: CGFloat = {
                 if isDragging {
                     return 1.15
                 } else if isExpanded {
                     return 0.9
-                } else if showOnboardingPopover.wrappedValue {
+                } else if isOnboardingHighlighted {
                     return isBreathing ? 1.04 : 1.0
                 } else {
                     return 1.0
@@ -75,7 +55,7 @@ struct FloatingCommandButton: View {
             let shadowRadius: CGFloat = {
                 if isDragging || isExpanded {
                     return 15
-                } else if showOnboardingPopover.wrappedValue {
+                } else if isOnboardingHighlighted {
                     return isBreathing ? 24 : 10
                 } else {
                     return 10
@@ -85,7 +65,7 @@ struct FloatingCommandButton: View {
             let shadowColor: Color = {
                 if isDragging || isExpanded {
                     return Color.black.opacity(0.35)
-                } else if showOnboardingPopover.wrappedValue {
+                } else if isOnboardingHighlighted {
                     return Color(hex: "0066FF").opacity(isBreathing ? 0.8 : 0.4)
                 } else {
                     return Color.black.opacity(0.2)
@@ -119,7 +99,7 @@ struct FloatingCommandButton: View {
                             color: shadowColor,
                             radius: shadowRadius,
                             x: 0,
-                            y: (isDragging || isExpanded) ? 8 : (showOnboardingPopover.wrappedValue ? 4 : 5)
+                            y: (isDragging || isExpanded) ? 8 : (isOnboardingHighlighted ? 4 : 5)
                         )
                     
                     Image(systemName: isExpanded ? "xmark" : "command")
@@ -128,35 +108,7 @@ struct FloatingCommandButton: View {
                 }
                 .frame(width: buttonSize, height: buttonSize)
                 .scaleEffect(buttonScale)
-                .popover(
-                    present: showOnboardingPopover,
-                    attributes: { attributes in
-                        attributes.position = .absolute(
-                            originAnchor: .top,
-                            popoverAnchor: .bottom
-                        )
-                        attributes.dismissal.mode = .none
-                        attributes.rubberBandingMode = .none
-                        attributes.blocksBackgroundTouches = false
-                        attributes.presentation.animation = .spring(response: 0.4, dampingFraction: 0.8)
-                        attributes.presentation.transition = .asymmetric(
-                            insertion: .scale(scale: 0.85).combined(with: .opacity),
-                            removal: .scale(scale: 0.9).combined(with: .opacity)
-                        )
-                        attributes.dismissal.animation = .spring(response: 0.3, dampingFraction: 0.8)
-                        attributes.dismissal.transition = .asymmetric(
-                            insertion: .scale(scale: 0.85).combined(with: .opacity),
-                            removal: .scale(scale: 0.9).combined(with: .opacity)
-                        )
-                        attributes.sourceFrameInset = UIEdgeInsets(top: -8, left: 0, bottom: 0, right: 0)
-                    }
-                ) {
-                    if let content = onboardingPopoverContent {
-                        content(arrowOffset)
-                    } else {
-                        EmptyView()
-                    }
-                }
+                .onboardingTooltipAnchor(.floatingCommandButton)
                 .simultaneousGesture(
                     LongPressGesture(minimumDuration: 0.25)
                         .onEnded { _ in
@@ -225,7 +177,7 @@ struct FloatingCommandButton: View {
                 if position == .zero {
                     position = initialPosition(in: size)
                 }
-                if showOnboardingPopover.wrappedValue {
+                if isOnboardingHighlighted {
                     withAnimation(
                         .easeInOut(duration: 1.8)
                             .repeatForever(autoreverses: true)
@@ -234,7 +186,7 @@ struct FloatingCommandButton: View {
                     }
                 }
             }
-            .onChange(of: showOnboardingPopover.wrappedValue) { _, newValue in
+            .onChange(of: isOnboardingHighlighted) { _, newValue in
                 if newValue {
                     withAnimation(
                         .easeInOut(duration: 1.8)

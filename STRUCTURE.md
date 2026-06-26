@@ -296,6 +296,19 @@ Launch transition and global launch-time prompts shown by the root app shell.
 
 ---
 
+#### `Onboarding/`
+First-run guided onboarding for the canvas, Omnibox, and CoCaptain flow.
+
+| File | Responsibility |
+|---|---|
+| `OnboardingCoordinator.swift` | Observable state machine for the active onboarding step, popover visibility, delayed presentation, and completion/skipping persistence. |
+| `OnboardingManifest.swift` | Manifest-backed copy, icon, and ordering for every onboarding step. |
+| `OnboardingPopoverCard.swift` | Central onboarding tooltip presentation. Views publish named `OnboardingTooltipAnchor` frames, and a single `onboardingTooltipOverlay()` renders the active step card. |
+
+Onboarding tooltips must not be presented by feature-local `.popover` modifiers. Feature views should only publish anchors with `onboardingTooltipAnchor(_:)`; the central overlay decides which single tooltip is visible.
+
+---
+
 #### `Overlays/`
 Persistent floating HUD elements — the project header bar, zoom indicator, and action buttons that float above the canvas at all times.
 

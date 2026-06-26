@@ -97,6 +97,154 @@ struct UnifiedBubbleWithArrowShape: Shape {
     }
 }
 
+enum OnboardingTooltipAnchor: Hashable {
+    case floatingCommandButton
+    case omniboxSearchField
+    case omniboxPromptRow
+    case coCaptainInput
+    case coCaptainDoneButton
+}
+
+private struct OnboardingTooltipAnchorPreferenceKey: PreferenceKey {
+    static var defaultValue: [OnboardingTooltipAnchor: Anchor<CGRect>] = [:]
+
+    static func reduce(
+        value: inout [OnboardingTooltipAnchor: Anchor<CGRect>],
+        nextValue: () -> [OnboardingTooltipAnchor: Anchor<CGRect>]
+    ) {
+        value.merge(nextValue(), uniquingKeysWith: { _, new in new })
+    }
+}
+
+private struct OnboardingTooltipSizePreferenceKey: PreferenceKey {
+    static var defaultValue: CGSize = CGSize(width: 290, height: 180)
+
+    static func reduce(value: inout CGSize, nextValue: () -> CGSize) {
+        value = nextValue()
+    }
+}
+
+extension View {
+    func onboardingTooltipAnchor(_ anchor: OnboardingTooltipAnchor) -> some View {
+        anchorPreference(key: OnboardingTooltipAnchorPreferenceKey.self, value: .bounds) {
+            [anchor: $0]
+        }
+    }
+
+    func onboardingTooltipOverlay() -> some View {
+        overlayPreferenceValue(OnboardingTooltipAnchorPreferenceKey.self) { anchors in
+            OnboardingTooltipOverlay(anchors: anchors)
+        }
+    }
+}
+
+extension OnboardingCoordinator.Step {
+    var tooltipAnchor: OnboardingTooltipAnchor {
+        switch self {
+        case .tapFAB, .longPressFAB:
+            return .floatingCommandButton
+        case .typeCoCaptainPrompt:
+            return .omniboxSearchField
+        case .submitCoCaptainPrompt:
+            return .omniboxPromptRow
+        case .chatCoCaptain:
+            return .coCaptainInput
+        case .dismissCoCaptain:
+            return .coCaptainDoneButton
+        }
+    }
+
+    var tooltipArrowPlacement: UnifiedBubbleWithArrowShape.ArrowPlacement {
+        switch self {
+        case .dismissCoCaptain:
+            return .top
+        case .tapFAB, .typeCoCaptainPrompt, .submitCoCaptainPrompt, .chatCoCaptain, .longPressFAB:
+            return .bottom
+        }
+    }
+}
+
+private struct OnboardingTooltipOverlay: View {
+    let anchors: [OnboardingTooltipAnchor: Anchor<CGRect>]
+
+    @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
+    @State private var cardSize = CGSize(width: 290, height: 180)
+
+    var body: some View {
+        GeometryReader { proxy in
+            if let onboarding,
+               let step = onboarding.currentStep,
+               onboarding.showPopover,
+               let anchor = anchors[step.tooltipAnchor] {
+                let targetFrame = proxy[anchor]
+                let tooltipCenter = tooltipCenter(
+                    for: targetFrame,
+                    placement: step.tooltipArrowPlacement,
+                    cardSize: cardSize,
+                    containerSize: proxy.size
+                )
+                let arrowOffset = targetFrame.midX - tooltipCenter.x
+
+                OnboardingPopoverCard(
+                    step: step,
+                    arrowOffset: arrowOffset,
+                    arrowPlacement: step.tooltipArrowPlacement
+                ) {
+                    onboarding.skip()
+                }
+                .background(
+                    GeometryReader { cardProxy in
+                        Color.clear.preference(
+                            key: OnboardingTooltipSizePreferenceKey.self,
+                            value: cardProxy.size
+                        )
+                    }
+                )
+                .onPreferenceChange(OnboardingTooltipSizePreferenceKey.self) { newSize in
+                    cardSize = newSize
+                }
+                .position(tooltipCenter)
+                .transition(.scale(scale: 0.92).combined(with: .opacity))
+                .zIndex(1000)
+            }
+        }
+        .animation(.spring(response: 0.35, dampingFraction: 0.82), value: onboarding?.currentStep)
+        .animation(.spring(response: 0.35, dampingFraction: 0.82), value: onboarding?.showPopover)
+    }
+
+    private func tooltipCenter(
+        for targetFrame: CGRect,
+        placement: UnifiedBubbleWithArrowShape.ArrowPlacement,
+        cardSize: CGSize,
+        containerSize: CGSize
+    ) -> CGPoint {
+        let safetyMargin: CGFloat = 16
+        let spacing: CGFloat = 8
+        let halfWidth = cardSize.width / 2
+        let halfHeight = cardSize.height / 2
+
+        let x = min(
+            max(targetFrame.midX, safetyMargin + halfWidth),
+            max(safetyMargin + halfWidth, containerSize.width - safetyMargin - halfWidth)
+        )
+
+        let unclampedY: CGFloat
+        switch placement {
+        case .bottom:
+            unclampedY = targetFrame.minY - spacing - halfHeight
+        case .top:
+            unclampedY = targetFrame.maxY + spacing + halfHeight
+        }
+
+        let y = min(
+            max(unclampedY, safetyMargin + halfHeight),
+            max(safetyMargin + halfHeight, containerSize.height - safetyMargin - halfHeight)
+        )
+
+        return CGPoint(x: x, y: y)
+    }
+}
+
 /// A premium glassmorphic popover card used for onboarding tooltips.
 /// Matches CAOCAP's dark, material-blurred visual language.
 struct OnboardingPopoverCard: View {
