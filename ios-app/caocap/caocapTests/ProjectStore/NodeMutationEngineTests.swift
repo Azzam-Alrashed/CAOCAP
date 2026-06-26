@@ -24,6 +24,7 @@ final class NodeMutationEngineTests: XCTestCase {
         XCTAssertEqual(nodes[0].icon, NodeType.miniApp.defaultIcon)
         XCTAssertEqual(nodes[0].subtitle, "Tap to run, build, and configure this mini-app.")
         XCTAssertNotNil(nodes[0].miniApp)
+        XCTAssertTrue(nodes[0].miniApp?.srsText.contains("Make this button remember") ?? false)
         XCTAssertFalse(nodes[0].miniApp?.codeText.isEmpty ?? true)
         XCTAssertTrue(compileCalled)
     }

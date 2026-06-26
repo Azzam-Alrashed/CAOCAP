@@ -47,8 +47,9 @@ struct caocapTests {
         #expect(text.contains("## Why It Matters"))
         #expect(text.contains("## Core Flow"))
         #expect(text.contains("## Acceptance Checks"))
-        #expect(text.contains("CoCaptain has enough context"))
-        #expect(miniApp.srsReadinessState == .needsClarification)
+        #expect(text.contains("Make this button remember"))
+        #expect(text.contains("state"))
+        #expect(miniApp.srsReadinessState == .implementationReady)
     }
 
     @Test func defaultProjectDoesNotAutoTriggerNodeAgents() throws {
