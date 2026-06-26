@@ -112,6 +112,8 @@ struct RemoteConfigMinimumVersionProvider: AppMinimumVersionProviding {
     }
 }
 
+/// The central coordinator that compares the installed app version against
+/// the remote minimum version requirement to determine if a forced update is necessary.
 @MainActor
 @Observable
 final class AppUpdateService {

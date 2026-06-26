@@ -225,6 +225,8 @@ public final class LLMService {
         }
     }
 
+    /// The base system instruction loaded into the Gemini context window.
+    /// Dictates the persona, rules of engagement, and XML output schemas.
     private static let systemInstructionText = """
         You are Co-Captain, a spatial programming assistant for the CAOCAP platform.
         You can request app actions with the `request_app_action` function and request node edits with a `cocaptain_actions` XML block. The app validates every requested action before execution.
@@ -249,6 +251,8 @@ public final class LLMService {
         - Implement persistence with Mini-App `section="code"` `node_edits` using the Firestore compat instance on `window.__caocapFirestore` (never invent a second `initializeApp` in JS). Firebase config lives inside the Mini-App's Firebase tool, not in a separate node.
         """
 
+    /// Creates and configures a new `GenerativeModel` instance with the required
+    /// tools and system instructions for CoCaptain agent execution.
     private func makeModel(modelName: String) -> GenerativeModel {
         FirebaseAI.firebaseAI(backend: .googleAI()).generativeModel(
             modelName: modelName,
@@ -263,6 +267,7 @@ public final class LLMService {
         )
     }
 
+    /// The tool definition that exposes local CAOCAP app actions to the LLM.
     private static let requestAppActionDeclaration = FunctionDeclaration(
         name: CoCaptainFunctionCallAgentAdapter.requestAppActionName,
         description: "Requests a CAOCAP app action. The app validates and either executes or stages the action for user review.",
