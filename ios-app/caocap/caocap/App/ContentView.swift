@@ -44,6 +44,8 @@ struct ContentView: View {
     @State private var coCaptainDetent: PresentationDetent = .medium
     @State private var coCaptainStartsLarge = false
     @State private var coCaptainAllowsMediumDetent = true
+    /// The baseline count of completed CoCaptain assistant responses. Used during onboarding to wait
+    /// until the assistant successfully responds to the user's initial prompt before advancing the step.
     @State private var onboardingInitialCoCaptainResponseBaseline: Int?
 
     var body: some View {
@@ -415,12 +417,16 @@ struct ContentView: View {
         coCaptain.setPresented(true)
     }
 
+    /// Checks if the user is currently on the onboarding step to submit a prompt, and if so,
+    /// records the current response count baseline and hides the onboarding popover.
     private func beginInitialCoCaptainOnboardingWaitIfNeeded() {
         guard onboarding.currentStep == .submitCoCaptainPrompt else { return }
         onboardingInitialCoCaptainResponseBaseline = coCaptain.completedAssistantResponseCount
         onboarding.hidePopoverForCurrentStep()
     }
 
+    /// Advances the onboarding flow from the prompt submission step once CoCaptain's response count
+    /// exceeds the recorded baseline (indicating that the model finished its response).
     private func advanceInitialCoCaptainOnboardingIfReady() {
         guard let baseline = onboardingInitialCoCaptainResponseBaseline,
               onboarding.currentStep == .submitCoCaptainPrompt,

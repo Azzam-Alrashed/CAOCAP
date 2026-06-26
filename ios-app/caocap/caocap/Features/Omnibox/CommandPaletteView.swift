@@ -415,6 +415,7 @@ struct CommandPaletteView: View {
         }
     }
 
+    /// A button that clears the current query text in the Omnibox.
     private var clearQueryButton: some View {
         Button {
             viewModel.query = ""
@@ -426,11 +427,13 @@ struct CommandPaletteView: View {
         .accessibilityLabel("Clear Omnibox query")
     }
 
+    /// A button that toggles speech dictation (recording/stopping) for the Omnibox query.
     private var omniboxMicButton: some View {
         Button {
             if dictation.isRecording {
                 dictation.stop()
             } else {
+                // Remove focus from the keyboard search bar to avoid conflict with dictation input
                 isFocused = false
                 Task {
                     await dictation.start(
@@ -453,6 +456,7 @@ struct CommandPaletteView: View {
         }
     }
 
+    /// A context menu view listing the available localization languages for speech recognition.
     @ViewBuilder
     private var dictationLocaleMenu: some View {
         ForEach(DictationLocaleOption.allCases) { option in
@@ -471,6 +475,7 @@ struct CommandPaletteView: View {
         }
     }
 
+    /// A label displaying dictation error messages when permissions are missing or service is unavailable.
     @ViewBuilder
     private var dictationErrorView: some View {
         if let errorMessage = dictation.errorMessage {
