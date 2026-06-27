@@ -59,12 +59,40 @@ final class PublishHTMLCompilerTests: XCTestCase {
     }
 }
 
+final class GitHubPagesServiceTests: XCTestCase {
+    func testPublishedURLUsesProjectSiteFormat() {
+        XCTAssertEqual(
+            GitHubPagesService.publishedURL(owner: "Builder", repo: "caocap-pac-man-abc123"),
+            "https://builder.github.io/caocap-pac-man-abc123/"
+        )
+    }
+
+    func testFirebaseHostUsesOwnerSubdomain() {
+        XCTAssertEqual(GitHubPagesService.firebaseHost(owner: "Builder"), "builder.github.io")
+    }
+
+    func testPrivatePagesErrorDetection() {
+        XCTAssertTrue(
+            GitHubPagesService.isPrivatePagesError(
+                statusCode: 422,
+                body: "{\"message\":\"GitHub Pages is not available for private repositories\"}"
+            )
+        )
+        XCTAssertFalse(
+            GitHubPagesService.isPrivatePagesError(
+                statusCode: 500,
+                body: "{\"message\":\"Internal server error\"}"
+            )
+        )
+    }
+}
+
 final class MiniAppPublishMetadataTests: XCTestCase {
     func testMiniAppStateEncodesPublishMetadata() throws {
         let state = MiniAppState(
             codeText: "<h1>Hi</h1>",
-            publishURL: "https://example.vercel.app",
-            githubRepoOwner: "dev",
+            publishURL: "https://builder.github.io/caocap-demo-abc123/",
+            githubRepoOwner: "builder",
             githubRepoName: "caocap-demo-abc123",
             githubRepoId: 42,
             publishedAt: Date(timeIntervalSince1970: 1_700_000_000),
@@ -74,8 +102,8 @@ final class MiniAppPublishMetadataTests: XCTestCase {
         let data = try JSONEncoder().encode(state)
         let decoded = try JSONDecoder().decode(MiniAppState.self, from: data)
 
-        XCTAssertEqual(decoded.publishURL, "https://example.vercel.app")
-        XCTAssertEqual(decoded.githubRepoOwner, "dev")
+        XCTAssertEqual(decoded.publishURL, "https://builder.github.io/caocap-demo-abc123/")
+        XCTAssertEqual(decoded.githubRepoOwner, "builder")
         XCTAssertEqual(decoded.githubRepoName, "caocap-demo-abc123")
         XCTAssertEqual(decoded.githubRepoId, 42)
         XCTAssertEqual(decoded.isPublishRepoPrivate, false)
@@ -114,9 +142,13 @@ final class PublishCoordinatorGateTests: XCTestCase {
 
     func testFirebaseHostnameExtraction() {
         XCTAssertEqual(
-            PublishCoordinator.firebaseHostname(from: "https://my-app.vercel.app"),
-            "my-app.vercel.app"
+            PublishCoordinator.firebaseHostname(from: "https://builder.github.io/caocap-demo/"),
+            "builder.github.io"
         )
+    }
+
+    func testFirebaseHostForOwner() {
+        XCTAssertEqual(PublishCoordinator.firebaseHost(forOwner: "Builder"), "builder.github.io")
     }
 }
 
@@ -132,7 +164,7 @@ final class PublishMetadataMutationTests: XCTestCase {
         engine.updateMiniAppPublishMetadata(
             nodes: &nodes,
             id: nodeID,
-            publishURL: "https://demo.vercel.app",
+            publishURL: "https://builder.github.io/caocap-app-abc123/",
             githubRepoOwner: "builder",
             githubRepoName: "caocap-app-abc123",
             githubRepoId: 99,
@@ -140,7 +172,7 @@ final class PublishMetadataMutationTests: XCTestCase {
         )
 
         XCTAssertTrue(saveRequested)
-        XCTAssertEqual(nodes[0].miniApp?.publishURL, "https://demo.vercel.app")
+        XCTAssertEqual(nodes[0].miniApp?.publishURL, "https://builder.github.io/caocap-app-abc123/")
         XCTAssertEqual(nodes[0].miniApp?.githubRepoOwner, "builder")
         XCTAssertEqual(nodes[0].miniApp?.githubRepoName, "caocap-app-abc123")
         XCTAssertEqual(nodes[0].miniApp?.githubRepoId, 99)

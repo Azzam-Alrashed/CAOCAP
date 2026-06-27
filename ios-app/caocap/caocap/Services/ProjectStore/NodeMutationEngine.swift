@@ -445,7 +445,7 @@ final class NodeMutationEngine {
         }
     }
 
-    /// Persists GitHub / Vercel publish metadata for a Mini-App node after a successful publish.
+    /// Persists GitHub Pages publish metadata for a Mini-App node after a successful publish.
     public func updateMiniAppPublishMetadata(
         nodes: inout [SpatialNode],
         id: UUID,

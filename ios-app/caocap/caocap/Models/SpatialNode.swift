@@ -88,13 +88,13 @@ public struct MiniAppState: Codable, Equatable, Hashable {
     public var firebaseConfigText: String
     /// Optional Firestore collection/document path used when the mini-app integrates with Firestore.
     public var firebaseFirestorePath: String?
-    /// Live HTTPS URL after publishing to Vercel.
+    /// Live HTTPS URL after publishing to GitHub Pages.
     public var publishURL: String?
     /// GitHub username that owns the published repository.
     public var githubRepoOwner: String?
     /// GitHub repository name used for publish.
     public var githubRepoName: String?
-    /// GitHub repository numeric id for Vercel gitSource.
+    /// GitHub repository numeric id used for republish identity.
     public var githubRepoId: Int?
     /// Timestamp of the most recent successful publish.
     public var publishedAt: Date?
