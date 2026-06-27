@@ -7,6 +7,7 @@ import OSLog
 public final class ProjectSaveController {
     public var isSaving: Bool = false
     private var activeVisualSavesCount: Int = 0
+    private var activeWritesCount: Int = 0
     private var saveTask: Task<Void, Never>?
     
     private let persistence: ProjectPersistenceService
@@ -19,6 +20,7 @@ public final class ProjectSaveController {
     }
     
     public func save(snapshot: ProjectSnapshot, fileName: String, showIndicator: Bool = true) {
+        activeWritesCount += 1
         if showIndicator {
             activeVisualSavesCount += 1
             isSaving = true
@@ -37,6 +39,7 @@ public final class ProjectSaveController {
             
             await MainActor.run { [weak self] in
                 guard let self else { return }
+                self.activeWritesCount = max(0, self.activeWritesCount - 1)
                 if showIndicator {
                     self.activeVisualSavesCount = max(0, self.activeVisualSavesCount - 1)
                     if self.activeVisualSavesCount == 0 {
@@ -44,6 +47,20 @@ public final class ProjectSaveController {
                     }
                 }
             }
+        }
+    }
+
+    public func cancelPendingSave() {
+        saveTask?.cancel()
+        saveTask = nil
+        if activeVisualSavesCount == 0 {
+            isSaving = false
+        }
+    }
+
+    public func waitForActiveWrites() async {
+        while activeWritesCount > 0 {
+            try? await Task.sleep(for: .milliseconds(20))
         }
     }
     

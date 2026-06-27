@@ -3,6 +3,7 @@ import SwiftUI
 /// Presents global sheets driven by `AppSessionCoordinator` presentation flags.
 struct AppSheetsModifier: ViewModifier {
     @Bindable var session: AppSessionCoordinator
+    @Environment(AuthenticationManager.self) private var authManager
 
     func body(content: Content) -> some View {
         content
@@ -37,8 +38,17 @@ struct AppSheetsModifier: ViewModifier {
                     .presentationBackground(Color(hex: "050505"))
             }
             .sheet(isPresented: $session.showingSettings) {
-                SettingsView()
-                    .environment(session.onboarding)
+                SettingsView(
+                    onRestartOnboarding: {
+                        session.restartOnboarding()
+                    },
+                    onRestartTutorial: {
+                        session.restartTutorial()
+                    },
+                    onEraseEverything: {
+                        try await session.eraseEverything(authManager: authManager)
+                    }
+                )
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
             }

@@ -2,7 +2,10 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(OnboardingCoordinator.self) private var onboarding
+
+    var onRestartOnboarding: () -> Void = {}
+    var onRestartTutorial: () -> Void = {}
+    var onEraseEverything: () async throws -> Void = {}
     
     @AppStorage("app_language") private var selectedLanguage = "English"
     @AppStorage("app_theme") private var selectedTheme = "System"
@@ -15,6 +18,9 @@ struct SettingsView: View {
     @AppStorage("cocaptain.hfToken") private var hfToken = ""
 
     @State private var localModelManager = LocalMLXModelManager.shared
+    @State private var showingEraseConfirmation = false
+    @State private var isErasingEverything = false
+    @State private var eraseErrorMessage: String?
 
     let languages = LocalizationManager.supportedLanguages
     let themes = ["System", "Light", "Dark"]
@@ -258,17 +264,42 @@ struct SettingsView: View {
                                 }
                             }
                             
-                            // MARK: - Tutorial
-                            SettingsSection("Tutorial") {
+                            // MARK: - Onboarding
+                            SettingsSection("Onboarding") {
                                 SettingsRow(
                                     icon: "arrow.clockwise.circle",
-                                    title: "Restart Interactive Tutorial",
-                                    subtitle: "Reset and start first-run walkthrough",
+                                    title: "Restart Onboarding",
+                                    subtitle: "Start again from the intro screens",
                                     color: .blue,
                                     action: {
-                                        onboarding.reset()
-                                        onboarding.startIfNeeded()
+                                        onRestartOnboarding()
                                         dismiss()
+                                    }
+                                )
+
+                                Divider().padding(.leading, 56).opacity(0.3)
+
+                                SettingsRow(
+                                    icon: "graduationcap.fill",
+                                    title: "Restart Tutorial",
+                                    subtitle: "Return to the guided app walkthrough",
+                                    color: .cyan,
+                                    action: {
+                                        onRestartTutorial()
+                                        dismiss()
+                                    }
+                                )
+                            }
+
+                            SettingsSection("Danger Zone") {
+                                SettingsRow(
+                                    icon: "trash.fill",
+                                    title: "Erase Everything",
+                                    subtitle: "Delete all local data and start like a fresh install",
+                                    color: .red,
+                                    action: {
+                                        guard !isErasingEverything else { return }
+                                        showingEraseConfirmation = true
                                     }
                                 )
                             }
@@ -317,6 +348,38 @@ struct SettingsView: View {
                 }
             }
             .preferredColorScheme(currentColorScheme)
+            .confirmationDialog(
+                "Erase Everything?",
+                isPresented: $showingEraseConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Erase Everything", role: .destructive) {
+                    isErasingEverything = true
+                    Task { @MainActor in
+                        do {
+                            try await onEraseEverything()
+                            dismiss()
+                        } catch {
+                            isErasingEverything = false
+                            eraseErrorMessage = error.localizedDescription
+                        }
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This permanently deletes every local canvas, checkpoint, preference, onboarding answer, and downloaded model, then signs you out. Your cloud account and App Store purchases are not deleted.")
+            }
+            .alert(
+                "Couldn’t Erase Everything",
+                isPresented: Binding(
+                    get: { eraseErrorMessage != nil },
+                    set: { if !$0 { eraseErrorMessage = nil } }
+                )
+            ) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(eraseErrorMessage ?? "Please try again.")
+            }
         }
     }
     
