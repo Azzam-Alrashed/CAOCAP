@@ -66,6 +66,9 @@ GoogleService-Info.plist
 firebase-debug.log
 .firebase/
 
+# CAOCAP publish credentials (copy from Secrets.plist.example)
+ios-app/caocap/caocap/Resources/Config/Secrets.plist
+
 # macOS
 .DS_Store
 
