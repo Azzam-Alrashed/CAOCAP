@@ -15,6 +15,47 @@ struct CoCaptainAgentTests {
         #expect(instructions?.contains("Match the language used by the user") == true)
     }
 
+    @Test func onboardingBuildHandoffPurposeDefinesFocusedPromptInstructions() {
+        let instructions = CoCaptainTurnPurpose.onboardingBuildHandoff.promptInstructions
+
+        #expect(instructions?.contains("initial direction for what they want to build") == true)
+        #expect(instructions?.contains("20 to 50 words") == true)
+        #expect(instructions?.contains("transition back to the canvas") == true)
+        #expect(instructions?.contains("Do not ask a question") == true)
+        #expect(instructions?.contains("Do not request app actions") == true)
+        #expect(instructions?.contains("invoke tools") == true)
+        #expect(instructions?.contains("emit a `cocaptain_actions` block") == true)
+        #expect(instructions?.contains("Match the language used by the user") == true)
+    }
+
+    @Test func turnCompletionShouldAdvanceToCanvasDismissalOnlyForSuccessfulHandoff() {
+        let handoffSuccess = CoCaptainTurnCompletion(
+            turnID: UUID(),
+            purpose: .onboardingBuildHandoff,
+            succeeded: true
+        )
+        let handoffFailure = CoCaptainTurnCompletion(
+            turnID: UUID(),
+            purpose: .onboardingBuildHandoff,
+            succeeded: false
+        )
+        let welcomeSuccess = CoCaptainTurnCompletion(
+            turnID: UUID(),
+            purpose: .onboardingWelcome,
+            succeeded: true
+        )
+        let standardSuccess = CoCaptainTurnCompletion(
+            turnID: UUID(),
+            purpose: .standard,
+            succeeded: true
+        )
+
+        #expect(handoffSuccess.shouldAdvanceToCanvasDismissal)
+        #expect(!handoffFailure.shouldAdvanceToCanvasDismissal)
+        #expect(!welcomeSuccess.shouldAdvanceToCanvasDismissal)
+        #expect(!standardSuccess.shouldAdvanceToCanvasDismissal)
+    }
+
     @MainActor
     @Test func projectContextIncludesMiniAppsAndExcludesCompiledPreview() throws {
         let store = makeStore()
@@ -774,6 +815,23 @@ struct CoCaptainAgentTests {
     }
 
     @MainActor
+    @Test func coordinatorForwardsOnboardingBuildHandoffPurpose() async throws {
+        let llm = TestLLMClient(
+            response: "Great idea. Let's head back to the canvas and start building."
+        )
+        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
+
+        _ = try await coordinator.run(
+            userMessage: "a todo app",
+            store: makeStore(),
+            dispatcher: nil,
+            purpose: .onboardingBuildHandoff
+        ) { _ in }
+
+        #expect(llm.receivedPurposes == [.onboardingBuildHandoff])
+    }
+
+    @MainActor
     @Test func coordinatorRetriesSRSRequestsWithoutNodeEdits() async throws {
         let dispatcher = TestActionDispatcher()
         let llm = TestLLMClient(
@@ -1318,6 +1376,115 @@ struct CoCaptainAgentTests {
         #expect(!vm.isThinking)
         #expect(vm.completedAssistantResponseCount == 0)
         #expect(vm.successfulAssistantResponseCount == 0)
+    }
+
+    @MainActor
+    @Test func cancelledOnboardingBuildHandoffRecordsFailedCompletion() async throws {
+        let coordinator = CoCaptainAgentCoordinator(llmClient: ThrowingLLMClient(error: CancellationError()))
+        let vm = CoCaptainViewModel(agentCoordinator: coordinator)
+
+        vm.sendMessage("a todo app", purpose: .onboardingBuildHandoff)
+
+        for _ in 0..<20 where vm.isThinking {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+
+        #expect(!vm.isThinking)
+        #expect(vm.completedAssistantResponseCount == 0)
+        #expect(vm.successfulAssistantResponseCount == 0)
+        #expect(vm.lastTurnCompletion?.purpose == .onboardingBuildHandoff)
+        #expect(vm.lastTurnCompletion?.succeeded == false)
+        #expect(vm.lastTurnCompletion?.shouldAdvanceToCanvasDismissal == false)
+    }
+
+    @MainActor
+    @Test func successfulOnboardingBuildHandoffRecordsTurnCompletion() async throws {
+        let llm = TestLLMClient(
+            response: "A todo app sounds great. Let's head back to the canvas and start building."
+        )
+        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
+        let vm = CoCaptainViewModel(agentCoordinator: coordinator)
+
+        vm.sendMessage("a todo app", purpose: .onboardingBuildHandoff)
+
+        for _ in 0..<20 where vm.isThinking {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+
+        #expect(!vm.isThinking)
+        #expect(vm.lastTurnCompletion?.purpose == .onboardingBuildHandoff)
+        #expect(vm.lastTurnCompletion?.succeeded == true)
+        #expect(vm.lastTurnCompletion?.shouldAdvanceToCanvasDismissal == true)
+        #expect(llm.receivedPurposes == [.onboardingBuildHandoff])
+    }
+
+    @MainActor
+    @Test func failedOnboardingBuildHandoffShowsRetryMessageAndFailedCompletion() async throws {
+        let llm = TestLLMClient(response: "")
+        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
+        let vm = CoCaptainViewModel(agentCoordinator: coordinator)
+
+        vm.sendMessage("a todo app", purpose: .onboardingBuildHandoff)
+
+        for _ in 0..<20 where vm.isThinking {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+
+        #expect(vm.lastTurnCompletion?.purpose == .onboardingBuildHandoff)
+        #expect(vm.lastTurnCompletion?.succeeded == false)
+        #expect(vm.lastTurnCompletion?.shouldAdvanceToCanvasDismissal == false)
+        #expect(vm.successfulAssistantResponseCount == 0)
+        #expect(vm.items.contains { item in
+            guard case .message(let bubble) = item.content else { return false }
+            return bubble.text.contains("Please try sending your idea again.")
+        })
+    }
+
+    @MainActor
+    @Test func failedOnboardingBuildHandoffCanRetryWithoutCountingFailureAsSuccess() async throws {
+        let llm = FailingThenSucceedingLLMClient(failureCount: 1)
+        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
+        let vm = CoCaptainViewModel(agentCoordinator: coordinator)
+
+        vm.sendMessage("a todo app", purpose: .onboardingBuildHandoff)
+
+        for _ in 0..<20 where vm.isThinking {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+
+        #expect(vm.completedAssistantResponseCount == 1)
+        #expect(vm.successfulAssistantResponseCount == 0)
+        #expect(vm.lastTurnCompletion?.succeeded == false)
+
+        vm.sendMessage("a todo app again", purpose: .onboardingBuildHandoff)
+
+        for _ in 0..<20 where vm.isThinking {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+
+        #expect(vm.completedAssistantResponseCount == 2)
+        #expect(vm.successfulAssistantResponseCount == 1)
+        #expect(vm.lastTurnCompletion?.purpose == .onboardingBuildHandoff)
+        #expect(vm.lastTurnCompletion?.succeeded == true)
+        #expect(vm.lastTurnCompletion?.shouldAdvanceToCanvasDismissal == true)
+        #expect(llm.receivedPurposes.allSatisfy { $0 == .onboardingBuildHandoff })
+    }
+
+    @MainActor
+    @Test func standardTurnCompletionDoesNotAdvanceToCanvasDismissal() async throws {
+        let llm = TestLLMClient(response: "Here is how I can help.")
+        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
+        let vm = CoCaptainViewModel(agentCoordinator: coordinator)
+
+        vm.sendMessage("help me", purpose: .standard)
+
+        for _ in 0..<20 where vm.isThinking {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+
+        #expect(vm.lastTurnCompletion?.purpose == .standard)
+        #expect(vm.lastTurnCompletion?.succeeded == true)
+        #expect(vm.lastTurnCompletion?.shouldAdvanceToCanvasDismissal == false)
     }
 
     @MainActor

@@ -38,8 +38,8 @@ enum OnboardingManifest {
         ),
         OnboardingStepContent(
             step: .chatCoCaptain,
-            title: "Meet Your CoCaptain",
-            message: "CoCaptain is here. Type a message here to build, refine, or explain code.",
+            title: "Share Your Idea",
+            message: "Tell CoCaptain what you'd like to build.",
             icon: "bubble.left.and.text.bubble.right"
         ),
         OnboardingStepContent(

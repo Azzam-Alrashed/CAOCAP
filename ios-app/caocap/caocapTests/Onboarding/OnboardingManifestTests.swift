@@ -54,4 +54,44 @@ struct OnboardingManifestTests {
         #expect(onboarding.currentStep == .chatCoCaptain)
         #expect(!onboarding.showPopover)
     }
+
+    @MainActor
+    @Test func successfulHandoffCompletionAdvancesToDismissStep() {
+        let onboarding = OnboardingCoordinator()
+        onboarding.currentStep = .chatCoCaptain
+
+        let completion = CoCaptainTurnCompletion(
+            turnID: UUID(),
+            purpose: .onboardingBuildHandoff,
+            succeeded: true
+        )
+
+        #expect(completion.shouldAdvanceToCanvasDismissal)
+
+        if completion.shouldAdvanceToCanvasDismissal {
+            onboarding.completeCurrentStep()
+        }
+
+        #expect(onboarding.currentStep == .dismissCoCaptain)
+    }
+
+    @MainActor
+    @Test func failedHandoffCompletionDoesNotAdvanceFromChatStep() {
+        let onboarding = OnboardingCoordinator()
+        onboarding.currentStep = .chatCoCaptain
+
+        let completion = CoCaptainTurnCompletion(
+            turnID: UUID(),
+            purpose: .onboardingBuildHandoff,
+            succeeded: false
+        )
+
+        #expect(!completion.shouldAdvanceToCanvasDismissal)
+
+        if completion.shouldAdvanceToCanvasDismissal {
+            onboarding.completeCurrentStep()
+        }
+
+        #expect(onboarding.currentStep == .chatCoCaptain)
+    }
 }

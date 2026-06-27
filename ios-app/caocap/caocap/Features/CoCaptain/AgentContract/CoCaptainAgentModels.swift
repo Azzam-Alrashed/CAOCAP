@@ -8,6 +8,7 @@ import Foundation
 public enum CoCaptainTurnPurpose: Hashable {
     case standard
     case onboardingWelcome
+    case onboardingBuildHandoff
 
     var promptInstructions: String? {
         switch self {
@@ -26,7 +27,51 @@ public enum CoCaptainTurnPurpose: Hashable {
             - Do not request app actions, propose edits, or emit a `cocaptain_actions` block.
             - Do not claim the canvas contains anything that is not present in the supplied context.
             """
+        case .onboardingBuildHandoff:
+            return """
+            Onboarding build handoff objective:
+            - Treat the user's message as their initial direction for what they want to build.
+            - In 20 to 50 words, briefly reflect their idea without inventing details.
+            - Confirm that you are ready to begin and end with a natural transition back to the canvas to build it.
+            - Match the language used by the user.
+            - Do not ask a question or request more information.
+            - Do not mention onboarding, internal tools, nodes, SRS, patches, XML, or Firebase.
+            - Do not request app actions, propose edits, invoke tools, or emit a `cocaptain_actions` block.
+            """
         }
+    }
+
+    var isOnboardingConversation: Bool {
+        switch self {
+        case .standard:
+            return false
+        case .onboardingWelcome, .onboardingBuildHandoff:
+            return true
+        }
+    }
+}
+
+/// The terminal outcome of one specific CoCaptain turn.
+///
+/// The turn purpose lets onboarding react only to the response it initiated,
+/// instead of inferring intent from a global response counter.
+public struct CoCaptainTurnCompletion: Equatable {
+    public let turnID: UUID
+    public let purpose: CoCaptainTurnPurpose
+    public let succeeded: Bool
+
+    public init(
+        turnID: UUID,
+        purpose: CoCaptainTurnPurpose,
+        succeeded: Bool
+    ) {
+        self.turnID = turnID
+        self.purpose = purpose
+        self.succeeded = succeeded
+    }
+
+    var shouldAdvanceToCanvasDismissal: Bool {
+        purpose == .onboardingBuildHandoff && succeeded
     }
 }
 
