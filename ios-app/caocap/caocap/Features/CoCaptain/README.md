@@ -22,15 +22,29 @@ Supporting services live outside this feature:
 1. The user sends a message through `CoCaptainViewModel`.
 2. Direct commands are resolved locally with `CommandIntentResolver` when possible.
 3. Otherwise, `CoCaptainAgentCoordinator` builds project context from the active `ProjectStore`.
-4. `LLMService` streams text back into the current assistant bubble.
-5. `CoCaptainAgentOutputAdapter` hides machine output while streaming and turns the final response into a directive.
-6. `CoCaptainAgentValidator` checks action IDs, action safety, node edit shape, and required agentic work.
-7. Safe actions are executed immediately through `AppActionDispatcher` only after validation passes.
-8. Mutating app actions and node edits become `ReviewBundleItem` entries.
-9. Applying a review item revalidates the base node text before writing changes to `ProjectStore`.
+4. `CoCaptainTurnPurpose` selects both prompt instructions and a turn execution policy.
+5. `LLMService` streams text back into the current assistant bubble.
+6. `CoCaptainAgentOutputAdapter` hides machine output while streaming and turns the final response into a directive.
+7. For agentic turns, `CoCaptainAgentValidator` checks action IDs, action safety, node edit shape, and required agentic work.
+8. Safe actions are executed immediately through `AppActionDispatcher` only after validation passes.
+9. Mutating app actions and node edits become `ReviewBundleItem` entries.
+10. Applying a review item revalidates the base node text before writing changes to `ProjectStore`.
 
 The core contract is human-in-the-loop code editing. Do not auto-apply node edits without explicit user approval.
 Free-usage and subscription prompts are product CTA timeline items, not review bundles.
+
+## Turn Execution Modes
+
+`CoCaptainTurnPurpose` maps to a `CoCaptainTurnExecutionPolicy` in `CoCaptainAgentModels.swift`. The coordinator reads policy flags instead of hardcoding onboarding exceptions.
+
+| Mode | Purposes | Structured XML | Agentic retry | Execute actions / review |
+|------|----------|----------------|---------------|--------------------------|
+| Agentic | `.standard` | Yes | Yes | Yes |
+| Conversational | `.onboardingWelcome`, `.onboardingBuildHandoff` | No | No | No — prose only |
+
+Conversational turns still receive canvas context and purpose-specific prompt instructions, but the agent contract block is omitted from the LLM prompt. If the model disobeys and emits `cocaptain_actions`, the coordinator ignores the payload and surfaces visible prose only.
+
+When adding a new turn purpose, declare its execution policy in the same enum switch as its prompt instructions.
 
 ## Structured Payload Contract
 

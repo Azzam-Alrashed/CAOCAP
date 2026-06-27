@@ -68,7 +68,6 @@ final class DictationController {
         }
 
         let request = SFSpeechAudioBufferRecognitionRequest()
-        request.shouldReportReportedPartialResults = false // Fallback compatibility
         request.shouldReportPartialResults = true
         recognitionRequest = request
         hasEndedAudio = false

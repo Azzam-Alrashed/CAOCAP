@@ -147,6 +147,11 @@ public class ProjectStore {
             showIndicator: showIndicator
         )
     }
+
+    public func prepareForDataReset() async {
+        saveController.cancelPendingSave()
+        await saveController.waitForActiveWrites()
+    }
     
     /// Schedules a save operation to run after a short delay (500ms).
     /// If another save is requested before the delay expires, the previous request is cancelled.
@@ -373,6 +378,15 @@ public class ProjectStore {
             at: center
         )
     }
+
+    /// Restores an app-owned node only when its stable identity is absent,
+    /// preserving any existing user edits to that node.
+    public func ensureNodeExists(_ node: SpatialNode) {
+        guard !nodes.contains(where: { $0.id == node.id }) else { return }
+        nodes.append(node)
+        requestSave(showIndicator: false)
+    }
+
     public func updateNodeTitle(id: UUID, title: String) {
         mutationEngine.updateNodeTitle(nodes: &nodes, id: id, title: title)
     }

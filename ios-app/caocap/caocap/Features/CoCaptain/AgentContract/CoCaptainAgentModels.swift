@@ -1,5 +1,118 @@
 import Foundation
 
+/// Describes the conversational objective for a CoCaptain turn.
+///
+/// Most turns use the standard agent behavior. The onboarding welcome keeps
+/// the response model-generated while giving the first interaction a focused
+/// UX outcome.
+public enum CoCaptainTurnPurpose: Hashable {
+    case standard
+    case onboardingWelcome
+    case onboardingBuildHandoff
+
+    var promptInstructions: String? {
+        switch self {
+        case .standard:
+            return nil
+        case .onboardingWelcome:
+            return """
+            Onboarding welcome objective:
+            - This is the user's first CoCaptain interaction during onboarding.
+            - Respond naturally to the user's greeting in 40 to 80 words.
+            - Briefly explain that CoCaptain helps them build a working app while helping them understand the important decisions.
+            - End with exactly one easy question asking what they would like to make.
+            - You may include at most two short example ideas to make answering easier.
+            - Match the language used by the user.
+            - Do not mention nodes, SRS, patches, XML, Firebase, internal tools, or implementation details.
+            - Do not request app actions, propose edits, or emit a `cocaptain_actions` block.
+            - Do not claim the canvas contains anything that is not present in the supplied context.
+            """
+        case .onboardingBuildHandoff:
+            return """
+            Onboarding build handoff objective:
+            - Treat the user's message as their initial direction for what they want to build.
+            - In 20 to 50 words, briefly reflect their idea without inventing details.
+            - Confirm that you are ready to begin and end with a natural transition back to the canvas to build it.
+            - Match the language used by the user.
+            - Do not ask a question or request more information.
+            - Do not mention onboarding, internal tools, nodes, SRS, patches, XML, or Firebase.
+            - Do not request app actions, propose edits, invoke tools, or emit a `cocaptain_actions` block.
+            """
+        }
+    }
+
+    /// Selects how the coordinator executes this turn: full agentic pipeline or prose-only chat.
+    var executionPolicy: CoCaptainTurnExecutionPolicy {
+        switch self {
+        case .standard:
+            return .agentic
+        case .onboardingWelcome, .onboardingBuildHandoff:
+            return .conversational
+        }
+    }
+
+    var isConversationalTurn: Bool {
+        executionPolicy.kind == .conversational
+    }
+}
+
+/// Controls whether a CoCaptain turn runs the full agent contract or stays conversational.
+///
+/// Derived from `CoCaptainTurnPurpose` so prompt instructions and execution behavior
+/// stay aligned in one place.
+struct CoCaptainTurnExecutionPolicy: Equatable {
+    enum Kind: Equatable {
+        case conversational
+        case agentic
+    }
+
+    let kind: Kind
+    let expectsStructuredResponse: Bool
+    let enforcesExecutableWork: Bool
+    let executesActions: Bool
+    let allowsAgenticRetry: Bool
+
+    static let agentic = CoCaptainTurnExecutionPolicy(
+        kind: .agentic,
+        expectsStructuredResponse: true,
+        enforcesExecutableWork: true,
+        executesActions: true,
+        allowsAgenticRetry: true
+    )
+
+    static let conversational = CoCaptainTurnExecutionPolicy(
+        kind: .conversational,
+        expectsStructuredResponse: false,
+        enforcesExecutableWork: false,
+        executesActions: false,
+        allowsAgenticRetry: false
+    )
+}
+
+/// The terminal outcome of one specific CoCaptain turn.
+///
+/// The turn purpose lets onboarding react only to the response it initiated,
+/// instead of inferring intent from a global response counter.
+public struct CoCaptainTurnCompletion: Equatable {
+    public let turnID: UUID
+    public let purpose: CoCaptainTurnPurpose
+    public let succeeded: Bool
+
+    public init(
+        turnID: UUID,
+        purpose: CoCaptainTurnPurpose,
+        succeeded: Bool
+    ) {
+        self.turnID = turnID
+        self.purpose = purpose
+        self.succeeded = succeeded
+    }
+
+    var shouldAdvanceToCanvasDismissal: Bool {
+        purpose == .onboardingBuildHandoff && succeeded
+    }
+}
+
 /// Identifies the portion of the canvas that a CoCaptain agent session targets.
 ///
 /// The scope controls both which context is serialised for the model and

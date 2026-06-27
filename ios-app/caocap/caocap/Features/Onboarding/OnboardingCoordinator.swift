@@ -10,8 +10,10 @@ public class OnboardingCoordinator {
     // MARK: - Step Definition
 
     public enum Step: Int, CaseIterable, Comparable {
+        /// User must open the Tutorial portal on the root canvas.
+        case openTutorial = 0
         /// User must tap the floating command button (FAB) to open the command palette.
-        case tapFAB = 0
+        case tapFAB
         /// User must type any text in the omnibox search field.
         case typeCoCaptainPrompt
         /// User must send the typed text to CoCaptain via the prompt row or Return key.
@@ -64,10 +66,10 @@ public class OnboardingCoordinator {
     // MARK: - Persistence
 
     /// Versioned key so a future onboarding redesign can show the new flow to existing users.
-    private static let completedKey = "onboarding_completed_v2"
+    private static let completedKey = "onboarding_completed_v3"
     /// Persists the last in-progress step so the coordinator could resume mid-flow if needed
     /// (currently always resets to the first step on re-launch for a coherent experience).
-    private static let stepKey = "onboarding_current_step_v2"
+    private static let stepKey = "onboarding_current_step_v3"
 
     public var isCompleted: Bool {
         get { UserDefaults.standard.bool(forKey: Self.completedKey) }
@@ -78,7 +80,7 @@ public class OnboardingCoordinator {
 
     public init() {}
 
-    /// Call once from `ContentView.onAppear` after the launch screen fades.
+    /// Call once from `AppSessionCoordinator.bootstrap` after the launch screen fades.
     public func startIfNeeded() {
         guard !isCompleted else { return }
 

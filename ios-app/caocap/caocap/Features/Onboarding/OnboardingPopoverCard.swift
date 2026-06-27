@@ -98,6 +98,8 @@ struct UnifiedBubbleWithArrowShape: Shape {
 }
 
 enum OnboardingTooltipAnchor: Hashable {
+    /// Anchored to the Tutorial portal on the root canvas.
+    case tutorialNode
     /// Anchored to the floating command button (FAB) at the bottom of the canvas.
     case floatingCommandButton
     /// Anchored to the omnibox search text field.
@@ -141,6 +143,14 @@ extension View {
         }
     }
 
+    /// Registers the canonical Tutorial node without teaching Canvas views about
+    /// the tooltip preference-key implementation.
+    func tutorialOnboardingAnchor(isEnabled: Bool) -> some View {
+        anchorPreference(key: OnboardingTooltipAnchorPreferenceKey.self, value: .bounds) {
+            isEnabled ? [.tutorialNode: $0] : [:]
+        }
+    }
+
     /// Reads all accumulated anchors and renders the tooltip overlay in a single pass,
     /// avoiding multiple layout passes that could cause jitter.
     func onboardingTooltipOverlay() -> some View {
@@ -153,6 +163,8 @@ extension View {
 extension OnboardingCoordinator.Step {
     var tooltipAnchor: OnboardingTooltipAnchor {
         switch self {
+        case .openTutorial:
+            return .tutorialNode
         case .tapFAB, .longPressFAB:
             return .floatingCommandButton
         case .typeCoCaptainPrompt:
@@ -170,7 +182,7 @@ extension OnboardingCoordinator.Step {
         switch self {
         case .dismissCoCaptain:
             return .top
-        case .tapFAB, .typeCoCaptainPrompt, .submitCoCaptainPrompt, .chatCoCaptain, .longPressFAB:
+        case .openTutorial, .tapFAB, .typeCoCaptainPrompt, .submitCoCaptainPrompt, .chatCoCaptain, .longPressFAB:
             return .bottom
         }
     }

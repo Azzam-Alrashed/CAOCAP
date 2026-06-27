@@ -128,7 +128,7 @@ struct caocapTests {
         #expect(onboarding.currentStep == nil)
         
         onboarding.startIfNeeded()
-        #expect(onboarding.currentStep == .tapFAB)
+        #expect(onboarding.currentStep == .openTutorial)
     }
 
     @MainActor
