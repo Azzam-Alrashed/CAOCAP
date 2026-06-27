@@ -14,6 +14,8 @@ struct MiniAppPublishView: View {
     @State private var showPaywall = false
     @State private var showSignIn = false
     @State private var showHomeScreenSteps = false
+    @State private var showConfetti = false
+    @State private var heroScale: CGFloat = 0.92
 
     private var currentNode: SpatialNode {
         store.nodes.first(where: { $0.id == node.id }) ?? node
@@ -23,164 +25,249 @@ struct MiniAppPublishView: View {
         coordinator.gate(isSubscribed: subscriptionManager.isSubscribed, isAnonymous: authManager.isAnonymous)
     }
 
+    private var presentation: PublishStagePresentation {
+        PublishStagePresentation.make(
+            gate: gate,
+            stage: coordinator.stage,
+            nodeTitle: currentNode.title,
+            hasGitHubToken: coordinator.hasGitHubToken,
+            hasExistingPublish: currentNode.miniApp?.publishURL != nil,
+            errorMessage: errorMessage
+        )
+    }
+
+    private var errorMessage: String? {
+        if case .error(let message) = coordinator.stage { return message }
+        return nil
+    }
+
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 24) {
-                    header
-                    content
+            ZStack {
+                Color(uiColor: .systemBackground).ignoresSafeArea()
+
+                Image("SpaceSketchBG")
+                    .resizable()
+                    .scaledToFill()
+                    .ignoresSafeArea()
+                    .opacity(0.55)
+
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 0) {
+                        stageHero
+                            .padding(.top, 12)
+
+                        VStack(spacing: 12) {
+                            Text(presentation.title)
+                                .font(.system(size: 28, weight: .heavy))
+                                .multilineTextAlignment(.center)
+                                .foregroundStyle(.primary)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .frame(maxWidth: .infinity)
+
+                            Text(presentation.subtitle)
+                                .font(.system(size: 17))
+                                .multilineTextAlignment(.center)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .frame(maxWidth: .infinity)
+                        }
+                        .padding(.top, 16)
+
+                        if hasStageActions {
+                            stageBody
+                                .padding(.top, 24)
+                        }
+
+                        Color.clear.frame(height: 32)
+                    }
+                    .padding(.horizontal, 24)
+                    .containerRelativeFrame(.horizontal)
                 }
-                .padding(24)
+
+                if showConfetti {
+                    PublishConfettiView()
+                        .transition(.opacity)
+                }
             }
-            .background(Color(uiColor: .systemBackground))
-            .navigationTitle("Publish")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { dismiss() }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Close", systemImage: "xmark") {
+                        dismiss()
+                    }
+                    .labelStyle(.iconOnly)
+                    .accessibilityLabel("Close")
                 }
             }
-            .sheet(isPresented: $showPaywall) {
-                PurchaseView()
+        }
+        .sheet(isPresented: $showPaywall) {
+            PurchaseView()
+        }
+        .sheet(isPresented: $showSignIn) {
+            SignInView()
+        }
+        .task {
+            await subscriptionManager.fetchProducts()
+        }
+        .onChange(of: coordinator.stage) { _, newStage in
+            if case .finished = newStage {
+                HapticsManager.shared.notification(.success)
+                showConfetti = true
+            } else {
+                showConfetti = false
             }
-            .sheet(isPresented: $showSignIn) {
-                SignInView()
-            }
-            .task {
-                await subscriptionManager.fetchProducts()
+            heroScale = 1
+        }
+        .onAppear {
+            heroScale = 1
+        }
+    }
+
+    private var hasStageActions: Bool {
+        switch gate {
+        case .requiresPro, .requiresSignIn:
+            return true
+        case .ready:
+            switch coordinator.stage {
+            case .connectingGitHub, .creatingRepo, .pushingCode, .enablingPages, .waitingForPages:
+                return false
+            default:
+                return true
             }
         }
     }
 
     @ViewBuilder
-    private var header: some View {
-        VStack(spacing: 8) {
-            Text(currentNode.title)
-                .font(.title2.bold())
-                .multilineTextAlignment(.center)
-            Text("Publish your Mini-App to a live URL, then add it to your Home Screen from Safari.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+    private var stageHero: some View {
+        Group {
+            if presentation.showSpinner {
+                ProgressView()
+                    .controlSize(.large)
+            } else {
+                Text(presentation.emoji)
+                    .font(.system(size: presentation.emojiSize))
+                    .scaleEffect(heroScale)
+                    .accessibilityHidden(true)
+            }
         }
+        .frame(height: presentation.emojiSize + 16)
+        .frame(maxWidth: .infinity)
     }
 
     @ViewBuilder
-    private var content: some View {
+    private var stageBody: some View {
         switch gate {
         case .requiresPro:
-            gateCard(
-                title: "CAOCAP Pro required",
-                message: "Publishing to the web is a Pro feature.",
-                buttonTitle: "View Pro",
-                action: { showPaywall = true }
-            )
+            gateActions(buttonTitle: "View Pro") { showPaywall = true }
         case .requiresSignIn:
-            gateCard(
-                title: "Sign in required",
-                message: "Create an account before publishing your Mini-App.",
-                buttonTitle: "Sign In",
-                action: { showSignIn = true }
-            )
+            gateActions(buttonTitle: "Sign In") { showSignIn = true }
         case .ready:
-            publishContent
+            readyStageBody
         }
     }
 
     @ViewBuilder
-    private var publishContent: some View {
-        if case .finished = coordinator.stage, let url = coordinator.publishURL ?? currentNode.miniApp?.publishURL {
-            finishedView(url: url)
-        } else if case .error(let message) = coordinator.stage {
-            errorView(message: message)
-        } else if coordinator.stage == .idle {
-            idleView
-        } else {
-            progressView
+    private var readyStageBody: some View {
+        switch coordinator.stage {
+        case .finished:
+            if let url = coordinator.publishURL ?? currentNode.miniApp?.publishURL {
+                finishedActions(url: url)
+            } else {
+                Button("Try Again") {
+                    coordinator.retry()
+                }
+                .publishPrimaryButton(tint: .red)
+            }
+        case .error:
+            Button("Try Again") {
+                coordinator.retry()
+            }
+            .publishPrimaryButton(tint: .red)
+        case .idle:
+            idleActions
+        default:
+            EmptyView()
         }
     }
 
-    private var idleView: some View {
+    private var idleActions: some View {
         VStack(spacing: 20) {
-            Toggle("Make repository private", isOn: $coordinator.isRepoPrivate)
-                .font(.subheadline)
+            if presentation.showPrivateToggle {
+                VStack(spacing: 8) {
+                    Toggle("Make repository private", isOn: $coordinator.isRepoPrivate)
+                        .font(.system(size: 16, weight: .medium))
+                        .tint(.blue)
 
-            Text("Private repos require GitHub Pro for GitHub Pages.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-
-            if !coordinator.hasGitHubToken {
-                Text("Connect GitHub to create a repository and publish your Mini-App.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
+                    Text("Private repos require GitHub Pro for GitHub Pages.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(16)
+                .frame(maxWidth: .infinity)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
 
             if let existingURL = currentNode.miniApp?.publishURL {
                 VStack(spacing: 6) {
                     Text("Last published")
-                        .font(.caption)
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
                     Text(existingURL)
                         .font(.caption.monospaced())
                         .multilineTextAlignment(.center)
+                        .lineLimit(3)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity)
+                        .textSelection(.enabled)
                 }
+                .padding(12)
+                .frame(maxWidth: .infinity)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
 
             Button(action: primaryAction) {
                 Text(primaryButtonTitle)
-                    .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
+            .publishPrimaryButton()
             .disabled(isBusy)
         }
-    }
-
-    private var progressView: some View {
-        VStack(spacing: 16) {
-            ProgressView()
-                .controlSize(.large)
-            Text(stageLabel)
-                .font(.headline)
-            Text(stageSubtitle)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-        }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 32)
     }
 
-    private func finishedView(url: String) -> some View {
+    private func finishedActions(url: String) -> some View {
         VStack(spacing: 16) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 48))
-                .foregroundStyle(.green)
-
-            Text("Your Mini-App is live!")
-                .font(.title3.bold())
+            Text("✨ 10 Launch Points")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(.primary)
 
             Text(url)
                 .font(.caption.monospaced())
                 .multilineTextAlignment(.center)
+                .lineLimit(4)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity)
                 .textSelection(.enabled)
+                .padding(12)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
 
             if PublishCoordinator.hasFirebaseConfig(currentNode) {
                 firebaseWarning(host: firebaseHostForWarning)
             }
-
-            Button("Copy Link") {
-                UIPasteboard.general.string = url
-            }
-            .buttonStyle(.bordered)
 
             Button("Open in Safari") {
                 if let link = URL(string: url) {
                     openURL(link)
                 }
             }
-            .buttonStyle(.borderedProminent)
+            .publishPrimaryButton()
+
+            Button("Copy Link") {
+                UIPasteboard.general.string = url
+                HapticsManager.shared.notification(.success)
+            }
+            .publishSecondaryButton()
 
             DisclosureGroup("Add to Home Screen", isExpanded: $showHomeScreenSteps) {
                 VStack(alignment: .leading, spacing: 8) {
@@ -191,46 +278,27 @@ struct MiniAppPublishView: View {
                 .padding(.top, 8)
             }
             .font(.subheadline)
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
 
             if currentNode.miniApp?.publishURL != nil {
                 Button("Publish Again") {
+                    showConfetti = false
                     coordinator.reset()
                 }
-                .font(.footnote)
+                .font(.footnote.weight(.medium))
+                .foregroundStyle(.secondary)
+                .padding(.top, 4)
             }
         }
+        .frame(maxWidth: .infinity)
     }
 
-    private func errorView(message: String) -> some View {
-        VStack(spacing: 16) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 44))
-                .foregroundStyle(.orange)
-            Text("Publishing failed")
-                .font(.title3.bold())
-            Text(message)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-            Button("Try Again") {
-                coordinator.retry()
-            }
-            .buttonStyle(.borderedProminent)
-        }
-    }
-
-    private func gateCard(title: String, message: String, buttonTitle: String, action: @escaping () -> Void) -> some View {
-        VStack(spacing: 16) {
-            Text(title)
-                .font(.title3.bold())
-            Text(message)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-            Button(buttonTitle, action: action)
-                .buttonStyle(.borderedProminent)
-        }
-        .padding(.vertical, 24)
+    private func gateActions(buttonTitle: String, action: @escaping () -> Void) -> some View {
+        Button(buttonTitle, action: action)
+            .publishPrimaryButton()
+            .padding(.top, 8)
     }
 
     private func firebaseWarning(host: String) -> some View {
@@ -281,41 +349,132 @@ struct MiniAppPublishView: View {
         }
     }
 
-    private var stageLabel: String {
-        switch coordinator.stage {
-        case .connectingGitHub: return "Connecting GitHub"
-        case .creatingRepo: return "Creating repository"
-        case .pushingCode: return "Uploading HTML"
-        case .enablingPages: return "Enabling GitHub Pages"
-        case .waitingForPages: return "Waiting for site to go live"
-        default: return "Publishing"
-        }
-    }
-
-    private var stageSubtitle: String {
-        switch coordinator.stage {
-        case .connectingGitHub:
-            return "Authorize CAOCAP to create a repository on your account."
-        case .creatingRepo:
-            return "Setting up your GitHub repository."
-        case .pushingCode:
-            return "Pushing index.html to GitHub."
-        case .enablingPages:
-            return "Turning on GitHub Pages for your repository."
-        case .waitingForPages:
-            return "This can take up to a minute on the first publish."
-        default:
-            return ""
-        }
-    }
-
     private func primaryAction() {
+        heroScale = 0.92
         Task {
             if !coordinator.hasGitHubToken {
                 await coordinator.connectGitHub()
             } else {
                 await coordinator.publish(node: currentNode, store: store)
             }
+        }
+    }
+}
+
+private struct PublishStagePresentation {
+    let emoji: String
+    let emojiSize: CGFloat
+    let title: String
+    let subtitle: String
+    let showSpinner: Bool
+    let showPrivateToggle: Bool
+
+    static func make(
+        gate: PublishGate,
+        stage: PublishStage,
+        nodeTitle: String,
+        hasGitHubToken: Bool,
+        hasExistingPublish: Bool,
+        errorMessage: String?
+    ) -> PublishStagePresentation {
+        switch gate {
+        case .requiresPro:
+            return PublishStagePresentation(
+                emoji: "⭐️",
+                emojiSize: 80,
+                title: "CAOCAP Pro required",
+                subtitle: "Publishing to the web is a Pro feature. Upgrade to launch your Mini-App.",
+                showSpinner: false,
+                showPrivateToggle: false
+            )
+        case .requiresSignIn:
+            return PublishStagePresentation(
+                emoji: "👋",
+                emojiSize: 80,
+                title: "Sign in to publish",
+                subtitle: "Create an account before sharing your Mini-App with the world.",
+                showSpinner: false,
+                showPrivateToggle: false
+            )
+        case .ready:
+            break
+        }
+
+        switch stage {
+        case .idle:
+            return PublishStagePresentation(
+                emoji: "🚀",
+                emojiSize: 80,
+                title: hasExistingPublish ? "Update your web app!" : "Publish your web app!",
+                subtitle: hasGitHubToken
+                    ? "Ship \(nodeTitle) to GitHub Pages, then add it to your Home Screen from Safari."
+                    : "Connect GitHub to publish \(nodeTitle) live on the web.",
+                showSpinner: false,
+                showPrivateToggle: hasGitHubToken
+            )
+        case .connectingGitHub:
+            return PublishStagePresentation(
+                emoji: "⏳",
+                emojiSize: 80,
+                title: "Connecting...",
+                subtitle: "Authenticating with your GitHub account.",
+                showSpinner: true,
+                showPrivateToggle: false
+            )
+        case .creatingRepo:
+            return PublishStagePresentation(
+                emoji: "⚙️",
+                emojiSize: 80,
+                title: "Preparing...",
+                subtitle: "Creating your repository on GitHub.",
+                showSpinner: true,
+                showPrivateToggle: false
+            )
+        case .pushingCode:
+            return PublishStagePresentation(
+                emoji: "📡",
+                emojiSize: 80,
+                title: "Uploading...",
+                subtitle: "Pushing your HTML into the repository.",
+                showSpinner: true,
+                showPrivateToggle: false
+            )
+        case .enablingPages:
+            return PublishStagePresentation(
+                emoji: "🌐",
+                emojiSize: 80,
+                title: "Enabling Pages...",
+                subtitle: "Turning on GitHub Pages for your repository.",
+                showSpinner: true,
+                showPrivateToggle: false
+            )
+        case .waitingForPages:
+            return PublishStagePresentation(
+                emoji: "🌍",
+                emojiSize: 80,
+                title: "Going live...",
+                subtitle: "Your web app will be ready in a moment.",
+                showSpinner: true,
+                showPrivateToggle: false
+            )
+        case .finished:
+            return PublishStagePresentation(
+                emoji: "🎉",
+                emojiSize: 88,
+                title: "You've published your web app!",
+                subtitle: "Your Mini-App is live on the web.",
+                showSpinner: false,
+                showPrivateToggle: false
+            )
+        case .error:
+            return PublishStagePresentation(
+                emoji: "⚠️",
+                emojiSize: 80,
+                title: "Publishing failed",
+                subtitle: errorMessage ?? "Something went wrong while publishing.",
+                showSpinner: false,
+                showPrivateToggle: false
+            )
         }
     }
 }

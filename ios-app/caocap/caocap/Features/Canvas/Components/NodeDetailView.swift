@@ -114,6 +114,7 @@ private struct MiniAppPreviewShell: View {
         }
         .sheet(isPresented: $showingPublish) {
             MiniAppPublishView(node: currentNode, store: store)
+                .presentationDragIndicator(.visible)
         }
         .sheet(item: $activeTool) { tool in
             switch tool {
