@@ -45,6 +45,7 @@ struct ContentView: View {
             .background(Color.black.ignoresSafeArea())
             .overlay { launchOverlay }
             .overlay { introOverlay }
+            .overlay { personalizationOverlay }
             .overlay { updatePromptOverlay }
             .modifier(AppSheetsModifier(session: session))
             .modifier(AppSessionLifecycle(
@@ -102,10 +103,23 @@ struct ContentView: View {
     private var introOverlay: some View {
         if !session.isLaunching && session.intro.shouldPresent {
             IntroView(coordinator: session.intro) {
-                session.onboarding.startIfNeeded()
+                session.finishIntroFlow()
             }
             .transition(.opacity)
             .zIndex(80)
+        }
+    }
+
+    @ViewBuilder
+    private var personalizationOverlay: some View {
+        if !session.isLaunching
+            && !session.intro.shouldPresent
+            && session.personalization.shouldPresent {
+            PersonalizationOnboardingView(coordinator: session.personalization) {
+                session.finishPersonalizationFlow()
+            }
+            .transition(.opacity)
+            .zIndex(75)
         }
     }
 

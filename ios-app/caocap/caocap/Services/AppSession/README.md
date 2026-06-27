@@ -15,6 +15,7 @@ Owns root-level session orchestration for the running app: workspace routing hoo
 - Add new app-level actions by registering handlers in `AppSessionCoordinator.configureActions()` and exposing them through the dispatcher.
 - Keep feature-specific UI in `Features/*`; keep cross-cutting session wiring here.
 - When onboarding or CoCaptain presentation rules grow, prefer extracting focused helpers over expanding the coordinator indefinitely.
+- First-run handoffs: `finishIntroFlow()` → personalization overlay; `finishPersonalizationFlow()` → interactive tutorial via `startInteractiveOnboardingIfNeeded()`.
 
 ## Related Tests
 
