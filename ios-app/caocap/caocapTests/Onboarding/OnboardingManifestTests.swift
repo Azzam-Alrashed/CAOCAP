@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import caocap
 
@@ -10,7 +11,8 @@ struct OnboardingManifestTests {
     }
 
     @Test func manifestDrivesStepLabelsAndProgression() {
-        #expect(OnboardingManifest.firstStep == .tapFAB)
+        #expect(OnboardingManifest.firstStep == .openTutorial)
+        #expect(OnboardingManifest.nextStep(after: .openTutorial) == .tapFAB)
         #expect(OnboardingManifest.nextStep(after: .tapFAB) == .typeCoCaptainPrompt)
         #expect(OnboardingManifest.nextStep(after: .typeCoCaptainPrompt) == .submitCoCaptainPrompt)
         #expect(OnboardingManifest.nextStep(after: .submitCoCaptainPrompt) == .chatCoCaptain)
@@ -18,9 +20,10 @@ struct OnboardingManifestTests {
         #expect(OnboardingManifest.nextStep(after: .dismissCoCaptain) == .longPressFAB)
         #expect(OnboardingManifest.nextStep(after: .longPressFAB) == nil)
 
-        #expect(OnboardingManifest.steps.count == 6)
-        #expect(OnboardingCoordinator.Step.tapFAB.stepLabel == "1 of 6")
-        #expect(OnboardingCoordinator.Step.longPressFAB.stepLabel == "6 of 6")
+        #expect(OnboardingManifest.steps.count == 7)
+        #expect(OnboardingCoordinator.Step.openTutorial.stepLabel == "1 of 7")
+        #expect(OnboardingCoordinator.Step.tapFAB.stepLabel == "2 of 7")
+        #expect(OnboardingCoordinator.Step.longPressFAB.stepLabel == "7 of 7")
     }
 
     @Test func manifestContentIsReadyForPopoverPresentation() {
@@ -35,6 +38,7 @@ struct OnboardingManifestTests {
     }
 
     @Test func everyOnboardingStepDeclaresASingleTooltipAnchor() {
+        #expect(OnboardingCoordinator.Step.openTutorial.tooltipAnchor == .tutorialNode)
         #expect(OnboardingCoordinator.Step.tapFAB.tooltipAnchor == .floatingCommandButton)
         #expect(OnboardingCoordinator.Step.typeCoCaptainPrompt.tooltipAnchor == .omniboxSearchField)
         #expect(OnboardingCoordinator.Step.submitCoCaptainPrompt.tooltipAnchor == .omniboxPromptRow)
@@ -53,5 +57,45 @@ struct OnboardingManifestTests {
 
         #expect(onboarding.currentStep == .chatCoCaptain)
         #expect(!onboarding.showPopover)
+    }
+
+    @MainActor
+    @Test func successfulHandoffCompletionAdvancesToDismissStep() {
+        let onboarding = OnboardingCoordinator()
+        onboarding.currentStep = .chatCoCaptain
+
+        let completion = CoCaptainTurnCompletion(
+            turnID: UUID(),
+            purpose: .onboardingBuildHandoff,
+            succeeded: true
+        )
+
+        #expect(completion.shouldAdvanceToCanvasDismissal)
+
+        if completion.shouldAdvanceToCanvasDismissal {
+            onboarding.completeCurrentStep()
+        }
+
+        #expect(onboarding.currentStep == .dismissCoCaptain)
+    }
+
+    @MainActor
+    @Test func failedHandoffCompletionDoesNotAdvanceFromChatStep() {
+        let onboarding = OnboardingCoordinator()
+        onboarding.currentStep = .chatCoCaptain
+
+        let completion = CoCaptainTurnCompletion(
+            turnID: UUID(),
+            purpose: .onboardingBuildHandoff,
+            succeeded: false
+        )
+
+        #expect(!completion.shouldAdvanceToCanvasDismissal)
+
+        if completion.shouldAdvanceToCanvasDismissal {
+            onboarding.completeCurrentStep()
+        }
+
+        #expect(onboarding.currentStep == .chatCoCaptain)
     }
 }

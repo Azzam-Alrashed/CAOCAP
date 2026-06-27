@@ -13,10 +13,6 @@
 			</array>
 		</dict>
 	</array>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>CAOCAP uses the microphone to dictate text into search and assistant input fields.</string>
-	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>CAOCAP uses speech recognition to turn your dictated words into text.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

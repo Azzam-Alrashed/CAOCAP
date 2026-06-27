@@ -26,7 +26,8 @@ public protocol CoCaptainLLMClient: AnyObject {
         context: String?,
         expectsStructuredResponse: Bool,
         availableActions: [AppActionDefinition],
-        scope: CoCaptainAgentScope
+        scope: CoCaptainAgentScope,
+        purpose: CoCaptainTurnPurpose
     ) -> AsyncThrowingStream<CoCaptainLLMStreamEvent, Error>
 }
 
@@ -103,6 +104,7 @@ public final class CoCaptainAgentCoordinator {
         store: ProjectStore?,
         dispatcher: (any AppActionPerforming)?,
         scope: CoCaptainAgentScope = .project,
+        purpose: CoCaptainTurnPurpose = .standard,
         onVisibleText: @escaping (String) -> Void
     ) async throws -> CoCaptainAgentRunResult {
         let context = store.map { store in
@@ -113,16 +115,19 @@ public final class CoCaptainAgentCoordinator {
                 return contextBuilder.buildNodePromptContext(from: store, nodeID: nodeID)
             }
         }
+        let policy = purpose.executionPolicy
+
         do {
             return try await runOnce(
                 userMessage: userMessage,
                 context: context,
-                expectsStructuredResponse: true,
+                expectsStructuredResponse: policy.expectsStructuredResponse,
                 store: store,
                 dispatcher: dispatcher,
                 scope: scope,
+                purpose: purpose,
                 onVisibleText: onVisibleText,
-                allowAgenticRetry: true
+                allowAgenticRetry: policy.allowsAgenticRetry
             )
         } catch {
             // Fallback: if the structured+context prompt fails (often with opaque
@@ -134,6 +139,7 @@ public final class CoCaptainAgentCoordinator {
                 store: store,
                 dispatcher: dispatcher,
                 scope: scope,
+                purpose: purpose,
                 onVisibleText: onVisibleText,
                 allowAgenticRetry: false
             )
@@ -153,6 +159,7 @@ public final class CoCaptainAgentCoordinator {
         store: ProjectStore?,
         dispatcher: (any AppActionPerforming)?,
         scope: CoCaptainAgentScope,
+        purpose: CoCaptainTurnPurpose,
         onVisibleText: @escaping (String) -> Void,
         allowAgenticRetry: Bool
     ) async throws -> CoCaptainAgentRunResult {
@@ -165,7 +172,8 @@ public final class CoCaptainAgentCoordinator {
             context: context,
             expectsStructuredResponse: expectsStructuredResponse,
             availableActions: dispatcher?.availableActions ?? [],
-            scope: scope
+            scope: scope,
+            purpose: purpose
         )
 
         for try await event in stream {
@@ -183,11 +191,13 @@ public final class CoCaptainAgentCoordinator {
         // The visible chat can stream before the structured block is complete;
         // only parse actions after the model has finished the turn.
         let directive = outputAdapter.directive(from: responseText, functionCalls: functionCalls)
-        let payload = expectsStructuredResponse ? directive.payload : nil
+        let policy = purpose.executionPolicy
+        let payload = policy.expectsStructuredResponse ? directive.payload : nil
 
-        let requiresAgenticWork = shouldRequireAgenticWork(for: userMessage)
+        let requiresAgenticWork =
+            policy.enforcesExecutableWork && shouldRequireAgenticWork(for: userMessage)
 
-        if expectsStructuredResponse {
+        if policy.expectsStructuredResponse {
             if !directive.diagnostics.isEmpty {
                 if allowAgenticRetry {
                     return try await runOnce(
@@ -200,6 +210,7 @@ public final class CoCaptainAgentCoordinator {
                         store: store,
                         dispatcher: dispatcher,
                         scope: scope,
+                        purpose: purpose,
                         onVisibleText: onVisibleText,
                         allowAgenticRetry: false
                     )
@@ -228,6 +239,7 @@ public final class CoCaptainAgentCoordinator {
                     store: store,
                     dispatcher: dispatcher,
                     scope: scope,
+                    purpose: purpose,
                     onVisibleText: onVisibleText,
                     allowAgenticRetry: false
                 )
@@ -252,6 +264,7 @@ public final class CoCaptainAgentCoordinator {
                             store: store,
                             dispatcher: dispatcher,
                             scope: scope,
+                            purpose: purpose,
                             onVisibleText: onVisibleText,
                             allowAgenticRetry: false
                         )
@@ -267,6 +280,10 @@ public final class CoCaptainAgentCoordinator {
             }
         }
 
+        if !policy.executesActions {
+            return conversationalRunResult(from: directive)
+        }
+
         let executionSummary = executeSafeActions(payload?.safeActions ?? [], dispatcher: dispatcher, store: store)
         let reviewBundle = buildReviewBundle(
             pendingActions: payload?.pendingActions ?? [],
@@ -280,6 +297,16 @@ public final class CoCaptainAgentCoordinator {
             payloadMessage: payload?.assistantMessage,
             executionSummary: executionSummary,
             reviewBundle: reviewBundle
+        )
+    }
+
+    /// Returns visible prose only. Ignores any structured payload the model emitted.
+    private func conversationalRunResult(from directive: CoCaptainAgentDirective) -> CoCaptainAgentRunResult {
+        CoCaptainAgentRunResult(
+            preamble: directive.preamble,
+            payloadMessage: nil,
+            executionSummary: nil,
+            reviewBundle: nil
         )
     }
 

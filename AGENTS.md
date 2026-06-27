@@ -23,12 +23,12 @@ If architecture changes, update `STRUCTURE.md` in the same change. If product st
 
 ## Repository Map
 
-- `ios-app/caocap/caocap/App`: app entry point, root view, configuration, app metadata.
+- `ios-app/caocap/caocap/App`: app entry point, root view, configuration, and `Shell/` UI wiring.
 - `ios-app/caocap/caocap/Navigation`: type-safe workspace routing through `AppRouter`.
 - `ios-app/caocap/caocap/Models`: pure domain data such as `SpatialNode` and `NodeTheme`.
-- `ios-app/caocap/caocap/Services`: persistence, authentication, LLM, subscriptions, app actions, context building, patching.
+- `ios-app/caocap/caocap/Services`: persistence, authentication, LLM, subscriptions, app actions, session orchestration, context building, patching.
 - `ios-app/caocap/caocap/Features`: user-facing SwiftUI features.
-- `ios-app/caocap/caocap/Resources`: assets, privacy manifest, StoreKit config, local resources.
+- `ios-app/caocap/caocap/Resources`: assets, localization, and `Config/` app metadata.
 - `ios-app/caocap/caocapTests`: unit tests.
 - `ios-app/caocap/caocapUITests`: UI tests.
 - `website/src/app`: Next.js App Router pages and components.

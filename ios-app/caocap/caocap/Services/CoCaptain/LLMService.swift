@@ -65,7 +65,8 @@ public final class LLMService {
             context: nil,
             expectsStructuredResponse: false,
             availableActions: [],
-            scope: .project
+            scope: .project,
+            purpose: .standard
         )
 
         return AsyncThrowingStream { continuation in
@@ -107,14 +108,16 @@ public final class LLMService {
         context: String?,
         expectsStructuredResponse: Bool,
         availableActions: [AppActionDefinition],
-        scope: CoCaptainAgentScope = .project
+        scope: CoCaptainAgentScope = .project,
+        purpose: CoCaptainTurnPurpose = .standard
     ) -> AsyncThrowingStream<CoCaptainLLMStreamEvent, Error> {
         let prompt = buildPrompt(
             userMessage: userMessage,
             context: context,
             expectsStructuredResponse: expectsStructuredResponse,
             availableActions: availableActions,
-            scope: scope
+            scope: scope,
+            purpose: purpose
         )
 
         if case .failure(let error) = tokenUsageLimiter.preflight(
@@ -293,7 +296,8 @@ public final class LLMService {
         context: String?,
         expectsStructuredResponse: Bool,
         availableActions: [AppActionDefinition],
-        scope: CoCaptainAgentScope
+        scope: CoCaptainAgentScope,
+        purpose: CoCaptainTurnPurpose
     ) -> String {
         var parts: [String] = []
 
@@ -385,6 +389,10 @@ public final class LLMService {
                 </cocaptain_actions>
                 """
             )
+        }
+
+        if let purposeInstructions = purpose.promptInstructions {
+            parts.append(purposeInstructions)
         }
 
         parts.append("User request:\n\(userMessage)")

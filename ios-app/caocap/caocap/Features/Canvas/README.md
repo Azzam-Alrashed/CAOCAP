@@ -9,13 +9,15 @@ The Canvas feature is CAOCAP's spatial runtime. It renders the infinite workspac
 - `ViewportState` owns pan and zoom math. Keep gesture calculations here instead of spreading geometry math through views.
 - `NodeView` renders one node. It should stay presentational.
 - `NodeDetailView` opens Mini-App nodes into a full-screen running preview with FAB actions for SRS, Code, Firebase, Agent, Settings, and Back to Canvas.
-- Providers under `Providers/` create static Mini-App starter graphs for home/projects.
+- Providers under `Providers/` define the root constellation, curated Tutorial
+  and Pac-Man canvases, and generic Mini-App starter content.
 
 ## Data Flow
 
 1. `ContentView` provides an active `ProjectStore` from `AppRouter`.
 2. `InfiniteCanvasView` renders `store.nodes`.
-3. Tapping a Mini-App node opens its full-screen running preview; tapping an action node calls `onNodeAction`.
+3. Tapping a Mini-App opens its full-screen preview, tapping an action node calls
+   `onNodeAction`, and tapping a subcanvas portal opens its linked canvas file.
 4. Mini-App tools call `ProjectStore` mutation methods such as `updateMiniAppSRS`, `updateMiniAppCode`, and `updateMiniAppFirebaseConfig`.
 5. `ProjectStore` debounces saves and recompiles each Mini-App preview from its embedded code/Firebase state.
 6. `ConnectionLayer` draws arrows from `nextNodeId` and `connectedNodeIds`.

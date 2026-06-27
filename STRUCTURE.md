@@ -29,12 +29,14 @@ CAOCAP/
 ```
 caocap/
 ├── App/
+│   └── Shell/
 ├── Navigation/
 ├── Models/
 ├── Services/
 │   ├── Account/
 │   ├── AppActions/
 │   ├── AppEnvironment/
+│   ├── AppSession/
 │   ├── CoCaptain/
 │   ├── ProjectStore/
 │   ├── Runtime/
@@ -45,19 +47,22 @@ caocap/
 │   ├── Canvas/
 │   │   ├── Components/
 │   │   └── Providers/
-│   ├── Intro/
-│   ├── Omnibox/
 │   ├── CoCaptain/
 │   │   ├── AgentContract/
 │   │   ├── Analysis/
 │   │   ├── Chat/
 │   │   ├── NodeAgent/
 │   │   └── Review/
+│   ├── Intro/
 │   ├── Launch/
+│   ├── Omnibox/
+│   ├── Onboarding/
 │   ├── Overlays/
 │   ├── Settings/
+│   ├── SnapshotBrowser/
 │   └── Subscription/
 ├── Resources/
+│   └── Config/
 └── Preview Content/
 ```
 
@@ -65,6 +70,7 @@ caocap/
 
 ```
 caocapTests/
+├── AppSession/
 ├── AppEnvironment/
 ├── Canvas/
 ├── CoCaptain/
@@ -80,14 +86,24 @@ caocapTests/
 ## Directory Reference
 
 ### `App/`
-The application shell and lifecycle management. The thinnest layer possible — no business logic lives here.
+The application shell: entry point, root view, and SDK bootstrap only. No session orchestration or feature logic.
 
 | File | Responsibility |
 |---|---|
-| `caocapApp.swift` | `@main` entry point. Initializes Firebase and injects `AppRouter` as an environment object. |
-| `ContentView.swift` | Root view. Observes `AppRouter` and switches between Home and Project workspaces while presenting global sheets. |
-| `AppConfiguration.swift` | Static configuration for Firebase Function names and environment keys. |
-| `Info.plist` | System-level permissions and metadata. |
+| `caocapApp.swift` | `@main` entry point. Hosts `WindowGroup`, theme/locale injection, and menu-command shortcuts. |
+| `ContentView.swift` | Root SwiftUI composition. Observes `AppSessionCoordinator` and hosts canvas, overlays, FAB, and command palette. |
+| `AppConfiguration.swift` | One-time Firebase and Google Sign-In bootstrap called from `AppDelegate`. |
+
+#### `App/Shell/`
+Root-level SwiftUI wiring extracted from `ContentView`. These types bind UI to `AppSessionCoordinator` but do not own business rules.
+
+| File | Responsibility |
+|---|---|
+| `WorkspaceCanvasView.swift` | Shared `InfiniteCanvasView` wrapper for root and project workspaces. |
+| `AppSheetsModifier.swift` | Presents global sheets from session presentation flags. |
+| `AppSessionLifecycle.swift` | Attaches workspace sync, onboarding reactions, undo bridge, and file import. |
+| `KeyboardShortcutBridge.swift` | Hidden keyboard shortcuts for iPhone (where `.commands` is ignored). |
+| `AppNotifications.swift` | `NotificationCenter` names bridging menu commands and in-view shortcuts. |
 
 ---
 
@@ -110,6 +126,7 @@ Pure domain data. No UI, no persistence, no side effects. These structs define t
 | `NodeRole.swift` | Canonical role inference for Mini-App, Sub-Canvas, and custom/action nodes. |
 | `SRSReadinessState.swift` | Domain state for whether a Mini-App SRS section is empty, structured, drafted, or ready. |
 | `SRSScaffold.swift` | Definition of Software Requirements Specification (SRS) templates and check helpers. |
+| `PersonalizationSurveyAnswers.swift` | Codable saved responses from the first-run personalization survey (question ID → answer ID). |
 
 ---
 
@@ -121,6 +138,7 @@ Infrastructure and heavy-lifting. These are long-lived objects that outlive indi
 | `Account/` | Firebase Auth and StoreKit subscription infrastructure. |
 | `AppActions/` | Centralized action registry for app, Omnibox, and agent-triggered actions. |
 | `AppEnvironment/` | App-wide environment helpers such as localization, haptics, and update prompts. |
+| `AppSession/` | Root-session orchestration: action dispatch wiring, palette binding, sheet flags, and onboarding hooks. |
 | `Runtime/` | Mini-App preview compilation and preview bootstrapping. |
 | `WorkspaceIntelligence/` | Spatial layout, search indexing, project analysis, and SRS readiness evaluation. |
 | `ProjectStore/` | Project state, persistence, checkpoints, exports, and reactive compilation. |
@@ -132,6 +150,7 @@ Identity and monetization infrastructure.
 | File | Responsibility |
 |---|---|
 | `AuthenticationManager.swift` | Wraps Firebase Auth. Handles anonymous login, account linking, and social provider flows. |
+| `UserProfileStore.swift` | Local persistence for personalization survey answers and completion flags. |
 | `SubscriptionManager.swift` | StoreKit 2 integration. Manages Pro subscription state, purchase flow, and transaction verification. |
 
 #### `Services/AppActions/`
@@ -141,12 +160,23 @@ App action registry and execution.
 |---|---|
 | `AppActionDispatcher.swift` | Centralized action registry. Allows the app and the AI agent to trigger high-level navigation and project mutations. |
 
+#### `Services/AppSession/`
+Coordinates the live app session above individual features.
+
+| File | Responsibility |
+|---|---|
+| `AppSessionCoordinator.swift` | `@Observable` session owner for `AppRouter`, command palette, CoCaptain panel, action dispatcher registration, global sheet flags, intro/personalization handoffs, and interactive onboarding step reactions. |
+
+See `Services/AppSession/README.md` before changing session wiring.
+
 #### `Services/AppEnvironment/`
 App-wide support helpers.
 
 | File | Responsibility |
 |---|---|
+| `AppDataResetService.swift` | Factory-reset deletion of app-owned workspace, document, cache, temporary, and defaults data. |
 | `AppUpdateService.swift` | Firebase Remote Config minimum-version gate for required App Store update prompts. |
+| `AnalyticsService.swift` | Thin Firebase Analytics wrapper for onboarding and product events. |
 | `DictationController.swift` | Shared speech-to-text dictation controller for app input surfaces, including CoCaptain and the Omnibox. |
 | `HapticsManager.swift` | Central haptic feedback helper that honors app haptics settings. |
 | `LocalizationManager.swift` | Runtime language selection, localized strings, localized project/node labels, and date formatting. |
@@ -179,7 +209,8 @@ State management, persistence, checkpoints, and reactive compilation for the spa
 | `ProjectStore.swift` | Observable project state owner. Manages `[SpatialNode]`, viewport state, undo wiring, debounced save requests, live preview refresh, and omnibox shortcut pinning. |
 | `ProjectPersistenceService.swift` | Project file URLs, JSON schema decoding/encoding, schema version checks, and atomic writes. |
 | `CanvasFileNaming.swift` | Nested workspace file naming (`canvas_*.json`) and legacy `project_*.json` resolution for sub-canvas navigation. |
-| `CanvasWorkspaceMigration.swift` | One-time migration from project-manager filenames and root shortcut nodes to the canvas workspace model. |
+| `CanvasWorkspaceMigration.swift` | One-time migration of project-manager filenames and linked-canvas references to the canvas workspace model. |
+| `CuratedRootCanvasMigration.swift` | One-time installation of the curated root constellation and its Tutorial and Pac-Man child canvases. |
 | `ExportService.swift` | Generates shareable exports asynchronously on a background thread. |
 | `CheckpointManager.swift` | Coordinates pre-agent mutation backup checkpoints. |
 | `NodeMutationEngine.swift` | Manages standard node and layout mutations. |
@@ -260,8 +291,10 @@ The spatial runtime — the heart of CAOCAP.
 
 | File | Responsibility |
 |---|---|
-| `HomeProvider.swift` | Generates the default node graph for the Home workspace. |
-| `ProjectTemplateProvider.swift` | Generates the default Mini-App starter node for new projects. |
+| `RootCanvasProvider.swift` | Defines the stable five-node root constellation and curated child-canvas filenames. |
+| `TutorialCanvasProvider.swift` | Defines the clean workspace used by the interactive tutorial. |
+| `PacManCanvasProvider.swift` | Defines the self-contained, touch-first Pac-Man example Mini-App. |
+| `ProjectTemplateProvider.swift` | Supplies the clean default project state and manual Mini-App boilerplate. |
 
 ---
 
@@ -299,15 +332,21 @@ Launch transition and global launch-time prompts shown by the root app shell.
 ---
 
 #### `Onboarding/`
-First-run guided onboarding for the canvas, Omnibox, and CoCaptain flow.
+First-run onboarding for the canvas, Omnibox, and CoCaptain flow. The full funnel is: **Intro → Personalization survey → Interactive tutorial**.
 
 | File | Responsibility |
 |---|---|
-| `OnboardingCoordinator.swift` | Observable state machine for the active onboarding step, popover visibility, delayed presentation, and completion/skipping persistence. |
-| `OnboardingManifest.swift` | Manifest-backed copy, icon, and ordering for every onboarding step. |
+| `OnboardingCoordinator.swift` | Observable state machine for the active tutorial step, popover visibility, delayed presentation, and completion/skipping persistence. |
+| `OnboardingManifest.swift` | Manifest-backed copy, icon, and ordering for every interactive tutorial step. |
 | `OnboardingPopoverCard.swift` | Central onboarding tooltip presentation. Views publish named `OnboardingTooltipAnchor` frames, and a single `onboardingTooltipOverlay()` renders the active step card. |
+| `PersonalizationOnboardingCoordinator.swift` | State machine for the one-question-per-screen personalization survey, skip nudge, completion moment, and persistence/analytics handoff. |
+| `PersonalizationOnboardingManifest.swift` | Static question catalogue with stable question/answer IDs. |
+| `PersonalizationOnboardingView.swift` | Full-screen personalization overlay with progress bar, glass controls, and completion moment. |
+| `PersonalizationAnswerCard.swift` | Reusable selectable answer tile for survey options. |
 
 Onboarding tooltips must not be presented by feature-local `.popover` modifiers. Feature views should only publish anchors with `onboardingTooltipAnchor(_:)`; the central overlay decides which single tooltip is visible.
+
+See `Features/Onboarding/README.md` for the three-phase funnel and handoff rules.
 
 ---
 
@@ -319,7 +358,7 @@ First-run full-screen intro screens shown after the launch animation and before 
 | `IntroCoordinator.swift` | Observable state and `UserDefaults` persistence for intro completion, skip, and page navigation. |
 | `IntroManifest.swift` | Ordered draft copy and metadata for the five intro screens. |
 | `IntroStepContent.swift` | Value model for one intro page's copy, gradient palette, icon, and CTA label. |
-| `IntroView.swift` | Full-screen paged SwiftUI intro with progress dots, back/skip controls, and CTA handoff into the existing onboarding flow. |
+| `IntroView.swift` | Full-screen paged SwiftUI intro with progress dots, back/skip controls, and CTA handoff into the personalization survey. |
 
 ---
 
@@ -364,7 +403,19 @@ The Pro monetization UI. Contains the glassmorphic purchase sheet, plan comparis
 ---
 
 ### `Resources/`
-Asset catalogs, app icons, and localization files.
+Asset catalogs, app icons, localization files, and bundled app configuration.
+
+#### `Resources/Config/`
+Non-Swift app metadata referenced by Xcode build settings or bundled resources.
+
+| File | Responsibility |
+|---|---|
+| `Info.plist` | System permissions, URL schemes, and bundle metadata. |
+| `caocap.entitlements` | App capabilities and signing entitlements. |
+| `GoogleService-Info.plist` | Firebase project configuration (local/dev copy; gitignored in some environments). |
+| `Subscriptions.storekit` | Local StoreKit configuration for development paywall testing. |
+| `PrivacyInfo.xcprivacy` | Apple privacy manifest required-reason API declarations. |
+| `ar.lproj/InfoPlist.strings` | Localized Info.plist strings. |
 
 ### `Preview Content/`
 Assets used exclusively by Xcode Previews. Not included in production builds.
@@ -373,7 +424,7 @@ Assets used exclusively by Xcode Previews. Not included in production builds.
 
 ## Architectural Principles
 
-1. **Unidirectional Data Flow**: `AppRouter` owns workspace state. `ProjectStore` owns node state. Views observe and never mutate state directly.
+1. **Unidirectional Data Flow**: `AppRouter` owns workspace state. `ProjectStore` owns node state. `AppSessionCoordinator` wires session-level actions and presentation. Views observe and never mutate state directly.
 2. **No Blocking Main Thread**: Disk I/O and network requests should stay outside view bodies and main-actor interaction paths.
 3. **Agentic Context Harvesting**: CoCaptain reads the *entire* spatial graph state before every prompt, ensuring grounded AI responses.
 4. **Zero Core Dependencies**: Core logic (compilation, syntax highlighting) remains in pure Swift. Firebase is used exclusively for identity and AI.
