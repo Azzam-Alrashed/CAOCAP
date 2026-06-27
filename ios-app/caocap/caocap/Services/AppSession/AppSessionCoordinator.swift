@@ -31,6 +31,7 @@ final class AppSessionCoordinator {
     var showExportSheet = false
 
     var intro = IntroCoordinator()
+    var personalization = PersonalizationOnboardingCoordinator()
     var onboarding = OnboardingCoordinator()
 
     var coCaptainDetent: PresentationDetent = .medium
@@ -91,7 +92,7 @@ final class AppSessionCoordinator {
                 self.isLaunching = false
             }
             if !self.intro.shouldPresent {
-                self.onboarding.startIfNeeded()
+                self.startInteractiveOnboardingIfNeeded()
             }
         }
     }
@@ -107,6 +108,22 @@ final class AppSessionCoordinator {
 
     func updateContainerSize(_ size: CGSize) {
         containerSize = size
+    }
+
+    /// Called when the motivational intro tour finishes. Presents personalization if needed.
+    func finishIntroFlow() {
+        startInteractiveOnboardingIfNeeded()
+    }
+
+    /// Called when the personalization survey finishes or is skipped.
+    func finishPersonalizationFlow() {
+        onboarding.startIfNeeded()
+    }
+
+    /// Starts the gesture tutorial only when intro and personalization are both complete.
+    func startInteractiveOnboardingIfNeeded() {
+        guard !personalization.shouldPresent else { return }
+        onboarding.startIfNeeded()
     }
 
     func updateNodeFrames(_ frames: [UUID: NodeFrameData]) {

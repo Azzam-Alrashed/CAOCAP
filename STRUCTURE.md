@@ -126,6 +126,7 @@ Pure domain data. No UI, no persistence, no side effects. These structs define t
 | `NodeRole.swift` | Canonical role inference for Mini-App, Sub-Canvas, and custom/action nodes. |
 | `SRSReadinessState.swift` | Domain state for whether a Mini-App SRS section is empty, structured, drafted, or ready. |
 | `SRSScaffold.swift` | Definition of Software Requirements Specification (SRS) templates and check helpers. |
+| `PersonalizationSurveyAnswers.swift` | Codable saved responses from the first-run personalization survey (question ID → answer ID). |
 
 ---
 
@@ -149,6 +150,7 @@ Identity and monetization infrastructure.
 | File | Responsibility |
 |---|---|
 | `AuthenticationManager.swift` | Wraps Firebase Auth. Handles anonymous login, account linking, and social provider flows. |
+| `UserProfileStore.swift` | Local persistence for personalization survey answers and completion flags. |
 | `SubscriptionManager.swift` | StoreKit 2 integration. Manages Pro subscription state, purchase flow, and transaction verification. |
 
 #### `Services/AppActions/`
@@ -163,7 +165,7 @@ Coordinates the live app session above individual features.
 
 | File | Responsibility |
 |---|---|
-| `AppSessionCoordinator.swift` | `@Observable` session owner for `AppRouter`, command palette, CoCaptain panel, action dispatcher registration, global sheet flags, and onboarding step reactions. |
+| `AppSessionCoordinator.swift` | `@Observable` session owner for `AppRouter`, command palette, CoCaptain panel, action dispatcher registration, global sheet flags, intro/personalization handoffs, and interactive onboarding step reactions. |
 
 See `Services/AppSession/README.md` before changing session wiring.
 
@@ -173,6 +175,7 @@ App-wide support helpers.
 | File | Responsibility |
 |---|---|
 | `AppUpdateService.swift` | Firebase Remote Config minimum-version gate for required App Store update prompts. |
+| `AnalyticsService.swift` | Thin Firebase Analytics wrapper for onboarding and product events. |
 | `DictationController.swift` | Shared speech-to-text dictation controller for app input surfaces, including CoCaptain and the Omnibox. |
 | `HapticsManager.swift` | Central haptic feedback helper that honors app haptics settings. |
 | `LocalizationManager.swift` | Runtime language selection, localized strings, localized project/node labels, and date formatting. |
@@ -325,15 +328,21 @@ Launch transition and global launch-time prompts shown by the root app shell.
 ---
 
 #### `Onboarding/`
-First-run guided onboarding for the canvas, Omnibox, and CoCaptain flow.
+First-run onboarding for the canvas, Omnibox, and CoCaptain flow. The full funnel is: **Intro → Personalization survey → Interactive tutorial**.
 
 | File | Responsibility |
 |---|---|
-| `OnboardingCoordinator.swift` | Observable state machine for the active onboarding step, popover visibility, delayed presentation, and completion/skipping persistence. |
-| `OnboardingManifest.swift` | Manifest-backed copy, icon, and ordering for every onboarding step. |
+| `OnboardingCoordinator.swift` | Observable state machine for the active tutorial step, popover visibility, delayed presentation, and completion/skipping persistence. |
+| `OnboardingManifest.swift` | Manifest-backed copy, icon, and ordering for every interactive tutorial step. |
 | `OnboardingPopoverCard.swift` | Central onboarding tooltip presentation. Views publish named `OnboardingTooltipAnchor` frames, and a single `onboardingTooltipOverlay()` renders the active step card. |
+| `PersonalizationOnboardingCoordinator.swift` | State machine for the one-question-per-screen personalization survey, skip nudge, completion moment, and persistence/analytics handoff. |
+| `PersonalizationOnboardingManifest.swift` | Static question catalogue with stable question/answer IDs. |
+| `PersonalizationOnboardingView.swift` | Full-screen personalization overlay with progress bar, glass controls, and completion moment. |
+| `PersonalizationAnswerCard.swift` | Reusable selectable answer tile for survey options. |
 
 Onboarding tooltips must not be presented by feature-local `.popover` modifiers. Feature views should only publish anchors with `onboardingTooltipAnchor(_:)`; the central overlay decides which single tooltip is visible.
+
+See `Features/Onboarding/README.md` for the three-phase funnel and handoff rules.
 
 ---
 
@@ -345,7 +354,7 @@ First-run full-screen intro screens shown after the launch animation and before 
 | `IntroCoordinator.swift` | Observable state and `UserDefaults` persistence for intro completion, skip, and page navigation. |
 | `IntroManifest.swift` | Ordered draft copy and metadata for the five intro screens. |
 | `IntroStepContent.swift` | Value model for one intro page's copy, gradient palette, icon, and CTA label. |
-| `IntroView.swift` | Full-screen paged SwiftUI intro with progress dots, back/skip controls, and CTA handoff into the existing onboarding flow. |
+| `IntroView.swift` | Full-screen paged SwiftUI intro with progress dots, back/skip controls, and CTA handoff into the personalization survey. |
 
 ---
 
