@@ -88,6 +88,18 @@ public struct MiniAppState: Codable, Equatable, Hashable {
     public var firebaseConfigText: String
     /// Optional Firestore collection/document path used when the mini-app integrates with Firestore.
     public var firebaseFirestorePath: String?
+    /// Live HTTPS URL after publishing to Vercel.
+    public var publishURL: String?
+    /// GitHub username that owns the published repository.
+    public var githubRepoOwner: String?
+    /// GitHub repository name used for publish.
+    public var githubRepoName: String?
+    /// GitHub repository numeric id for Vercel gitSource.
+    public var githubRepoId: Int?
+    /// Timestamp of the most recent successful publish.
+    public var publishedAt: Date?
+    /// Whether the published GitHub repository is private.
+    public var isPublishRepoPrivate: Bool?
 
     public init(
         srsText: String = SRSScaffold.defaultText,
@@ -95,7 +107,13 @@ public struct MiniAppState: Codable, Equatable, Hashable {
         codeText: String = "",
         compiledHTML: String? = nil,
         firebaseConfigText: String = "",
-        firebaseFirestorePath: String? = nil
+        firebaseFirestorePath: String? = nil,
+        publishURL: String? = nil,
+        githubRepoOwner: String? = nil,
+        githubRepoName: String? = nil,
+        githubRepoId: Int? = nil,
+        publishedAt: Date? = nil,
+        isPublishRepoPrivate: Bool? = nil
     ) {
         self.srsText = srsText
         self.srsReadinessState = srsReadinessState ?? .empty
@@ -103,6 +121,12 @@ public struct MiniAppState: Codable, Equatable, Hashable {
         self.compiledHTML = compiledHTML
         self.firebaseConfigText = firebaseConfigText
         self.firebaseFirestorePath = firebaseFirestorePath
+        self.publishURL = publishURL
+        self.githubRepoOwner = githubRepoOwner
+        self.githubRepoName = githubRepoName
+        self.githubRepoId = githubRepoId
+        self.publishedAt = publishedAt
+        self.isPublishRepoPrivate = isPublishRepoPrivate
     }
 }
 

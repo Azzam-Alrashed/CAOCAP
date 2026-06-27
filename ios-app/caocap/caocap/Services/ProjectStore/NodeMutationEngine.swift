@@ -445,6 +445,31 @@ final class NodeMutationEngine {
         }
     }
 
+    /// Persists GitHub / Vercel publish metadata for a Mini-App node after a successful publish.
+    public func updateMiniAppPublishMetadata(
+        nodes: inout [SpatialNode],
+        id: UUID,
+        publishURL: String,
+        githubRepoOwner: String,
+        githubRepoName: String,
+        githubRepoId: Int,
+        isPrivate: Bool,
+        publishedAt: Date = Date(),
+        persist: Bool = true
+    ) {
+        guard let index = nodes.firstIndex(where: { $0.id == id }) else { return }
+        ensureMiniAppState(for: &nodes[index])
+        nodes[index].miniApp?.publishURL = publishURL
+        nodes[index].miniApp?.githubRepoOwner = githubRepoOwner
+        nodes[index].miniApp?.githubRepoName = githubRepoName
+        nodes[index].miniApp?.githubRepoId = githubRepoId
+        nodes[index].miniApp?.isPublishRepoPrivate = isPrivate
+        nodes[index].miniApp?.publishedAt = publishedAt
+        if persist {
+            onRequestSave?(true)
+        }
+    }
+
     /// Lazily bootstraps a `MiniAppState` on a `.miniApp` node if it is missing.
     /// Guards against operating on non-Mini-App node types.
     private func ensureMiniAppState(for node: inout SpatialNode) {
