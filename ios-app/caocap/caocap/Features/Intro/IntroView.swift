@@ -2,7 +2,6 @@ import SwiftUI
 
 /// Frosted-glass styling for illustration intro bottom chrome (CTA + pagination).
 private enum IntroGlassChrome {
-    static let foreground = Color(hex: "1E3A5F")
     static let stroke = Color.white.opacity(0.62)
     static let inactiveStroke = Color.white.opacity(0.38)
     static let shadow = Color.black.opacity(0.1)
@@ -243,7 +242,7 @@ struct IntroView: View {
     }
 
     private var ctaForeground: Color {
-        currentStep.usesIllustrationBackground ? IntroGlassChrome.foreground : .white
+        currentStep.usesIllustrationBackground ? Color(uiColor: .label) : .white
     }
 
     private var ctaFillStyle: AnyShapeStyle {
