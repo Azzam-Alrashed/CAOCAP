@@ -41,14 +41,52 @@ public enum CoCaptainTurnPurpose: Hashable {
         }
     }
 
-    var isOnboardingConversation: Bool {
+    /// Selects how the coordinator executes this turn: full agentic pipeline or prose-only chat.
+    var executionPolicy: CoCaptainTurnExecutionPolicy {
         switch self {
         case .standard:
-            return false
+            return .agentic
         case .onboardingWelcome, .onboardingBuildHandoff:
-            return true
+            return .conversational
         }
     }
+
+    var isConversationalTurn: Bool {
+        executionPolicy.kind == .conversational
+    }
+}
+
+/// Controls whether a CoCaptain turn runs the full agent contract or stays conversational.
+///
+/// Derived from `CoCaptainTurnPurpose` so prompt instructions and execution behavior
+/// stay aligned in one place.
+struct CoCaptainTurnExecutionPolicy: Equatable {
+    enum Kind: Equatable {
+        case conversational
+        case agentic
+    }
+
+    let kind: Kind
+    let expectsStructuredResponse: Bool
+    let enforcesExecutableWork: Bool
+    let executesActions: Bool
+    let allowsAgenticRetry: Bool
+
+    static let agentic = CoCaptainTurnExecutionPolicy(
+        kind: .agentic,
+        expectsStructuredResponse: true,
+        enforcesExecutableWork: true,
+        executesActions: true,
+        allowsAgenticRetry: true
+    )
+
+    static let conversational = CoCaptainTurnExecutionPolicy(
+        kind: .conversational,
+        expectsStructuredResponse: false,
+        enforcesExecutableWork: false,
+        executesActions: false,
+        allowsAgenticRetry: false
+    )
 }
 
 /// The terminal outcome of one specific CoCaptain turn.

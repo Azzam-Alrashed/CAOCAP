@@ -181,7 +181,7 @@ public final class CoCaptainViewModel {
                     result.executionSummary != nil ||
                     result.reviewBundle != nil
 
-                if purpose.isOnboardingConversation, !hasUsableResponse {
+                if purpose.isConversationalTurn, !hasUsableResponse {
                     updateMessage(id: aiMessageID, text: onboardingRetryMessage(for: purpose))
                     markAssistantResponseCompleted(
                         turnID: turnID,
@@ -230,7 +230,7 @@ public final class CoCaptainViewModel {
                 if let limitError = error as? TokenUsageLimitError {
                     updateMessage(id: aiMessageID, text: limitError.localizedDescription)
                     appendLimitReachedCTA()
-                } else if purpose.isOnboardingConversation {
+                } else if purpose.isConversationalTurn {
                     updateMessage(id: aiMessageID, text: onboardingRetryMessage(for: purpose))
                 } else {
                     let details = String(reflecting: error)

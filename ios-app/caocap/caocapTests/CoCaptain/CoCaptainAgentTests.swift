@@ -56,6 +56,15 @@ struct CoCaptainAgentTests {
         #expect(!standardSuccess.shouldAdvanceToCanvasDismissal)
     }
 
+    @Test func turnExecutionPolicyMapsPurposesToExpectedModes() {
+        #expect(CoCaptainTurnPurpose.standard.executionPolicy == .agentic)
+        #expect(CoCaptainTurnPurpose.onboardingWelcome.executionPolicy == .conversational)
+        #expect(CoCaptainTurnPurpose.onboardingBuildHandoff.executionPolicy == .conversational)
+        #expect(!CoCaptainTurnPurpose.standard.isConversationalTurn)
+        #expect(CoCaptainTurnPurpose.onboardingWelcome.isConversationalTurn)
+        #expect(CoCaptainTurnPurpose.onboardingBuildHandoff.isConversationalTurn)
+    }
+
     @MainActor
     @Test func projectContextIncludesMiniAppsAndExcludesCompiledPreview() throws {
         let store = makeStore()
@@ -832,6 +841,99 @@ struct CoCaptainAgentTests {
     }
 
     @MainActor
+    @Test func conversationalBuildHandoffDoesNotAgenticRetryForMakeKeyword() async throws {
+        let llm = TestLLMClient(
+            response: "A Pac-Man game sounds fun. Let's head back to the canvas and start building."
+        )
+        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
+
+        let result = try await coordinator.run(
+            userMessage: "I wanna make a pacman game",
+            store: makeStore(),
+            dispatcher: nil,
+            purpose: .onboardingBuildHandoff
+        ) { _ in }
+
+        #expect(llm.receivedMessages.count == 1)
+        #expect(llm.receivedMessages.allSatisfy {
+            !$0.contains("machine-readable CoCaptain action contract")
+        })
+        #expect(!result.visibleText.isEmpty)
+        #expect(result.reviewBundle == nil)
+        #expect(result.executionSummary == nil)
+    }
+
+    @MainActor
+    @Test func conversationalTurnIgnoresStructuredPayloadFromModel() async throws {
+        let dispatcher = TestActionDispatcher()
+        let llm = TestLLMClient(
+            response: """
+            A Pac-Man game sounds fun. Let's head back to the canvas.
+
+            <cocaptain_actions>
+              <assistant_message>I built Pac-Man.</assistant_message>
+              <node_edits>
+                <node_edit role="miniApp" section="code" summary="Build Pac-Man.">
+                  <operation type="replace_all">
+                    <content><![CDATA[<html><body>Pac-Man</body></html>]]></content>
+                  </operation>
+                </node_edit>
+              </node_edits>
+            </cocaptain_actions>
+            """
+        )
+        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
+
+        let result = try await coordinator.run(
+            userMessage: "I wanna make a pacman game",
+            store: makeStore(),
+            dispatcher: dispatcher,
+            purpose: .onboardingBuildHandoff
+        ) { _ in }
+
+        #expect(llm.receivedMessages.count == 1)
+        #expect(result.reviewBundle == nil)
+        #expect(result.executionSummary == nil)
+        #expect(result.visibleText.contains("Pac-Man"))
+        #expect(dispatcher.executedActionIDs.isEmpty)
+    }
+
+    @MainActor
+    @Test func standardTurnAgenticRetriesWhenBuildRequestHasNoStructuredPayload() async throws {
+        let dispatcher = TestActionDispatcher()
+        let llm = TestLLMClient(
+            responses: [
+                "A Pac-Man game sounds fun. We can build that together.",
+                """
+                I prepared a Pac-Man starter.
+
+                <cocaptain_actions>
+                  <assistant_message>I prepared a Pac-Man starter.</assistant_message>
+                  <node_edits>
+                    <node_edit role="miniApp" section="code" summary="Build Pac-Man.">
+                      <operation type="replace_all">
+                        <content><![CDATA[<html><body>Pac-Man</body></html>]]></content>
+                      </operation>
+                    </node_edit>
+                  </node_edits>
+                </cocaptain_actions>
+                """
+            ]
+        )
+        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
+
+        let result = try await coordinator.run(
+            userMessage: "I wanna make a pacman game",
+            store: makeStore(),
+            dispatcher: dispatcher
+        ) { _ in }
+
+        #expect(llm.receivedMessages.count == 2)
+        #expect(llm.receivedMessages.last?.contains("machine-readable CoCaptain action contract") == true)
+        #expect(result.reviewBundle?.items.first?.status == .pending)
+    }
+
+    @MainActor
     @Test func coordinatorRetriesSRSRequestsWithoutNodeEdits() async throws {
         let dispatcher = TestActionDispatcher()
         let llm = TestLLMClient(
@@ -1383,7 +1485,7 @@ struct CoCaptainAgentTests {
         let coordinator = CoCaptainAgentCoordinator(llmClient: ThrowingLLMClient(error: CancellationError()))
         let vm = CoCaptainViewModel(agentCoordinator: coordinator)
 
-        vm.sendMessage("a todo app", purpose: .onboardingBuildHandoff)
+        vm.sendMessage("I wanna make a pacman game", purpose: .onboardingBuildHandoff)
 
         for _ in 0..<20 where vm.isThinking {
             try await Task.sleep(for: .milliseconds(10))
@@ -1405,7 +1507,7 @@ struct CoCaptainAgentTests {
         let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
         let vm = CoCaptainViewModel(agentCoordinator: coordinator)
 
-        vm.sendMessage("a todo app", purpose: .onboardingBuildHandoff)
+        vm.sendMessage("I wanna make a pacman game", purpose: .onboardingBuildHandoff)
 
         for _ in 0..<20 where vm.isThinking {
             try await Task.sleep(for: .milliseconds(10))
@@ -1424,7 +1526,7 @@ struct CoCaptainAgentTests {
         let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
         let vm = CoCaptainViewModel(agentCoordinator: coordinator)
 
-        vm.sendMessage("a todo app", purpose: .onboardingBuildHandoff)
+        vm.sendMessage("I wanna make a pacman game", purpose: .onboardingBuildHandoff)
 
         for _ in 0..<20 where vm.isThinking {
             try await Task.sleep(for: .milliseconds(10))
@@ -1446,7 +1548,7 @@ struct CoCaptainAgentTests {
         let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
         let vm = CoCaptainViewModel(agentCoordinator: coordinator)
 
-        vm.sendMessage("a todo app", purpose: .onboardingBuildHandoff)
+        vm.sendMessage("I wanna make a pacman game", purpose: .onboardingBuildHandoff)
 
         for _ in 0..<20 where vm.isThinking {
             try await Task.sleep(for: .milliseconds(10))
