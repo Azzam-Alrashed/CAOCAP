@@ -85,7 +85,13 @@ The application shell and lifecycle management. The thinnest layer possible — 
 | File | Responsibility |
 |---|---|
 | `caocapApp.swift` | `@main` entry point. Initializes Firebase and injects `AppRouter` as an environment object. |
-| `ContentView.swift` | Root view. Observes `AppRouter` and switches between Home and Project workspaces while presenting global sheets. |
+| `ContentView.swift` | Root view. Composes workspace canvas, overlays, FAB, and command palette; delegates session orchestration to `AppSessionCoordinator`. |
+| `AppSessionCoordinator.swift` | `@Observable` session coordinator owning routing, action dispatch, palette binding, sheet flags, and onboarding hooks. |
+| `WorkspaceCanvasView.swift` | Shared `InfiniteCanvasView` wrapper for root and project workspaces. |
+| `AppSheetsModifier.swift` | View modifier presenting global sheets from session presentation state. |
+| `AppSessionLifecycle.swift` | View modifier attaching workspace sync, onboarding reactions, undo bridge, and file import. |
+| `KeyboardShortcutBridge.swift` | Hidden keyboard shortcut capture for iPhone (where `.commands` is ignored). |
+| `AppNotifications.swift` | `NotificationCenter` names bridging menu commands and in-view shortcuts. |
 | `AppConfiguration.swift` | Static configuration for Firebase Function names and environment keys. |
 | `Info.plist` | System-level permissions and metadata. |
 
