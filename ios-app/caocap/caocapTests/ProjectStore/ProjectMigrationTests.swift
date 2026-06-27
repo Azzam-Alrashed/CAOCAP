@@ -265,7 +265,140 @@ struct ProjectMigrationTests {
 
         let root = try persistence.load(fileName: CanvasFileNaming.rootFileName)
         #expect(root.nodes.first(where: { $0.title == "Child" })?.linkedCanvasFileName == "canvas_abc12345.json")
-        #expect(root.nodes.first(where: { $0.title == "Settings" })?.action == nil)
+        #expect(root.nodes.first(where: { $0.title == "Settings" })?.action == .openSettings)
+    }
+
+    @Test func curatedRootMigrationResetsRootOnceAndSeedsChildCanvases() throws {
+        let tempDirectory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: tempDirectory) }
+        let persistence = ProjectPersistenceService(baseDirectory: tempDirectory)
+        let defaults = try #require(UserDefaults(suiteName: "CuratedRootCanvasMigrationTests.reset"))
+        defer { defaults.removePersistentDomain(forName: "CuratedRootCanvasMigrationTests.reset") }
+        defaults.removePersistentDomain(forName: "CuratedRootCanvasMigrationTests.reset")
+
+        try persistence.save(
+            ProjectSnapshot(
+                projectName: "Old Root",
+                nodes: [SpatialNode(position: .zero, title: "Old Node")],
+                viewportOffset: CGSize(width: 42, height: 24),
+                viewportScale: 1
+            ),
+            fileName: CanvasFileNaming.rootFileName
+        )
+
+        CuratedRootCanvasMigration.runIfNeeded(persistence: persistence, defaults: defaults)
+
+        let migratedRoot = try persistence.load(fileName: CanvasFileNaming.rootFileName)
+        #expect(migratedRoot.nodes == RootCanvasProvider.nodes)
+        #expect(migratedRoot.viewportOffset == .zero)
+        #expect(migratedRoot.viewportScale == 0.5)
+        #expect(persistence.projectExists(fileName: RootCanvasProvider.tutorialFileName))
+        #expect(persistence.projectExists(fileName: RootCanvasProvider.pacManFileName))
+
+        let customizedRoot = ProjectSnapshot(
+            projectName: "Customized",
+            nodes: [SpatialNode(position: .zero, title: "My Node")],
+            viewportOffset: .zero,
+            viewportScale: 1
+        )
+        try persistence.save(customizedRoot, fileName: CanvasFileNaming.rootFileName)
+        CuratedRootCanvasMigration.runIfNeeded(persistence: persistence, defaults: defaults)
+        let preservedRoot = try persistence.load(fileName: CanvasFileNaming.rootFileName)
+        #expect(preservedRoot == customizedRoot)
+    }
+
+    @Test func curatedRootMigrationPreservesExistingChildCanvases() throws {
+        let tempDirectory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: tempDirectory) }
+        let persistence = ProjectPersistenceService(baseDirectory: tempDirectory)
+        let defaults = try #require(UserDefaults(suiteName: "CuratedRootCanvasMigrationTests.children"))
+        defer { defaults.removePersistentDomain(forName: "CuratedRootCanvasMigrationTests.children") }
+        defaults.removePersistentDomain(forName: "CuratedRootCanvasMigrationTests.children")
+
+        let customizedPacMan = ProjectSnapshot(
+            projectName: "Customized Pac-Man",
+            nodes: [SpatialNode(position: .zero, title: "Keep Me")],
+            viewportOffset: .zero,
+            viewportScale: 1
+        )
+        try persistence.save(customizedPacMan, fileName: RootCanvasProvider.pacManFileName)
+
+        CuratedRootCanvasMigration.runIfNeeded(persistence: persistence, defaults: defaults)
+
+        let preservedPacMan = try persistence.load(fileName: RootCanvasProvider.pacManFileName)
+        #expect(preservedPacMan == customizedPacMan)
+    }
+
+    @Test func curatedRootMigrationUpdatesLegacyConstellationToVerticalLayout() throws {
+        let tempDirectory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: tempDirectory) }
+        let persistence = ProjectPersistenceService(baseDirectory: tempDirectory)
+        let defaults = try #require(UserDefaults(suiteName: "CuratedRootCanvasMigrationTests.vertical"))
+        defer { defaults.removePersistentDomain(forName: "CuratedRootCanvasMigrationTests.vertical") }
+        defaults.removePersistentDomain(forName: "CuratedRootCanvasMigrationTests.vertical")
+
+        let legacyNodes = [
+            SpatialNode(
+                id: RootCanvasProvider.tutorialNodeID,
+                type: .subCanvas,
+                position: .zero,
+                title: "Tutorial",
+                subtitle: "Learn CAOCAP by using it",
+                icon: "graduationcap.fill",
+                theme: .green,
+                linkedCanvasFileName: RootCanvasProvider.tutorialFileName
+            ),
+            SpatialNode(
+                id: RootCanvasProvider.proNodeID,
+                position: CGPoint(x: 0, y: -300),
+                title: "Pro Subscription",
+                subtitle: "Unlock CoCaptain & Premium Features",
+                icon: "crown.fill",
+                theme: .indigo,
+                action: .proSubscription
+            ),
+            SpatialNode(
+                id: RootCanvasProvider.profileNodeID,
+                position: CGPoint(x: -250, y: -150),
+                title: "Profile",
+                subtitle: "Account & Preferences",
+                icon: "person.crop.circle.fill",
+                theme: .blue,
+                action: .openProfile
+            ),
+            SpatialNode(
+                id: RootCanvasProvider.pacManNodeID,
+                type: .subCanvas,
+                position: CGPoint(x: 250, y: -150),
+                title: "Pac-Man",
+                subtitle: "A mobile-ready Mini-App",
+                icon: "gamecontroller.fill",
+                theme: .purple,
+                linkedCanvasFileName: RootCanvasProvider.pacManFileName
+            ),
+            SpatialNode(
+                id: RootCanvasProvider.settingsNodeID,
+                position: CGPoint(x: -250, y: 150),
+                title: "Settings",
+                subtitle: "App Tools & Config",
+                icon: "gearshape.fill",
+                theme: .orange,
+                action: .openSettings
+            )
+        ]
+
+        try persistence.save(
+            ProjectSnapshot(projectName: "Root", nodes: legacyNodes, viewportOffset: .zero, viewportScale: 0.5),
+            fileName: CanvasFileNaming.rootFileName
+        )
+        defaults.set(true, forKey: CuratedRootCanvasMigration.migrationCompleteKey)
+
+        CuratedRootCanvasMigration.runIfNeeded(persistence: persistence, defaults: defaults)
+
+        let migratedRoot = try persistence.load(fileName: CanvasFileNaming.rootFileName)
+        let positionsByID = Dictionary(uniqueKeysWithValues: migratedRoot.nodes.map { ($0.id, $0.position) })
+        let expectedPositions = Dictionary(uniqueKeysWithValues: RootCanvasProvider.nodes.map { ($0.id, $0.position) })
+        #expect(positionsByID == expectedPositions)
     }
 
     private func makeTemporaryDirectory() throws -> URL {

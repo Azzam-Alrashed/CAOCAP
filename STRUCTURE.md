@@ -174,6 +174,7 @@ App-wide support helpers.
 
 | File | Responsibility |
 |---|---|
+| `AppDataResetService.swift` | Factory-reset deletion of app-owned workspace, document, cache, temporary, and defaults data. |
 | `AppUpdateService.swift` | Firebase Remote Config minimum-version gate for required App Store update prompts. |
 | `AnalyticsService.swift` | Thin Firebase Analytics wrapper for onboarding and product events. |
 | `DictationController.swift` | Shared speech-to-text dictation controller for app input surfaces, including CoCaptain and the Omnibox. |
@@ -208,7 +209,8 @@ State management, persistence, checkpoints, and reactive compilation for the spa
 | `ProjectStore.swift` | Observable project state owner. Manages `[SpatialNode]`, viewport state, undo wiring, debounced save requests, live preview refresh, and omnibox shortcut pinning. |
 | `ProjectPersistenceService.swift` | Project file URLs, JSON schema decoding/encoding, schema version checks, and atomic writes. |
 | `CanvasFileNaming.swift` | Nested workspace file naming (`canvas_*.json`) and legacy `project_*.json` resolution for sub-canvas navigation. |
-| `CanvasWorkspaceMigration.swift` | One-time migration from project-manager filenames and root shortcut nodes to the canvas workspace model. |
+| `CanvasWorkspaceMigration.swift` | One-time migration of project-manager filenames and linked-canvas references to the canvas workspace model. |
+| `CuratedRootCanvasMigration.swift` | One-time installation of the curated root constellation and its Tutorial and Pac-Man child canvases. |
 | `ExportService.swift` | Generates shareable exports asynchronously on a background thread. |
 | `CheckpointManager.swift` | Coordinates pre-agent mutation backup checkpoints. |
 | `NodeMutationEngine.swift` | Manages standard node and layout mutations. |
@@ -289,8 +291,10 @@ The spatial runtime — the heart of CAOCAP.
 
 | File | Responsibility |
 |---|---|
-| `HomeProvider.swift` | Generates the default node graph for the Home workspace. |
-| `ProjectTemplateProvider.swift` | Generates the default Mini-App starter node for new projects. |
+| `RootCanvasProvider.swift` | Defines the stable five-node root constellation and curated child-canvas filenames. |
+| `TutorialCanvasProvider.swift` | Defines the clean workspace used by the interactive tutorial. |
+| `PacManCanvasProvider.swift` | Defines the self-contained, touch-first Pac-Man example Mini-App. |
+| `ProjectTemplateProvider.swift` | Supplies the clean default project state and manual Mini-App boilerplate. |
 
 ---
 
