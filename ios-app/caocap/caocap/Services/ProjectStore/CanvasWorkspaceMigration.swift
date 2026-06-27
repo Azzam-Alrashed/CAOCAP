@@ -16,7 +16,6 @@ enum CanvasWorkspaceMigration {
 
         let directory = persistence.workspaceDirectory()
         renameLegacyProjectFiles(in: directory)
-        stripRootShortcutActions(persistence: persistence)
         rewriteLinkedCanvasFileNames(persistence: persistence, in: directory)
         migrateLastOpenedFileName()
 
@@ -44,39 +43,6 @@ enum CanvasWorkspaceMigration {
             } catch {
                 logger.error("Failed to rename \(legacyName): \(error.localizedDescription)")
             }
-        }
-    }
-
-    /// Removes any `NodeAction` values that were stored on sub-canvas nodes in
-    /// the root canvas file. Actions were moved out of nodes in a previous refactor
-    /// and leftover values can cause unexpected behaviour.
-    private static func stripRootShortcutActions(persistence: ProjectPersistenceService) {
-        let rootFileName = CanvasFileNaming.rootFileName
-        guard persistence.projectExists(fileName: rootFileName) else { return }
-
-        do {
-            var snapshot = try persistence.load(fileName: rootFileName)
-            var changed = false
-            snapshot = ProjectSnapshot(
-                schemaVersion: snapshot.schemaVersion,
-                projectName: snapshot.projectName,
-                nodes: snapshot.nodes.map { node in
-                    guard node.action != nil else { return node }
-                    changed = true
-                    var updated = node
-                    updated.action = nil
-                    return updated
-                },
-                viewportOffset: snapshot.viewportOffset,
-                viewportScale: snapshot.viewportScale,
-                checkpointLabel: snapshot.checkpointLabel
-            )
-            if changed {
-                try persistence.save(snapshot, fileName: rootFileName)
-                logger.info("Stripped shortcut actions from \(rootFileName)")
-            }
-        } catch {
-            logger.error("Failed to strip root shortcut actions: \(error.localizedDescription)")
         }
     }
 

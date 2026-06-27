@@ -92,6 +92,7 @@ struct InfiniteCanvasView: View {
                             isDragging: isDraggingThisNode,
                             agentState: store.activeAgentStates[node.id] ?? .idle
                         )
+                            .tutorialOnboardingAnchor(isEnabled: node.id == RootCanvasProvider.tutorialNodeID)
                             .offset(
                                 x: node.position.x + currentOffset.width,
                                 y: node.position.y + currentOffset.height

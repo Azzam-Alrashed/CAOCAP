@@ -47,11 +47,12 @@ public class AppRouter {
     /// the root canvas with its default node template and a zoomed-out initial scale.
     public init() {
         CanvasWorkspaceMigration.runIfNeeded()
+        CuratedRootCanvasMigration.runIfNeeded()
         self.currentWorkspace = .root
         self.rootStore = ProjectStore(
             fileName: CanvasFileNaming.rootFileName,
             projectName: "Root",
-            initialNodes: ProjectTemplateProvider.defaultNodes,
+            initialNodes: RootCanvasProvider.nodes,
             initialViewportScale: 0.5
         )
     }
