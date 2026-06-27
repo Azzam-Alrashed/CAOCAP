@@ -38,6 +38,9 @@ public final class CoCaptainViewModel {
     /// The cumulative number of completed assistant turns/responses. This increments whenever a model
     /// streaming task, execution result, or local command finishes. Used to synchronize onboarding prompts.
     public private(set) var completedAssistantResponseCount: Int = 0
+    /// The cumulative number of assistant turns that produced a usable response.
+    /// Errors remain completed turns but do not advance this counter.
+    public private(set) var successfulAssistantResponseCount: Int = 0
     public var isAwaitingFirstResponse: Bool {
         guard isThinking,
               let lastMessage,
@@ -127,14 +130,17 @@ public final class CoCaptainViewModel {
         sendMessage(suggestion.suggestedPrompt)
     }
 
-    public func sendMessage(_ text: String) {
+    public func sendMessage(
+        _ text: String,
+        purpose: CoCaptainTurnPurpose = .standard
+    ) {
         guard !isThinking else { return }
 
         let userItem = ChatBubbleItem(text: text, isUser: true)
         items.append(CoCaptainTimelineItem(content: .message(userItem)))
         persistNodeMessageIfNeeded(userItem)
 
-        if handleDirectCommand(text) {
+        if purpose == .standard, handleDirectCommand(text) {
             return
         }
 
@@ -158,9 +164,21 @@ public final class CoCaptainViewModel {
                     userMessage: text,
                     store: store,
                     dispatcher: actionDispatcher,
-                    scope: scope
+                    scope: scope,
+                    purpose: purpose
                 ) { _ in
                     // Stop streaming characters to the UI for a cleaner 'split message' feel.
+                }
+
+                let hasUsableResponse =
+                    !result.visibleText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+                    result.executionSummary != nil ||
+                    result.reviewBundle != nil
+
+                if purpose == .onboardingWelcome, !hasUsableResponse {
+                    updateMessage(id: aiMessageID, text: onboardingWelcomeRetryMessage)
+                    markAssistantResponseCompleted(successful: false)
+                    return
                 }
 
                 // Remove the empty thinking placeholder.
@@ -183,7 +201,7 @@ public final class CoCaptainViewModel {
                 if let reviewBundle = result.reviewBundle {
                     items.append(CoCaptainTimelineItem(content: .reviewBundle(reviewBundle)))
                 }
-                markAssistantResponseCompleted()
+                markAssistantResponseCompleted(successful: hasUsableResponse)
             } catch {
                 if error is CancellationError || Task.isCancelled {
                     removeEmptyMessage(id: aiMessageID)
@@ -193,6 +211,8 @@ public final class CoCaptainViewModel {
                 if let limitError = error as? TokenUsageLimitError {
                     updateMessage(id: aiMessageID, text: limitError.localizedDescription)
                     appendLimitReachedCTA()
+                } else if purpose == .onboardingWelcome {
+                    updateMessage(id: aiMessageID, text: onboardingWelcomeRetryMessage)
                 } else {
                     let details = String(reflecting: error)
                     updateMessage(
@@ -203,7 +223,7 @@ public final class CoCaptainViewModel {
                         )
                     )
                 }
-                markAssistantResponseCompleted()
+                markAssistantResponseCompleted(successful: false)
             }
         }
     }
@@ -264,7 +284,7 @@ public final class CoCaptainViewModel {
                     )
                 )
             )
-            markAssistantResponseCompleted()
+            markAssistantResponseCompleted(successful: true)
             return true
         }
 
@@ -274,7 +294,7 @@ public final class CoCaptainViewModel {
                 content: .execution(ExecutionStatusItem(summary: result.message))
             )
         )
-        markAssistantResponseCompleted()
+        markAssistantResponseCompleted(successful: true)
         return true
     }
 
@@ -436,8 +456,17 @@ public final class CoCaptainViewModel {
 
     /// Increments the completed response count to signal to subscribers that the assistant
     /// has finished processing the current request/action.
-    private func markAssistantResponseCompleted() {
+    private func markAssistantResponseCompleted(successful: Bool) {
         completedAssistantResponseCount += 1
+        if successful {
+            successfulAssistantResponseCount += 1
+        }
+    }
+
+    private var onboardingWelcomeRetryMessage: String {
+        LocalizationManager.shared.localizedString(
+            "I couldn't finish your welcome. Please try sending your message again."
+        )
     }
 
     private var lastMessage: ChatBubbleItem? {

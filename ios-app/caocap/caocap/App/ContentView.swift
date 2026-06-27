@@ -74,9 +74,9 @@ struct ContentView: View {
     /// Controls whether the `.medium` detent is available, temporarily locked out when
     /// the sheet must start large during onboarding.
     @State private var coCaptainAllowsMediumDetent = true
-    /// The baseline count of completed CoCaptain assistant responses. Used during onboarding to wait
+    /// The baseline count of successful CoCaptain assistant responses. Used during onboarding to wait
     /// until the assistant successfully responds to the user's initial prompt before advancing the step.
-    @State private var onboardingInitialCoCaptainResponseBaseline: Int?
+    @State private var onboardingInitialCoCaptainSuccessBaseline: Int?
 
     var body: some View {
         GeometryReader { geometry in
@@ -306,7 +306,7 @@ struct ContentView: View {
                     onboarding.hidePopoverForCurrentStep()
                 }
             } else {
-                onboardingInitialCoCaptainResponseBaseline = nil
+                onboardingInitialCoCaptainSuccessBaseline = nil
                 if onboarding.currentStep == .dismissCoCaptain {
                     onboarding.completeCurrentStep()
                 } else if onboarding.currentStep == .submitCoCaptainPrompt || onboarding.currentStep == .chatCoCaptain {
@@ -314,7 +314,7 @@ struct ContentView: View {
                 }
             }
         }
-        .onChange(of: coCaptain.completedAssistantResponseCount) {
+        .onChange(of: coCaptain.successfulAssistantResponseCount) {
             advanceInitialCoCaptainOnboardingIfReady()
         }
         .onChange(of: router.currentWorkspace) {
@@ -469,20 +469,20 @@ struct ContentView: View {
     /// records the current response count baseline and hides the onboarding popover.
     private func beginInitialCoCaptainOnboardingWaitIfNeeded() {
         guard onboarding.currentStep == .submitCoCaptainPrompt else { return }
-        onboardingInitialCoCaptainResponseBaseline = coCaptain.completedAssistantResponseCount
+        onboardingInitialCoCaptainSuccessBaseline = coCaptain.successfulAssistantResponseCount
         onboarding.hidePopoverForCurrentStep()
     }
 
-    /// Advances the onboarding flow from the prompt submission step once CoCaptain's response count
-    /// exceeds the recorded baseline (indicating that the model finished its response).
+    /// Advances the onboarding flow from the prompt submission step once CoCaptain's successful
+    /// response count exceeds the recorded baseline.
     private func advanceInitialCoCaptainOnboardingIfReady() {
-        guard let baseline = onboardingInitialCoCaptainResponseBaseline,
+        guard let baseline = onboardingInitialCoCaptainSuccessBaseline,
               onboarding.currentStep == .submitCoCaptainPrompt,
-              coCaptain.completedAssistantResponseCount > baseline else {
+              coCaptain.successfulAssistantResponseCount > baseline else {
             return
         }
 
-        onboardingInitialCoCaptainResponseBaseline = nil
+        onboardingInitialCoCaptainSuccessBaseline = nil
         onboarding.completeCurrentStep()
     }
 
@@ -653,9 +653,11 @@ struct ContentView: View {
         }
         commandPalette.onSubmitPrompt = { prompt in
             coCaptain.configureProjectSession(store: router.activeStore, dispatcher: actionDispatcher)
+            let purpose: CoCaptainTurnPurpose =
+                onboarding.currentStep == .submitCoCaptainPrompt ? .onboardingWelcome : .standard
             beginInitialCoCaptainOnboardingWaitIfNeeded()
             presentCoCaptain()
-            coCaptain.sendMessage(prompt)
+            coCaptain.sendMessage(prompt, purpose: purpose)
             advanceInitialCoCaptainOnboardingIfReady()
         }
     }
