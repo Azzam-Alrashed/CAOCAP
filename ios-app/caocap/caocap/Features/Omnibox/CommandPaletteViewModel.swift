@@ -55,10 +55,17 @@ public class CommandPaletteViewModel {
         let paletteActions = actions.filter { !Self.hiddenCreationActionIDs.contains($0.id) }
         if trimmedQuery.isEmpty { return paletteActions }
         
-        return paletteActions.filter {
+        let matches = paletteActions.filter {
             $0.localizedTitle.localizedCaseInsensitiveContains(trimmedQuery) ||
             $0.title.localizedCaseInsensitiveContains(trimmedQuery)
         }
+        return matches.enumerated()
+            .sorted { lhs, rhs in
+                let lhsPriority = Self.navigationPriority(for: lhs.element.id)
+                let rhsPriority = Self.navigationPriority(for: rhs.element.id)
+                return lhsPriority == rhsPriority ? lhs.offset < rhs.offset : lhsPriority < rhsPriority
+            }
+            .map(\.element)
     }
 
     public var nodeResults: [NodeSearchResult] {
@@ -75,12 +82,26 @@ public class CommandPaletteViewModel {
         .createSubCanvas
     ]
 
+    private static func navigationPriority(for id: AppActionID) -> Int {
+        switch id {
+        case .goBack: return 0
+        case .goRoot: return 1
+        default: return 2
+        }
+    }
+
     private var nodeResultCount: Int { nodeResults.count }
     private var nodeCreationResultCount: Int { nodeCreationResults.count }
     private var actionResultCount: Int { filteredActions.count }
+    public var prioritizedNavigationActionCount: Int {
+        guard !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return 0 }
+        return filteredActions.prefix {
+            $0.id == .goBack || $0.id == .goRoot
+        }.count
+    }
 
-    private var nodeResultsStartIndex: Int { 0 }
-    private var actionsStartIndex: Int { nodeResultCount }
+    private var nodeResultsStartIndex: Int { prioritizedNavigationActionCount }
+    private var remainingActionsStartIndex: Int { prioritizedNavigationActionCount + nodeResultCount }
     private var nodeCreationResultsStartIndex: Int { nodeResultCount + actionResultCount }
     private var promptRowIndex: Int { nodeResultCount + actionResultCount + nodeCreationResultCount }
 
@@ -145,11 +166,15 @@ public class CommandPaletteViewModel {
         let nodeResults = nodeResults
         let nodeCreationResults = nodeCreationResults
         let actions = filteredActions
+        let prioritizedCount = prioritizedNavigationActionCount
         
-        if selectedIndex >= nodeResultsStartIndex && selectedIndex < actionsStartIndex {
+        if selectedIndex < prioritizedCount {
+            executeAction(actions[selectedIndex])
+        } else if selectedIndex >= nodeResultsStartIndex && selectedIndex < remainingActionsStartIndex {
             flyToNode(nodeResults[selectedIndex - nodeResultsStartIndex])
-        } else if selectedIndex >= actionsStartIndex && selectedIndex < nodeCreationResultsStartIndex {
-            executeAction(actions[selectedIndex - actionsStartIndex])
+        } else if selectedIndex >= remainingActionsStartIndex && selectedIndex < nodeCreationResultsStartIndex {
+            let actionIndex = prioritizedCount + selectedIndex - remainingActionsStartIndex
+            executeAction(actions[actionIndex])
         } else if selectedIndex >= nodeCreationResultsStartIndex && selectedIndex < promptRowIndex {
             createNode(nodeCreationResults[selectedIndex - nodeCreationResultsStartIndex])
         } else if canSubmitPrompt && selectedIndex == promptRowIndex {
@@ -201,7 +226,10 @@ public class CommandPaletteViewModel {
 
     /// Maps an action list index into the unified `selectedIndex` space.
     public func selectionIndex(forActionAt index: Int) -> Int {
-        actionsStartIndex + index
+        if index < prioritizedNavigationActionCount {
+            return index
+        }
+        return remainingActionsStartIndex + index - prioritizedNavigationActionCount
     }
 
     public var canSubmitPrompt: Bool {

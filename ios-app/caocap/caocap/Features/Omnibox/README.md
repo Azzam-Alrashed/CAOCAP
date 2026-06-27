@@ -42,6 +42,8 @@ All other actions are execute-only from the omnibox.
 Important rules:
 
 - only registered actions can resolve;
+- matching **Go Back** and **Go to Root** actions are pinned ahead of canvas-node
+  and creation results so navigation remains the default queried result;
 - explicit negations such as "do not create a project" return `nil`;
 - single-word aliases require exact matches;
 - multi-word aliases may match inside longer requests;

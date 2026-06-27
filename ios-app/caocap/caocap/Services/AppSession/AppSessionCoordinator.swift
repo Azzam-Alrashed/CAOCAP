@@ -40,6 +40,7 @@ final class AppSessionCoordinator {
     private var onboardingInitialCoCaptainSuccessBaseline: Int?
 
     private var actionsConfigured = false
+    @ObservationIgnored private var activeUndoManager: UndoManager?
 
     private enum StorageKey {
         static let gridOpacity = "grid_opacity"
@@ -79,6 +80,7 @@ final class AppSessionCoordinator {
     // MARK: - Lifecycle
 
     func bootstrap(undoManager: UndoManager?) {
+        activeUndoManager = undoManager
         bindCommandPalette()
         configureActionsIfNeeded()
         syncViewportWithActiveStore()
@@ -98,6 +100,7 @@ final class AppSessionCoordinator {
     }
 
     func handleWorkspaceChange(undoManager: UndoManager?) {
+        activeUndoManager = undoManager
         bindCommandPalette()
         attachUndoManager(undoManager)
         coCaptain.configureProjectSession(store: router.activeStore, dispatcher: actionDispatcher)
@@ -124,6 +127,69 @@ final class AppSessionCoordinator {
     func startInteractiveOnboardingIfNeeded() {
         guard !personalization.shouldPresent else { return }
         onboarding.startIfNeeded()
+    }
+
+    func restartOnboarding() {
+        restoreTutorialPortalIfNeeded()
+        intro.reset()
+        personalization.reset()
+        onboarding.reset()
+        router.navigate(to: .root, addToStack: false, animated: false)
+        syncViewportWithActiveStore()
+    }
+
+    func restartTutorial() {
+        restoreTutorialPortalIfNeeded()
+        onboarding.reset()
+        router.navigate(to: .root, addToStack: false, animated: false)
+        syncViewportWithActiveStore()
+        onboarding.startIfNeeded()
+    }
+
+    private func restoreTutorialPortalIfNeeded() {
+        guard let tutorial = RootCanvasProvider.nodes.first(where: {
+            $0.id == RootCanvasProvider.tutorialNodeID
+        }) else { return }
+        router.rootStore.ensureNodeExists(tutorial)
+    }
+
+    func eraseEverything(authManager: AuthenticationManager) async throws {
+        guard !LocalMLXModelManager.shared.isDownloadingLocalModel else {
+            throw AppDataResetError.localModelDownloadInProgress
+        }
+
+        coCaptain.stopStreaming()
+        onboarding.reset()
+
+        let stores = [router.rootStore] + Array(router.projects.values)
+        for store in stores {
+            await store.prepareForDataReset()
+        }
+
+        authManager.signOut()
+        LocalMLXModelManager.shared.updateHFToken("")
+        LocalMLXModelManager.shared.clearLocalModelCache()
+        try await AppDataResetService.eraseLocalData()
+
+        router = AppRouter()
+        commandPalette = CommandPaletteViewModel()
+        coCaptain = CoCaptainViewModel()
+        actionDispatcher = AppActionDispatcher()
+        intro = IntroCoordinator()
+        personalization = PersonalizationOnboardingCoordinator()
+        onboarding = OnboardingCoordinator()
+        viewport = ViewportState()
+        currentScale = 1
+        nodeFrames = [:]
+        onboardingInitialCoCaptainSuccessBaseline = nil
+        actionsConfigured = false
+
+        bindCommandPalette()
+        configureActionsIfNeeded()
+        attachUndoManager(activeUndoManager)
+        coCaptain.configureProjectSession(store: router.activeStore, dispatcher: actionDispatcher)
+        syncViewportWithActiveStore()
+        isLaunching = false
     }
 
     func updateNodeFrames(_ frames: [UUID: NodeFrameData]) {
@@ -161,6 +227,14 @@ final class AppSessionCoordinator {
             _ = actionDispatcher.perform(.summonCoCaptain, source: .user)
         case .proSubscription:
             _ = actionDispatcher.perform(.proSubscription, source: .user)
+        }
+    }
+
+    func handleSubCanvasNavigation(fileName: String) {
+        router.navigateToSubCanvas(fileName: fileName)
+        if fileName == RootCanvasProvider.tutorialFileName,
+           onboarding.currentStep == .openTutorial {
+            onboarding.completeCurrentStep()
         }
     }
 

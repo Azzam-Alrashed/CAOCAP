@@ -550,6 +550,13 @@ private struct OmniboxSearchResultsView: View {
     let promptRowAnchor: OnboardingTooltipAnchor
 
     var body: some View {
+        let actions = viewModel.filteredActions
+        let prioritizedCount = viewModel.prioritizedNavigationActionCount
+
+        ForEach(Array(actions.prefix(prioritizedCount).enumerated()), id: \.element.id) { index, action in
+            actionRow(action, at: index)
+        }
+
         if !viewModel.nodeResults.isEmpty {
             sectionHeader("CANVAS NODES")
 
@@ -564,14 +571,8 @@ private struct OmniboxSearchResultsView: View {
             }
         }
 
-        ForEach(Array(viewModel.filteredActions.enumerated()), id: \.element.id) { index, action in
-            AppActionRow(
-                item: action,
-                isSelected: viewModel.selectionIndex(forActionAt: index) == viewModel.selectedIndex,
-                onSelect: { viewModel.executeAction(action) },
-                onPin: action.canPinToCanvas ? { viewModel.pinAction(action) } : nil
-            )
-            .id(action.id.rawValue)
+        ForEach(Array(actions.dropFirst(prioritizedCount).enumerated()), id: \.element.id) { offset, action in
+            actionRow(action, at: prioritizedCount + offset)
         }
 
         if !viewModel.nodeCreationResults.isEmpty {
@@ -602,6 +603,16 @@ private struct OmniboxSearchResultsView: View {
         }
     }
 
+    private func actionRow(_ action: AppActionDefinition, at index: Int) -> some View {
+        AppActionRow(
+            item: action,
+            isSelected: viewModel.selectionIndex(forActionAt: index) == viewModel.selectedIndex,
+            onSelect: { viewModel.executeAction(action) },
+            onPin: action.canPinToCanvas ? { viewModel.pinAction(action) } : nil
+        )
+        .id(action.id.rawValue)
+    }
+
     @ViewBuilder
     private func sectionHeader(_ title: String) -> some View {
         HStack {
@@ -623,16 +634,23 @@ private struct OmniboxSearchResultsView: View {
         let nodeResults = viewModel.nodeResults
         let nodeCreationResults = viewModel.nodeCreationResults
         let actions = viewModel.filteredActions
+        let prioritizedCount = viewModel.prioritizedNavigationActionCount
+        let nodeStartIndex = prioritizedCount
+        let remainingActionsStartIndex = prioritizedCount + nodeResults.count
+        let nodeCreationStartIndex = nodeResults.count + actions.count
 
         withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
-            if newIndex >= 0 && newIndex < nodeResults.count {
-                proxy.scrollTo(nodeResults[newIndex].id.uuidString, anchor: .center)
-            } else if newIndex >= nodeResults.count && newIndex < (nodeResults.count + actions.count) {
-                let action = actions[newIndex - nodeResults.count]
+            if newIndex >= 0 && newIndex < prioritizedCount {
+                proxy.scrollTo(actions[newIndex].id.rawValue, anchor: .center)
+            } else if newIndex >= nodeStartIndex && newIndex < remainingActionsStartIndex {
+                proxy.scrollTo(nodeResults[newIndex - nodeStartIndex].id.uuidString, anchor: .center)
+            } else if newIndex >= remainingActionsStartIndex && newIndex < nodeCreationStartIndex {
+                let actionIndex = prioritizedCount + newIndex - remainingActionsStartIndex
+                let action = actions[actionIndex]
                 proxy.scrollTo(action.id.rawValue, anchor: .center)
-            } else if newIndex >= (nodeResults.count + actions.count)
-                        && newIndex < (nodeResults.count + actions.count + nodeCreationResults.count) {
-                let option = nodeCreationResults[newIndex - nodeResults.count - actions.count]
+            } else if newIndex >= nodeCreationStartIndex
+                        && newIndex < (nodeCreationStartIndex + nodeCreationResults.count) {
+                let option = nodeCreationResults[newIndex - nodeCreationStartIndex]
                 proxy.scrollTo("create-\(option.id.rawValue)", anchor: .center)
             } else if viewModel.canSubmitPrompt && newIndex == viewModel.promptSelectionIndex {
                 proxy.scrollTo("cocaptain-prompt", anchor: .center)

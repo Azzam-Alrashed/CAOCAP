@@ -67,7 +67,7 @@ struct ContentView: View {
                 currentScale: $session.currentScale,
                 onNodeAction: { session.handleNodeAction($0) },
                 onNavigateToSubCanvas: { fileName in
-                    session.router.navigateToSubCanvas(fileName: fileName)
+                    session.handleSubCanvasNavigation(fileName: fileName)
                 },
                 onRecoverUnsupportedProject: {
                     session.router.createFreshMiniAppCanvas()
@@ -81,7 +81,7 @@ struct ContentView: View {
                 currentScale: $session.currentScale,
                 onNodeAction: { session.handleNodeAction($0) },
                 onNavigateToSubCanvas: { fileName in
-                    session.router.navigateToSubCanvas(fileName: fileName)
+                    session.handleSubCanvasNavigation(fileName: fileName)
                 },
                 onRecoverUnsupportedProject: {
                     session.router.createFreshMiniAppCanvas()
@@ -167,4 +167,5 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
+        .environment(AuthenticationManager())
 }

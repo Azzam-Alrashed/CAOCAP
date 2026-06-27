@@ -19,6 +19,12 @@ struct OnboardingStepContent: Equatable {
 enum OnboardingManifest {
     static let steps: [OnboardingStepContent] = [
         OnboardingStepContent(
+            step: .openTutorial,
+            title: "Enter the Tutorial",
+            message: "Tap the Tutorial node to step inside and learn CAOCAP using its real controls.",
+            icon: "graduationcap.fill"
+        ),
+        OnboardingStepContent(
             step: .tapFAB,
             title: "Your Command Center",
             message: "Tap this button to open the command palette, your gateway to every action in CAOCAP.",
