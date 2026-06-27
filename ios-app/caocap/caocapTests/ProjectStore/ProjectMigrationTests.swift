@@ -217,7 +217,10 @@ struct ProjectMigrationTests {
         defer { try? FileManager.default.removeItem(at: tempDirectory) }
         let persistence = ProjectPersistenceService(baseDirectory: tempDirectory)
         let legacy = "project_deadbeef.json"
-        try persistence.save(ProjectSnapshot(projectName: "Legacy", nodes: []), fileName: legacy)
+        try persistence.save(
+            ProjectSnapshot(projectName: "Legacy", nodes: [], viewportOffset: .zero, viewportScale: 1.0),
+            fileName: legacy
+        )
 
         let resolved = CanvasFileNaming.resolveExistingFileName("canvas_deadbeef.json", persistence: persistence)
         #expect(resolved == legacy)
@@ -247,7 +250,10 @@ struct ProjectMigrationTests {
             viewportScale: 1.0
         )
         try persistence.save(rootSnapshot, fileName: CanvasFileNaming.rootFileName)
-        try persistence.save(ProjectSnapshot(projectName: "Child", nodes: []), fileName: legacyLinked)
+        try persistence.save(
+            ProjectSnapshot(projectName: "Child", nodes: [], viewportOffset: .zero, viewportScale: 1.0),
+            fileName: legacyLinked
+        )
 
         #expect(persistence.projectExists(fileName: legacyLinked))
         #expect(!persistence.projectExists(fileName: "canvas_abc12345.json"))

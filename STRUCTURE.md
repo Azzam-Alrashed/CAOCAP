@@ -29,12 +29,14 @@ CAOCAP/
 ```
 caocap/
 ├── App/
+│   └── Shell/
 ├── Navigation/
 ├── Models/
 ├── Services/
 │   ├── Account/
 │   ├── AppActions/
 │   ├── AppEnvironment/
+│   ├── AppSession/
 │   ├── CoCaptain/
 │   ├── ProjectStore/
 │   ├── Runtime/
@@ -45,19 +47,22 @@ caocap/
 │   ├── Canvas/
 │   │   ├── Components/
 │   │   └── Providers/
-│   ├── Intro/
-│   ├── Omnibox/
 │   ├── CoCaptain/
 │   │   ├── AgentContract/
 │   │   ├── Analysis/
 │   │   ├── Chat/
 │   │   ├── NodeAgent/
 │   │   └── Review/
+│   ├── Intro/
 │   ├── Launch/
+│   ├── Omnibox/
+│   ├── Onboarding/
 │   ├── Overlays/
 │   ├── Settings/
+│   ├── SnapshotBrowser/
 │   └── Subscription/
 ├── Resources/
+│   └── Config/
 └── Preview Content/
 ```
 
@@ -65,6 +70,7 @@ caocap/
 
 ```
 caocapTests/
+├── AppSession/
 ├── AppEnvironment/
 ├── Canvas/
 ├── CoCaptain/
@@ -80,20 +86,24 @@ caocapTests/
 ## Directory Reference
 
 ### `App/`
-The application shell and lifecycle management. The thinnest layer possible — no business logic lives here.
+The application shell: entry point, root view, and SDK bootstrap only. No session orchestration or feature logic.
 
 | File | Responsibility |
 |---|---|
-| `caocapApp.swift` | `@main` entry point. Initializes Firebase and injects `AppRouter` as an environment object. |
-| `ContentView.swift` | Root view. Composes workspace canvas, overlays, FAB, and command palette; delegates session orchestration to `AppSessionCoordinator`. |
-| `AppSessionCoordinator.swift` | `@Observable` session coordinator owning routing, action dispatch, palette binding, sheet flags, and onboarding hooks. |
+| `caocapApp.swift` | `@main` entry point. Hosts `WindowGroup`, theme/locale injection, and menu-command shortcuts. |
+| `ContentView.swift` | Root SwiftUI composition. Observes `AppSessionCoordinator` and hosts canvas, overlays, FAB, and command palette. |
+| `AppConfiguration.swift` | One-time Firebase and Google Sign-In bootstrap called from `AppDelegate`. |
+
+#### `App/Shell/`
+Root-level SwiftUI wiring extracted from `ContentView`. These types bind UI to `AppSessionCoordinator` but do not own business rules.
+
+| File | Responsibility |
+|---|---|
 | `WorkspaceCanvasView.swift` | Shared `InfiniteCanvasView` wrapper for root and project workspaces. |
-| `AppSheetsModifier.swift` | View modifier presenting global sheets from session presentation state. |
-| `AppSessionLifecycle.swift` | View modifier attaching workspace sync, onboarding reactions, undo bridge, and file import. |
-| `KeyboardShortcutBridge.swift` | Hidden keyboard shortcut capture for iPhone (where `.commands` is ignored). |
+| `AppSheetsModifier.swift` | Presents global sheets from session presentation flags. |
+| `AppSessionLifecycle.swift` | Attaches workspace sync, onboarding reactions, undo bridge, and file import. |
+| `KeyboardShortcutBridge.swift` | Hidden keyboard shortcuts for iPhone (where `.commands` is ignored). |
 | `AppNotifications.swift` | `NotificationCenter` names bridging menu commands and in-view shortcuts. |
-| `AppConfiguration.swift` | Static configuration for Firebase Function names and environment keys. |
-| `Info.plist` | System-level permissions and metadata. |
 
 ---
 
@@ -127,6 +137,7 @@ Infrastructure and heavy-lifting. These are long-lived objects that outlive indi
 | `Account/` | Firebase Auth and StoreKit subscription infrastructure. |
 | `AppActions/` | Centralized action registry for app, Omnibox, and agent-triggered actions. |
 | `AppEnvironment/` | App-wide environment helpers such as localization, haptics, and update prompts. |
+| `AppSession/` | Root-session orchestration: action dispatch wiring, palette binding, sheet flags, and onboarding hooks. |
 | `Runtime/` | Mini-App preview compilation and preview bootstrapping. |
 | `WorkspaceIntelligence/` | Spatial layout, search indexing, project analysis, and SRS readiness evaluation. |
 | `ProjectStore/` | Project state, persistence, checkpoints, exports, and reactive compilation. |
@@ -146,6 +157,15 @@ App action registry and execution.
 | File | Responsibility |
 |---|---|
 | `AppActionDispatcher.swift` | Centralized action registry. Allows the app and the AI agent to trigger high-level navigation and project mutations. |
+
+#### `Services/AppSession/`
+Coordinates the live app session above individual features.
+
+| File | Responsibility |
+|---|---|
+| `AppSessionCoordinator.swift` | `@Observable` session owner for `AppRouter`, command palette, CoCaptain panel, action dispatcher registration, global sheet flags, and onboarding step reactions. |
+
+See `Services/AppSession/README.md` before changing session wiring.
 
 #### `Services/AppEnvironment/`
 App-wide support helpers.
@@ -370,7 +390,19 @@ The Pro monetization UI. Contains the glassmorphic purchase sheet, plan comparis
 ---
 
 ### `Resources/`
-Asset catalogs, app icons, and localization files.
+Asset catalogs, app icons, localization files, and bundled app configuration.
+
+#### `Resources/Config/`
+Non-Swift app metadata referenced by Xcode build settings or bundled resources.
+
+| File | Responsibility |
+|---|---|
+| `Info.plist` | System permissions, URL schemes, and bundle metadata. |
+| `caocap.entitlements` | App capabilities and signing entitlements. |
+| `GoogleService-Info.plist` | Firebase project configuration (local/dev copy; gitignored in some environments). |
+| `Subscriptions.storekit` | Local StoreKit configuration for development paywall testing. |
+| `PrivacyInfo.xcprivacy` | Apple privacy manifest required-reason API declarations. |
+| `ar.lproj/InfoPlist.strings` | Localized Info.plist strings. |
 
 ### `Preview Content/`
 Assets used exclusively by Xcode Previews. Not included in production builds.
@@ -379,7 +411,7 @@ Assets used exclusively by Xcode Previews. Not included in production builds.
 
 ## Architectural Principles
 
-1. **Unidirectional Data Flow**: `AppRouter` owns workspace state. `ProjectStore` owns node state. Views observe and never mutate state directly.
+1. **Unidirectional Data Flow**: `AppRouter` owns workspace state. `ProjectStore` owns node state. `AppSessionCoordinator` wires session-level actions and presentation. Views observe and never mutate state directly.
 2. **No Blocking Main Thread**: Disk I/O and network requests should stay outside view bodies and main-actor interaction paths.
 3. **Agentic Context Harvesting**: CoCaptain reads the *entire* spatial graph state before every prompt, ensuring grounded AI responses.
 4. **Zero Core Dependencies**: Core logic (compilation, syntax highlighting) remains in pure Swift. Firebase is used exclusively for identity and AI.

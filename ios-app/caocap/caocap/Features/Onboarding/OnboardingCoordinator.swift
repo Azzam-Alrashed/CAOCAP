@@ -78,7 +78,7 @@ public class OnboardingCoordinator {
 
     public init() {}
 
-    /// Call once from `ContentView.onAppear` after the launch screen fades.
+    /// Call once from `AppSessionCoordinator.bootstrap` after the launch screen fades.
     public func startIfNeeded() {
         guard !isCompleted else { return }
 

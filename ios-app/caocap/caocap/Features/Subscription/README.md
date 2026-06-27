@@ -7,7 +7,7 @@ The Subscription feature presents CAOCAP Pro plans, loads StoreKit products, han
 - `SubscriptionManager` owns StoreKit products, active entitlement IDs, purchase flow, restore flow, and transaction updates.
 - `PurchaseView` renders the paywall, plan selection, purchase button, legal disclosure, and success/error states.
 - `PurchaseComponents` contains reusable paywall rows, cards, and visual building blocks.
-- `Subscriptions.storekit` in `App/` provides local StoreKit configuration for development.
+- `Subscriptions.storekit` in `Resources/Config/` provides local StoreKit configuration for development.
 
 The feature's core contract is simple: grant Pro only from verified StoreKit transactions.
 

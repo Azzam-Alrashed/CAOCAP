@@ -87,7 +87,6 @@ struct AppSessionCoordinatorTests {
 
         let scale = session.flyToTargetScale(for: node, nodeId: nodeID)
 
-        let expectedScale = min(min((375 * 0.8) / 375, (667 * 0.8) / 667), 1.2)
-        #expect(scale == expectedScale)
+        #expect(scale == 0.8)
     }
 }
