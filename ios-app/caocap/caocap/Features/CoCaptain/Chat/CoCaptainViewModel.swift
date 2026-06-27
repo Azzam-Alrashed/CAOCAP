@@ -41,6 +41,9 @@ public final class CoCaptainViewModel {
     /// The cumulative number of assistant turns that produced a usable response.
     /// Errors remain completed turns but do not advance this counter.
     public private(set) var successfulAssistantResponseCount: Int = 0
+    /// The most recent terminal outcome, including the purpose of the exact turn
+    /// that completed. Onboarding observes this instead of global counters.
+    public private(set) var lastTurnCompletion: CoCaptainTurnCompletion?
     public var isAwaitingFirstResponse: Bool {
         guard isThinking,
               let lastMessage,
@@ -65,6 +68,7 @@ public final class CoCaptainViewModel {
             loadPersistedNodeMessages(nodeID: nodeID)
         }
         lastScrollPosition = nil
+        lastTurnCompletion = nil
     }
 
     public func configureProjectSession(store: ProjectStore?, dispatcher: (any AppActionPerforming)?) {
@@ -136,11 +140,13 @@ public final class CoCaptainViewModel {
     ) {
         guard !isThinking else { return }
 
+        let turnID = UUID()
         let userItem = ChatBubbleItem(text: text, isUser: true)
         items.append(CoCaptainTimelineItem(content: .message(userItem)))
         persistNodeMessageIfNeeded(userItem)
 
-        if purpose == .standard, handleDirectCommand(text) {
+        if purpose == .standard,
+           handleDirectCommand(text, turnID: turnID, purpose: purpose) {
             return
         }
 
@@ -175,9 +181,13 @@ public final class CoCaptainViewModel {
                     result.executionSummary != nil ||
                     result.reviewBundle != nil
 
-                if purpose == .onboardingWelcome, !hasUsableResponse {
-                    updateMessage(id: aiMessageID, text: onboardingWelcomeRetryMessage)
-                    markAssistantResponseCompleted(successful: false)
+                if purpose.isOnboardingConversation, !hasUsableResponse {
+                    updateMessage(id: aiMessageID, text: onboardingRetryMessage(for: purpose))
+                    markAssistantResponseCompleted(
+                        turnID: turnID,
+                        purpose: purpose,
+                        successful: false
+                    )
                     return
                 }
 
@@ -201,18 +211,27 @@ public final class CoCaptainViewModel {
                 if let reviewBundle = result.reviewBundle {
                     items.append(CoCaptainTimelineItem(content: .reviewBundle(reviewBundle)))
                 }
-                markAssistantResponseCompleted(successful: hasUsableResponse)
+                markAssistantResponseCompleted(
+                    turnID: turnID,
+                    purpose: purpose,
+                    successful: hasUsableResponse
+                )
             } catch {
                 if error is CancellationError || Task.isCancelled {
                     removeEmptyMessage(id: aiMessageID)
+                    recordTurnCompletion(
+                        turnID: turnID,
+                        purpose: purpose,
+                        successful: false
+                    )
                     return
                 }
 
                 if let limitError = error as? TokenUsageLimitError {
                     updateMessage(id: aiMessageID, text: limitError.localizedDescription)
                     appendLimitReachedCTA()
-                } else if purpose == .onboardingWelcome {
-                    updateMessage(id: aiMessageID, text: onboardingWelcomeRetryMessage)
+                } else if purpose.isOnboardingConversation {
+                    updateMessage(id: aiMessageID, text: onboardingRetryMessage(for: purpose))
                 } else {
                     let details = String(reflecting: error)
                     updateMessage(
@@ -223,7 +242,11 @@ public final class CoCaptainViewModel {
                         )
                     )
                 }
-                markAssistantResponseCompleted(successful: false)
+                markAssistantResponseCompleted(
+                    turnID: turnID,
+                    purpose: purpose,
+                    successful: false
+                )
             }
         }
     }
@@ -244,7 +267,11 @@ public final class CoCaptainViewModel {
 
     /// Handles simple app commands locally so navigation does not need a model
     /// round trip. Mutating commands still become review items.
-    private func handleDirectCommand(_ text: String) -> Bool {
+    private func handleDirectCommand(
+        _ text: String,
+        turnID: UUID,
+        purpose: CoCaptainTurnPurpose
+    ) -> Bool {
         guard scope == .project else { return false }
         guard let actionDispatcher,
               let actionID = commandIntentResolver.resolve(text, availableActions: actionDispatcher.availableActions),
@@ -284,7 +311,11 @@ public final class CoCaptainViewModel {
                     )
                 )
             )
-            markAssistantResponseCompleted(successful: true)
+            markAssistantResponseCompleted(
+                turnID: turnID,
+                purpose: purpose,
+                successful: true
+            )
             return true
         }
 
@@ -294,7 +325,11 @@ public final class CoCaptainViewModel {
                 content: .execution(ExecutionStatusItem(summary: result.message))
             )
         )
-        markAssistantResponseCompleted(successful: true)
+        markAssistantResponseCompleted(
+            turnID: turnID,
+            purpose: purpose,
+            successful: true
+        )
         return true
     }
 
@@ -456,17 +491,49 @@ public final class CoCaptainViewModel {
 
     /// Increments the completed response count to signal to subscribers that the assistant
     /// has finished processing the current request/action.
-    private func markAssistantResponseCompleted(successful: Bool) {
+    private func markAssistantResponseCompleted(
+        turnID: UUID,
+        purpose: CoCaptainTurnPurpose,
+        successful: Bool
+    ) {
         completedAssistantResponseCount += 1
         if successful {
             successfulAssistantResponseCount += 1
         }
+        recordTurnCompletion(
+            turnID: turnID,
+            purpose: purpose,
+            successful: successful
+        )
     }
 
-    private var onboardingWelcomeRetryMessage: String {
-        LocalizationManager.shared.localizedString(
-            "I couldn't finish your welcome. Please try sending your message again."
+    private func recordTurnCompletion(
+        turnID: UUID,
+        purpose: CoCaptainTurnPurpose,
+        successful: Bool
+    ) {
+        lastTurnCompletion = CoCaptainTurnCompletion(
+            turnID: turnID,
+            purpose: purpose,
+            succeeded: successful
         )
+    }
+
+    private func onboardingRetryMessage(for purpose: CoCaptainTurnPurpose) -> String {
+        switch purpose {
+        case .onboardingWelcome:
+            return LocalizationManager.shared.localizedString(
+                "I couldn't finish your welcome. Please try sending your message again."
+            )
+        case .onboardingBuildHandoff:
+            return LocalizationManager.shared.localizedString(
+                "I couldn't finish preparing our next step. Please try sending your idea again."
+            )
+        case .standard:
+            return LocalizationManager.shared.localizedString(
+                "Sorry, I couldn't finish that response. Please try again."
+            )
+        }
     }
 
     private var lastMessage: ChatBubbleItem? {

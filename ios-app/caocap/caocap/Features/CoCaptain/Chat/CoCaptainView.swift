@@ -3,9 +3,6 @@ import SwiftUI
 struct CoCaptainView: View {
     var viewModel: CoCaptainViewModel
     @State private var text: String = ""
-    /// The baseline count of completed CoCaptain responses, used to wait for the assistant's
-    /// response to complete before advancing the active onboarding step.
-    @State private var onboardingChatResponseBaseline: Int?
     @FocusState private var isFocused: Bool
     
     @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
@@ -58,14 +55,12 @@ struct CoCaptainView: View {
         .onChange(of: text) { oldValue, newValue in
             hideChatOnboardingWhenTypingChanges(from: oldValue, to: newValue)
         }
-        .onChange(of: viewModel.completedAssistantResponseCount) {
-            advanceChatOnboardingIfResponseFinished()
+        .onChange(of: viewModel.lastTurnCompletion) { _, completion in
+            advanceChatOnboardingIfHandoffFinished(completion)
         }
         .onChange(of: onboarding?.currentStep) { _, step in
             if step == .chatCoCaptain {
                 hideChatOnboardingIfTextIsPresent()
-            } else {
-                onboardingChatResponseBaseline = nil
             }
         }
         .onAppear {
@@ -81,7 +76,6 @@ struct CoCaptainView: View {
         viewModel.sendMessage(prompt, purpose: currentTurnPurpose)
         text = ""
         isFocused = false
-        advanceChatOnboardingIfResponseFinished()
     }
 
     private func sendQuickPrompt(_ prompt: String) {
@@ -91,13 +85,18 @@ struct CoCaptainView: View {
         isFocused = false
         beginChatOnboardingResponseWaitIfNeeded()
         viewModel.sendMessage(prompt, purpose: currentTurnPurpose)
-        advanceChatOnboardingIfResponseFinished()
     }
 
-    /// Retries the generated onboarding welcome while the initial prompt step
-    /// remains active; every later conversation uses standard agent behavior.
+    /// Gives each onboarding conversation turn its explicit UX objective.
     private var currentTurnPurpose: CoCaptainTurnPurpose {
-        onboarding?.currentStep == .submitCoCaptainPrompt ? .onboardingWelcome : .standard
+        switch onboarding?.currentStep {
+        case .some(.submitCoCaptainPrompt):
+            return .onboardingWelcome
+        case .some(.chatCoCaptain):
+            return .onboardingBuildHandoff
+        default:
+            return .standard
+        }
     }
 
     /// Hides the onboarding tooltip if the user begins typing a message in the text field.
@@ -121,24 +120,23 @@ struct CoCaptainView: View {
         onboarding?.hidePopoverForCurrentStep()
     }
 
-    /// Stores the current assistant response count baseline and hides the popover, starting the wait
-    /// for CoCaptain's response.
+    /// Hides the chat instruction while the user's idea handoff is in progress.
     private func beginChatOnboardingResponseWaitIfNeeded() {
         guard onboarding?.currentStep == .chatCoCaptain else { return }
 
-        onboardingChatResponseBaseline = viewModel.completedAssistantResponseCount
         onboarding?.hidePopoverForCurrentStep()
     }
 
-    /// Completes the chat onboarding step if the assistant's response count baseline has been exceeded.
-    private func advanceChatOnboardingIfResponseFinished() {
-        guard let baseline = onboardingChatResponseBaseline,
-              onboarding?.currentStep == .chatCoCaptain,
-              viewModel.completedAssistantResponseCount > baseline else {
+    /// Shows the Back to Canvas step only after the exact onboarding handoff
+    /// response succeeds. The coordinator applies its existing inter-step delay.
+    private func advanceChatOnboardingIfHandoffFinished(
+        _ completion: CoCaptainTurnCompletion?
+    ) {
+        guard onboarding?.currentStep == .chatCoCaptain,
+              completion?.shouldAdvanceToCanvasDismissal == true else {
             return
         }
 
-        onboardingChatResponseBaseline = nil
         onboarding?.completeCurrentStep()
     }
 }
