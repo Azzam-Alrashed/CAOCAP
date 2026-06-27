@@ -1,5 +1,35 @@
 import Foundation
 
+/// Describes the conversational objective for a CoCaptain turn.
+///
+/// Most turns use the standard agent behavior. The onboarding welcome keeps
+/// the response model-generated while giving the first interaction a focused
+/// UX outcome.
+public enum CoCaptainTurnPurpose: Hashable {
+    case standard
+    case onboardingWelcome
+
+    var promptInstructions: String? {
+        switch self {
+        case .standard:
+            return nil
+        case .onboardingWelcome:
+            return """
+            Onboarding welcome objective:
+            - This is the user's first CoCaptain interaction during onboarding.
+            - Respond naturally to the user's greeting in 40 to 80 words.
+            - Briefly explain that CoCaptain helps them build a working app while helping them understand the important decisions.
+            - End with exactly one easy question asking what they would like to make.
+            - You may include at most two short example ideas to make answering easier.
+            - Match the language used by the user.
+            - Do not mention nodes, SRS, patches, XML, Firebase, internal tools, or implementation details.
+            - Do not request app actions, propose edits, or emit a `cocaptain_actions` block.
+            - Do not claim the canvas contains anything that is not present in the supplied context.
+            """
+        }
+    }
+}
+
 /// Identifies the portion of the canvas that a CoCaptain agent session targets.
 ///
 /// The scope controls both which context is serialised for the model and

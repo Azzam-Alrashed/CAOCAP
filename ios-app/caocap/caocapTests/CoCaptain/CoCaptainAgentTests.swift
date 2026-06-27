@@ -4,6 +4,17 @@ import Testing
 @testable import caocap
 
 struct CoCaptainAgentTests {
+    @Test func onboardingWelcomePurposeDefinesFocusedPromptInstructions() {
+        let instructions = CoCaptainTurnPurpose.onboardingWelcome.promptInstructions
+
+        #expect(CoCaptainTurnPurpose.standard.promptInstructions == nil)
+        #expect(instructions?.contains("40 to 80 words") == true)
+        #expect(instructions?.contains("exactly one easy question") == true)
+        #expect(instructions?.contains("at most two short example ideas") == true)
+        #expect(instructions?.contains("Do not request app actions") == true)
+        #expect(instructions?.contains("Match the language used by the user") == true)
+    }
+
     @MainActor
     @Test func projectContextIncludesMiniAppsAndExcludesCompiledPreview() throws {
         let store = makeStore()
@@ -746,6 +757,23 @@ struct CoCaptainAgentTests {
     }
 
     @MainActor
+    @Test func coordinatorForwardsOnboardingWelcomePurpose() async throws {
+        let llm = TestLLMClient(
+            response: "Welcome! What would you like to make?"
+        )
+        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
+
+        _ = try await coordinator.run(
+            userMessage: "hi",
+            store: makeStore(),
+            dispatcher: nil,
+            purpose: .onboardingWelcome
+        ) { _ in }
+
+        #expect(llm.receivedPurposes == [.onboardingWelcome])
+    }
+
+    @MainActor
     @Test func coordinatorRetriesSRSRequestsWithoutNodeEdits() async throws {
         let dispatcher = TestActionDispatcher()
         let llm = TestLLMClient(
@@ -1196,6 +1224,7 @@ struct CoCaptainAgentTests {
 
         #expect(!vm.isThinking)
         #expect(vm.completedAssistantResponseCount == 1)
+        #expect(vm.successfulAssistantResponseCount == 0)
 
         let assistantMessage = vm.items.compactMap { item -> ChatBubbleItem? in
             guard case .message(let bubble) = item.content, !bubble.isUser else { return nil }
@@ -1258,6 +1287,7 @@ struct CoCaptainAgentTests {
 
         #expect(!vm.isThinking)
         #expect(vm.completedAssistantResponseCount == 1)
+        #expect(vm.successfulAssistantResponseCount == 1)
         #expect(dispatcher.executedActionIDs == [.openSettings])
     }
 
@@ -1270,6 +1300,7 @@ struct CoCaptainAgentTests {
         vm.sendMessage("open settings")
 
         #expect(vm.completedAssistantResponseCount == 1)
+        #expect(vm.successfulAssistantResponseCount == 1)
         #expect(dispatcher.executedActionIDs == [.openSettings])
     }
 
@@ -1286,6 +1317,37 @@ struct CoCaptainAgentTests {
 
         #expect(!vm.isThinking)
         #expect(vm.completedAssistantResponseCount == 0)
+        #expect(vm.successfulAssistantResponseCount == 0)
+    }
+
+    @MainActor
+    @Test func failedOnboardingWelcomeCanRetryWithoutCountingFailureAsSuccess() async throws {
+        let llm = FailingThenSucceedingLLMClient(failureCount: 2)
+        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
+        let vm = CoCaptainViewModel(agentCoordinator: coordinator)
+
+        vm.sendMessage("hi", purpose: .onboardingWelcome)
+
+        for _ in 0..<20 where vm.isThinking {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+
+        #expect(vm.completedAssistantResponseCount == 1)
+        #expect(vm.successfulAssistantResponseCount == 0)
+        #expect(vm.items.contains { item in
+            guard case .message(let bubble) = item.content else { return false }
+            return bubble.text.contains("Please try sending your message again.")
+        })
+
+        vm.sendMessage("hi again", purpose: .onboardingWelcome)
+
+        for _ in 0..<20 where vm.isThinking {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+
+        #expect(vm.completedAssistantResponseCount == 2)
+        #expect(vm.successfulAssistantResponseCount == 1)
+        #expect(llm.receivedPurposes.allSatisfy { $0 == .onboardingWelcome })
     }
 
     @MainActor
@@ -1330,7 +1392,8 @@ private final class ThrowingLLMClient: CoCaptainLLMClient {
         context: String?,
         expectsStructuredResponse: Bool,
         availableActions: [AppActionDefinition],
-        scope: CoCaptainAgentScope
+        scope: CoCaptainAgentScope,
+        purpose: CoCaptainTurnPurpose
     ) -> AsyncThrowingStream<CoCaptainLLMStreamEvent, Error> {
         AsyncThrowingStream { continuation in
             continuation.finish(throwing: error)
@@ -1345,6 +1408,7 @@ private final class TestLLMClient: CoCaptainLLMClient {
     private var streamCount = 0
     var receivedMessages: [String] = []
     var receivedScopes: [CoCaptainAgentScope] = []
+    var receivedPurposes: [CoCaptainTurnPurpose] = []
 
     init(response: String) {
         self.responses = [response]
@@ -1373,10 +1437,12 @@ private final class TestLLMClient: CoCaptainLLMClient {
         context: String?,
         expectsStructuredResponse: Bool,
         availableActions: [AppActionDefinition],
-        scope: CoCaptainAgentScope
+        scope: CoCaptainAgentScope,
+        purpose: CoCaptainTurnPurpose
     ) -> AsyncThrowingStream<CoCaptainLLMStreamEvent, Error> {
         receivedMessages.append(userMessage)
         receivedScopes.append(scope)
+        receivedPurposes.append(purpose)
         let index = streamCount
         let response = responses[min(index, responses.count - 1)]
         let calls = functionCalls.indices.contains(index) ? functionCalls[index] : []
@@ -1387,6 +1453,47 @@ private final class TestLLMClient: CoCaptainLLMClient {
             if !calls.isEmpty {
                 continuation.yield(.functionCalls(calls))
             }
+            continuation.finish()
+        }
+    }
+}
+
+@MainActor
+private final class FailingThenSucceedingLLMClient: CoCaptainLLMClient {
+    private var remainingFailures: Int
+    var receivedPurposes: [CoCaptainTurnPurpose] = []
+
+    init(failureCount: Int) {
+        self.remainingFailures = failureCount
+    }
+
+    func resetChat(scope: CoCaptainAgentScope) {}
+
+    func streamAgentEvents(
+        for userMessage: String,
+        context: String?,
+        expectsStructuredResponse: Bool,
+        availableActions: [AppActionDefinition],
+        scope: CoCaptainAgentScope,
+        purpose: CoCaptainTurnPurpose
+    ) -> AsyncThrowingStream<CoCaptainLLMStreamEvent, Error> {
+        receivedPurposes.append(purpose)
+
+        if remainingFailures > 0 {
+            remainingFailures -= 1
+            return AsyncThrowingStream { continuation in
+                continuation.finish(
+                    throwing: NSError(
+                        domain: "CoCaptainOnboardingTest",
+                        code: 1,
+                        userInfo: [NSLocalizedDescriptionKey: "Temporary model failure"]
+                    )
+                )
+            }
+        }
+
+        return AsyncThrowingStream { continuation in
+            continuation.yield(.text("Welcome! What would you like to make?"))
             continuation.finish()
         }
     }

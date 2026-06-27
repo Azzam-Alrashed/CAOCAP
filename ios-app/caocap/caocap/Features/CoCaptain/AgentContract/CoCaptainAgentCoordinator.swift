@@ -26,7 +26,8 @@ public protocol CoCaptainLLMClient: AnyObject {
         context: String?,
         expectsStructuredResponse: Bool,
         availableActions: [AppActionDefinition],
-        scope: CoCaptainAgentScope
+        scope: CoCaptainAgentScope,
+        purpose: CoCaptainTurnPurpose
     ) -> AsyncThrowingStream<CoCaptainLLMStreamEvent, Error>
 }
 
@@ -103,6 +104,7 @@ public final class CoCaptainAgentCoordinator {
         store: ProjectStore?,
         dispatcher: (any AppActionPerforming)?,
         scope: CoCaptainAgentScope = .project,
+        purpose: CoCaptainTurnPurpose = .standard,
         onVisibleText: @escaping (String) -> Void
     ) async throws -> CoCaptainAgentRunResult {
         let context = store.map { store in
@@ -121,6 +123,7 @@ public final class CoCaptainAgentCoordinator {
                 store: store,
                 dispatcher: dispatcher,
                 scope: scope,
+                purpose: purpose,
                 onVisibleText: onVisibleText,
                 allowAgenticRetry: true
             )
@@ -134,6 +137,7 @@ public final class CoCaptainAgentCoordinator {
                 store: store,
                 dispatcher: dispatcher,
                 scope: scope,
+                purpose: purpose,
                 onVisibleText: onVisibleText,
                 allowAgenticRetry: false
             )
@@ -153,6 +157,7 @@ public final class CoCaptainAgentCoordinator {
         store: ProjectStore?,
         dispatcher: (any AppActionPerforming)?,
         scope: CoCaptainAgentScope,
+        purpose: CoCaptainTurnPurpose,
         onVisibleText: @escaping (String) -> Void,
         allowAgenticRetry: Bool
     ) async throws -> CoCaptainAgentRunResult {
@@ -165,7 +170,8 @@ public final class CoCaptainAgentCoordinator {
             context: context,
             expectsStructuredResponse: expectsStructuredResponse,
             availableActions: dispatcher?.availableActions ?? [],
-            scope: scope
+            scope: scope,
+            purpose: purpose
         )
 
         for try await event in stream {
@@ -200,6 +206,7 @@ public final class CoCaptainAgentCoordinator {
                         store: store,
                         dispatcher: dispatcher,
                         scope: scope,
+                        purpose: purpose,
                         onVisibleText: onVisibleText,
                         allowAgenticRetry: false
                     )
@@ -228,6 +235,7 @@ public final class CoCaptainAgentCoordinator {
                     store: store,
                     dispatcher: dispatcher,
                     scope: scope,
+                    purpose: purpose,
                     onVisibleText: onVisibleText,
                     allowAgenticRetry: false
                 )
@@ -252,6 +260,7 @@ public final class CoCaptainAgentCoordinator {
                             store: store,
                             dispatcher: dispatcher,
                             scope: scope,
+                            purpose: purpose,
                             onVisibleText: onVisibleText,
                             allowAgenticRetry: false
                         )

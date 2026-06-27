@@ -78,7 +78,7 @@ struct CoCaptainView: View {
         guard !prompt.isEmpty, !viewModel.isThinking else { return }
 
         beginChatOnboardingResponseWaitIfNeeded()
-        viewModel.sendMessage(prompt)
+        viewModel.sendMessage(prompt, purpose: currentTurnPurpose)
         text = ""
         isFocused = false
         advanceChatOnboardingIfResponseFinished()
@@ -90,8 +90,14 @@ struct CoCaptainView: View {
         text = ""
         isFocused = false
         beginChatOnboardingResponseWaitIfNeeded()
-        viewModel.sendMessage(prompt)
+        viewModel.sendMessage(prompt, purpose: currentTurnPurpose)
         advanceChatOnboardingIfResponseFinished()
+    }
+
+    /// Retries the generated onboarding welcome while the initial prompt step
+    /// remains active; every later conversation uses standard agent behavior.
+    private var currentTurnPurpose: CoCaptainTurnPurpose {
+        onboarding?.currentStep == .submitCoCaptainPrompt ? .onboardingWelcome : .standard
     }
 
     /// Hides the onboarding tooltip if the user begins typing a message in the text field.
