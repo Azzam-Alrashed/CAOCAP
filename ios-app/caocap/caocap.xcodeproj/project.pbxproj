@@ -66,8 +66,8 @@
 				Features/CoCaptain/README.md,
 				Features/Omnibox/README.md,
 				Features/Subscription/README.md,
-				Services/AppSession/README.md,
 				Resources/Config/Info.plist,
+				Services/AppSession/README.md,
 			);
 			target = EC997C762F96178E00C19E5E /* caocap */;
 		};
@@ -391,6 +391,8 @@
 				INFOPLIST_FILE = caocap/Resources/Config/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = caocap;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "CAOCAP uses the microphone to dictate text into search and assistant input fields.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "CAOCAP uses speech recognition to turn your dictated words into text.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -423,6 +425,8 @@
 				INFOPLIST_FILE = caocap/Resources/Config/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = caocap;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "CAOCAP uses the microphone to dictate text into search and assistant input fields.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "CAOCAP uses speech recognition to turn your dictated words into text.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
