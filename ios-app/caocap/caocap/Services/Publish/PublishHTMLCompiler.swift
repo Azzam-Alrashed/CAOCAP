@@ -1,6 +1,6 @@
 import Foundation
 
-/// Compiles Mini-App HTML for Vercel publish with PWA / Home Screen meta tags.
+/// Compiles Mini-App HTML for GitHub Pages publish with PWA / Home Screen meta tags.
 struct PublishHTMLCompiler {
     private let previewCompiler = LivePreviewCompiler()
 

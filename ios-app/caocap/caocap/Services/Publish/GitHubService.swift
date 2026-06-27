@@ -125,6 +125,18 @@ struct GitHubService {
         }
     }
 
+    /// Pushes `.nojekyll` so GitHub Pages serves raw HTML without Jekyll processing.
+    func ensureNoJekyllFile(owner: String, repo: String, token: String, message: String) async throws {
+        try await createOrUpdateFile(
+            owner: owner,
+            repo: repo,
+            path: ".nojekyll",
+            content: "",
+            message: message,
+            token: token
+        )
+    }
+
     func getAuthenticatedUser(token: String) async throws -> String {
         guard let url = URL(string: "https://api.github.com/user") else {
             throw GitHubError.invalidURL

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Publish flow for a Mini-App: GitHub repo push, Vercel deploy, Safari Home Screen guide.
+/// Publish flow for a Mini-App: GitHub repo push, GitHub Pages, Safari Home Screen guide.
 struct MiniAppPublishView: View {
     let node: SpatialNode
     let store: ProjectStore
@@ -105,8 +105,13 @@ struct MiniAppPublishView: View {
             Toggle("Make repository private", isOn: $coordinator.isRepoPrivate)
                 .font(.subheadline)
 
+            Text("Private repos require GitHub Pro for GitHub Pages.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+
             if !coordinator.hasGitHubToken {
-                Text("Connect GitHub to create a repository and deploy your Mini-App.")
+                Text("Connect GitHub to create a repository and publish your Mini-App.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -161,9 +166,8 @@ struct MiniAppPublishView: View {
                 .multilineTextAlignment(.center)
                 .textSelection(.enabled)
 
-            if PublishCoordinator.hasFirebaseConfig(currentNode),
-               let host = PublishCoordinator.firebaseHostname(from: url) {
-                firebaseWarning(host: host)
+            if PublishCoordinator.hasFirebaseConfig(currentNode) {
+                firebaseWarning(host: firebaseHostForWarning)
             }
 
             Button("Copy Link") {
@@ -257,9 +261,20 @@ struct MiniAppPublishView: View {
         return currentNode.miniApp?.publishURL == nil ? "Publish Now" : "Republish"
     }
 
+    private var firebaseHostForWarning: String {
+        if let owner = currentNode.miniApp?.githubRepoOwner {
+            return PublishCoordinator.firebaseHost(forOwner: owner)
+        }
+        if let url = coordinator.publishURL ?? currentNode.miniApp?.publishURL,
+           let host = PublishCoordinator.firebaseHostname(from: url) {
+            return host
+        }
+        return "your-username.github.io"
+    }
+
     private var isBusy: Bool {
         switch coordinator.stage {
-        case .connectingGitHub, .creatingRepo, .pushingCode, .deployingVercel:
+        case .connectingGitHub, .creatingRepo, .pushingCode, .enablingPages, .waitingForPages:
             return true
         default:
             return false
@@ -271,7 +286,8 @@ struct MiniAppPublishView: View {
         case .connectingGitHub: return "Connecting GitHub"
         case .creatingRepo: return "Creating repository"
         case .pushingCode: return "Uploading HTML"
-        case .deployingVercel: return "Deploying to Vercel"
+        case .enablingPages: return "Enabling GitHub Pages"
+        case .waitingForPages: return "Waiting for site to go live"
         default: return "Publishing"
         }
     }
@@ -284,8 +300,10 @@ struct MiniAppPublishView: View {
             return "Setting up your GitHub repository."
         case .pushingCode:
             return "Pushing index.html to GitHub."
-        case .deployingVercel:
-            return "Your web app will be live in a few seconds."
+        case .enablingPages:
+            return "Turning on GitHub Pages for your repository."
+        case .waitingForPages:
+            return "This can take up to a minute on the first publish."
         default:
             return ""
         }

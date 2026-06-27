@@ -36,14 +36,12 @@ Maintain the domain-driven, feature-based structure:
 
 ## Mini-App Publish (local development)
 
-Publishing Mini-Apps to Vercel requires API credentials that are not committed to the repo.
+Publishing Mini-Apps to GitHub Pages requires a GitHub OAuth app that is not committed to the repo.
 
 1. Copy `ios-app/caocap/caocap/Resources/Config/Secrets.plist.example` to `Secrets.plist` in the same folder.
 2. Create a [GitHub OAuth App](https://github.com/settings/developers) with authorization callback URL `caocap://`.
 3. Add `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` to `Secrets.plist` (never put real keys in `Secrets.plist.example`).
-4. Add a [Vercel API token](https://vercel.com/account/settings/tokens) as `VERCEL_API_TOKEN`.
-5. Ensure the Vercel account is linked to GitHub so deployments can pull user repositories.
-6. Rebuild the app so `Secrets.plist` is copied into the app bundle.
+4. Rebuild the app so `Secrets.plist` is copied into the app bundle.
 
 `Secrets.plist` is gitignored. Do not commit real tokens.
 
