@@ -43,6 +43,7 @@ caocap/
 │   └── WorkspaceIntelligence/
 ├── Extensions/
 ├── Features/
+│   ├── Activity/
 │   ├── Auth/
 │   ├── Canvas/
 │   │   ├── Components/
@@ -177,6 +178,7 @@ App-wide support helpers.
 | `AppDataResetService.swift` | Factory-reset deletion of app-owned workspace, document, cache, temporary, and defaults data. |
 | `AppUpdateService.swift` | Firebase Remote Config minimum-version gate for required App Store update prompts. |
 | `AnalyticsService.swift` | Thin Firebase Analytics wrapper for onboarding and product events. |
+| `ActivityStore.swift` | Local device-wide daily counts for successful canvas saves and 17-week activity history. |
 | `DictationController.swift` | Shared speech-to-text dictation controller for app input surfaces, including CoCaptain and the Omnibox. |
 | `HapticsManager.swift` | Central haptic feedback helper that honors app haptics settings. |
 | `LocalizationManager.swift` | Runtime language selection, localized strings, localized project/node labels, and date formatting. |
@@ -268,6 +270,16 @@ All user-facing UI. Each subfolder is a self-contained feature module with its o
 
 ---
 
+#### `Activity/`
+Local-first building history surfaced by the protected Activity node on the root canvas.
+
+| File | Responsibility |
+|---|---|
+| `ActivityHeatmapView.swift` | Reusable 17×7 Sunday-to-Saturday save-activity grid with five intensity levels. |
+| `ActivityHistoryView.swift` | Expanded activity sheet with recent totals, active days, and the heatmap legend. |
+
+---
+
 #### `Auth/`
 Identity management and account security.
 
@@ -291,7 +303,7 @@ The spatial runtime — the heart of CAOCAP.
 
 | File | Responsibility |
 |---|---|
-| `NodeView.swift` | Renders a single `SpatialNode` on the canvas. Mini-App nodes show the live 9:16 preview card backed by nested `MiniAppState`. |
+| `NodeView.swift` | Renders a single `SpatialNode` on the canvas. Mini-App nodes show the live 9:16 preview; the protected Activity node shows recent save history. |
 | `NodeDetailView.swift` | Opens Mini-App nodes into a full-screen running preview with Mini-App-scoped FAB actions for SRS, Code, Firebase, Agent, Settings, Publish, and Back to Canvas. |
 | `MiniAppPublishView.swift` | Pro-gated publish sheet: GitHub connect, repo push, GitHub Pages, Safari Home Screen install guide. |
 | `NodeFrameData.swift` | Preference-key plumbing that reports rendered node frames so connection arrows can target real node centers. |
@@ -307,7 +319,7 @@ The spatial runtime — the heart of CAOCAP.
 
 | File | Responsibility |
 |---|---|
-| `RootCanvasProvider.swift` | Defines the stable five-node root constellation and curated child-canvas filenames. |
+| `RootCanvasProvider.swift` | Defines the stable six-node root column, including Activity, and curated child-canvas filenames. |
 | `TutorialCanvasProvider.swift` | Defines the clean workspace used by the interactive tutorial. |
 | `PacManCanvasProvider.swift` | Defines the self-contained, touch-first Pac-Man example Mini-App. |
 | `ProjectTemplateProvider.swift` | Supplies the clean default project state and manual Mini-App boilerplate. |

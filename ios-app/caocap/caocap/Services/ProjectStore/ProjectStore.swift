@@ -56,13 +56,17 @@ public class ProjectStore {
         projectName: String = "Untitled Project",
         initialNodes: [SpatialNode]? = nil,
         initialViewportScale: CGFloat = 1.0,
-        persistence: ProjectPersistenceService = ProjectPersistenceService()
+        persistence: ProjectPersistenceService = ProjectPersistenceService(),
+        activityRecorder: (any ActivityRecording)? = nil
     ) {
         self.fileName = fileName
         self.projectName = projectName
         self.viewportScale = initialViewportScale
         self.persistence = persistence
-        self.saveController = ProjectSaveController(persistence: persistence)
+        self.saveController = ProjectSaveController(
+            persistence: persistence,
+            activityRecorder: activityRecorder
+        )
         self.checkpointManager = CheckpointManager(persistence: persistence)
         wireMutationEngineCallbacks()
         load(initialNodes: initialNodes, initialViewportScale: initialViewportScale)

@@ -11,6 +11,8 @@ The Canvas feature is CAOCAP's spatial runtime. It renders the infinite workspac
 - `NodeDetailView` opens Mini-App nodes into a full-screen running preview with FAB actions for SRS, Code, Firebase, Agent, Settings, and Back to Canvas.
 - Providers under `Providers/` define the root constellation, curated Tutorial
   and Pac-Man canvases, and generic Mini-App starter content.
+- The protected Activity action node renders the device-wide 17-week save
+  heatmap directly on the root canvas and opens the expanded activity sheet.
 
 ## Data Flow
 
@@ -52,6 +54,8 @@ When changing gestures or connection rendering, test pan, zoom, drag, and arrow 
 - Pro users: publish a Mini-App, confirm live GitHub Pages URL, and verify Safari Add to Home Screen steps appear.
 - Check connection arrows while dragging nodes and at multiple zoom levels.
 - Verify action nodes on the Home screen navigate to correct destinations.
+- Make a saved change on any canvas, return to Root, and confirm the Activity
+  node and expanded sheet update without counting failed or cancelled saves.
 
 ## Test Targets
 

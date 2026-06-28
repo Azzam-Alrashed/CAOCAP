@@ -63,6 +63,14 @@ struct AppSessionCoordinatorTests {
         #expect(!actionIDs.contains(.goBack))
     }
 
+    @Test func activityNodeActionPresentsActivitySheet() {
+        let session = AppSessionCoordinator()
+
+        session.handleNodeAction(.openActivity)
+
+        #expect(session.showingActivity)
+    }
+
     @Test func flyToTargetScaleUsesMeasuredFrameWhenAvailable() {
         let session = AppSessionCoordinator()
         let nodeID = UUID()

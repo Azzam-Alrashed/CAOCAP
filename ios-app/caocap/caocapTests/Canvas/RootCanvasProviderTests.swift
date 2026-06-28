@@ -4,29 +4,29 @@ import Testing
 @testable import caocap
 
 struct RootCanvasProviderTests {
-    @Test func rootDefinesTheCuratedFiveNodeVerticalColumn() throws {
+    @Test func rootDefinesTheCuratedSixNodeVerticalColumn() throws {
         let nodes = RootCanvasProvider.nodes
-        #expect(nodes.count == 5)
+        #expect(nodes.count == 6)
 
         let spacing: CGFloat = 220
         let startY = -CGFloat(nodes.count - 1) * spacing / 2
 
-        #expect(nodes[0].id == RootCanvasProvider.profileNodeID)
+        #expect(nodes[0].id == RootCanvasProvider.activityNodeID)
         #expect(nodes[0].position == CGPoint(x: 0, y: startY))
 
-        #expect(nodes[1].id == RootCanvasProvider.proNodeID)
+        #expect(nodes[1].id == RootCanvasProvider.profileNodeID)
         #expect(nodes[1].position == CGPoint(x: 0, y: startY + spacing))
 
-        #expect(nodes[2].id == RootCanvasProvider.settingsNodeID)
+        #expect(nodes[2].id == RootCanvasProvider.proNodeID)
         #expect(nodes[2].position == CGPoint(x: 0, y: startY + spacing * 2))
 
         let tutorial = try #require(nodes.first { $0.id == RootCanvasProvider.tutorialNodeID })
-        #expect(tutorial.position == CGPoint(x: 0, y: startY + spacing * 3))
+        #expect(tutorial.position == CGPoint(x: 0, y: startY + spacing * 4))
         #expect(tutorial.type == .subCanvas)
         #expect(tutorial.linkedCanvasFileName == RootCanvasProvider.tutorialFileName)
 
         let pacMan = try #require(nodes.first { $0.id == RootCanvasProvider.pacManNodeID })
-        #expect(pacMan.position == CGPoint(x: 0, y: startY + spacing * 4))
+        #expect(pacMan.position == CGPoint(x: 0, y: startY + spacing * 5))
         #expect(pacMan.type == .subCanvas)
         #expect(pacMan.linkedCanvasFileName == RootCanvasProvider.pacManFileName)
 
@@ -43,7 +43,8 @@ struct RootCanvasProviderTests {
         #expect(actions[RootCanvasProvider.profileNodeID] == .openProfile)
         #expect(actions[RootCanvasProvider.settingsNodeID] == .openSettings)
         #expect(actions[RootCanvasProvider.proNodeID] == .proSubscription)
-        #expect(actions.count == 3)
+        #expect(actions[RootCanvasProvider.activityNodeID] == .openActivity)
+        #expect(actions.count == 4)
     }
 
     @Test func pacManCanvasContainsATouchFirstRunnableMiniApp() throws {

@@ -329,6 +329,46 @@ struct ProjectMigrationTests {
         #expect(preservedPacMan == customizedPacMan)
     }
 
+    @Test func activityMigrationAppendsBelowCustomizedRootWithoutMovingExistingNodes() throws {
+        let tempDirectory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: tempDirectory) }
+        let persistence = ProjectPersistenceService(baseDirectory: tempDirectory)
+        let suiteName = "CuratedRootCanvasMigrationTests.activity.custom"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        defaults.removePersistentDomain(forName: suiteName)
+
+        let customNode = SpatialNode(
+            position: CGPoint(x: 125, y: 700),
+            title: "My Custom Root Node"
+        )
+        try persistence.save(
+            ProjectSnapshot(
+                projectName: "Root",
+                nodes: [customNode],
+                viewportOffset: .zero,
+                viewportScale: 0.5
+            ),
+            fileName: CanvasFileNaming.rootFileName
+        )
+        defaults.set(true, forKey: CuratedRootCanvasMigration.migrationCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.verticalLayoutCompleteKey)
+
+        CuratedRootCanvasMigration.runIfNeeded(persistence: persistence, defaults: defaults)
+        CuratedRootCanvasMigration.runIfNeeded(persistence: persistence, defaults: defaults)
+
+        let migrated = try persistence.load(fileName: CanvasFileNaming.rootFileName)
+        let preserved = try #require(migrated.nodes.first(where: { $0.id == customNode.id }))
+        let activity = try #require(migrated.nodes.first(where: {
+            $0.id == RootCanvasProvider.activityNodeID
+        }))
+
+        #expect(preserved.position == customNode.position)
+        #expect(activity.position == CGPoint(x: 0, y: 920))
+        #expect(activity.isProtected)
+        #expect(migrated.nodes.filter { $0.id == RootCanvasProvider.activityNodeID }.count == 1)
+    }
+
     @Test func curatedRootMigrationUpdatesLegacyConstellationToVerticalLayout() throws {
         let tempDirectory = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: tempDirectory) }
