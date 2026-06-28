@@ -35,6 +35,10 @@ Pin-able rows show an **Add to canvas** affordance. Choosing it calls `ProjectSt
 
 All other actions are execute-only from the omnibox.
 
+The root Activity node is intentionally a canvas-owned system action rather
+than an Omnibox command. Its heatmap is spatial dashboard content, while the
+Omnibox remains focused on actions and navigation.
+
 ## Intent Matching
 
 `CommandIntentResolver` supports local phrase matching for commands such as "open settings" or Arabic equivalents. It normalizes case, punctuation, and diacritics, then checks conservative aliases.

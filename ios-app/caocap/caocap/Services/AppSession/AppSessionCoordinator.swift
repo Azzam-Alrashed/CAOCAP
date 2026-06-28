@@ -19,6 +19,7 @@ final class AppSessionCoordinator {
     var showingSettings = false
     var showingSnapshotBrowser = false
     var showingProfile = false
+    var showingActivity = false
 
     var currentScale: CGFloat = 1.0
     var isLaunching = true
@@ -170,6 +171,7 @@ final class AppSessionCoordinator {
         LocalMLXModelManager.shared.updateHFToken("")
         LocalMLXModelManager.shared.clearLocalModelCache()
         try await AppDataResetService.eraseLocalData()
+        ActivityStore.shared.reset()
 
         router = AppRouter()
         commandPalette = CommandPaletteViewModel()
@@ -227,6 +229,8 @@ final class AppSessionCoordinator {
             _ = actionDispatcher.perform(.summonCoCaptain, source: .user)
         case .proSubscription:
             _ = actionDispatcher.perform(.proSubscription, source: .user)
+        case .openActivity:
+            showingActivity = true
         }
     }
 
@@ -315,6 +319,7 @@ final class AppSessionCoordinator {
                     }.value
 
                     logger.info("Successfully imported project to: \(newFileName)")
+                    ActivityStore.shared.recordSuccessfulSave(at: Date())
 
                     guard let self else { return }
                     withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {

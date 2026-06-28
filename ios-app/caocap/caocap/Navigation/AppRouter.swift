@@ -23,6 +23,7 @@ public class AppRouter {
     public var projects: [String: ProjectStore] = [:]
     /// Stack of previously visited workspaces, supporting `goBack()` navigation.
     private var navigationStack: [WorkspaceState] = []
+    private let activityRecorder: any ActivityRecording
     
     public let rootStore: ProjectStore
     
@@ -37,7 +38,10 @@ public class AppRouter {
             }
             
             // COLD BOOT FIX: Initialize and cache synchronously to prevent race conditions
-            let newStore = ProjectStore(fileName: fileName)
+            let newStore = ProjectStore(
+                fileName: fileName,
+                activityRecorder: activityRecorder
+            )
             projects[fileName] = newStore
             return newStore
         }
@@ -45,7 +49,9 @@ public class AppRouter {
     
     /// Initializes the router, runs any pending workspace migrations, and creates
     /// the root canvas with its default node template and a zoomed-out initial scale.
-    public init() {
+    public init(activityRecorder: (any ActivityRecording)? = nil) {
+        let resolvedActivityRecorder = activityRecorder ?? ActivityStore.shared
+        self.activityRecorder = resolvedActivityRecorder
         CanvasWorkspaceMigration.runIfNeeded()
         CuratedRootCanvasMigration.runIfNeeded()
         self.currentWorkspace = .root
@@ -53,7 +59,8 @@ public class AppRouter {
             fileName: CanvasFileNaming.rootFileName,
             projectName: "Root",
             initialNodes: RootCanvasProvider.nodes,
-            initialViewportScale: 0.5
+            initialViewportScale: 0.5,
+            activityRecorder: resolvedActivityRecorder
         )
     }
     
@@ -111,7 +118,8 @@ public class AppRouter {
         let store = ProjectStore(
             fileName: fileName,
             projectName: "Mini-App Canvas",
-            initialNodes: ProjectTemplateProvider.defaultNodes
+            initialNodes: ProjectTemplateProvider.defaultNodes,
+            activityRecorder: activityRecorder
         )
         projects[fileName] = store
         navigate(to: .project(fileName), animated: true)

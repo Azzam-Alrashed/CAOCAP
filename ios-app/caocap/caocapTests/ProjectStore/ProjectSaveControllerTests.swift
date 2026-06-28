@@ -93,4 +93,100 @@ final class ProjectSaveControllerTests: XCTestCase {
         try await Task.sleep(nanoseconds: 100_000_000)
         XCTAssertFalse(sut.isSaving)
     }
+
+    func testSuccessfulSaveRecordsActivity() async throws {
+        let suiteName = "ProjectSaveControllerTests.success.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let activity = ActivityStore(defaults: defaults)
+        let controller = ProjectSaveController(
+            persistence: persistence,
+            activityRecorder: activity
+        )
+
+        controller.save(
+            snapshot: makeSnapshot(),
+            fileName: "activity_success.json",
+            showIndicator: false
+        )
+        await controller.waitForActiveWrites()
+
+        XCTAssertEqual(activity.todayCount, 1)
+    }
+
+    func testCancelledDebouncedSaveDoesNotRecordActivity() async throws {
+        let suiteName = "ProjectSaveControllerTests.cancelled.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let activity = ActivityStore(defaults: defaults)
+        let controller = ProjectSaveController(
+            persistence: persistence,
+            activityRecorder: activity
+        )
+
+        controller.requestSave(
+            fileName: "activity_cancelled.json",
+            snapshotFactory: { self.makeSnapshot() }
+        )
+        controller.cancelPendingSave()
+        try await Task.sleep(for: .milliseconds(550))
+
+        XCTAssertEqual(activity.todayCount, 0)
+    }
+
+    func testFailedSaveDoesNotRecordActivity() async throws {
+        let suiteName = "ProjectSaveControllerTests.failed.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let activity = ActivityStore(defaults: defaults)
+        let invalidDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("activity-file-\(UUID().uuidString)")
+        try Data("not a directory".utf8).write(to: invalidDirectory)
+        defer { try? FileManager.default.removeItem(at: invalidDirectory) }
+        let controller = ProjectSaveController(
+            persistence: ProjectPersistenceService(baseDirectory: invalidDirectory),
+            activityRecorder: activity
+        )
+
+        controller.save(
+            snapshot: makeSnapshot(),
+            fileName: "cannot-save.json",
+            showIndicator: false
+        )
+        await controller.waitForActiveWrites()
+
+        XCTAssertEqual(activity.todayCount, 0)
+    }
+
+    func testSeparateCanvasControllersAggregateActivity() async throws {
+        let suiteName = "ProjectSaveControllerTests.aggregate.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let activity = ActivityStore(defaults: defaults)
+        let first = ProjectSaveController(
+            persistence: persistence,
+            activityRecorder: activity
+        )
+        let second = ProjectSaveController(
+            persistence: persistence,
+            activityRecorder: activity
+        )
+
+        first.save(snapshot: makeSnapshot(), fileName: "canvas_one.json", showIndicator: false)
+        second.save(snapshot: makeSnapshot(), fileName: "canvas_two.json", showIndicator: false)
+        await first.waitForActiveWrites()
+        await second.waitForActiveWrites()
+
+        XCTAssertEqual(activity.todayCount, 2)
+    }
+
+    private func makeSnapshot() -> ProjectSnapshot {
+        ProjectSnapshot(
+            schemaVersion: ProjectStore.currentSchemaVersion,
+            projectName: "Test",
+            nodes: [],
+            viewportOffset: .zero,
+            viewportScale: 1.0
+        )
+    }
 }

@@ -78,5 +78,10 @@ struct AppSheetsModifier: ViewModifier {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
             }
+            .sheet(isPresented: $session.showingActivity) {
+                ActivityHistoryView(store: .shared)
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+            }
     }
 }
