@@ -2,8 +2,9 @@ import Foundation
 import CoreGraphics
 
 /// Canvas-level actions a node can dispatch to the app when tapped.
-/// These are wired through `AppActionDispatcher` rather than embedded in views
-/// so the canvas remains decoupled from navigation and sheet state.
+/// Node taps resolve to `AppActionID` via `NodeAction.appActionID` and run
+/// through `AppActionDispatcher` so the canvas stays decoupled from navigation
+/// and sheet state.
 public enum NodeAction: String, Codable, Equatable {
     /// Navigate back to the root home canvas.
     case navigateRoot
@@ -21,6 +22,8 @@ public enum NodeAction: String, Codable, Equatable {
     case openDaily
     /// Open a WhatsApp chat with the CAOCAP creator.
     case openWhatsApp
+    /// Open the in-app help and documentation center.
+    case openHelp
 }
 
 /// Structural kind of a canvas node, determining its rendering, behavior, and default metadata.

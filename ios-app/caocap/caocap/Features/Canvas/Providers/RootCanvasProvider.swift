@@ -16,13 +16,23 @@ public enum RootCanvasProvider {
     public static let dailyNodeID = UUID(uuidString: "CA0CA001-0000-4000-8000-000000000007")!
     public static let xoNodeID = UUID(uuidString: "CA0CA001-0000-4000-8000-000000000008")!
     public static let whatsAppNodeID = UUID(uuidString: "CA0CA001-0000-4000-8000-000000000009")!
+    public static let helpNodeID = UUID(uuidString: "CA0CA001-0000-4000-8000-00000000000A")!
 
-    /// Default root zoom that frames the full 2×4 launch grid with side margins on phone.
+    /// Default root zoom that frames the 2×4 grid plus top/bottom anchor nodes on phone.
     public static let defaultViewportScale: CGFloat = 0.45
 
     private static let verticalSpacing: CGFloat = 220
     private static let columnSpacing: CGFloat = 250
     private static let rowCount = 4
+
+    /// Y offset for anchor nodes placed above or below the launch grid.
+    static var anchorRowYOffset: CGFloat {
+        gridRowY[rowCount - 1] + verticalSpacing
+    }
+
+    static var topAnchorY: CGFloat {
+        gridRowY[0] - verticalSpacing
+    }
 
     static func verticalColumnPosition(index: Int, count: Int) -> CGPoint {
         let totalHeight = CGFloat(count - 1) * verticalSpacing
@@ -83,7 +93,9 @@ public enum RootCanvasProvider {
         case dailyNodeID:
             gridPosition(column: 1, row: 3)
         case whatsAppNodeID:
-            CGPoint(x: 0, y: gridRowY[rowCount - 1] + verticalSpacing)
+            CGPoint(x: 0, y: topAnchorY)
+        case helpNodeID:
+            CGPoint(x: 0, y: anchorRowYOffset)
         default:
             .zero
         }
@@ -174,6 +186,15 @@ public enum RootCanvasProvider {
                 icon: "message.fill",
                 theme: .green,
                 action: .openWhatsApp
+            ),
+            SpatialNode(
+                id: helpNodeID,
+                position: gridPosition(for: helpNodeID),
+                title: "Help",
+                subtitle: "Tutorials, shortcuts, and guides",
+                icon: "book.fill",
+                theme: .indigo,
+                action: .openHelp
             )
         ]
     }
