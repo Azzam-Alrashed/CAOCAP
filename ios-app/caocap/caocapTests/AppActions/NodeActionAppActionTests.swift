@@ -21,7 +21,7 @@ struct NodeActionAppActionTests {
         }
     }
 
-    @Test func pinableAppActionsRoundTripToNodeAction() {
+    @Test func pinableAppActionsRoundTripToNodeAction() throws {
         let pinableIDs: [AppActionID] = [
             .goRoot,
             .openSettings,
@@ -41,7 +41,7 @@ struct NodeActionAppActionTests {
     }
 
     @MainActor
-    @Test func dispatcherExposesNewRootShortcutActions() {
+    @Test func dispatcherExposesNewRootShortcutActions() throws {
         let dispatcher = AppActionDispatcher()
         let newIDs: [AppActionID] = [.openActivity, .openDaily, .openWhatsApp, .help]
 

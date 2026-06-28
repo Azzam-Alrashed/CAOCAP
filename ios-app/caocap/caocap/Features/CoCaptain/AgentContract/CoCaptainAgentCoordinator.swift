@@ -66,6 +66,8 @@ public final class CoCaptainAgentCoordinator {
     private let patchEngine: NodePatchEngine
     private let outputAdapter: any CoCaptainAgentOutputAdapting
     private let validator: CoCaptainAgentValidator
+    private let verifier: any MiniAppVerifying
+    private let verifiedCodingLoopEnabled: () -> Bool
 
     /// Creates a coordinator with optional dependency overrides for testing.
     ///
@@ -77,7 +79,9 @@ public final class CoCaptainAgentCoordinator {
         patchEngine: NodePatchEngine = NodePatchEngine(),
         parser: CoCaptainAgentParser = CoCaptainAgentParser(),
         outputAdapter: (any CoCaptainAgentOutputAdapting)? = nil,
-        validator: CoCaptainAgentValidator = CoCaptainAgentValidator()
+        validator: CoCaptainAgentValidator = CoCaptainAgentValidator(),
+        verifier: (any MiniAppVerifying)? = nil,
+        verifiedCodingLoopEnabled: (() -> Bool)? = nil
     ) {
         self.llmClient = llmClient ?? LLMService.shared
         self.contextBuilder = contextBuilder
@@ -88,6 +92,8 @@ public final class CoCaptainAgentCoordinator {
             xmlAdapter: CoCaptainXMLAgentAdapter(parser: parser)
         )
         self.validator = validator
+        self.verifier = verifier ?? MiniAppVerificationService()
+        self.verifiedCodingLoopEnabled = verifiedCodingLoopEnabled ?? { VerifiedCodingLoopFeature.isEnabled }
     }
 
     /// Resets the chat history for the given scope, forwarding directly to the
@@ -105,6 +111,7 @@ public final class CoCaptainAgentCoordinator {
         dispatcher: (any AppActionPerforming)?,
         scope: CoCaptainAgentScope = .project,
         purpose: CoCaptainTurnPurpose = .standard,
+        onCodingProgress: @escaping (CoCaptainCodingRunState) -> Void = { _ in },
         onVisibleText: @escaping (String) -> Void
     ) async throws -> CoCaptainAgentRunResult {
         let context = store.map { store in
@@ -127,9 +134,15 @@ public final class CoCaptainAgentCoordinator {
                 scope: scope,
                 purpose: purpose,
                 onVisibleText: onVisibleText,
+                onCodingProgress: onCodingProgress,
                 allowAgenticRetry: policy.allowsAgenticRetry
             )
+        } catch is CancellationError {
+            onCodingProgress(.cancelled)
+            logCodingEvent("cocaptain_coding_loop_cancelled", parameters: ["scope": scope.storageKey])
+            throw CancellationError()
         } catch {
+            guard purpose != .onboardingBuildHandoff else { throw error }
             // Fallback: if the structured+context prompt fails (often with opaque
             // `GenerateContentError error 0`), retry with a minimal prompt so chat stays usable.
             return try await runOnce(
@@ -141,6 +154,7 @@ public final class CoCaptainAgentCoordinator {
                 scope: scope,
                 purpose: purpose,
                 onVisibleText: onVisibleText,
+                onCodingProgress: onCodingProgress,
                 allowAgenticRetry: false
             )
         }
@@ -161,36 +175,18 @@ public final class CoCaptainAgentCoordinator {
         scope: CoCaptainAgentScope,
         purpose: CoCaptainTurnPurpose,
         onVisibleText: @escaping (String) -> Void,
+        onCodingProgress: @escaping (CoCaptainCodingRunState) -> Void,
         allowAgenticRetry: Bool
     ) async throws -> CoCaptainAgentRunResult {
-        var responseText = ""
-        var functionCalls: [CoCaptainAgentFunctionCall] = []
-        var seenFunctionCallIDs = Set<String>()
-
-        let stream = llmClient.streamAgentEvents(
-            for: userMessage,
+        let directive = try await generateDirective(
+            userMessage: userMessage,
             context: context,
             expectsStructuredResponse: expectsStructuredResponse,
             availableActions: dispatcher?.availableActions ?? [],
             scope: scope,
-            purpose: purpose
+            purpose: purpose,
+            onVisibleText: onVisibleText
         )
-
-        for try await event in stream {
-            switch event {
-            case .text(let chunk):
-                responseText += chunk
-                onVisibleText(outputAdapter.visibleText(from: responseText))
-            case .functionCalls(let calls):
-                for call in calls where shouldAppend(functionCall: call, seenIDs: &seenFunctionCallIDs) {
-                    functionCalls.append(call)
-                }
-            }
-        }
-
-        // The visible chat can stream before the structured block is complete;
-        // only parse actions after the model has finished the turn.
-        let directive = outputAdapter.directive(from: responseText, functionCalls: functionCalls)
         let policy = purpose.executionPolicy
         let payload = policy.expectsStructuredResponse ? directive.payload : nil
 
@@ -212,6 +208,7 @@ public final class CoCaptainAgentCoordinator {
                         scope: scope,
                         purpose: purpose,
                         onVisibleText: onVisibleText,
+                        onCodingProgress: onCodingProgress,
                         allowAgenticRetry: false
                     )
                 }
@@ -241,15 +238,22 @@ public final class CoCaptainAgentCoordinator {
                     scope: scope,
                     purpose: purpose,
                     onVisibleText: onVisibleText,
+                    onCodingProgress: onCodingProgress,
                     allowAgenticRetry: false
                 )
             }
 
             if let payload {
+                let requiresVerification = codingLoopTarget(
+                    payload: payload,
+                    store: store,
+                    purpose: purpose
+                ) != nil
                 let validation = validator.validate(
                     payload: payload,
                     dispatcher: dispatcher,
-                    requiresAgenticWork: requiresAgenticWork
+                    requiresAgenticWork: requiresAgenticWork,
+                    requiresVerificationChecks: requiresVerification
                 )
 
                 if !validation.isValid {
@@ -266,6 +270,7 @@ public final class CoCaptainAgentCoordinator {
                             scope: scope,
                             purpose: purpose,
                             onVisibleText: onVisibleText,
+                            onCodingProgress: onCodingProgress,
                             allowAgenticRetry: false
                         )
                     }
@@ -284,6 +289,32 @@ public final class CoCaptainAgentCoordinator {
             return conversationalRunResult(from: directive)
         }
 
+        if let payload,
+           let target = codingLoopTarget(payload: payload, store: store, purpose: purpose) {
+            do {
+                return try await runVerifiedCodingLoop(
+                    originalRequest: userMessage,
+                    initialDirective: directive,
+                    initialPayload: payload,
+                    target: target,
+                    dispatcher: dispatcher,
+                    scope: scope,
+                    purpose: purpose,
+                    onCodingProgress: onCodingProgress
+                )
+            } catch is CancellationError {
+                onCodingProgress(.cancelled)
+                throw CancellationError()
+            } catch {
+                let message = error.localizedDescription
+                onCodingProgress(.failed(message))
+                return codingLoopFailureResult(
+                    preamble: directive.preamble,
+                    message: message
+                )
+            }
+        }
+
         let executionSummary = executeSafeActions(payload?.safeActions ?? [], dispatcher: dispatcher, store: store)
         let reviewBundle = buildReviewBundle(
             pendingActions: payload?.pendingActions ?? [],
@@ -298,6 +329,317 @@ public final class CoCaptainAgentCoordinator {
             executionSummary: executionSummary,
             reviewBundle: reviewBundle
         )
+    }
+
+    private func generateDirective(
+        userMessage: String,
+        context: String?,
+        expectsStructuredResponse: Bool,
+        availableActions: [AppActionDefinition],
+        scope: CoCaptainAgentScope,
+        purpose: CoCaptainTurnPurpose,
+        onVisibleText: @escaping (String) -> Void
+    ) async throws -> CoCaptainAgentDirective {
+        var responseText = ""
+        var functionCalls: [CoCaptainAgentFunctionCall] = []
+        var seenFunctionCallIDs = Set<String>()
+        let stream = llmClient.streamAgentEvents(
+            for: userMessage,
+            context: context,
+            expectsStructuredResponse: expectsStructuredResponse,
+            availableActions: availableActions,
+            scope: scope,
+            purpose: purpose
+        )
+
+        for try await event in stream {
+            try Task.checkCancellation()
+            switch event {
+            case .text(let chunk):
+                responseText += chunk
+                onVisibleText(outputAdapter.visibleText(from: responseText))
+            case .functionCalls(let calls):
+                for call in calls where shouldAppend(functionCall: call, seenIDs: &seenFunctionCallIDs) {
+                    functionCalls.append(call)
+                }
+            }
+        }
+        return outputAdapter.directive(from: responseText, functionCalls: functionCalls)
+    }
+
+    private struct CodingLoopTarget {
+        let node: SpatialNode
+        let edit: CoCaptainNodeEditProposal
+        let baseCode: String
+        let store: ProjectStore
+    }
+
+    private func codingLoopTarget(
+        payload: CoCaptainAgentPayload,
+        store: ProjectStore?,
+        purpose: CoCaptainTurnPurpose
+    ) -> CodingLoopTarget? {
+        guard verifiedCodingLoopEnabled(),
+              purpose == .standard,
+              let store,
+              payload.nodeEdits.count == 1,
+              let edit = payload.nodeEdits.first,
+              edit.section == .code,
+              let node = patchEngine.resolveNode(nodeID: edit.nodeID, for: edit.role, in: store),
+              let baseCode = node.miniApp?.codeText,
+              !baseCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return nil
+        }
+        return CodingLoopTarget(node: node, edit: edit, baseCode: baseCode, store: store)
+    }
+
+    private func runVerifiedCodingLoop(
+        originalRequest: String,
+        initialDirective: CoCaptainAgentDirective,
+        initialPayload: CoCaptainAgentPayload,
+        target: CodingLoopTarget,
+        dispatcher: (any AppActionPerforming)?,
+        scope: CoCaptainAgentScope,
+        purpose: CoCaptainTurnPurpose,
+        onCodingProgress: @escaping (CoCaptainCodingRunState) -> Void
+    ) async throws -> CoCaptainAgentRunResult {
+        let startedAt = Date()
+        onCodingProgress(.planning)
+        logCodingEvent("cocaptain_coding_loop_started", parameters: ["scope": scope.storageKey])
+
+        if let reason = verifier.unsupportedReason(for: target.node) {
+            onCodingProgress(.failed(reason))
+            logCodingCompletion(startedAt: startedAt, attempts: 0, outcome: "unsupported")
+            return codingLoopFailureResult(preamble: initialDirective.preamble, message: reason)
+        }
+
+        var attempt = 1
+        var currentCode = target.baseCode
+        var candidateEdit = target.edit
+        var candidateChecks = candidateEdit.verificationChecks
+        var candidateMessage = initialPayload.assistantMessage
+        var lastFeedback = ""
+
+        while attempt <= 3 {
+            try Task.checkCancellation()
+            onCodingProgress(.building(attempt: attempt))
+
+            do {
+                currentCode = try patchEngine.apply(
+                    operations: candidateEdit.operations,
+                    to: attempt == 1 ? target.baseCode : currentCode
+                )
+            } catch {
+                lastFeedback = "- invalidCandidate: \(error.localizedDescription)"
+                if attempt == 3 { break }
+                attempt += 1
+                onCodingProgress(.repairing(nextAttempt: attempt))
+                let repair = try await generateRepairCandidate(
+                    originalRequest: originalRequest,
+                    currentCode: currentCode,
+                    feedback: lastFeedback,
+                    targetNodeID: target.node.id,
+                    dispatcher: dispatcher,
+                    scope: scope,
+                    purpose: purpose
+                )
+                candidateEdit = repair.edit
+                candidateChecks = repair.edit.verificationChecks
+                candidateMessage = repair.message
+                continue
+            }
+
+            onCodingProgress(.testing(attempt: attempt))
+            let verification = await verifier.verify(
+                code: currentCode,
+                checks: candidateChecks,
+                node: target.node
+            )
+            try Task.checkCancellation()
+            logCodingEvent(
+                "cocaptain_coding_loop_attempt",
+                parameters: [
+                    "attempt": String(attempt),
+                    "outcome": verification.passed ? "passed" : "failed"
+                ]
+            )
+
+            if verification.passed {
+                let finalEdit = CoCaptainNodeEditProposal(
+                    nodeID: target.node.id,
+                    role: candidateEdit.role,
+                    section: .code,
+                    summary: candidateEdit.summary,
+                    operations: [
+                        NodePatchOperation(type: .replaceAll, content: currentCode)
+                    ],
+                    verificationChecks: candidateChecks
+                )
+                let finalPayload = CoCaptainAgentPayload(
+                    assistantMessage: mentorSummary(
+                        candidateMessage,
+                        checks: candidateChecks,
+                        attempts: attempt
+                    ),
+                    safeActions: initialPayload.safeActions,
+                    pendingActions: initialPayload.pendingActions,
+                    nodeEdits: [finalEdit]
+                )
+                onCodingProgress(.readyForReview(attempts: attempt))
+                logCodingCompletion(startedAt: startedAt, attempts: attempt, outcome: "verified")
+                let executionSummary = executeSafeActions(
+                    finalPayload.safeActions,
+                    dispatcher: dispatcher,
+                    store: target.store
+                )
+                let reviewBundle = buildReviewBundle(
+                    pendingActions: finalPayload.pendingActions,
+                    nodeEdits: finalPayload.nodeEdits,
+                    store: target.store,
+                    dispatcher: dispatcher
+                )
+                return CoCaptainAgentRunResult(
+                    preamble: initialDirective.preamble,
+                    payloadMessage: finalPayload.assistantMessage,
+                    executionSummary: executionSummary,
+                    reviewBundle: reviewBundle
+                )
+            }
+
+            lastFeedback = verification.compactFeedback
+            if attempt == 3 { break }
+            attempt += 1
+            onCodingProgress(.repairing(nextAttempt: attempt))
+            let repair = try await generateRepairCandidate(
+                originalRequest: originalRequest,
+                currentCode: currentCode,
+                feedback: lastFeedback,
+                targetNodeID: target.node.id,
+                dispatcher: dispatcher,
+                scope: scope,
+                purpose: purpose
+            )
+            candidateEdit = repair.edit
+            candidateChecks = repair.edit.verificationChecks
+            candidateMessage = repair.message
+        }
+
+        let message = lastFeedback.isEmpty
+            ? "CoCaptain could not produce a verified change."
+            : "No verified change is ready. \(lastFeedback)"
+        onCodingProgress(.failed(message))
+        logCodingCompletion(startedAt: startedAt, attempts: attempt, outcome: "failed")
+        return codingLoopFailureResult(preamble: initialDirective.preamble, message: message)
+    }
+
+    private func generateRepairCandidate(
+        originalRequest: String,
+        currentCode: String,
+        feedback: String,
+        targetNodeID: UUID,
+        dispatcher: (any AppActionPerforming)?,
+        scope: CoCaptainAgentScope,
+        purpose: CoCaptainTurnPurpose
+    ) async throws -> (edit: CoCaptainNodeEditProposal, message: String) {
+        let prompt = """
+        Repair the staged Mini-App candidate using the verification feedback below.
+        Return exactly one code node_edit targeting nodeId="\(targetNodeID.uuidString)".
+        Operations apply to the current staged code, not the original canvas code.
+        Include 1 to 5 verification_check entries. Do not request app actions.
+
+        Original request:
+        \(originalRequest)
+
+        Verification feedback:
+        \(feedback)
+
+        Current staged code:
+        \(currentCode)
+        """
+        let directive = try await generateDirective(
+            userMessage: prompt,
+            context: nil,
+            expectsStructuredResponse: true,
+            availableActions: [],
+            scope: scope,
+            purpose: purpose,
+            onVisibleText: { _ in }
+        )
+        guard directive.diagnostics.isEmpty,
+              let payload = directive.payload,
+              payload.nodeEdits.count == 1,
+              let edit = payload.nodeEdits.first,
+              edit.section == .code,
+              edit.nodeID == nil || edit.nodeID == targetNodeID else {
+            throw CodingLoopError.invalidRepair
+        }
+        let validation = validator.validate(
+            payload: payload,
+            dispatcher: dispatcher,
+            requiresAgenticWork: true,
+            requiresVerificationChecks: true
+        )
+        guard validation.isValid else {
+            throw CodingLoopError.invalidRepair
+        }
+        return (edit, payload.assistantMessage)
+    }
+
+    private enum CodingLoopError: LocalizedError {
+        case invalidRepair
+
+        var errorDescription: String? {
+            "The repair response did not contain one valid, verifiable code edit."
+        }
+    }
+
+    private func mentorSummary(
+        _ modelMessage: String,
+        checks: [CoCaptainVerificationCheck],
+        attempts: Int
+    ) -> String {
+        let descriptions = checks.map(\.description).joined(separator: ", ")
+        let prefix = modelMessage.trimmingCharacters(in: .whitespacesAndNewlines)
+        let verification = "Verified in \(attempts) attempt(s): \(descriptions)."
+        let concept = "Concept: staged execution tests a proposed change before it touches your canvas."
+        return [prefix, verification, concept].filter { !$0.isEmpty }.joined(separator: "\n\n")
+    }
+
+    private func codingLoopFailureResult(
+        preamble: String,
+        message: String
+    ) -> CoCaptainAgentRunResult {
+        CoCaptainAgentRunResult(
+            preamble: preamble,
+            payloadMessage: message,
+            executionSummary: nil,
+            reviewBundle: nil
+        )
+    }
+
+    private func logCodingCompletion(
+        startedAt: Date,
+        attempts: Int,
+        outcome: String
+    ) {
+        logCodingEvent(
+            "cocaptain_coding_loop_completed",
+            parameters: [
+                "attempts": String(attempts),
+                "duration_ms": String(Int(Date().timeIntervalSince(startedAt) * 1_000)),
+                "outcome": outcome,
+                "model_backend": UserDefaults.standard.string(forKey: "cocaptain.modelName") == "gemma-4-local"
+                    ? "local"
+                    : "firebase"
+            ]
+        )
+    }
+
+    private func logCodingEvent(
+        _ name: String,
+        parameters: [String: String]
+    ) {
+        AnalyticsService.shared.logEvent(name, parameters: parameters)
     }
 
     /// Returns visible prose only. Ignores any structured payload the model emitted.
@@ -351,7 +693,7 @@ public final class CoCaptainAgentCoordinator {
         let issueList = validationIssues.map { "- \($0)" }.joined(separator: "\n")
 
         return """
-        The previous response did not satisfy the machine-readable CoCaptain action contract.
+        The previous response has not satisfied the machine-readable CoCaptain action contract.
 
         Validation issues:
         \(issueList)
@@ -365,6 +707,7 @@ public final class CoCaptainAgentCoordinator {
         6. Use `safeActions` or `executionMode=safe` only for available, non-mutating, autonomous app actions.
         7. For full builds or games, use `replace_all` for the Mini-App `section="code"` with a complete single-file HTML document.
         8. For documentation, requirements, spec, or SRS requests, target the Mini-App `section="srs"` unless the user explicitly asks for code.
+        9. For an existing Mini-App code edit, include 1 to 5 `verification_check` entries with unique ids, descriptions, and CDATA-wrapped JavaScript that returns true only when the requested behavior works.
         
         Original user request:
         \(userMessage)

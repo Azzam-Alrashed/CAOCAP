@@ -23,7 +23,8 @@ public struct CoCaptainAgentValidator {
     public func validate(
         payload: CoCaptainAgentPayload,
         dispatcher: (any AppActionPerforming)?,
-        requiresAgenticWork: Bool
+        requiresAgenticWork: Bool,
+        requiresVerificationChecks: Bool = false
     ) -> CoCaptainAgentValidationResult {
         var issues: [String] = []
 
@@ -66,6 +67,10 @@ public struct CoCaptainAgentValidator {
             for operation in edit.operations {
                 validate(operation: operation, role: edit.role, issues: &issues)
             }
+
+            if requiresVerificationChecks, edit.section == .code {
+                validate(verificationChecks: edit.verificationChecks, issues: &issues)
+            }
         }
 
         if requiresAgenticWork,
@@ -76,6 +81,51 @@ public struct CoCaptainAgentValidator {
         }
 
         return CoCaptainAgentValidationResult(issues: issues)
+    }
+
+    private func validate(
+        verificationChecks: [CoCaptainVerificationCheck],
+        issues: inout [String]
+    ) {
+        if verificationChecks.isEmpty {
+            issues.append("Verified code edits require at least one verification check.")
+            return
+        }
+
+        if verificationChecks.count > CoCaptainVerificationCheck.maximumCount {
+            issues.append("Verified code edits may include at most \(CoCaptainVerificationCheck.maximumCount) checks.")
+        }
+
+        var ids = Set<String>()
+        var totalScriptCharacters = 0
+        for check in verificationChecks {
+            let id = check.id.trimmingCharacters(in: .whitespacesAndNewlines)
+            let description = check.description.trimmingCharacters(in: .whitespacesAndNewlines)
+            let script = check.script.trimmingCharacters(in: .whitespacesAndNewlines)
+
+            if id.isEmpty {
+                issues.append("Verification checks require a non-empty id.")
+            } else if !ids.insert(id).inserted {
+                issues.append("Verification check id `\(id)` is duplicated.")
+            }
+            if description.isEmpty {
+                issues.append("Verification check `\(id)` requires a description.")
+            }
+            if script.isEmpty {
+                issues.append("Verification check `\(id)` requires a script.")
+            }
+            if script.count > CoCaptainVerificationCheck.maximumScriptCharacters {
+                issues.append("Verification check `\(id)` exceeds the per-check script limit.")
+            }
+            if script.contains("]]>") {
+                issues.append("Verification check `\(id)` contains an unsupported CDATA terminator.")
+            }
+            totalScriptCharacters += script.count
+        }
+
+        if totalScriptCharacters > CoCaptainVerificationCheck.maximumTotalScriptCharacters {
+            issues.append("Verification checks exceed the total script limit.")
+        }
     }
 
     /// Validates an individual patch operation to ensure it meets constraints for its type.

@@ -44,6 +44,7 @@ struct OnboardingManifestTests {
             language: "Arabic"
         )
         #expect(message.contains("لوحة الأوامر"))
+    }
 
     @Test func manifestContentIsReadyForPopoverPresentation() {
         for step in OnboardingCoordinator.Step.allCases {

@@ -262,6 +262,8 @@ Decoupled backend engines and API clients specific to the CoCaptain agentic flow
 | `CommandIntentResolver.swift` | Maps plain-language command palette and CoCaptain prompts to available app actions. |
 | `ProjectContextBuilder.swift` | Logic to "harvest" the spatial graph and serialize it into a grounded prompt context for the LLM. |
 | `NodePatchEngine.swift` | A precision editing engine that previews partial patches (replace/insert/append) for Mini-App SRS and Code sections. |
+| `MiniAppVerificationService.swift` | Runs staged Mini-App code in an ephemeral offline WebView, captures runtime diagnostics, and evaluates model-authored behavior checks. |
+| `VerifiedCodingLoopFeature.swift` | TestFlight/Debug rollout gate for the verified generate-test-repair loop. |
 
 `ProjectStore` and `ProjectPersistenceService` also maintain checkpoint metadata and saved project snapshots. The infrastructure is used to protect work before significant AI or mutation flows; a full user-facing snapshot browser remains roadmap work.
 

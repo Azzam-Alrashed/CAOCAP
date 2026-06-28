@@ -16,6 +16,7 @@ Supporting services live outside this feature:
 - `LLMService` streams from Firebase AI Logic.
 - `AppActionDispatcher` performs high-level app actions.
 - `NodePatchEngine` previews and applies exact node edits.
+- `MiniAppVerificationService` executes staged code in an isolated offline WebView.
 
 ## Agent Flow
 
@@ -26,12 +27,20 @@ Supporting services live outside this feature:
 5. `LLMService` streams text back into the current assistant bubble.
 6. `CoCaptainAgentOutputAdapter` hides machine output while streaming and turns the final response into a directive.
 7. For agentic turns, `CoCaptainAgentValidator` checks action IDs, action safety, node edit shape, and required agentic work.
-8. Safe actions are executed immediately through `AppActionDispatcher` only after validation passes.
-9. Mutating app actions and node edits become `ReviewBundleItem` entries.
-10. Applying a review item revalidates the base node text before writing changes to `ProjectStore`.
+8. Eligible existing Mini-App code edits enter the verified coding loop.
+9. CoCaptain stages the candidate, runs behavioral checks, and may repair it twice without mutating `ProjectStore`.
+10. Safe actions remain buffered until verification succeeds.
+11. The final verified code and pending actions become `ReviewBundleItem` entries.
+12. Applying a review item revalidates the original base node text before writing changes to `ProjectStore`.
 
 The core contract is human-in-the-loop code editing. Do not auto-apply node edits without explicit user approval.
 Free-usage and subscription prompts are product CTA timeline items, not review bundles.
+
+### Verified Coding Loop
+
+The loop is limited to one existing, non-empty, offline Mini-App code edit. It uses at most three candidates and converts the passing result into one `replace_all` review proposal against the original base text. Blank Mini-Apps, SRS edits, multi-node edits, and network-dependent Mini-Apps continue through their existing paths.
+
+Verification uses a non-persistent WebView, blocks external effects, captures runtime errors and `console.error`, and requires every declared behavioral check to return `true`. Failed or unsupported runs produce diagnostics without an Apply control. The rollout gate is enabled by default in Debug and TestFlight, disabled in production App Store builds, and can be overridden with `cocaptain.verifiedCodingLoopEnabled`.
 
 ## Turn Execution Modes
 
@@ -64,6 +73,13 @@ The model may include one trailing XML block:
       <operation type="replace_all">
         <content><![CDATA[<h1>New text</h1>]]></content>
       </operation>
+      <verification_checks>
+        <verification_check id="headline" description="Headline shows the new text">
+          <script><![CDATA[
+            return document.querySelector("h1")?.textContent === "New text";
+          ]]></script>
+        </verification_check>
+      </verification_checks>
     </node_edit>
   </node_edits>
 </cocaptain_actions>
@@ -78,6 +94,7 @@ Rules:
 - `nodeEdits` target Mini-App nodes by `nodeId`, `role="miniApp"`, and `section="srs"` or `section="code"`, plus `NodePatchOperation` arrays.
 - Node edits require a non-empty summary and at least one operation.
 - Exact operations require a non-empty target.
+- Verified code edits require 1–5 uniquely identified checks. Each offline script must return a Boolean, stay under 2,000 characters, and keep the combined scripts under 8,000 characters.
 
 Invalid structured payloads are not partially executed. The coordinator retries once with parse or validation feedback. If the retry is still invalid, the user sees a conflicted review item rather than a silent no-op or unsafe action.
 

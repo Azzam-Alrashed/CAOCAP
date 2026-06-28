@@ -2,6 +2,7 @@ import Foundation
 import Testing
 @testable import caocap
 
+@MainActor
 struct GamificationStoreTests {
   @Test func completingChallengeAwardsXPOncePerDay() throws {
     let suiteName = "GamificationStoreTests.challenge.\(UUID().uuidString)"
