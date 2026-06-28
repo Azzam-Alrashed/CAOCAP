@@ -71,6 +71,14 @@ struct AppSessionCoordinatorTests {
         #expect(session.showingActivity)
     }
 
+    @Test func dailyNodeActionPresentsDailySheet() {
+        let session = AppSessionCoordinator()
+
+        session.handleNodeAction(.openDaily)
+
+        #expect(session.showingDaily)
+    }
+
     @Test func flyToTargetScaleUsesMeasuredFrameWhenAvailable() {
         let session = AppSessionCoordinator()
         let nodeID = UUID()

@@ -1,29 +1,6 @@
-import Lottie
 import SwiftUI
 
-/// Full-screen confetti celebration for a successful publish.
-struct PublishConfettiView: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    var body: some View {
-        if !reduceMotion, let animation = loadAnimation() {
-            LottieView(animation: animation)
-                .playbackMode(.playing(.fromProgress(0, toProgress: 1, loopMode: .playOnce)))
-                .animationSpeed(1)
-                .configure(\.contentMode, to: .scaleAspectFill)
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
-        }
-    }
-
-    private func loadAnimation() -> LottieAnimation? {
-        if let path = Bundle.main.path(forResource: "confetti", ofType: "json", inDirectory: "Lottie") {
-            return LottieAnimation.filepath(path)
-        }
-        return LottieAnimation.named("confetti")
-    }
-}
-
+/// Button styles shared by publish flows.
 struct PublishPrimaryButtonStyle: ButtonStyle {
     var tint: Color = .blue
 
