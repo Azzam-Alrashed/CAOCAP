@@ -78,5 +78,15 @@ struct AppSheetsModifier: ViewModifier {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
             }
+            .sheet(isPresented: $session.showingActivity) {
+                ActivityHistoryView(store: .shared)
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+            }
+            .sheet(isPresented: $session.showingDaily) {
+                DailyChallengesView(store: .shared)
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+            }
     }
 }

@@ -19,6 +19,9 @@ final class AppSessionCoordinator {
     var showingSettings = false
     var showingSnapshotBrowser = false
     var showingProfile = false
+    var showingActivity = false
+    var showingDaily = false
+    var showConfetti = false
 
     var currentScale: CGFloat = 1.0
     var isLaunching = true
@@ -83,6 +86,7 @@ final class AppSessionCoordinator {
         activeUndoManager = undoManager
         bindCommandPalette()
         configureActionsIfNeeded()
+        wireGamification()
         syncViewportWithActiveStore()
         attachUndoManager(undoManager)
         coCaptain.configureProjectSession(store: router.activeStore, dispatcher: actionDispatcher)
@@ -102,6 +106,7 @@ final class AppSessionCoordinator {
     func handleWorkspaceChange(undoManager: UndoManager?) {
         activeUndoManager = undoManager
         bindCommandPalette()
+        wireGamification()
         attachUndoManager(undoManager)
         coCaptain.configureProjectSession(store: router.activeStore, dispatcher: actionDispatcher)
         syncCommandPaletteActions()
@@ -170,8 +175,11 @@ final class AppSessionCoordinator {
         LocalMLXModelManager.shared.updateHFToken("")
         LocalMLXModelManager.shared.clearLocalModelCache()
         try await AppDataResetService.eraseLocalData()
+        ActivityStore.shared.reset()
+        GamificationStore.shared.reset()
 
         router = AppRouter()
+        wireGamification()
         commandPalette = CommandPaletteViewModel()
         coCaptain = CoCaptainViewModel()
         actionDispatcher = AppActionDispatcher()
@@ -227,6 +235,10 @@ final class AppSessionCoordinator {
             _ = actionDispatcher.perform(.summonCoCaptain, source: .user)
         case .proSubscription:
             _ = actionDispatcher.perform(.proSubscription, source: .user)
+        case .openActivity:
+            showingActivity = true
+        case .openDaily:
+            showingDaily = true
         }
     }
 
@@ -315,6 +327,7 @@ final class AppSessionCoordinator {
                     }.value
 
                     logger.info("Successfully imported project to: \(newFileName)")
+                    ActivityStore.shared.recordSuccessfulSave(at: Date())
 
                     guard let self else { return }
                     withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
@@ -410,6 +423,29 @@ final class AppSessionCoordinator {
             scale: router.activeStore.viewportScale
         )
         currentScale = viewport.scale
+    }
+
+    private func wireGamification() {
+        let handler: ([DailyChallengeDefinition]) -> Void = { [weak self] _ in
+            self?.celebrateChallengeCompletion()
+        }
+        router.rootStore.onChallengesCompleted = handler
+        for store in router.projects.values {
+            store.onChallengesCompleted = handler
+        }
+        router.activeStore.onChallengesCompleted = handler
+        _ = GamificationStore.shared.evaluateMiniApps(
+            htmlSamples: router.activeStore.nodes.compactMap(\.miniApp?.compiledHTML)
+        )
+    }
+
+    private func celebrateChallengeCompletion() {
+        HapticsManager.shared.notification(.success)
+        showConfetti = true
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(2.5))
+            self?.showConfetti = false
+        }
     }
 
     func ensureActionsConfigured() {

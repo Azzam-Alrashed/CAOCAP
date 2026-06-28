@@ -100,7 +100,9 @@ struct NodeView: View {
             NodePreviewContent(
                 node: node,
                 agentState: agentState,
-                themeColor: themeColor
+                themeColor: themeColor,
+                activityStore: ActivityStore.shared,
+                gamificationStore: GamificationStore.shared
             )
         }
         .padding(.horizontal, node.type == .miniApp ? 12 : 20)
@@ -257,10 +259,32 @@ private struct NodePreviewContent: View {
     let node: SpatialNode
     let agentState: AgentExecutionState
     let themeColor: Color
+    let activityStore: ActivityStore
+    let gamificationStore: GamificationStore
     
     var body: some View {
         Group {
-            if node.action != nil {
+            if node.action == .openDaily {
+                DailyNodeCardContent(store: gamificationStore)
+            } else if node.action == .openActivity {
+                VStack(alignment: .leading, spacing: 10) {
+                    ActivityHeatmapView(
+                        days: activityStore.days(),
+                        cellSize: 9,
+                        spacing: 3,
+                        accentColor: themeColor
+                    )
+
+                    HStack(spacing: 6) {
+                        Text(activityStore.todayCount, format: .number)
+                            .fontWeight(.bold)
+                        Text("saved today")
+                    }
+                    .font(.system(size: 12, design: .rounded))
+                    .foregroundStyle(.secondary)
+                }
+                .padding(.top, 14)
+            } else if node.action != nil {
                 EmptyView()
             } else {
                 switch node.type {

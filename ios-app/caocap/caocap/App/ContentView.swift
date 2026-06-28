@@ -47,6 +47,13 @@ struct ContentView: View {
             .overlay { introOverlay }
             .overlay { personalizationOverlay }
             .overlay { updatePromptOverlay }
+            .overlay {
+                if session.showConfetti {
+                    ConfettiCelebrationView()
+                        .zIndex(95)
+                        .transition(.opacity)
+                }
+            }
             .modifier(AppSheetsModifier(session: session))
             .modifier(AppSessionLifecycle(
                 session: session,

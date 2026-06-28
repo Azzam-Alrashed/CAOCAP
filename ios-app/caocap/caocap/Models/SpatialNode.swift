@@ -15,6 +15,10 @@ public enum NodeAction: String, Codable, Equatable {
     case summonCoCaptain
     /// Present the Pro subscription purchase flow.
     case proSubscription
+    /// Open the device-wide project activity history.
+    case openActivity
+    /// Open today's daily HTML challenges and XP progress.
+    case openDaily
 }
 
 /// Structural kind of a canvas node, determining its rendering, behavior, and default metadata.
