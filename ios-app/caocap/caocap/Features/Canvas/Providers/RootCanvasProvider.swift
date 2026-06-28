@@ -25,17 +25,8 @@ public enum RootCanvasProvider {
         let count = 6
         return [
             SpatialNode(
-                id: activityNodeID,
-                position: verticalColumnPosition(index: 0, count: count),
-                title: "Activity",
-                subtitle: "Saved changes across all canvases",
-                icon: "chart.bar.xaxis",
-                theme: .green,
-                action: .openActivity
-            ),
-            SpatialNode(
                 id: profileNodeID,
-                position: verticalColumnPosition(index: 1, count: count),
+                position: verticalColumnPosition(index: 0, count: count),
                 title: "Profile",
                 subtitle: "Account & Preferences",
                 icon: "person.crop.circle.fill",
@@ -44,21 +35,31 @@ public enum RootCanvasProvider {
             ),
             SpatialNode(
                 id: proNodeID,
-                position: verticalColumnPosition(index: 2, count: count),
+                position: verticalColumnPosition(index: 1, count: count),
                 title: "Pro Subscription",
                 subtitle: "Unlock CoCaptain & Premium Features",
                 icon: "crown.fill",
-                theme: .indigo,
+                theme: .orange,
                 action: .proSubscription
             ),
             SpatialNode(
                 id: settingsNodeID,
-                position: verticalColumnPosition(index: 3, count: count),
+                position: verticalColumnPosition(index: 2, count: count),
                 title: "Settings",
                 subtitle: "App Tools & Config",
                 icon: "gearshape.fill",
-                theme: .orange,
+                theme: .pink,
                 action: .openSettings
+            ),
+            SpatialNode(
+                id: pacManNodeID,
+                type: .subCanvas,
+                position: verticalColumnPosition(index: 3, count: count),
+                title: "Pac-Man",
+                subtitle: "A mobile-ready Mini-App",
+                icon: "gamecontroller.fill",
+                theme: .purple,
+                linkedCanvasFileName: pacManFileName
             ),
             SpatialNode(
                 id: tutorialNodeID,
@@ -71,14 +72,13 @@ public enum RootCanvasProvider {
                 linkedCanvasFileName: tutorialFileName
             ),
             SpatialNode(
-                id: pacManNodeID,
-                type: .subCanvas,
+                id: activityNodeID,
                 position: verticalColumnPosition(index: 5, count: count),
-                title: "Pac-Man",
-                subtitle: "A mobile-ready Mini-App",
-                icon: "gamecontroller.fill",
-                theme: .purple,
-                linkedCanvasFileName: pacManFileName
+                title: "Activity",
+                subtitle: "Saved changes across all canvases",
+                icon: "chart.bar.xaxis",
+                theme: .cyan,
+                action: .openActivity
             )
         ]
     }

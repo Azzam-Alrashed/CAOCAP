@@ -7,6 +7,7 @@ enum CuratedRootCanvasMigration {
     static let migrationCompleteKey = "curatedRootCanvas_v1_complete"
     static let verticalLayoutCompleteKey = "curatedRootCanvas_v2_vertical_layout_complete"
     static let activityNodeCompleteKey = "curatedRootCanvas_v3_activity_complete"
+    static let launchLayoutCompleteKey = "curatedRootCanvas_v4_launch_layout_complete"
     private static let logger = Logger(subsystem: "com.caocap.app", category: "CuratedRootCanvasMigration")
 
     static func runIfNeeded(
@@ -52,6 +53,16 @@ enum CuratedRootCanvasMigration {
                 logger.info("Installed the root Activity node.")
             } catch {
                 logger.error("Failed to install the root Activity node: \(error.localizedDescription)")
+            }
+        }
+
+        if !defaults.bool(forKey: launchLayoutCompleteKey) {
+            do {
+                try refreshLaunchRootLayout(persistence: persistence)
+                defaults.set(true, forKey: launchLayoutCompleteKey)
+                logger.info("Updated the curated root canvas to the launch layout.")
+            } catch {
+                logger.error("Failed to update the curated root canvas launch layout: \(error.localizedDescription)")
             }
         }
     }
@@ -153,6 +164,64 @@ enum CuratedRootCanvasMigration {
                 checkpointLabel: snapshot.checkpointLabel
             ),
             fileName: rootFileName
+        )
+    }
+
+    /// Reorders the curated six-node column and refreshes launch themes when the
+    /// root still matches the prior activity-first vertical layout.
+    private static func refreshLaunchRootLayout(persistence: ProjectPersistenceService) throws {
+        let rootFileName = CanvasFileNaming.rootFileName
+        guard persistence.projectExists(fileName: rootFileName) else { return }
+
+        let snapshot = try persistence.load(fileName: rootFileName)
+        let canonicalIDs = Set(RootCanvasProvider.nodes.map(\.id))
+        guard Set(snapshot.nodes.map(\.id)) == canonicalIDs else { return }
+
+        let previousPositions = activityFirstVerticalPositions()
+        let hasPreviousLayout = snapshot.nodes.allSatisfy {
+            previousPositions[$0.id] == $0.position
+        }
+        guard hasPreviousLayout else { return }
+
+        let canonicalByID = Dictionary(uniqueKeysWithValues: RootCanvasProvider.nodes.map { ($0.id, $0) })
+        let updatedNodes = snapshot.nodes.map { node -> SpatialNode in
+            guard let canonical = canonicalByID[node.id] else { return node }
+            var updated = node
+            updated.position = canonical.position
+            updated.theme = canonical.theme
+            return updated
+        }
+        let orderedNodes = RootCanvasProvider.nodes.compactMap { canonical in
+            updatedNodes.first(where: { $0.id == canonical.id })
+        }
+
+        try persistence.save(
+            ProjectSnapshot(
+                schemaVersion: snapshot.schemaVersion,
+                projectName: snapshot.projectName,
+                nodes: orderedNodes,
+                viewportOffset: snapshot.viewportOffset,
+                viewportScale: snapshot.viewportScale,
+                checkpointLabel: snapshot.checkpointLabel
+            ),
+            fileName: rootFileName
+        )
+    }
+
+    private static func activityFirstVerticalPositions() -> [UUID: CGPoint] {
+        let count = 6
+        let orderedIDs = [
+            RootCanvasProvider.activityNodeID,
+            RootCanvasProvider.profileNodeID,
+            RootCanvasProvider.proNodeID,
+            RootCanvasProvider.settingsNodeID,
+            RootCanvasProvider.tutorialNodeID,
+            RootCanvasProvider.pacManNodeID
+        ]
+        return Dictionary(
+            uniqueKeysWithValues: orderedIDs.enumerated().map { index, id in
+                (id, RootCanvasProvider.verticalColumnPosition(index: index, count: count))
+            }
         )
     }
 

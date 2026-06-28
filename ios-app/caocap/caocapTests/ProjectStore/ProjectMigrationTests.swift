@@ -441,6 +441,92 @@ struct ProjectMigrationTests {
         #expect(positionsByID == expectedPositions)
     }
 
+    @Test func curatedRootMigrationUpdatesActivityFirstLayoutToLaunchLayout() throws {
+        let tempDirectory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: tempDirectory) }
+        let persistence = ProjectPersistenceService(baseDirectory: tempDirectory)
+        let suiteName = "CuratedRootCanvasMigrationTests.launch.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let count = 6
+        let spacing: CGFloat = 220
+        let startY = -CGFloat(count - 1) * spacing / 2
+        let previousNodes = [
+            SpatialNode(
+                id: RootCanvasProvider.activityNodeID,
+                position: CGPoint(x: 0, y: startY),
+                title: "Activity",
+                subtitle: "Saved changes across all canvases",
+                icon: "chart.bar.xaxis",
+                theme: .green,
+                action: .openActivity
+            ),
+            SpatialNode(
+                id: RootCanvasProvider.profileNodeID,
+                position: CGPoint(x: 0, y: startY + spacing),
+                title: "Profile",
+                subtitle: "Account & Preferences",
+                icon: "person.crop.circle.fill",
+                theme: .blue,
+                action: .openProfile
+            ),
+            SpatialNode(
+                id: RootCanvasProvider.proNodeID,
+                position: CGPoint(x: 0, y: startY + spacing * 2),
+                title: "Pro Subscription",
+                subtitle: "Unlock CoCaptain & Premium Features",
+                icon: "crown.fill",
+                theme: .indigo,
+                action: .proSubscription
+            ),
+            SpatialNode(
+                id: RootCanvasProvider.settingsNodeID,
+                position: CGPoint(x: 0, y: startY + spacing * 3),
+                title: "Settings",
+                subtitle: "App Tools & Config",
+                icon: "gearshape.fill",
+                theme: .orange,
+                action: .openSettings
+            ),
+            SpatialNode(
+                id: RootCanvasProvider.tutorialNodeID,
+                type: .subCanvas,
+                position: CGPoint(x: 0, y: startY + spacing * 4),
+                title: "Tutorial",
+                subtitle: "Learn CAOCAP by using it",
+                icon: "graduationcap.fill",
+                theme: .green,
+                linkedCanvasFileName: RootCanvasProvider.tutorialFileName
+            ),
+            SpatialNode(
+                id: RootCanvasProvider.pacManNodeID,
+                type: .subCanvas,
+                position: CGPoint(x: 0, y: startY + spacing * 5),
+                title: "Pac-Man",
+                subtitle: "A mobile-ready Mini-App",
+                icon: "gamecontroller.fill",
+                theme: .purple,
+                linkedCanvasFileName: RootCanvasProvider.pacManFileName
+            )
+        ]
+
+        try persistence.save(
+            ProjectSnapshot(projectName: "Root", nodes: previousNodes, viewportOffset: .zero, viewportScale: 0.5),
+            fileName: CanvasFileNaming.rootFileName
+        )
+        defaults.set(true, forKey: CuratedRootCanvasMigration.migrationCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.verticalLayoutCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.activityNodeCompleteKey)
+
+        CuratedRootCanvasMigration.runIfNeeded(persistence: persistence, defaults: defaults)
+
+        let migratedRoot = try persistence.load(fileName: CanvasFileNaming.rootFileName)
+        #expect(migratedRoot.nodes.map(\.id) == RootCanvasProvider.nodes.map(\.id))
+        #expect(migratedRoot.nodes.map(\.position) == RootCanvasProvider.nodes.map(\.position))
+        #expect(migratedRoot.nodes.map(\.theme) == RootCanvasProvider.nodes.map(\.theme))
+    }
+
     private func makeTemporaryDirectory() throws -> URL {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("caocap-tests-\(UUID().uuidString)", isDirectory: true)
