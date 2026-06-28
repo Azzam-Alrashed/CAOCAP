@@ -12,6 +12,7 @@ struct PersonalizationOnboardingView: View {
     @Bindable var coordinator: PersonalizationOnboardingCoordinator
     let onFinish: () -> Void
 
+    @AppStorage(LocalizationManager.languageStorageKey) private var selectedLanguage = "English"
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -25,24 +26,26 @@ struct PersonalizationOnboardingView: View {
                 questionFlow
             }
         }
+        .environment(\.layoutDirection, .leftToRight)
+        .environment(\.locale, LocalizationManager.shared.locale(for: selectedLanguage))
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
             coordinator.onAppearIfNeeded()
         }
         .confirmationDialog(
-            "Continue without personalizing?",
+            LocalizedStringKey("Continue without personalizing?"),
             isPresented: $coordinator.showSkipConfirmation,
             titleVisibility: .visible
         ) {
-            Button("Skip anyway", role: .destructive) {
+            Button(LocalizedStringKey("Skip anyway"), role: .destructive) {
                 coordinator.confirmSkip()
                 onFinish()
             }
-            Button("Go back", role: .cancel) {
+            Button(LocalizedStringKey("Go back"), role: .cancel) {
                 coordinator.cancelSkip()
             }
         } message: {
-            Text("Personalization helps us tailor your journey.")
+            Text(LocalizedStringKey("Personalization helps us tailor your journey."))
         }
     }
 
@@ -87,6 +90,7 @@ struct PersonalizationOnboardingView: View {
                         .tag(index)
                 }
             }
+            .id(selectedLanguage)
             .tabViewStyle(.page(indexDisplayMode: .never))
             .animation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.86), value: coordinator.currentIndex)
 
@@ -98,23 +102,21 @@ struct PersonalizationOnboardingView: View {
 
     private var topBar: some View {
         HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 10) {
-                Text("CAOCAP")
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
-                    .tracking(2)
-                    .foregroundStyle(headerForeground)
-
-                Button {
-                    coordinator.requestSkip()
-                } label: {
-                    Text("Skip")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(headerForeground.opacity(0.78))
-                }
-                .buttonStyle(.plain)
-            }
+            Text("CAOCAP")
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .tracking(2)
+                .foregroundStyle(headerForeground)
 
             Spacer(minLength: 0)
+
+            Button {
+                coordinator.requestSkip()
+            } label: {
+                Text(LocalizedStringKey("Skip"))
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(headerForeground.opacity(0.78))
+            }
+            .buttonStyle(.plain)
         }
         .frame(height: 56, alignment: .top)
     }
@@ -128,6 +130,7 @@ struct PersonalizationOnboardingView: View {
             Text(coordinator.stepLabel)
                 .font(.system(size: 13, weight: .semibold, design: .rounded))
                 .foregroundStyle(headerForeground.opacity(0.82))
+                .id(selectedLanguage)
 
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
@@ -153,12 +156,12 @@ struct PersonalizationOnboardingView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text(question.title)
+                    Text(LocalizedStringKey(stringLiteral: question.titleKey))
                         .font(.system(size: titleSize, weight: .black, design: .rounded))
                         .foregroundStyle(Color(uiColor: .label))
                         .fixedSize(horizontal: false, vertical: true)
 
-                    Text(question.subtitle)
+                    Text(LocalizedStringKey(stringLiteral: question.subtitleKey))
                         .font(.system(size: 16, weight: .medium))
                         .foregroundStyle(Color(uiColor: .secondaryLabel))
                         .fixedSize(horizontal: false, vertical: true)
@@ -168,7 +171,7 @@ struct PersonalizationOnboardingView: View {
                 VStack(spacing: 12) {
                     ForEach(question.options) { option in
                         PersonalizationAnswerCard(
-                            title: option.title,
+                            titleKey: option.titleKey,
                             isSelected: coordinator.selectedAnswerID(for: question.id) == option.id
                         ) {
                             coordinator.select(answerID: option.id, for: question.id)
@@ -210,7 +213,7 @@ struct PersonalizationOnboardingView: View {
                 }
             } label: {
                 HStack(spacing: 10) {
-                    Text(coordinator.isLastQuestionPage ? "Continue" : "Continue")
+                    Text(LocalizedStringKey("Continue"))
                         .font(.system(size: 16, weight: .bold))
                         .lineLimit(1)
 
@@ -251,12 +254,12 @@ struct PersonalizationOnboardingView: View {
                 .symbolEffect(.bounce, value: coordinator.showCompletionMoment)
 
             VStack(spacing: 12) {
-                Text("Your mission profile is ready")
+                Text(LocalizedStringKey("Your mission profile is ready"))
                     .font(.system(size: titleSize, weight: .black, design: .rounded))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(Color(uiColor: .label))
 
-                Text("We’ll use this to shape your journey from here.")
+                Text(LocalizedStringKey("We’ll use this to shape your journey from here."))
                     .font(.system(size: 17, weight: .medium))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(Color(uiColor: .secondaryLabel))
@@ -270,7 +273,7 @@ struct PersonalizationOnboardingView: View {
                 onFinish()
             } label: {
                 HStack(spacing: 10) {
-                    Text("Enter mission control")
+                    Text(LocalizedStringKey("Enter mission control"))
                         .font(.system(size: 16, weight: .bold))
 
                     Image(systemName: "arrow.right.circle.fill")
