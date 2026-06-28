@@ -19,6 +19,8 @@ public enum NodeAction: String, Codable, Equatable {
     case openActivity
     /// Open today's daily HTML challenges and XP progress.
     case openDaily
+    /// Open a WhatsApp chat with the CAOCAP creator.
+    case openWhatsApp
 }
 
 /// Structural kind of a canvas node, determining its rendering, behavior, and default metadata.

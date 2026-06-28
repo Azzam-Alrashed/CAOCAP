@@ -12,6 +12,7 @@ enum CuratedRootCanvasMigration {
     static let constellationLayoutCompleteKey = "curatedRootCanvas_v6_constellation_layout_complete"
     static let xoGridLayoutCompleteKey = "curatedRootCanvas_v7_xo_grid_layout_complete"
     static let launchViewportScaleCompleteKey = "curatedRootCanvas_v8_launch_viewport_scale_complete"
+    static let whatsAppNodeCompleteKey = "curatedRootCanvas_v9_whatsapp_node_complete"
     private static let logger = Logger(subsystem: "com.caocap.app", category: "CuratedRootCanvasMigration")
 
     static func runIfNeeded(
@@ -112,6 +113,16 @@ enum CuratedRootCanvasMigration {
                 logger.info("Updated the curated root canvas launch viewport scale.")
             } catch {
                 logger.error("Failed to update the curated root canvas launch viewport scale: \(error.localizedDescription)")
+            }
+        }
+
+        if !defaults.bool(forKey: whatsAppNodeCompleteKey) {
+            do {
+                try installWhatsAppNode(persistence: persistence)
+                defaults.set(true, forKey: whatsAppNodeCompleteKey)
+                logger.info("Installed the root WhatsApp node.")
+            } catch {
+                logger.error("Failed to install the root WhatsApp node: \(error.localizedDescription)")
             }
         }
     }
@@ -439,11 +450,17 @@ enum CuratedRootCanvasMigration {
         guard persistence.projectExists(fileName: rootFileName) else { return }
 
         let snapshot = try persistence.load(fileName: rootFileName)
-        let canonicalIDs = Set(RootCanvasProvider.nodes.map(\.id))
+        let canonicalIDs = Set(
+            RootCanvasProvider.nodes
+                .filter { $0.id != RootCanvasProvider.whatsAppNodeID }
+                .map(\.id)
+        )
         guard Set(snapshot.nodes.map(\.id)) == canonicalIDs else { return }
 
         let gridPositions: [UUID: CGPoint] = Dictionary(
-            uniqueKeysWithValues: RootCanvasProvider.nodes.map { ($0.id, $0.position) }
+            uniqueKeysWithValues: RootCanvasProvider.nodes
+                .filter { $0.id != RootCanvasProvider.whatsAppNodeID }
+                .map { ($0.id, $0.position) }
         )
         let hasGridLayout = snapshot.nodes.allSatisfy { gridPositions[$0.id] == $0.position }
         guard hasGridLayout else { return }
@@ -458,6 +475,53 @@ enum CuratedRootCanvasMigration {
                 nodes: snapshot.nodes,
                 viewportOffset: .zero,
                 viewportScale: RootCanvasProvider.defaultViewportScale,
+                checkpointLabel: snapshot.checkpointLabel
+            ),
+            fileName: rootFileName
+        )
+    }
+
+    /// Appends the WhatsApp contact node when the root still matches the eight-node launch grid.
+    private static func installWhatsAppNode(persistence: ProjectPersistenceService) throws {
+        let rootFileName = CanvasFileNaming.rootFileName
+        guard persistence.projectExists(fileName: rootFileName) else { return }
+
+        let snapshot = try persistence.load(fileName: rootFileName)
+        guard !snapshot.nodes.contains(where: { $0.id == RootCanvasProvider.whatsAppNodeID }) else {
+            return
+        }
+
+        let gridNodeIDs = Set(
+            RootCanvasProvider.nodes
+                .filter { $0.id != RootCanvasProvider.whatsAppNodeID }
+                .map(\.id)
+        )
+        guard Set(snapshot.nodes.map(\.id)) == gridNodeIDs else { return }
+
+        let gridPositions: [UUID: CGPoint] = Dictionary(
+            uniqueKeysWithValues: RootCanvasProvider.nodes
+                .filter { $0.id != RootCanvasProvider.whatsAppNodeID }
+                .map { ($0.id, $0.position) }
+        )
+        let hasGridLayout = snapshot.nodes.allSatisfy { gridPositions[$0.id] == $0.position }
+        guard hasGridLayout else { return }
+
+        guard let whatsAppNode = RootCanvasProvider.nodes.first(where: {
+            $0.id == RootCanvasProvider.whatsAppNodeID
+        }) else {
+            return
+        }
+
+        var updatedNodes = snapshot.nodes
+        updatedNodes.append(whatsAppNode)
+
+        try persistence.save(
+            ProjectSnapshot(
+                schemaVersion: snapshot.schemaVersion,
+                projectName: snapshot.projectName,
+                nodes: updatedNodes,
+                viewportOffset: snapshot.viewportOffset,
+                viewportScale: snapshot.viewportScale,
                 checkpointLabel: snapshot.checkpointLabel
             ),
             fileName: rootFileName

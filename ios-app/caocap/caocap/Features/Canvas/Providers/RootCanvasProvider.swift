@@ -15,6 +15,7 @@ public enum RootCanvasProvider {
     public static let activityNodeID = UUID(uuidString: "CA0CA001-0000-4000-8000-000000000006")!
     public static let dailyNodeID = UUID(uuidString: "CA0CA001-0000-4000-8000-000000000007")!
     public static let xoNodeID = UUID(uuidString: "CA0CA001-0000-4000-8000-000000000008")!
+    public static let whatsAppNodeID = UUID(uuidString: "CA0CA001-0000-4000-8000-000000000009")!
 
     /// Default root zoom that frames the full 2×4 launch grid with side margins on phone.
     public static let defaultViewportScale: CGFloat = 0.45
@@ -81,6 +82,8 @@ public enum RootCanvasProvider {
             gridPosition(column: 1, row: 2)
         case dailyNodeID:
             gridPosition(column: 1, row: 3)
+        case whatsAppNodeID:
+            CGPoint(x: 0, y: gridRowY[rowCount - 1] + verticalSpacing)
         default:
             .zero
         }
@@ -162,6 +165,15 @@ public enum RootCanvasProvider {
                 icon: "rosette",
                 theme: .indigo,
                 action: .openDaily
+            ),
+            SpatialNode(
+                id: whatsAppNodeID,
+                position: gridPosition(for: whatsAppNodeID),
+                title: "WhatsApp",
+                subtitle: "Message Azzam directly",
+                icon: "message.fill",
+                theme: .green,
+                action: .openWhatsApp
             )
         ]
     }

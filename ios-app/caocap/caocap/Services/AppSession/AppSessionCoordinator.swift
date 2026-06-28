@@ -2,6 +2,7 @@ import Foundation
 import Observation
 import OSLog
 import SwiftUI
+import UIKit
 import UniformTypeIdentifiers
 
 /// Orchestrates root-session state: routing, actions, palette binding, sheets, and onboarding hooks.
@@ -239,6 +240,10 @@ final class AppSessionCoordinator {
             showingActivity = true
         case .openDaily:
             showingDaily = true
+        case .openWhatsApp:
+            if let url = SupportContact.whatsAppURL {
+                UIApplication.shared.open(url)
+            }
         }
     }
 
