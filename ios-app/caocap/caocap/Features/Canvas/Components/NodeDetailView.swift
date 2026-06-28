@@ -58,6 +58,8 @@ private struct MiniAppPreviewShell: View {
     @State private var showingActions = false
     /// Drives which tool sheet is currently presented.
     @State private var activeTool: MiniAppTool?
+    @State private var showingPublish = false
+    @State private var subscriptionManager = SubscriptionManager.shared
 
     /// Live-refreshed node so any background store mutation (e.g. CoCaptain applying
     /// a patch) is immediately reflected in the preview without dismissing the sheet.
@@ -98,8 +100,21 @@ private struct MiniAppPreviewShell: View {
             Button("Firebase") { activeTool = .firebase }
             Button("Agent") { activeTool = .agent }
             Button("Settings") { activeTool = .settings }
+            Button {
+                showingPublish = true
+            } label: {
+                if subscriptionManager.isSubscribed {
+                    Text("Publish")
+                } else {
+                    Label("Publish", systemImage: "lock.fill")
+                }
+            }
             Button("Back to Canvas") { dismiss() }
             Button("Cancel", role: .cancel) {}
+        }
+        .sheet(isPresented: $showingPublish) {
+            MiniAppPublishView(node: currentNode, store: store)
+                .presentationDragIndicator(.visible)
         }
         .sheet(item: $activeTool) { tool in
             switch tool {

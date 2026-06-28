@@ -14,6 +14,9 @@
 ## Google Services (Firebase)
 GoogleService-Info.plist
 
+## Publish credentials (copy from Secrets.plist.example)
+caocap/Resources/Config/Secrets.plist
+
 ## Dependencies
 Packages/
 Package.resolved

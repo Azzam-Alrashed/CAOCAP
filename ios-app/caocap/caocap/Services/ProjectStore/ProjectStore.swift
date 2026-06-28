@@ -331,6 +331,28 @@ public class ProjectStore {
     public func updateMiniAppFirebaseConfig(id: UUID, text: String, persist: Bool = true) {
         mutationEngine.updateMiniAppFirebaseConfig(nodes: &nodes, id: id, text: text, persist: persist)
     }
+    public func updateMiniAppPublishMetadata(
+        id: UUID,
+        publishURL: String,
+        githubRepoOwner: String,
+        githubRepoName: String,
+        githubRepoId: Int,
+        isPrivate: Bool,
+        publishedAt: Date = Date(),
+        persist: Bool = true
+    ) {
+        mutationEngine.updateMiniAppPublishMetadata(
+            nodes: &nodes,
+            id: id,
+            publishURL: publishURL,
+            githubRepoOwner: githubRepoOwner,
+            githubRepoName: githubRepoName,
+            githubRepoId: githubRepoId,
+            isPrivate: isPrivate,
+            publishedAt: publishedAt,
+            persist: persist
+        )
+    }
     public func updateNodeAgentState(id: UUID, agentState: NodeAgentState, persist: Bool = true) {
         mutationEngine.updateNodeAgentState(nodes: &nodes, id: id, agentState: agentState, persist: persist)
     }
