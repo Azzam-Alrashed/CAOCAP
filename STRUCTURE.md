@@ -39,11 +39,13 @@ caocap/
 │   ├── AppSession/
 │   ├── CoCaptain/
 │   ├── ProjectStore/
+│   ├── Gamification/
 │   ├── Runtime/
 │   └── WorkspaceIntelligence/
 ├── Extensions/
 ├── Features/
 │   ├── Activity/
+│   ├── Daily/
 │   ├── Auth/
 │   ├── Canvas/
 │   │   ├── Components/
@@ -183,6 +185,18 @@ App-wide support helpers.
 | `HapticsManager.swift` | Central haptic feedback helper that honors app haptics settings. |
 | `LocalizationManager.swift` | Runtime language selection, localized strings, localized project/node labels, and date formatting. |
 
+#### `Services/Gamification/`
+Daily HTML challenges, XP, and level progression.
+
+| File | Responsibility |
+|---|---|
+| `GamificationStore.swift` | Local XP totals, daily challenge completion, and Mini-App HTML evaluation. |
+| `DailyChallengeDetector.swift` | Pure HTML inspection for iron/gold/diamond challenge rules. |
+| `DailyChallengeDefinition.swift` | Static challenge catalog and localized copy keys. |
+| `DailyChallengeTier.swift` | Iron, gold, and diamond tiers with XP rewards and badge asset names. |
+| `XPLevelTable.swift` | XP thresholds and cosmetic level titles. |
+| `SessionActivityRecorder.swift` | Forwards successful saves to activity history and gamification XP awards. |
+
 #### `Services/Runtime/`
 Live project execution and preview support.
 
@@ -277,6 +291,18 @@ Local-first building history surfaced by the protected Activity node on the root
 |---|---|
 | `ActivityHeatmapView.swift` | Reusable 17×7 Sunday-to-Saturday save-activity grid with five intensity levels. |
 | `ActivityHistoryView.swift` | Expanded activity sheet with recent totals, active days, and the heatmap legend. |
+
+---
+
+#### `Daily/`
+Daily HTML challenges, badge previews, and XP sheet surfaced by the protected Daily root node.
+
+| File | Responsibility |
+|---|---|
+| `DailyBadgesRow.swift` | Iron, gold, and diamond badge row with completion opacity and counters. |
+| `DailyNodeCardContent.swift` | Inline Daily node preview with tap-to-reveal challenge descriptions. |
+| `DailyChallengesView.swift` | Expanded daily sheet with XP progress and challenge list. |
+| `GamificationLevelCard.swift` | Compact XP level card shown in Profile. |
 
 ---
 

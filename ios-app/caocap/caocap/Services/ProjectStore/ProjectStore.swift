@@ -51,6 +51,9 @@ public class ProjectStore {
     
     public let fileName: String
     
+    /// Called when daily challenges are newly completed after a live preview compile.
+    public var onChallengesCompleted: (([DailyChallengeDefinition]) -> Void)?
+    
     public init(
         fileName: String = "canvas_v1.json",
         projectName: String = "Untitled Project",
@@ -80,7 +83,7 @@ public class ProjectStore {
         }
         mutationEngine.onCompileLivePreview = { [weak self] nodes in
             guard let self else { return }
-            _ = self.livePreviewOrchestrator.compile(nodes: &nodes)
+            self.compileLivePreviewsAndEvaluateChallenges(nodes: &nodes)
         }
         mutationEngine.onTriggerDownstreamAgents = { [weak self] id, nodes in
             self?.triggerDownstreamAgents(from: id, nodes: nodes)
@@ -106,7 +109,7 @@ public class ProjectStore {
             self.viewportScale = initialViewportScale
             
             // Ensure Mini-App previews are compiled immediately for new projects.
-            _ = livePreviewOrchestrator.compile(nodes: &nodes)
+            compileLivePreviewsAndEvaluateChallenges(nodes: &nodes)
             
             // Only perform an initial save for permanent project files.
             if !self.fileName.contains("onboarding") {
@@ -136,7 +139,7 @@ public class ProjectStore {
         }
         
         // Ensure Mini-App previews are synced with embedded code on startup.
-        _ = livePreviewOrchestrator.compile(nodes: &nodes)
+        compileLivePreviewsAndEvaluateChallenges(nodes: &nodes)
         
         // Load history
         checkpointManager.loadHistory(for: fileName)
@@ -168,7 +171,7 @@ public class ProjectStore {
             },
             onDebounceComplete: { [weak self] in
                 guard let self = self else { return }
-                _ = self.livePreviewOrchestrator.compile(nodes: &self.nodes)
+                self.compileLivePreviewsAndEvaluateChallenges(nodes: &self.nodes)
             }
         )
     }
@@ -199,7 +202,7 @@ public class ProjectStore {
             apply(snapshot: snapshot)
         }
         save()
-        _ = livePreviewOrchestrator.compile(nodes: &nodes)
+        compileLivePreviewsAndEvaluateChallenges(nodes: &nodes)
     }
 
     /// Deletes a historical checkpoint from disk and local state.
@@ -427,6 +430,18 @@ public class ProjectStore {
     }
     public func updateNodeFirebaseFirestorePath(id: UUID, path: String?, persist: Bool = true) {
         mutationEngine.updateNodeFirebaseFirestorePath(nodes: &nodes, id: id, path: path, persist: persist)
+    }
+
+    private func compileLivePreviewsAndEvaluateChallenges(nodes: inout [SpatialNode]) {
+        _ = livePreviewOrchestrator.compile(nodes: &nodes)
+        let htmlSamples = nodes.compactMap { node -> String? in
+            guard node.type == .miniApp else { return nil }
+            return node.miniApp?.compiledHTML
+        }
+        let newlyCompleted = GamificationStore.shared.evaluateMiniApps(htmlSamples: htmlSamples)
+        if !newlyCompleted.isEmpty {
+            onChallengesCompleted?(newlyCompleted)
+        }
     }
 
 }
