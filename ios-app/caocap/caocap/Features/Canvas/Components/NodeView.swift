@@ -101,7 +101,8 @@ struct NodeView: View {
                 node: node,
                 agentState: agentState,
                 themeColor: themeColor,
-                activityStore: ActivityStore.shared
+                activityStore: ActivityStore.shared,
+                gamificationStore: GamificationStore.shared
             )
         }
         .padding(.horizontal, node.type == .miniApp ? 12 : 20)
@@ -259,10 +260,13 @@ private struct NodePreviewContent: View {
     let agentState: AgentExecutionState
     let themeColor: Color
     let activityStore: ActivityStore
+    let gamificationStore: GamificationStore
     
     var body: some View {
         Group {
-            if node.action == .openActivity {
+            if node.action == .openDaily {
+                DailyNodeCardContent(store: gamificationStore)
+            } else if node.action == .openActivity {
                 VStack(alignment: .leading, spacing: 10) {
                     ActivityHeatmapView(
                         days: activityStore.days(),

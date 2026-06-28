@@ -50,7 +50,7 @@ public class AppRouter {
     /// Initializes the router, runs any pending workspace migrations, and creates
     /// the root canvas with its default node template and a zoomed-out initial scale.
     public init(activityRecorder: (any ActivityRecording)? = nil) {
-        let resolvedActivityRecorder = activityRecorder ?? ActivityStore.shared
+        let resolvedActivityRecorder = activityRecorder ?? SessionActivityRecorder()
         self.activityRecorder = resolvedActivityRecorder
         CanvasWorkspaceMigration.runIfNeeded()
         CuratedRootCanvasMigration.runIfNeeded()

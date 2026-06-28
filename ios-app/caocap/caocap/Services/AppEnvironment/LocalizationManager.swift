@@ -32,7 +32,8 @@ public class LocalizationManager {
         "CSS",
         "JavaScript",
         "New Logic",
-        "Activity"
+        "Activity",
+        "Daily"
     ]
     /// Subtitles of app-owned nodes. Only strings in this set are passed through
     /// the localization lookup; user-authored subtitles are returned verbatim.
@@ -57,7 +58,8 @@ public class LocalizationManager {
         "Define intent, people, flow, and success.",
         "Your current build renders here.",
         "Write your intent here.",
-        "Saved changes across all canvases"
+        "Saved changes across all canvases",
+        "Today's building challenges"
     ]
     
     private init() {}
