@@ -88,5 +88,14 @@ struct AppSheetsModifier: ViewModifier {
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
             }
+            .sheet(isPresented: $session.showingHelp) {
+                HelpView(
+                    onOpenTutorial: { session.openTutorialFromHelp() },
+                    onRestartTutorial: { session.restartTutorialFromHelp() },
+                    onOpenDemoCanvas: { session.openDemoCanvasFromHelp(fileName: $0) }
+                )
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+            }
     }
 }

@@ -46,6 +46,7 @@ caocap/
 ├── Features/
 │   ├── Activity/
 │   ├── Daily/
+│   ├── Help/
 │   ├── Auth/
 │   ├── Canvas/
 │   │   ├── Components/
@@ -291,6 +292,17 @@ Local-first building history surfaced by the protected Activity node on the root
 |---|---|
 | `ActivityHeatmapView.swift` | Reusable 17×7 Sunday-to-Saturday save-activity grid with five intensity levels. |
 | `ActivityHistoryView.swift` | Expanded activity sheet with recent totals, active days, and the heatmap legend. |
+
+---
+
+#### `Help/`
+In-app help center opened from the Omnibox and the root Help node.
+
+| File | Responsibility |
+|---|---|
+| `HelpManifest.swift` | Static tutorials, Omnibox shortcut examples, and guide articles. |
+| `HelpView.swift` | Help sheet with sections and navigation callbacks. |
+| `HelpArticleView.swift` | Scrollable getting-started article pages. |
 
 ---
 

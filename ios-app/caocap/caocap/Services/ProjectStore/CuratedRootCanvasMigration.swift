@@ -13,6 +13,8 @@ enum CuratedRootCanvasMigration {
     static let xoGridLayoutCompleteKey = "curatedRootCanvas_v7_xo_grid_layout_complete"
     static let launchViewportScaleCompleteKey = "curatedRootCanvas_v8_launch_viewport_scale_complete"
     static let whatsAppNodeCompleteKey = "curatedRootCanvas_v9_whatsapp_node_complete"
+    static let helpNodeCompleteKey = "curatedRootCanvas_v10_help_node_complete"
+    static let launchAnchorLayoutCompleteKey = "curatedRootCanvas_v11_launch_anchor_layout_complete"
     private static let logger = Logger(subsystem: "com.caocap.app", category: "CuratedRootCanvasMigration")
 
     static func runIfNeeded(
@@ -123,6 +125,26 @@ enum CuratedRootCanvasMigration {
                 logger.info("Installed the root WhatsApp node.")
             } catch {
                 logger.error("Failed to install the root WhatsApp node: \(error.localizedDescription)")
+            }
+        }
+
+        if !defaults.bool(forKey: helpNodeCompleteKey) {
+            do {
+                try installHelpNode(persistence: persistence)
+                defaults.set(true, forKey: helpNodeCompleteKey)
+                logger.info("Installed the root Help node.")
+            } catch {
+                logger.error("Failed to install the root Help node: \(error.localizedDescription)")
+            }
+        }
+
+        if !defaults.bool(forKey: launchAnchorLayoutCompleteKey) {
+            do {
+                try refreshLaunchAnchorLayout(persistence: persistence)
+                defaults.set(true, forKey: launchAnchorLayoutCompleteKey)
+                logger.info("Updated the curated root canvas launch anchor layout.")
+            } catch {
+                logger.error("Failed to update the curated root canvas launch anchor layout: \(error.localizedDescription)")
             }
         }
     }
@@ -353,7 +375,15 @@ enum CuratedRootCanvasMigration {
     }
 
     private static func preGridRootNodeIDs() -> Set<UUID> {
-        Set(RootCanvasProvider.nodes.filter { $0.id != RootCanvasProvider.xoNodeID }.map(\.id))
+        Set(
+            RootCanvasProvider.nodes
+                .filter {
+                    $0.id != RootCanvasProvider.xoNodeID &&
+                        $0.id != RootCanvasProvider.whatsAppNodeID &&
+                        $0.id != RootCanvasProvider.helpNodeID
+                }
+                .map(\.id)
+        )
     }
 
     /// Repositions the seven-node vertical column into the centered two-column constellation.
@@ -514,6 +544,110 @@ enum CuratedRootCanvasMigration {
 
         var updatedNodes = snapshot.nodes
         updatedNodes.append(whatsAppNode)
+
+        try persistence.save(
+            ProjectSnapshot(
+                schemaVersion: snapshot.schemaVersion,
+                projectName: snapshot.projectName,
+                nodes: updatedNodes,
+                viewportOffset: snapshot.viewportOffset,
+                viewportScale: snapshot.viewportScale,
+                checkpointLabel: snapshot.checkpointLabel
+            ),
+            fileName: rootFileName
+        )
+    }
+
+    /// Appends the Help node when the root still matches the nine-node launch grid with WhatsApp.
+    private static func installHelpNode(persistence: ProjectPersistenceService) throws {
+        let rootFileName = CanvasFileNaming.rootFileName
+        guard persistence.projectExists(fileName: rootFileName) else { return }
+
+        let snapshot = try persistence.load(fileName: rootFileName)
+        guard !snapshot.nodes.contains(where: { $0.id == RootCanvasProvider.helpNodeID }) else {
+            return
+        }
+
+        let preHelpIDs = Set(
+            RootCanvasProvider.nodes
+                .filter { $0.id != RootCanvasProvider.helpNodeID }
+                .map(\.id)
+        )
+        guard Set(snapshot.nodes.map(\.id)) == preHelpIDs else { return }
+
+        let canonicalPositions: [UUID: CGPoint] = Dictionary(
+            uniqueKeysWithValues: RootCanvasProvider.nodes
+                .filter { $0.id != RootCanvasProvider.helpNodeID }
+                .map { ($0.id, $0.position) }
+        )
+        let hasCanonicalLayout = snapshot.nodes.allSatisfy { canonicalPositions[$0.id] == $0.position }
+        guard hasCanonicalLayout else { return }
+
+        guard let helpNode = RootCanvasProvider.nodes.first(where: {
+            $0.id == RootCanvasProvider.helpNodeID
+        }) else {
+            return
+        }
+
+        var updatedNodes = snapshot.nodes
+        updatedNodes.append(helpNode)
+
+        try persistence.save(
+            ProjectSnapshot(
+                schemaVersion: snapshot.schemaVersion,
+                projectName: snapshot.projectName,
+                nodes: updatedNodes,
+                viewportOffset: snapshot.viewportOffset,
+                viewportScale: snapshot.viewportScale,
+                checkpointLabel: snapshot.checkpointLabel
+            ),
+            fileName: rootFileName
+        )
+    }
+
+    /// Repositions WhatsApp above the grid and Help below when anchors still use the prior bottom-row layout.
+    private static func refreshLaunchAnchorLayout(persistence: ProjectPersistenceService) throws {
+        let rootFileName = CanvasFileNaming.rootFileName
+        guard persistence.projectExists(fileName: rootFileName) else { return }
+
+        let snapshot = try persistence.load(fileName: rootFileName)
+        let canonicalByID = Dictionary(uniqueKeysWithValues: RootCanvasProvider.nodes.map { ($0.id, $0) })
+        let canonicalIDs = Set(canonicalByID.keys)
+        guard Set(snapshot.nodes.map(\.id)).isSubset(of: canonicalIDs) else { return }
+
+        let gridNodeIDs = Set(
+            RootCanvasProvider.nodes
+                .filter {
+                    $0.id != RootCanvasProvider.whatsAppNodeID &&
+                        $0.id != RootCanvasProvider.helpNodeID
+                }
+                .map(\.id)
+        )
+        let gridPositions: [UUID: CGPoint] = Dictionary(
+            uniqueKeysWithValues: RootCanvasProvider.nodes
+                .filter { gridNodeIDs.contains($0.id) }
+                .map { ($0.id, $0.position) }
+        )
+        let hasCanonicalGrid = snapshot.nodes
+            .filter { gridNodeIDs.contains($0.id) }
+            .allSatisfy { gridPositions[$0.id] == $0.position }
+        guard hasCanonicalGrid else { return }
+
+        let legacyBottomAnchorY = RootCanvasProvider.anchorRowYOffset
+        let whatsApp = snapshot.nodes.first(where: { $0.id == RootCanvasProvider.whatsAppNodeID })
+        let help = snapshot.nodes.first(where: { $0.id == RootCanvasProvider.helpNodeID })
+        let hadLegacyWhatsApp = whatsApp?.position == CGPoint(x: 0, y: legacyBottomAnchorY)
+        let hadLegacyHelp =
+            help?.position == CGPoint(x: -125, y: legacyBottomAnchorY) ||
+            help?.position == CGPoint(x: 0, y: legacyBottomAnchorY)
+        guard hadLegacyWhatsApp || hadLegacyHelp else { return }
+
+        let updatedNodes = snapshot.nodes.map { node -> SpatialNode in
+            guard let canonical = canonicalByID[node.id] else { return node }
+            var updated = node
+            updated.position = canonical.position
+            return updated
+        }
 
         try persistence.save(
             ProjectSnapshot(

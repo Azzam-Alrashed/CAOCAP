@@ -65,6 +65,7 @@ struct AppSessionCoordinatorTests {
 
     @Test func activityNodeActionPresentsActivitySheet() {
         let session = AppSessionCoordinator()
+        session.ensureActionsConfigured()
 
         session.handleNodeAction(.openActivity)
 
@@ -73,14 +74,51 @@ struct AppSessionCoordinatorTests {
 
     @Test func dailyNodeActionPresentsDailySheet() {
         let session = AppSessionCoordinator()
+        session.ensureActionsConfigured()
 
         session.handleNodeAction(.openDaily)
 
         #expect(session.showingDaily)
     }
 
-    @Test func whatsAppNodeActionOpensSupportURL() {
+    @Test func navigateRootNodeActionRoutesThroughDispatcher() {
+        let session = AppSessionCoordinator()
+        session.ensureActionsConfigured()
+        session.router.navigate(to: .project("test.json"), animated: false)
+        session.currentScale = 2.0
+
+        session.handleNodeAction(.navigateRoot)
+
+        #expect(session.router.currentWorkspace == .root)
+        #expect(session.currentScale == 1.0)
+    }
+
+    @Test func whatsAppNodeActionIsConfiguredInDispatcher() {
+        let session = AppSessionCoordinator()
+        session.ensureActionsConfigured()
+
+        let result = session.actionDispatcher.perform(.openWhatsApp, source: .user)
+
+        #expect(result.executed)
         #expect(SupportContact.whatsAppURL?.absoluteString == "https://wa.me/966559279486")
+    }
+
+    @Test func helpNodeActionPresentsHelpSheet() {
+        let session = AppSessionCoordinator()
+        session.ensureActionsConfigured()
+
+        session.handleNodeAction(.openHelp)
+
+        #expect(session.showingHelp)
+    }
+
+    @Test func helpAppActionPresentsHelpSheet() {
+        let session = AppSessionCoordinator()
+        session.ensureActionsConfigured()
+
+        _ = session.actionDispatcher.perform(.help, source: .user)
+
+        #expect(session.showingHelp)
     }
 
     @Test func flyToTargetScaleUsesMeasuredFrameWhenAvailable() {
