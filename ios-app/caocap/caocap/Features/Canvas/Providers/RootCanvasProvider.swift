@@ -5,6 +5,7 @@ import Foundation
 public enum RootCanvasProvider {
     public static let tutorialFileName = "canvas_tutorial.json"
     public static let pacManFileName = "canvas_pacman.json"
+    public static let xoFileName = "canvas_xo.json"
 
     public static let tutorialNodeID = UUID(uuidString: "CA0CA001-0000-4000-8000-000000000001")!
     public static let pacManNodeID = UUID(uuidString: "CA0CA001-0000-4000-8000-000000000002")!
@@ -13,10 +14,14 @@ public enum RootCanvasProvider {
     public static let proNodeID = UUID(uuidString: "CA0CA001-0000-4000-8000-000000000005")!
     public static let activityNodeID = UUID(uuidString: "CA0CA001-0000-4000-8000-000000000006")!
     public static let dailyNodeID = UUID(uuidString: "CA0CA001-0000-4000-8000-000000000007")!
+    public static let xoNodeID = UUID(uuidString: "CA0CA001-0000-4000-8000-000000000008")!
+
+    /// Default root zoom that frames the full 2×4 launch grid with side margins on phone.
+    public static let defaultViewportScale: CGFloat = 0.45
 
     private static let verticalSpacing: CGFloat = 220
     private static let columnSpacing: CGFloat = 250
-    private static let rowY: [CGFloat] = [-220, 0, 220]
+    private static let rowCount = 4
 
     static func verticalColumnPosition(index: Int, count: Int) -> CGPoint {
         let totalHeight = CGFloat(count - 1) * verticalSpacing
@@ -24,22 +29,58 @@ public enum RootCanvasProvider {
         return CGPoint(x: 0, y: startY + CGFloat(index) * verticalSpacing)
     }
 
-    static func constellationPosition(for nodeID: UUID) -> CGPoint {
+    private static var gridRowY: [CGFloat] {
+        let totalHeight = CGFloat(rowCount - 1) * verticalSpacing
+        let startY = -totalHeight / 2
+        return (0..<rowCount).map { startY + CGFloat($0) * verticalSpacing }
+    }
+
+    static func gridPosition(column: Int, row: Int) -> CGPoint {
+        let x = column == 0 ? -columnSpacing : columnSpacing
+        return CGPoint(x: x, y: gridRowY[row])
+    }
+
+    /// Positions from the pre-grid two-column constellation (v6).
+    static func legacyConstellationPosition(for nodeID: UUID) -> CGPoint? {
+        let legacyRowY: [CGFloat] = [-220, 0, 220]
         switch nodeID {
         case proNodeID:
-            CGPoint(x: -columnSpacing, y: rowY[0])
+            return CGPoint(x: -columnSpacing, y: legacyRowY[0])
         case settingsNodeID:
-            CGPoint(x: -columnSpacing, y: rowY[1])
+            return CGPoint(x: -columnSpacing, y: legacyRowY[1])
         case profileNodeID:
-            CGPoint(x: -columnSpacing, y: rowY[2])
+            return CGPoint(x: -columnSpacing, y: legacyRowY[2])
         case tutorialNodeID:
-            CGPoint(x: columnSpacing, y: rowY[0])
+            return CGPoint(x: columnSpacing, y: legacyRowY[0])
         case pacManNodeID:
-            CGPoint(x: columnSpacing, y: rowY[1])
+            return CGPoint(x: columnSpacing, y: legacyRowY[1])
         case dailyNodeID:
-            CGPoint(x: columnSpacing, y: rowY[2])
+            return CGPoint(x: columnSpacing, y: legacyRowY[2])
         case activityNodeID:
-            CGPoint(x: 0, y: rowY[2] + verticalSpacing)
+            return CGPoint(x: 0, y: legacyRowY[2] + verticalSpacing)
+        default:
+            return nil
+        }
+    }
+
+    static func gridPosition(for nodeID: UUID) -> CGPoint {
+        switch nodeID {
+        case proNodeID:
+            gridPosition(column: 0, row: 0)
+        case settingsNodeID:
+            gridPosition(column: 0, row: 1)
+        case profileNodeID:
+            gridPosition(column: 0, row: 2)
+        case activityNodeID:
+            gridPosition(column: 0, row: 3)
+        case tutorialNodeID:
+            gridPosition(column: 1, row: 0)
+        case pacManNodeID:
+            gridPosition(column: 1, row: 1)
+        case xoNodeID:
+            gridPosition(column: 1, row: 2)
+        case dailyNodeID:
+            gridPosition(column: 1, row: 3)
         default:
             .zero
         }
@@ -48,17 +89,8 @@ public enum RootCanvasProvider {
     public static var nodes: [SpatialNode] {
         return [
             SpatialNode(
-                id: profileNodeID,
-                position: constellationPosition(for: profileNodeID),
-                title: "Profile",
-                subtitle: "Account & Preferences",
-                icon: "person.crop.circle.fill",
-                theme: .blue,
-                action: .openProfile
-            ),
-            SpatialNode(
                 id: proNodeID,
-                position: constellationPosition(for: proNodeID),
+                position: gridPosition(for: proNodeID),
                 title: "Pro Subscription",
                 subtitle: "Unlock CoCaptain & Premium Features",
                 icon: "crown.fill",
@@ -67,7 +99,7 @@ public enum RootCanvasProvider {
             ),
             SpatialNode(
                 id: settingsNodeID,
-                position: constellationPosition(for: settingsNodeID),
+                position: gridPosition(for: settingsNodeID),
                 title: "Settings",
                 subtitle: "App Tools & Config",
                 icon: "gearshape.fill",
@@ -75,19 +107,27 @@ public enum RootCanvasProvider {
                 action: .openSettings
             ),
             SpatialNode(
-                id: pacManNodeID,
-                type: .subCanvas,
-                position: constellationPosition(for: pacManNodeID),
-                title: "Pac-Man",
-                subtitle: "A mobile-ready Mini-App",
-                icon: "gamecontroller.fill",
-                theme: .purple,
-                linkedCanvasFileName: pacManFileName
+                id: profileNodeID,
+                position: gridPosition(for: profileNodeID),
+                title: "Profile",
+                subtitle: "Account & Preferences",
+                icon: "person.crop.circle.fill",
+                theme: .blue,
+                action: .openProfile
+            ),
+            SpatialNode(
+                id: activityNodeID,
+                position: gridPosition(for: activityNodeID),
+                title: "Activity",
+                subtitle: "Saved changes across all canvases",
+                icon: "chart.bar.xaxis",
+                theme: .cyan,
+                action: .openActivity
             ),
             SpatialNode(
                 id: tutorialNodeID,
                 type: .subCanvas,
-                position: constellationPosition(for: tutorialNodeID),
+                position: gridPosition(for: tutorialNodeID),
                 title: "Tutorial",
                 subtitle: "Learn CAOCAP by using it",
                 icon: "graduationcap.fill",
@@ -95,22 +135,33 @@ public enum RootCanvasProvider {
                 linkedCanvasFileName: tutorialFileName
             ),
             SpatialNode(
+                id: pacManNodeID,
+                type: .subCanvas,
+                position: gridPosition(for: pacManNodeID),
+                title: "Pac-Man",
+                subtitle: "A mobile-ready Mini-App",
+                icon: "gamecontroller.fill",
+                theme: .purple,
+                linkedCanvasFileName: pacManFileName
+            ),
+            SpatialNode(
+                id: xoNodeID,
+                type: .subCanvas,
+                position: gridPosition(for: xoNodeID),
+                title: "XO",
+                subtitle: "Classic tic-tac-toe Mini-App",
+                icon: "square.grid.3x3.fill",
+                theme: .secondary,
+                linkedCanvasFileName: xoFileName
+            ),
+            SpatialNode(
                 id: dailyNodeID,
-                position: constellationPosition(for: dailyNodeID),
+                position: gridPosition(for: dailyNodeID),
                 title: "Daily",
                 subtitle: "Today's building challenges",
                 icon: "rosette",
                 theme: .indigo,
                 action: .openDaily
-            ),
-            SpatialNode(
-                id: activityNodeID,
-                position: constellationPosition(for: activityNodeID),
-                title: "Activity",
-                subtitle: "Saved changes across all canvases",
-                icon: "chart.bar.xaxis",
-                theme: .cyan,
-                action: .openActivity
             )
         ]
     }
@@ -120,7 +171,7 @@ public enum RootCanvasProvider {
             projectName: "Root",
             nodes: nodes,
             viewportOffset: .zero,
-            viewportScale: 0.5
+            viewportScale: defaultViewportScale
         )
     }
 }

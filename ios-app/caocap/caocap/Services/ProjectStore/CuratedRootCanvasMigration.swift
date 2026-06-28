@@ -10,6 +10,8 @@ enum CuratedRootCanvasMigration {
     static let launchLayoutCompleteKey = "curatedRootCanvas_v4_launch_layout_complete"
     static let dailyNodeCompleteKey = "curatedRootCanvas_v5_daily_node_complete"
     static let constellationLayoutCompleteKey = "curatedRootCanvas_v6_constellation_layout_complete"
+    static let xoGridLayoutCompleteKey = "curatedRootCanvas_v7_xo_grid_layout_complete"
+    static let launchViewportScaleCompleteKey = "curatedRootCanvas_v8_launch_viewport_scale_complete"
     private static let logger = Logger(subsystem: "com.caocap.app", category: "CuratedRootCanvasMigration")
 
     static func runIfNeeded(
@@ -26,6 +28,11 @@ enum CuratedRootCanvasMigration {
                 try seedIfMissing(
                     PacManCanvasProvider.snapshot,
                     fileName: RootCanvasProvider.pacManFileName,
+                    persistence: persistence
+                )
+                try seedIfMissing(
+                    XOCanvasProvider.snapshot,
+                    fileName: RootCanvasProvider.xoFileName,
                     persistence: persistence
                 )
 
@@ -85,6 +92,26 @@ enum CuratedRootCanvasMigration {
                 logger.info("Updated the curated root canvas to the constellation layout.")
             } catch {
                 logger.error("Failed to update the curated root canvas constellation layout: \(error.localizedDescription)")
+            }
+        }
+
+        if !defaults.bool(forKey: xoGridLayoutCompleteKey) {
+            do {
+                try installXOGridLayout(persistence: persistence)
+                defaults.set(true, forKey: xoGridLayoutCompleteKey)
+                logger.info("Installed the root XO node and grid layout.")
+            } catch {
+                logger.error("Failed to install the root XO node and grid layout: \(error.localizedDescription)")
+            }
+        }
+
+        if !defaults.bool(forKey: launchViewportScaleCompleteKey) {
+            do {
+                try refreshLaunchViewportScale(persistence: persistence)
+                defaults.set(true, forKey: launchViewportScaleCompleteKey)
+                logger.info("Updated the curated root canvas launch viewport scale.")
+            } catch {
+                logger.error("Failed to update the curated root canvas launch viewport scale: \(error.localizedDescription)")
             }
         }
     }
@@ -249,7 +276,10 @@ enum CuratedRootCanvasMigration {
 
     private static func launchLayoutNodeIDs() -> [UUID] {
         RootCanvasProvider.nodes
-            .filter { $0.id != RootCanvasProvider.dailyNodeID }
+            .filter {
+                $0.id != RootCanvasProvider.dailyNodeID &&
+                    $0.id != RootCanvasProvider.xoNodeID
+            }
             .map(\.id)
     }
 
@@ -265,17 +295,27 @@ enum CuratedRootCanvasMigration {
         let launchIDs = Set(launchLayoutNodeIDs())
         guard Set(snapshot.nodes.map(\.id)) == launchIDs else { return }
 
-        let canonicalLaunchNodes = RootCanvasProvider.nodes.filter { $0.id != RootCanvasProvider.dailyNodeID }
-        let constellationPositions = Dictionary(
-            uniqueKeysWithValues: canonicalLaunchNodes.map { ($0.id, $0.position) }
-        )
-        let verticalPositions = Dictionary(
-            uniqueKeysWithValues: canonicalLaunchNodes.enumerated().map { index, node in
-                (node.id, RootCanvasProvider.verticalColumnPosition(index: index, count: canonicalLaunchNodes.count))
+        let launchNodes = launchLayoutNodeIDs().compactMap { id in
+            RootCanvasProvider.nodes.first(where: { $0.id == id })
+        }
+        let constellationPositions: [UUID: CGPoint] = Dictionary(
+            uniqueKeysWithValues: launchNodes.compactMap { node -> (UUID, CGPoint)? in
+                guard let position = RootCanvasProvider.legacyConstellationPosition(for: node.id) else {
+                    return nil
+                }
+                return (node.id, position)
             }
         )
+        let verticalPositions: [UUID: CGPoint] = Dictionary(
+            uniqueKeysWithValues: launchNodes.enumerated().map { index, node in
+                (node.id, RootCanvasProvider.verticalColumnPosition(index: index, count: launchNodes.count))
+            }
+        )
+        let gridPositions: [UUID: CGPoint] = Dictionary(uniqueKeysWithValues: launchNodes.map { ($0.id, $0.position) })
         let hasLaunchPositions = snapshot.nodes.allSatisfy {
-            constellationPositions[$0.id] == $0.position || verticalPositions[$0.id] == $0.position
+            constellationPositions[$0.id] == $0.position ||
+                verticalPositions[$0.id] == $0.position ||
+                gridPositions[$0.id] == $0.position
         }
         guard hasLaunchPositions else { return }
 
@@ -301,31 +341,36 @@ enum CuratedRootCanvasMigration {
         )
     }
 
+    private static func preGridRootNodeIDs() -> Set<UUID> {
+        Set(RootCanvasProvider.nodes.filter { $0.id != RootCanvasProvider.xoNodeID }.map(\.id))
+    }
+
     /// Repositions the seven-node vertical column into the centered two-column constellation.
     private static func refreshConstellationRootLayout(persistence: ProjectPersistenceService) throws {
         let rootFileName = CanvasFileNaming.rootFileName
         guard persistence.projectExists(fileName: rootFileName) else { return }
 
         let snapshot = try persistence.load(fileName: rootFileName)
-        let canonicalIDs = Set(RootCanvasProvider.nodes.map(\.id))
-        guard Set(snapshot.nodes.map(\.id)) == canonicalIDs else { return }
+        let preGridIDs = preGridRootNodeIDs()
+        guard Set(snapshot.nodes.map(\.id)) == preGridIDs else { return }
 
+        let preGridNodes = RootCanvasProvider.nodes.filter { $0.id != RootCanvasProvider.xoNodeID }
         let verticalPositions = Dictionary(
-            uniqueKeysWithValues: RootCanvasProvider.nodes.enumerated().map { index, node in
-                (node.id, RootCanvasProvider.verticalColumnPosition(index: index, count: RootCanvasProvider.nodes.count))
+            uniqueKeysWithValues: preGridNodes.enumerated().map { index, node in
+                (node.id, RootCanvasProvider.verticalColumnPosition(index: index, count: preGridNodes.count))
             }
         )
         let hasVerticalLayout = snapshot.nodes.allSatisfy { verticalPositions[$0.id] == $0.position }
         guard hasVerticalLayout else { return }
 
-        let canonicalByID = Dictionary(uniqueKeysWithValues: RootCanvasProvider.nodes.map { ($0.id, $0) })
         let updatedNodes = snapshot.nodes.map { node -> SpatialNode in
-            guard let canonical = canonicalByID[node.id] else { return node }
             var updated = node
-            updated.position = canonical.position
+            if let position = RootCanvasProvider.legacyConstellationPosition(for: node.id) {
+                updated.position = position
+            }
             return updated
         }
-        let orderedNodes = RootCanvasProvider.nodes.compactMap { canonical in
+        let orderedNodes = preGridNodes.compactMap { canonical in
             updatedNodes.first(where: { $0.id == canonical.id })
         }
 
@@ -336,6 +381,83 @@ enum CuratedRootCanvasMigration {
                 nodes: orderedNodes,
                 viewportOffset: snapshot.viewportOffset,
                 viewportScale: snapshot.viewportScale,
+                checkpointLabel: snapshot.checkpointLabel
+            ),
+            fileName: rootFileName
+        )
+    }
+
+    /// Seeds the XO child canvas and upgrades the seven-node constellation to the launch grid.
+    private static func installXOGridLayout(persistence: ProjectPersistenceService) throws {
+        try seedIfMissing(
+            XOCanvasProvider.snapshot,
+            fileName: RootCanvasProvider.xoFileName,
+            persistence: persistence
+        )
+
+        let rootFileName = CanvasFileNaming.rootFileName
+        guard persistence.projectExists(fileName: rootFileName) else { return }
+
+        let snapshot = try persistence.load(fileName: rootFileName)
+        guard !snapshot.nodes.contains(where: { $0.id == RootCanvasProvider.xoNodeID }) else {
+            return
+        }
+
+        let preGridIDs = preGridRootNodeIDs()
+        guard Set(snapshot.nodes.map(\.id)) == preGridIDs else { return }
+
+        let hasConstellationLayout = snapshot.nodes.allSatisfy {
+            RootCanvasProvider.legacyConstellationPosition(for: $0.id) == $0.position
+        }
+        guard hasConstellationLayout else { return }
+
+        let orderedNodes = RootCanvasProvider.nodes.map { canonical -> SpatialNode in
+            if let existing = snapshot.nodes.first(where: { $0.id == canonical.id }) {
+                var updated = existing
+                updated.position = canonical.position
+                return updated
+            }
+            return canonical
+        }
+
+        try persistence.save(
+            ProjectSnapshot(
+                schemaVersion: snapshot.schemaVersion,
+                projectName: snapshot.projectName,
+                nodes: orderedNodes,
+                viewportOffset: snapshot.viewportOffset,
+                viewportScale: snapshot.viewportScale,
+                checkpointLabel: snapshot.checkpointLabel
+            ),
+            fileName: rootFileName
+        )
+    }
+
+    /// Reframes the canonical eight-node grid when the root still uses the prior 0.5 launch zoom.
+    private static func refreshLaunchViewportScale(persistence: ProjectPersistenceService) throws {
+        let rootFileName = CanvasFileNaming.rootFileName
+        guard persistence.projectExists(fileName: rootFileName) else { return }
+
+        let snapshot = try persistence.load(fileName: rootFileName)
+        let canonicalIDs = Set(RootCanvasProvider.nodes.map(\.id))
+        guard Set(snapshot.nodes.map(\.id)) == canonicalIDs else { return }
+
+        let gridPositions: [UUID: CGPoint] = Dictionary(
+            uniqueKeysWithValues: RootCanvasProvider.nodes.map { ($0.id, $0.position) }
+        )
+        let hasGridLayout = snapshot.nodes.allSatisfy { gridPositions[$0.id] == $0.position }
+        guard hasGridLayout else { return }
+
+        let hadDefaultViewport = snapshot.viewportScale == 0.5 && snapshot.viewportOffset == .zero
+        guard hadDefaultViewport else { return }
+
+        try persistence.save(
+            ProjectSnapshot(
+                schemaVersion: snapshot.schemaVersion,
+                projectName: snapshot.projectName,
+                nodes: snapshot.nodes,
+                viewportOffset: .zero,
+                viewportScale: RootCanvasProvider.defaultViewportScale,
                 checkpointLabel: snapshot.checkpointLabel
             ),
             fileName: rootFileName

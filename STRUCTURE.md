@@ -345,9 +345,10 @@ The spatial runtime — the heart of CAOCAP.
 
 | File | Responsibility |
 |---|---|
-| `RootCanvasProvider.swift` | Defines the stable six-node root column, including Activity, and curated child-canvas filenames. |
+| `RootCanvasProvider.swift` | Defines the stable eight-node root grid, including Activity and Daily, and curated child-canvas filenames. |
 | `TutorialCanvasProvider.swift` | Defines the clean workspace used by the interactive tutorial. |
 | `PacManCanvasProvider.swift` | Defines the self-contained, touch-first Pac-Man example Mini-App. |
+| `XOCanvasProvider.swift` | Defines the self-contained, touch-first tic-tac-toe example Mini-App. |
 | `ProjectTemplateProvider.swift` | Supplies the clean default project state and manual Mini-App boilerplate. |
 
 ---
