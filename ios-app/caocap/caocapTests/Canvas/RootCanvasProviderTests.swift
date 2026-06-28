@@ -4,31 +4,30 @@ import Testing
 @testable import caocap
 
 struct RootCanvasProviderTests {
-    @Test func rootDefinesTheCuratedSevenNodeConstellation() throws {
+    @Test func rootDefinesTheCuratedEightNodeGrid() throws {
         let nodes = RootCanvasProvider.nodes
-        #expect(nodes.count == 7)
+        #expect(nodes.count == 8)
+        #expect(RootCanvasProvider.defaultViewportScale == 0.45)
+        #expect(RootCanvasProvider.snapshot.viewportScale == RootCanvasProvider.defaultViewportScale)
 
         let columnSpacing: CGFloat = 250
-        let rowY: [CGFloat] = [-220, 0, 220]
-        let activityY = rowY[2] + 220
+        let rowY: [CGFloat] = [-330, -110, 110, 330]
 
-        #expect(nodes[0].id == RootCanvasProvider.profileNodeID)
-        #expect(nodes[0].position == CGPoint(x: -columnSpacing, y: rowY[2]))
-        #expect(nodes[0].theme == .blue)
+        #expect(nodes[0].id == RootCanvasProvider.proNodeID)
+        #expect(nodes[0].position == CGPoint(x: -columnSpacing, y: rowY[0]))
+        #expect(nodes[0].theme == .orange)
 
-        #expect(nodes[1].id == RootCanvasProvider.proNodeID)
-        #expect(nodes[1].position == CGPoint(x: -columnSpacing, y: rowY[0]))
-        #expect(nodes[1].theme == .orange)
+        #expect(nodes[1].id == RootCanvasProvider.settingsNodeID)
+        #expect(nodes[1].position == CGPoint(x: -columnSpacing, y: rowY[1]))
+        #expect(nodes[1].theme == .pink)
 
-        #expect(nodes[2].id == RootCanvasProvider.settingsNodeID)
-        #expect(nodes[2].position == CGPoint(x: -columnSpacing, y: rowY[1]))
-        #expect(nodes[2].theme == .pink)
+        #expect(nodes[2].id == RootCanvasProvider.profileNodeID)
+        #expect(nodes[2].position == CGPoint(x: -columnSpacing, y: rowY[2]))
+        #expect(nodes[2].theme == .blue)
 
-        let pacMan = try #require(nodes.first { $0.id == RootCanvasProvider.pacManNodeID })
-        #expect(pacMan.position == CGPoint(x: columnSpacing, y: rowY[1]))
-        #expect(pacMan.type == .subCanvas)
-        #expect(pacMan.linkedCanvasFileName == RootCanvasProvider.pacManFileName)
-        #expect(pacMan.theme == .purple)
+        let activity = try #require(nodes.first { $0.id == RootCanvasProvider.activityNodeID })
+        #expect(activity.position == CGPoint(x: -columnSpacing, y: rowY[3]))
+        #expect(activity.theme == .cyan)
 
         let tutorial = try #require(nodes.first { $0.id == RootCanvasProvider.tutorialNodeID })
         #expect(tutorial.position == CGPoint(x: columnSpacing, y: rowY[0]))
@@ -36,14 +35,22 @@ struct RootCanvasProviderTests {
         #expect(tutorial.linkedCanvasFileName == RootCanvasProvider.tutorialFileName)
         #expect(tutorial.theme == .green)
 
+        let pacMan = try #require(nodes.first { $0.id == RootCanvasProvider.pacManNodeID })
+        #expect(pacMan.position == CGPoint(x: columnSpacing, y: rowY[1]))
+        #expect(pacMan.type == .subCanvas)
+        #expect(pacMan.linkedCanvasFileName == RootCanvasProvider.pacManFileName)
+        #expect(pacMan.theme == .purple)
+
+        let xo = try #require(nodes.first { $0.id == RootCanvasProvider.xoNodeID })
+        #expect(xo.position == CGPoint(x: columnSpacing, y: rowY[2]))
+        #expect(xo.type == .subCanvas)
+        #expect(xo.linkedCanvasFileName == RootCanvasProvider.xoFileName)
+        #expect(xo.theme == .secondary)
+
         let daily = try #require(nodes.first { $0.id == RootCanvasProvider.dailyNodeID })
-        #expect(daily.position == CGPoint(x: columnSpacing, y: rowY[2]))
+        #expect(daily.position == CGPoint(x: columnSpacing, y: rowY[3]))
         #expect(daily.theme == .indigo)
         #expect(daily.action == .openDaily)
-
-        let activity = try #require(nodes.first { $0.id == RootCanvasProvider.activityNodeID })
-        #expect(activity.position == CGPoint(x: 0, y: activityY))
-        #expect(activity.theme == .cyan)
 
         #expect(!nodes.contains { $0.title == "Resume" || $0.title == "Projects" || $0.title == "New Project" })
     }
@@ -73,6 +80,18 @@ struct RootCanvasProviderTests {
         #expect(code.contains("touch-action:none"))
         #expect(code.contains("viewport-fit=cover"))
         #expect(code.contains("data-dir=\"up\""))
+        #expect(!code.contains("https://"))
+    }
+
+    @Test func xoCanvasContainsATouchFirstRunnableMiniApp() throws {
+        let node = try #require(XOCanvasProvider.snapshot.nodes.first)
+        let code = try #require(node.miniApp?.codeText)
+
+        #expect(node.type == .miniApp)
+        #expect(code.contains("pointerdown"))
+        #expect(code.contains("touch-action:none"))
+        #expect(code.contains("viewport-fit=cover"))
+        #expect(code.contains("role=\"grid\""))
         #expect(!code.contains("https://"))
     }
 }
