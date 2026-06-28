@@ -93,7 +93,7 @@ struct IntroView: View {
                 Button {
                     finishIntro(skipping: true)
                 } label: {
-                    Text("Skip")
+                    Text(LocalizationManager.shared.localizedString("Skip"))
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(.white.opacity(0.78))
                 }
@@ -101,6 +101,8 @@ struct IntroView: View {
             }
 
             Spacer(minLength: 0)
+
+            IntroLanguageButton(usesLightChrome: true)
         }
     }
 
@@ -113,14 +115,18 @@ struct IntroView: View {
 
             Spacer(minLength: 0)
 
-            Button {
-                finishIntro(skipping: true)
-            } label: {
-                Text("Skip")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.78))
+            HStack(spacing: 12) {
+                IntroLanguageButton(usesLightChrome: true)
+
+                Button {
+                    finishIntro(skipping: true)
+                } label: {
+                    Text(LocalizationManager.shared.localizedString("Skip"))
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.78))
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
         }
     }
 
@@ -133,17 +139,21 @@ struct IntroView: View {
 
             Spacer()
 
-            Button {
-                finishIntro(skipping: true)
-            } label: {
-                Text("Skip")
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(.ultraThinMaterial, in: Capsule())
+            HStack(spacing: 10) {
+                IntroLanguageButton(usesLightChrome: false)
+
+                Button {
+                    finishIntro(skipping: true)
+                } label: {
+                    Text(LocalizationManager.shared.localizedString("Skip"))
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(.ultraThinMaterial, in: Capsule())
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
         }
     }
 
@@ -186,7 +196,7 @@ struct IntroView: View {
                     }
                 } label: {
                     HStack(spacing: 10) {
-                        Text(currentStep.ctaLabel)
+                        Text(LocalizationManager.shared.localizedString(currentStep.ctaLabel))
                             .font(.system(size: 16, weight: .bold))
                             .lineLimit(1)
                             .minimumScaleFactor(0.82)
@@ -371,6 +381,14 @@ private struct IntroPageView: View {
     let step: IntroStepContent
     let isBreathing: Bool
 
+    private var localizedTitle: String {
+        LocalizationManager.shared.localizedString(step.title)
+    }
+
+    private var localizedMessage: String {
+        LocalizationManager.shared.localizedString(step.message)
+    }
+
     var body: some View {
         if step.usesIllustrationBackground {
             illustrationLayout
@@ -389,7 +407,7 @@ private struct IntroPageView: View {
             let yOffset = resolvedVerticalOffset(for: placement, in: geometry)
 
             VStack(alignment: hAlignment, spacing: 10) {
-                Text(step.title)
+                Text(localizedTitle)
                     .font(.system(size: titleSize, weight: .black, design: .rounded))
                     .multilineTextAlignment(placement.horizontalAlignment == .center ? .center : .leading)
                     .foregroundStyle(.white)
@@ -398,7 +416,7 @@ private struct IntroPageView: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .shadow(color: .black.opacity(0.35), radius: 8, x: 0, y: 2)
 
-                Text(step.message)
+                Text(localizedMessage)
                     .font(.system(size: 16, weight: .medium))
                     .lineSpacing(4)
                     .multilineTextAlignment(placement.horizontalAlignment == .center ? .center : .leading)
@@ -441,7 +459,7 @@ private struct IntroPageView: View {
                 .frame(height: heroHeight)
 
             VStack(spacing: 16) {
-                Text(step.title)
+                Text(localizedTitle)
                     .font(.system(size: titleSize, weight: .black, design: .rounded))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.primary)
@@ -449,7 +467,7 @@ private struct IntroPageView: View {
                     .minimumScaleFactor(0.74)
                     .fixedSize(horizontal: false, vertical: true)
 
-                Text(step.message)
+                Text(localizedMessage)
                     .font(.system(size: 18, weight: .medium))
                     .lineSpacing(5)
                     .multilineTextAlignment(.center)
