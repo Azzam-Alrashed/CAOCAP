@@ -153,6 +153,137 @@ public enum AgentExecutionState: Equatable {
     case error(String)
 }
 
+/// User-visible progress for a private verified coding run.
+///
+/// These stages are authored by the app and intentionally expose no model
+/// reasoning or hidden repair prompts.
+public enum CoCaptainCodingRunState: Hashable {
+    case planning
+    case building(attempt: Int)
+    case testing(attempt: Int)
+    case repairing(nextAttempt: Int)
+    case readyForReview(attempts: Int)
+    case failed(String)
+    case cancelled
+
+    public var title: String {
+        switch self {
+        case .planning:
+            return LocalizationManager.shared.localizedString("Planning")
+        case .building(let attempt):
+            return LocalizationManager.shared.localizedString("Building attempt %@", arguments: [Int64(attempt)])
+        case .testing(let attempt):
+            return LocalizationManager.shared.localizedString("Testing attempt %@", arguments: [Int64(attempt)])
+        case .repairing:
+            return LocalizationManager.shared.localizedString("Repairing")
+        case .readyForReview:
+            return LocalizationManager.shared.localizedString("Ready for review")
+        case .failed:
+            return LocalizationManager.shared.localizedString("Verification failed")
+        case .cancelled:
+            return LocalizationManager.shared.localizedString("Cancelled")
+        }
+    }
+
+    public var detail: String? {
+        switch self {
+        case .repairing(let nextAttempt):
+            return LocalizationManager.shared.localizedString("Preparing attempt %@ from the verification results.", arguments: [Int64(nextAttempt)])
+        case .readyForReview(let attempts):
+            return LocalizationManager.shared.localizedString("Verified after %@ attempt(s).", arguments: [Int64(attempts)])
+        case .failed(let message):
+            return message
+        default:
+            return nil
+        }
+    }
+
+    public var isTerminal: Bool {
+        switch self {
+        case .readyForReview, .failed, .cancelled:
+            return true
+        default:
+            return false
+        }
+    }
+}
+
+/// One model-authored behavioral assertion executed against staged Mini-App code.
+public struct CoCaptainVerificationCheck: Codable, Hashable, Identifiable {
+    public static let maximumCount = 5
+    public static let maximumScriptCharacters = 2_000
+    public static let maximumTotalScriptCharacters = 8_000
+
+    public let id: String
+    public let description: String
+    public let script: String
+
+    public init(id: String, description: String, script: String) {
+        self.id = id
+        self.description = description
+        self.script = script
+    }
+}
+
+public enum CoCaptainVerificationDiagnosticKind: String, Hashable {
+    case runtimeError
+    case consoleError
+    case blockedExternalAccess
+    case loadFailure
+    case timeout
+    case invalidCandidate
+    case unsupported
+}
+
+public struct CoCaptainVerificationDiagnostic: Hashable {
+    public let kind: CoCaptainVerificationDiagnosticKind
+    public let message: String
+
+    public init(kind: CoCaptainVerificationDiagnosticKind, message: String) {
+        self.kind = kind
+        self.message = message
+    }
+}
+
+public struct CoCaptainVerificationCheckResult: Hashable {
+    public let check: CoCaptainVerificationCheck
+    public let passed: Bool
+    public let detail: String?
+
+    public init(check: CoCaptainVerificationCheck, passed: Bool, detail: String? = nil) {
+        self.check = check
+        self.passed = passed
+        self.detail = detail
+    }
+}
+
+public struct CoCaptainVerificationResult: Hashable {
+    public let diagnostics: [CoCaptainVerificationDiagnostic]
+    public let checkResults: [CoCaptainVerificationCheckResult]
+
+    public init(
+        diagnostics: [CoCaptainVerificationDiagnostic] = [],
+        checkResults: [CoCaptainVerificationCheckResult] = []
+    ) {
+        self.diagnostics = diagnostics
+        self.checkResults = checkResults
+    }
+
+    public var passed: Bool {
+        diagnostics.isEmpty &&
+        !checkResults.isEmpty &&
+        checkResults.allSatisfy { $0.passed }
+    }
+
+    public var compactFeedback: String {
+        let diagnosticLines = diagnostics.map { "- \($0.kind.rawValue): \($0.message)" }
+        let checkLines = checkResults
+            .filter { !$0.passed }
+            .map { "- check \($0.check.id): \($0.detail ?? $0.check.description)" }
+        return (diagnosticLines + checkLines).joined(separator: "\n")
+    }
+}
+
 /// A single app-level action emitted by the model, referencing a registered
 /// `AppActionID` by its raw string and optional key-value arguments.
 ///
@@ -201,13 +332,23 @@ public struct CoCaptainNodeEditProposal: Codable, Hashable {
     public let summary: String
     /// The ordered sequence of patch operations to apply when accepted.
     public let operations: [NodePatchOperation]
+    /// Behavioral checks required before a code edit can enter review.
+    public let verificationChecks: [CoCaptainVerificationCheck]
 
-    public init(nodeID: UUID? = nil, role: NodeRole = .miniApp, section: MiniAppSection = .code, summary: String, operations: [NodePatchOperation]) {
+    public init(
+        nodeID: UUID? = nil,
+        role: NodeRole = .miniApp,
+        section: MiniAppSection = .code,
+        summary: String,
+        operations: [NodePatchOperation],
+        verificationChecks: [CoCaptainVerificationCheck] = []
+    ) {
         self.nodeID = nodeID
         self.role = role
         self.section = section
         self.summary = summary
         self.operations = operations
+        self.verificationChecks = verificationChecks
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -216,6 +357,7 @@ public struct CoCaptainNodeEditProposal: Codable, Hashable {
         case section
         case summary
         case operations
+        case verificationChecks
     }
 
     public init(from decoder: Decoder) throws {
@@ -226,6 +368,10 @@ public struct CoCaptainNodeEditProposal: Codable, Hashable {
         self.section = try container.decodeIfPresent(MiniAppSection.self, forKey: .section) ?? .code
         self.summary = try container.decodeIfPresent(String.self, forKey: .summary) ?? ""
         self.operations = try container.decode([NodePatchOperation].self, forKey: .operations)
+        self.verificationChecks = try container.decodeIfPresent(
+            [CoCaptainVerificationCheck].self,
+            forKey: .verificationChecks
+        ) ?? []
     }
 }
 
@@ -507,6 +653,8 @@ public enum CoCaptainTimelineContent: Hashable {
     case productCTA(CoCaptainProductCTAItem)
     /// A set of proposed changes awaiting user review.
     case reviewBundle(ReviewBundleItem)
+    /// App-authored progress for a verified coding loop.
+    case codingRun(CoCaptainCodingRunState)
 }
 
 /// One identifiable row in the CoCaptain conversation timeline.

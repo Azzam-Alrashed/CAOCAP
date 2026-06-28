@@ -1619,6 +1619,187 @@ struct CoCaptainAgentTests {
         #expect(llm.receivedPurposes.allSatisfy { $0 == .onboardingWelcome })
     }
 
+    @Test func parserExtractsVerificationChecksFromCodeEdit() throws {
+        let response = """
+        <cocaptain_actions>
+          <assistant_message>Updated and tested.</assistant_message>
+          <node_edits>
+            <node_edit role="miniApp" section="code" summary="Update heading">
+              <operation type="replace_exact">
+                <target>Hello World!</target>
+                <content><![CDATA[Verified]]></content>
+              </operation>
+              <verification_checks>
+                <verification_check id="heading" description="Heading shows the new text">
+                  <script><![CDATA[return document.querySelector("h1")?.textContent === "Verified";]]></script>
+                </verification_check>
+              </verification_checks>
+            </node_edit>
+          </node_edits>
+        </cocaptain_actions>
+        """
+
+        let edit = try #require(CoCaptainAgentParser().parse(response).payload?.nodeEdits.first)
+        let check = try #require(edit.verificationChecks.first)
+
+        #expect(check.id == "heading")
+        #expect(check.description == "Heading shows the new text")
+        #expect(check.script.contains("querySelector"))
+    }
+
+    @MainActor
+    @Test func validatorRejectsInvalidVerificationChecks() {
+        let duplicate = CoCaptainVerificationCheck(id: "same", description: "First", script: "return true;")
+        let payload = CoCaptainAgentPayload(
+            assistantMessage: "Ready",
+            nodeEdits: [
+                CoCaptainNodeEditProposal(
+                    summary: "Update",
+                    operations: [NodePatchOperation(type: .replaceAll, content: "<h1>x</h1>")],
+                    verificationChecks: [
+                        duplicate,
+                        CoCaptainVerificationCheck(id: "same", description: "", script: "")
+                    ]
+                )
+            ]
+        )
+
+        let result = CoCaptainAgentValidator().validate(
+            payload: payload,
+            dispatcher: nil,
+            requiresAgenticWork: true,
+            requiresVerificationChecks: true
+        )
+
+        #expect(!result.isValid)
+        #expect(result.issues.contains { $0.contains("duplicated") })
+        #expect(result.issues.contains { $0.contains("requires a description") })
+        #expect(result.issues.contains { $0.contains("requires a script") })
+    }
+
+    @MainActor
+    @Test func verifiedCodingLoopOffersOnlyPassingCandidate() async throws {
+        let verifier = TestMiniAppVerifier(results: [TestMiniAppVerifier.passing])
+        let llm = TestLLMClient(response: verifiedEditResponse(replacement: "Verified"))
+        let coordinator = CoCaptainAgentCoordinator(
+            llmClient: llm,
+            verifier: verifier,
+            verifiedCodingLoopEnabled: { true }
+        )
+        var progress: [CoCaptainCodingRunState] = []
+
+        let result = try await coordinator.run(
+            userMessage: "change the heading",
+            store: makeStore(),
+            dispatcher: nil,
+            onCodingProgress: { progress.append($0) }
+        ) { _ in }
+
+        let item = try #require(result.reviewBundle?.items.first)
+        guard case .nodeEdit(_, _, let operations, let baseText) = item.source else {
+            Issue.record("Expected a verified node edit")
+            return
+        }
+        #expect(item.status == .pending)
+        #expect(operations == [NodePatchOperation(type: .replaceAll, content: "<html><body><h1>Verified</h1></body></html>")])
+        #expect(baseText.contains("Hello World!"))
+        #expect(progress.contains(.readyForReview(attempts: 1)))
+    }
+
+    @MainActor
+    @Test func verifiedCodingLoopRepairsFailedCandidate() async throws {
+        let verifier = TestMiniAppVerifier(
+            results: [TestMiniAppVerifier.failing, TestMiniAppVerifier.passing]
+        )
+        let llm = TestLLMClient(
+            responses: [
+                verifiedEditResponse(replacement: "Broken"),
+                verifiedEditResponse(replacement: "Repaired", operation: "replace_all")
+            ]
+        )
+        let coordinator = CoCaptainAgentCoordinator(
+            llmClient: llm,
+            verifier: verifier,
+            verifiedCodingLoopEnabled: { true }
+        )
+
+        let result = try await coordinator.run(
+            userMessage: "change the heading",
+            store: makeStore(),
+            dispatcher: nil
+        ) { _ in }
+
+        #expect(llm.receivedMessages.count == 2)
+        #expect(result.reviewBundle?.items.first?.preview.contains("Repaired") == true)
+        #expect(verifier.receivedCodes.count == 2)
+    }
+
+    @MainActor
+    @Test func verifiedCodingLoopReturnsNoReviewAfterThreeFailures() async throws {
+        let verifier = TestMiniAppVerifier(
+            results: [
+                TestMiniAppVerifier.failing,
+                TestMiniAppVerifier.failing,
+                TestMiniAppVerifier.failing
+            ]
+        )
+        let llm = TestLLMClient(
+            responses: [
+                verifiedEditResponse(replacement: "Attempt 1"),
+                verifiedEditResponse(replacement: "Attempt 2", operation: "replace_all"),
+                verifiedEditResponse(replacement: "Attempt 3", operation: "replace_all")
+            ]
+        )
+        let coordinator = CoCaptainAgentCoordinator(
+            llmClient: llm,
+            verifier: verifier,
+            verifiedCodingLoopEnabled: { true }
+        )
+        var progress: [CoCaptainCodingRunState] = []
+
+        let result = try await coordinator.run(
+            userMessage: "change the heading",
+            store: makeStore(),
+            dispatcher: nil,
+            onCodingProgress: { progress.append($0) }
+        ) { _ in }
+
+        #expect(result.reviewBundle == nil)
+        #expect(llm.receivedMessages.count == 3)
+        #expect(progress.contains { state in
+            if case .failed = state { return true }
+            return false
+        })
+    }
+
+    private func verifiedEditResponse(
+        replacement: String,
+        operation: String = "replace_exact"
+    ) -> String {
+        let target = operation == "replace_exact" ? "<target>Hello World!</target>" : ""
+        let content = operation == "replace_all"
+            ? "<html><body><h1>\(replacement)</h1></body></html>"
+            : replacement
+        return """
+        <cocaptain_actions>
+          <assistant_message>Changed the heading.</assistant_message>
+          <node_edits>
+            <node_edit role="miniApp" section="code" summary="Update heading">
+              <operation type="\(operation)">
+                \(target)
+                <content><![CDATA[\(content)]]></content>
+              </operation>
+              <verification_checks>
+                <verification_check id="heading" description="Heading shows \(replacement)">
+                  <script><![CDATA[return document.querySelector("h1")?.textContent === "\(replacement)";]]></script>
+                </verification_check>
+              </verification_checks>
+            </node_edit>
+          </node_edits>
+        </cocaptain_actions>
+        """
+    }
+
     @MainActor
     private func makeStore() -> ProjectStore {
         ProjectStore(
@@ -1643,6 +1824,51 @@ struct CoCaptainAgentTests {
         [
             SpatialNode(type: .miniApp, position: .zero, title: "Mini-App", miniApp: MiniAppState(codeText: code))
         ]
+    }
+}
+
+@MainActor
+private final class TestMiniAppVerifier: MiniAppVerifying {
+    static let passing = CoCaptainVerificationResult(
+        checkResults: [
+            CoCaptainVerificationCheckResult(
+                check: CoCaptainVerificationCheck(id: "test", description: "Pass", script: "return true;"),
+                passed: true
+            )
+        ]
+    )
+    static let failing = CoCaptainVerificationResult(
+        diagnostics: [
+            CoCaptainVerificationDiagnostic(kind: .runtimeError, message: "Test failure")
+        ],
+        checkResults: [
+            CoCaptainVerificationCheckResult(
+                check: CoCaptainVerificationCheck(id: "test", description: "Fail", script: "return false;"),
+                passed: false,
+                detail: "Assertion returned false."
+            )
+        ]
+    )
+
+    private var results: [CoCaptainVerificationResult]
+    private(set) var receivedCodes: [String] = []
+
+    init(results: [CoCaptainVerificationResult]) {
+        self.results = results
+    }
+
+    func unsupportedReason(for node: SpatialNode) -> String? {
+        nil
+    }
+
+    func verify(
+        code: String,
+        checks: [CoCaptainVerificationCheck],
+        node: SpatialNode
+    ) async -> CoCaptainVerificationResult {
+        receivedCodes.append(code)
+        guard !results.isEmpty else { return Self.failing }
+        return results.removeFirst()
     }
 }
 
