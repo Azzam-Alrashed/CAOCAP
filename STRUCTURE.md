@@ -189,6 +189,21 @@ Live project execution and preview support.
 | `LivePreviewCompiler.swift` | Pure compiler that renders each Mini-App node's embedded code into its runnable preview payload. |
 | `FirebasePreviewBootstrap.swift` | Handles preview HTML injection and bootstrap configuration from Mini-App Firebase settings. |
 
+#### `Services/Publish/`
+Mini-App web publish pipeline (GitHub repo + GitHub Pages + Home Screen PWA meta).
+
+| File | Responsibility |
+|---|---|
+| `GitHubAuthService.swift` | Separate GitHub OAuth for publish (`repo read:user`), stores token in Keychain. |
+| `KeychainService.swift` | Keychain read/write for publish OAuth tokens. |
+| `GitHubService.swift` | GitHub REST API: create repo, push `index.html` and `.nojekyll`, resolve authenticated user. |
+| `GitHubPagesService.swift` | Enables GitHub Pages, polls build status, constructs published URL. |
+| `PublishHTMLCompiler.swift` | Compiles Mini-App HTML for publish and injects PWA / Home Screen meta tags. |
+| `PublishRepoNaming.swift` | Sanitizes node titles into GitHub repository names. |
+| `PublishCoordinator.swift` | Orchestrates publish stages, Pro/auth gates, and republish to the same repo. |
+
+---
+
 #### `Services/WorkspaceIntelligence/`
 Workspace analysis, search, and layout helpers.
 
@@ -277,7 +292,8 @@ The spatial runtime — the heart of CAOCAP.
 | File | Responsibility |
 |---|---|
 | `NodeView.swift` | Renders a single `SpatialNode` on the canvas. Mini-App nodes show the live 9:16 preview card backed by nested `MiniAppState`. |
-| `NodeDetailView.swift` | Opens Mini-App nodes into a full-screen running preview with Mini-App-scoped FAB actions for SRS, Code, Firebase, Agent, Settings, and Back to Canvas. |
+| `NodeDetailView.swift` | Opens Mini-App nodes into a full-screen running preview with Mini-App-scoped FAB actions for SRS, Code, Firebase, Agent, Settings, Publish, and Back to Canvas. |
+| `MiniAppPublishView.swift` | Pro-gated publish sheet: GitHub connect, repo push, GitHub Pages, Safari Home Screen install guide. |
 | `NodeFrameData.swift` | Preference-key plumbing that reports rendered node frames so connection arrows can target real node centers. |
 | `ConnectionLayer.swift` | Draws Bezier-curve connections for all `connectedNodeIds` relationships. Operates in screen-space to prevent clipping. |
 | `CodeEditorView.swift` | VS Code-style editor sheet for a Mini-App's embedded HTML/CSS/JS code section. Wraps `LineNumberedTextView` with a sleek dark tab bar and file extension label. |
