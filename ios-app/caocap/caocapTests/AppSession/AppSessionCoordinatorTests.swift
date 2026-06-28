@@ -79,6 +79,10 @@ struct AppSessionCoordinatorTests {
         #expect(session.showingDaily)
     }
 
+    @Test func whatsAppNodeActionOpensSupportURL() {
+        #expect(SupportContact.whatsAppURL?.absoluteString == "https://wa.me/966559279486")
+    }
+
     @Test func flyToTargetScaleUsesMeasuredFrameWhenAvailable() {
         let session = AppSessionCoordinator()
         let nodeID = UUID()
