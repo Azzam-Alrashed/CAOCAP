@@ -13,12 +13,9 @@ struct IntroLanguageButton: View {
                     selectedLanguage = language
                 } label: {
                     if selectedLanguage == language {
-                        Label(
-                            LocalizationManager.shared.localizedString(language, language: language),
-                            systemImage: "checkmark"
-                        )
+                        Label(LocalizedStringKey(stringLiteral: language), systemImage: "checkmark")
                     } else {
-                        Text(LocalizationManager.shared.localizedString(language, language: language))
+                        Text(LocalizedStringKey(stringLiteral: language))
                     }
                 }
             }
@@ -40,7 +37,7 @@ struct IntroLanguageButton: View {
         }
         .menuStyle(.button)
         .buttonStyle(.plain)
-        .accessibilityLabel(LocalizationManager.shared.localizedString("Language"))
+        .accessibilityLabel(Text("Language"))
     }
 
     private var languageAbbreviation: String {
