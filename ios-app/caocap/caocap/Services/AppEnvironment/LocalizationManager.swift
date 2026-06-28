@@ -121,16 +121,17 @@ public class LocalizationManager {
 
     /// Returns the localised string for `key` in the given `language`.
     ///
-    /// Resolution order:
-    /// 1. The language-specific `.lproj` bundle.
-    /// 2. `Bundle.main` as a fallback when the key is absent from the language bundle.
-    /// 3. The raw `key` itself when neither bundle contains an entry.
+    /// Resolves against the app's String Catalog (`Localizable.xcstrings`) using an
+    /// explicit locale so runtime language changes honor `app_language` instead of
+    /// the device system locale.
     public func localizedString(_ key: String, language: String? = nil) -> String {
-        let localized = bundle(for: language).localizedString(forKey: key, value: key, table: nil)
-        if localized != key {
-            return localized
-        }
-        return Bundle.main.localizedString(forKey: key, value: key, table: nil)
+        let resolvedLanguage = language ?? currentLanguage
+        return String(
+            localized: String.LocalizationValue(stringLiteral: key),
+            table: "Localizable",
+            bundle: .main,
+            locale: locale(for: resolvedLanguage)
+        )
     }
 
     /// Returns a formatted string by resolving `key` and applying `arguments`
