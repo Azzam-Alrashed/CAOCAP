@@ -3,14 +3,14 @@ import Foundation
 /// A selectable answer for a personalization survey question.
 struct PersonalizationSurveyOption: Equatable, Identifiable {
     let id: String
-    let title: String
+    let titleKey: String
 }
 
 /// One screen in the personalization onboarding survey.
 struct PersonalizationSurveyQuestion: Equatable, Identifiable {
     let id: String
-    let title: String
-    let subtitle: String
+    let titleKey: String
+    let subtitleKey: String
     let options: [PersonalizationSurveyOption]
 }
 
@@ -21,61 +21,61 @@ enum PersonalizationOnboardingManifest {
     static let questions: [PersonalizationSurveyQuestion] = [
         PersonalizationSurveyQuestion(
             id: "coding_level",
-            title: "What's your coding level?",
-            subtitle: "Before we launch, help us chart your course.",
+            titleKey: "personalization.coding_level.title",
+            subtitleKey: "personalization.coding_level.subtitle",
             options: [
-                PersonalizationSurveyOption(id: "complete_beginner", title: "Complete beginner"),
-                PersonalizationSurveyOption(id: "some_basics", title: "I know some basics"),
-                PersonalizationSurveyOption(id: "comfortable_fundamentals", title: "Comfortable with fundamentals"),
-                PersonalizationSurveyOption(id: "experienced", title: "Experienced developer")
+                PersonalizationSurveyOption(id: "complete_beginner", titleKey: "personalization.coding_level.complete_beginner"),
+                PersonalizationSurveyOption(id: "some_basics", titleKey: "personalization.coding_level.some_basics"),
+                PersonalizationSurveyOption(id: "comfortable_fundamentals", titleKey: "personalization.coding_level.comfortable_fundamentals"),
+                PersonalizationSurveyOption(id: "experienced", titleKey: "personalization.coding_level.experienced")
             ]
         ),
         PersonalizationSurveyQuestion(
             id: "build_target",
-            title: "What do you want to build?",
-            subtitle: "Every mission needs a destination.",
+            titleKey: "personalization.build_target.title",
+            subtitleKey: "personalization.build_target.subtitle",
             options: [
-                PersonalizationSurveyOption(id: "mobile_apps", title: "Mobile apps"),
-                PersonalizationSurveyOption(id: "web_apps", title: "Web apps"),
-                PersonalizationSurveyOption(id: "games", title: "Games and interactive experiences"),
-                PersonalizationSurveyOption(id: "personal_tools", title: "Tools for myself"),
-                PersonalizationSurveyOption(id: "exploring", title: "Not sure yet — I want to explore")
+                PersonalizationSurveyOption(id: "mobile_apps", titleKey: "personalization.build_target.mobile_apps"),
+                PersonalizationSurveyOption(id: "web_apps", titleKey: "personalization.build_target.web_apps"),
+                PersonalizationSurveyOption(id: "games", titleKey: "personalization.build_target.games"),
+                PersonalizationSurveyOption(id: "personal_tools", titleKey: "personalization.build_target.personal_tools"),
+                PersonalizationSurveyOption(id: "exploring", titleKey: "personalization.build_target.exploring")
             ]
         ),
         PersonalizationSurveyQuestion(
             id: "motivation",
-            title: "Why are you here?",
-            subtitle: "Your reason shapes the journey ahead.",
+            titleKey: "personalization.motivation.title",
+            subtitleKey: "personalization.motivation.subtitle",
             options: [
-                PersonalizationSurveyOption(id: "learn_from_scratch", title: "Learn to code from scratch"),
-                PersonalizationSurveyOption(id: "build_without_devs", title: "Build my ideas without hiring a developer"),
-                PersonalizationSurveyOption(id: "creative_skills", title: "Level up my creative skills"),
-                PersonalizationSurveyOption(id: "teach_others", title: "Teach or mentor others"),
-                PersonalizationSurveyOption(id: "curious", title: "Just curious")
+                PersonalizationSurveyOption(id: "learn_from_scratch", titleKey: "personalization.motivation.learn_from_scratch"),
+                PersonalizationSurveyOption(id: "build_without_devs", titleKey: "personalization.motivation.build_without_devs"),
+                PersonalizationSurveyOption(id: "creative_skills", titleKey: "personalization.motivation.creative_skills"),
+                PersonalizationSurveyOption(id: "teach_others", titleKey: "personalization.motivation.teach_others"),
+                PersonalizationSurveyOption(id: "curious", titleKey: "personalization.motivation.curious")
             ]
         ),
         PersonalizationSurveyQuestion(
             id: "main_goal",
-            title: "What's your main goal?",
-            subtitle: "Keep your north star in sight.",
+            titleKey: "personalization.main_goal.title",
+            subtitleKey: "personalization.main_goal.subtitle",
             options: [
-                PersonalizationSurveyOption(id: "ship_something_real", title: "Ship something real I can show people"),
-                PersonalizationSurveyOption(id: "understand_software", title: "Understand how software works"),
-                PersonalizationSurveyOption(id: "build_confidence", title: "Become confident enough to keep building"),
-                PersonalizationSurveyOption(id: "have_fun", title: "Have fun while learning"),
-                PersonalizationSurveyOption(id: "career_prep", title: "Prepare for a career change")
+                PersonalizationSurveyOption(id: "ship_something_real", titleKey: "personalization.main_goal.ship_something_real"),
+                PersonalizationSurveyOption(id: "understand_software", titleKey: "personalization.main_goal.understand_software"),
+                PersonalizationSurveyOption(id: "build_confidence", titleKey: "personalization.main_goal.build_confidence"),
+                PersonalizationSurveyOption(id: "have_fun", titleKey: "personalization.main_goal.have_fun"),
+                PersonalizationSurveyOption(id: "career_prep", titleKey: "personalization.main_goal.career_prep")
             ]
         ),
         PersonalizationSurveyQuestion(
             id: "learning_style",
-            title: "How do you prefer to learn?",
-            subtitle: "We'll match the pace to your style.",
+            titleKey: "personalization.learning_style.title",
+            subtitleKey: "personalization.learning_style.subtitle",
             options: [
-                PersonalizationSurveyOption(id: "build_first", title: "By doing — build first, understand later"),
-                PersonalizationSurveyOption(id: "step_by_step", title: "Step-by-step guidance"),
-                PersonalizationSurveyOption(id: "big_picture", title: "Seeing the big picture, then details"),
-                PersonalizationSurveyOption(id: "experiment_with_help", title: "Experimenting freely with help when I'm stuck"),
-                PersonalizationSurveyOption(id: "short_missions", title: "Short focused missions")
+                PersonalizationSurveyOption(id: "build_first", titleKey: "personalization.learning_style.build_first"),
+                PersonalizationSurveyOption(id: "step_by_step", titleKey: "personalization.learning_style.step_by_step"),
+                PersonalizationSurveyOption(id: "big_picture", titleKey: "personalization.learning_style.big_picture"),
+                PersonalizationSurveyOption(id: "experiment_with_help", titleKey: "personalization.learning_style.experiment_with_help"),
+                PersonalizationSurveyOption(id: "short_missions", titleKey: "personalization.learning_style.short_missions")
             ]
         )
     ]
@@ -88,7 +88,11 @@ enum PersonalizationOnboardingManifest {
         questions[min(max(index, 0), lastIndex)]
     }
 
-    static func stepLabel(for index: Int) -> String {
-        "Question \(index + 1) of \(questions.count)"
+    static func stepLabel(for index: Int, language: String? = nil) -> String {
+        LocalizationManager.shared.localizedString(
+            "personalization.stepLabel",
+            arguments: [index + 1, questions.count],
+            language: language
+        )
     }
 }

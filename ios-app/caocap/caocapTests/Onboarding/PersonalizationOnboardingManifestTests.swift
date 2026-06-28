@@ -10,18 +10,42 @@ struct PersonalizationOnboardingManifestTests {
         #expect(Set(questionIDs).count == 5)
 
         for question in PersonalizationOnboardingManifest.questions {
-            #expect(!question.title.isEmpty)
-            #expect(!question.subtitle.isEmpty)
+            #expect(!question.titleKey.isEmpty)
+            #expect(!question.subtitleKey.isEmpty)
             #expect(!question.options.isEmpty)
 
             let optionIDs = question.options.map(\.id)
             #expect(Set(optionIDs).count == optionIDs.count)
+
+            for option in question.options {
+                #expect(!option.titleKey.isEmpty)
+            }
         }
     }
 
     @Test func stepLabelsFollowQuestionCount() {
-        #expect(PersonalizationOnboardingManifest.stepLabel(for: 0) == "Question 1 of 5")
-        #expect(PersonalizationOnboardingManifest.stepLabel(for: 4) == "Question 5 of 5")
+        #expect(
+            PersonalizationOnboardingManifest.stepLabel(for: 0, language: "English")
+                == "Question 1 of 5"
+        )
+        #expect(
+            PersonalizationOnboardingManifest.stepLabel(for: 4, language: "English")
+                == "Question 5 of 5"
+        )
         #expect(PersonalizationOnboardingManifest.lastIndex == 4)
+    }
+
+    @Test func catalogResolvesArabicPersonalizationCopy() {
+        let title = LocalizationManager.shared.localizedString(
+            "personalization.coding_level.title",
+            language: "Arabic"
+        )
+        #expect(title == "ما مستوى خبرتك في البرمجة؟")
+
+        let option = LocalizationManager.shared.localizedString(
+            "personalization.coding_level.complete_beginner",
+            language: "Arabic"
+        )
+        #expect(option == "مبتدئ تماماً")
     }
 }

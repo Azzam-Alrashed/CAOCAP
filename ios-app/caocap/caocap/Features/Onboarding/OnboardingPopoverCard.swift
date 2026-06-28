@@ -307,7 +307,7 @@ struct OnboardingPopoverCard: View {
                     )
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(step.title)
+                    Text(LocalizedStringKey(stringLiteral: step.titleKey))
                         .font(.system(size: 16, weight: .bold))
                         .foregroundColor(.primary)
 
@@ -322,7 +322,7 @@ struct OnboardingPopoverCard: View {
                         onSkip()
                     }
                 } label: {
-                    Text("Skip")
+                    Text(LocalizedStringKey("Skip"))
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(.secondary)
                         .padding(.horizontal, 12)
@@ -336,7 +336,7 @@ struct OnboardingPopoverCard: View {
             }
 
             // Message body
-            Text(step.message)
+            Text(LocalizedStringKey(stringLiteral: step.messageKey))
                 .font(.system(size: 14, weight: .regular))
                 .foregroundColor(.primary.opacity(0.85))
                 .lineSpacing(3)

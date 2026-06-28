@@ -2,7 +2,7 @@ import SwiftUI
 
 /// A single selectable answer tile in the personalization survey.
 struct PersonalizationAnswerCard: View {
-    let title: String
+    let titleKey: String
     let isSelected: Bool
     let action: () -> Void
 
@@ -11,7 +11,7 @@ struct PersonalizationAnswerCard: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 14) {
-                Text(title)
+                Text(LocalizedStringKey(stringLiteral: titleKey))
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
                     .foregroundStyle(labelColor)
                     .multilineTextAlignment(.leading)

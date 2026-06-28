@@ -29,12 +29,12 @@ public class OnboardingCoordinator {
             lhs.rawValue < rhs.rawValue
         }
 
-        var title: String {
-            OnboardingManifest.content(for: self).title
+        var titleKey: String {
+            OnboardingManifest.content(for: self).titleKey
         }
 
-        var message: String {
-            OnboardingManifest.content(for: self).message
+        var messageKey: String {
+            OnboardingManifest.content(for: self).messageKey
         }
 
         var icon: String {
