@@ -24,6 +24,8 @@ public enum NodeAction: String, Codable, Equatable {
     case openWhatsApp
     /// Open the in-app help and documentation center.
     case openHelp
+    /// Open the alternate app icon picker.
+    case openAppIcon
 }
 
 /// Structural kind of a canvas node, determining its rendering, behavior, and default metadata.

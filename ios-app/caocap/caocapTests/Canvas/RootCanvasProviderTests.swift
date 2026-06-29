@@ -4,9 +4,9 @@ import Testing
 @testable import caocap
 
 struct RootCanvasProviderTests {
-    @Test func rootDefinesTheCuratedTenNodeGrid() throws {
+    @Test func rootDefinesTheCuratedElevenNodeGrid() throws {
         let nodes = RootCanvasProvider.nodes
-        #expect(nodes.count == 10)
+        #expect(nodes.count == 11)
         #expect(RootCanvasProvider.defaultViewportScale == 0.45)
         #expect(RootCanvasProvider.snapshot.viewportScale == RootCanvasProvider.defaultViewportScale)
 
@@ -57,6 +57,11 @@ struct RootCanvasProviderTests {
         #expect(whatsApp.theme == .green)
         #expect(whatsApp.action == .openWhatsApp)
 
+        let appIcon = try #require(nodes.first { $0.id == RootCanvasProvider.appIconNodeID })
+        #expect(appIcon.position == CGPoint(x: -columnSpacing, y: -550))
+        #expect(appIcon.theme == .secondary)
+        #expect(appIcon.action == .openAppIcon)
+
         let help = try #require(nodes.first { $0.id == RootCanvasProvider.helpNodeID })
         #expect(help.position == CGPoint(x: 0, y: 550))
         #expect(help.theme == .indigo)
@@ -78,8 +83,9 @@ struct RootCanvasProviderTests {
         #expect(actions[RootCanvasProvider.activityNodeID] == .openActivity)
         #expect(actions[RootCanvasProvider.dailyNodeID] == .openDaily)
         #expect(actions[RootCanvasProvider.whatsAppNodeID] == .openWhatsApp)
+        #expect(actions[RootCanvasProvider.appIconNodeID] == .openAppIcon)
         #expect(actions[RootCanvasProvider.helpNodeID] == .openHelp)
-        #expect(actions.count == 7)
+        #expect(actions.count == 8)
     }
 
     @Test func pacManCanvasContainsATouchFirstRunnableMiniApp() throws {

@@ -97,5 +97,10 @@ struct AppSheetsModifier: ViewModifier {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
             }
+            .sheet(isPresented: $session.showingAppIconPicker) {
+                AppIconPickerView()
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+            }
     }
 }

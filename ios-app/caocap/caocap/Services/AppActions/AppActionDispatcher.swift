@@ -35,6 +35,7 @@ public enum AppActionID: String, CaseIterable, Identifiable, Codable, Hashable {
     case openActivity = "open_activity"
     case openDaily = "open_daily"
     case openWhatsApp = "open_whatsapp"
+    case openAppIcon = "open_app_icon"
 
     public var id: String { rawValue }
 
@@ -50,6 +51,7 @@ public enum AppActionID: String, CaseIterable, Identifiable, Codable, Hashable {
         case .openDaily: return .openDaily
         case .openWhatsApp: return .openWhatsApp
         case .help: return .openHelp
+        case .openAppIcon: return .openAppIcon
         default: return nil
         }
     }
@@ -333,6 +335,15 @@ public final class AppActionDispatcher: AppActionPerforming {
             id: .openWhatsApp,
             title: "WhatsApp",
             icon: "message.fill",
+            category: .assistant,
+            isMutating: false,
+            allowsAutonomousExecution: false,
+            canPinToCanvas: true
+        ),
+        AppActionDefinition(
+            id: .openAppIcon,
+            title: "App Icon",
+            icon: "app.fill",
             category: .assistant,
             isMutating: false,
             allowsAutonomousExecution: false,

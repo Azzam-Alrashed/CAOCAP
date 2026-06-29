@@ -17,6 +17,7 @@ public enum RootCanvasProvider {
     public static let xoNodeID = UUID(uuidString: "CA0CA001-0000-4000-8000-000000000008")!
     public static let whatsAppNodeID = UUID(uuidString: "CA0CA001-0000-4000-8000-000000000009")!
     public static let helpNodeID = UUID(uuidString: "CA0CA001-0000-4000-8000-00000000000A")!
+    public static let appIconNodeID = UUID(uuidString: "CA0CA001-0000-4000-8000-00000000000B")!
 
     /// Default root zoom that frames the 2×4 grid plus top/bottom anchor nodes on phone.
     public static let defaultViewportScale: CGFloat = 0.45
@@ -94,6 +95,8 @@ public enum RootCanvasProvider {
             gridPosition(column: 1, row: 3)
         case whatsAppNodeID:
             CGPoint(x: 0, y: topAnchorY)
+        case appIconNodeID:
+            CGPoint(x: -columnSpacing, y: topAnchorY)
         case helpNodeID:
             CGPoint(x: 0, y: anchorRowYOffset)
         default:
@@ -186,6 +189,15 @@ public enum RootCanvasProvider {
                 icon: "message.fill",
                 theme: .green,
                 action: .openWhatsApp
+            ),
+            SpatialNode(
+                id: appIconNodeID,
+                position: gridPosition(for: appIconNodeID),
+                title: "App Icon",
+                subtitle: "Choose your home screen look",
+                icon: "app.fill",
+                theme: .secondary,
+                action: .openAppIcon
             ),
             SpatialNode(
                 id: helpNodeID,

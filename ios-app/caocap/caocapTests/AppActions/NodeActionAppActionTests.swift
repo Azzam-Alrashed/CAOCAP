@@ -13,7 +13,8 @@ struct NodeActionAppActionTests {
             (.openActivity, .openActivity),
             (.openDaily, .openDaily),
             (.openWhatsApp, .openWhatsApp),
-            (.openHelp, .help)
+            (.openHelp, .help),
+            (.openAppIcon, .openAppIcon)
         ]
 
         for (nodeAction, expectedID) in mappings {
@@ -31,7 +32,8 @@ struct NodeActionAppActionTests {
             .openActivity,
             .openDaily,
             .openWhatsApp,
-            .help
+            .help,
+            .openAppIcon
         ]
 
         for actionID in pinableIDs {
@@ -43,7 +45,7 @@ struct NodeActionAppActionTests {
     @MainActor
     @Test func dispatcherExposesNewRootShortcutActions() throws {
         let dispatcher = AppActionDispatcher()
-        let newIDs: [AppActionID] = [.openActivity, .openDaily, .openWhatsApp, .help]
+        let newIDs: [AppActionID] = [.openActivity, .openDaily, .openWhatsApp, .help, .openAppIcon]
 
         for id in newIDs {
             let definition = try #require(dispatcher.definition(for: id))

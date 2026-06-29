@@ -23,6 +23,7 @@ final class AppSessionCoordinator {
     var showingActivity = false
     var showingDaily = false
     var showingHelp = false
+    var showingAppIconPicker = false
     var showConfetti = false
 
     var currentScale: CGFloat = 1.0
@@ -524,6 +525,9 @@ final class AppSessionCoordinator {
         }
         actionDispatcher.register(.help) { [weak self] in
             self?.showingHelp = true
+        }
+        actionDispatcher.register(.openAppIcon) { [weak self] in
+            self?.showingAppIconPicker = true
         }
         actionDispatcher.register(.openSnapshotBrowser) { [weak self] in
             self?.showingSnapshotBrowser = true
