@@ -263,6 +263,17 @@ public struct CommandIntentResolver {
                 "افتح واتساب",
                 "راسل عزام"
             ]
+        case .openAppIcon:
+            return [
+                "app icon",
+                "change app icon",
+                "alternate icon",
+                "home screen icon",
+                "ايقونة التطبيق",
+                "أيقونة التطبيق",
+                "غير ايقونة التطبيق",
+                "تغيير ايقونة التطبيق"
+            ]
         }
     }
 

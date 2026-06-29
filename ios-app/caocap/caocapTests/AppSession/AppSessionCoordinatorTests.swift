@@ -112,6 +112,15 @@ struct AppSessionCoordinatorTests {
         #expect(session.showingHelp)
     }
 
+    @Test func appIconNodeActionPresentsAppIconPickerSheet() {
+        let session = AppSessionCoordinator()
+        session.ensureActionsConfigured()
+
+        session.handleNodeAction(.openAppIcon)
+
+        #expect(session.showingAppIconPicker)
+    }
+
     @Test func helpAppActionPresentsHelpSheet() {
         let session = AppSessionCoordinator()
         session.ensureActionsConfigured()

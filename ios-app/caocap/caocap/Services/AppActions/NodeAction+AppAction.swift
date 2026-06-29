@@ -13,6 +13,7 @@ extension NodeAction {
         case .openDaily: return .openDaily
         case .openWhatsApp: return .openWhatsApp
         case .openHelp: return .help
+        case .openAppIcon: return .openAppIcon
         }
     }
 }
