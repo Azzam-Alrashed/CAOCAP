@@ -65,6 +65,20 @@ struct CoCaptainAgentTests {
         #expect(CoCaptainTurnPurpose.onboardingBuildHandoff.isConversationalTurn)
     }
 
+    @Test func turnPlanMapsIntentAndPurposeToEffectivePolicy() {
+        let mutating = CoCaptainTurnPlan(purpose: .standard, intent: .mutatingWork)
+        let advisory = CoCaptainTurnPlan(purpose: .standard, intent: .advisory)
+        let general = CoCaptainTurnPlan(purpose: .standard, intent: .generalChat)
+        let onboarding = CoCaptainTurnPlan(purpose: .onboardingWelcome, intent: .mutatingWork)
+
+        #expect(mutating.effectivePolicy == .agentic)
+        #expect(advisory.effectivePolicy == .advisory)
+        #expect(general.effectivePolicy == .advisory)
+        #expect(onboarding.effectivePolicy == .conversational)
+        #expect(CoCaptainTurnExecutionPolicy.advisory.allowsAgenticRetry == false)
+        #expect(CoCaptainTurnExecutionPolicy.advisory.enforcesExecutableWork == false)
+    }
+
     @MainActor
     @Test func projectContextIncludesMiniAppsAndExcludesCompiledPreview() throws {
         let store = makeStore()
@@ -2180,15 +2194,90 @@ struct CoCaptainAgentTests {
     @Test func connectionFallbackShowsDegradedNoticeWhenExecutableWorkMissing() async throws {
         let llm = FailingThenPlainLLMClient(fallbackResponse: "I can explain the idea, but I cannot apply changes right now.")
         let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
+        let turnPlan = CoCaptainTurnPlan(purpose: .standard, intent: .mutatingWork)
 
         let result = try await coordinator.run(
             userMessage: "build a landing page",
             store: makeStore(),
-            dispatcher: TestActionDispatcher()
+            dispatcher: TestActionDispatcher(),
+            turnPlan: turnPlan
         ) { _ in }
 
         #expect(result.reviewBundle == nil)
-        #expect(result.visibleText.contains("could not reach the model with full project context") == true)
+        #expect(
+            result.visibleText.contains(
+                LocalizationManager.shared.localizedString("cocaptain.fallback.editsUnavailable")
+            )
+        )
+    }
+
+    @MainActor
+    @Test func connectionFallbackOmitsDegradedNoticeForAdvisoryTurns() async throws {
+        let llm = FailingThenPlainLLMClient(fallbackResponse: "Here are three ideas to explore next.")
+        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
+        let turnPlan = CoCaptainTurnPlan(purpose: .standard, intent: .advisory)
+
+        let result = try await coordinator.run(
+            userMessage: "suggest three useful next improvements",
+            store: makeStore(),
+            dispatcher: TestActionDispatcher(),
+            turnPlan: turnPlan
+        ) { _ in }
+
+        #expect(
+            !result.visibleText.contains(
+                LocalizationManager.shared.localizedString("cocaptain.fallback.editsUnavailable")
+            )
+        )
+    }
+
+    @MainActor
+    @Test func mutatingChatOnlyResponseTriggersAgenticRetry() async throws {
+        let llm = TestLLMClient(
+            responses: [
+                "I can describe the landing page in chat.",
+                """
+                <cocaptain_actions>
+                  <assistant_message>Updated heading.</assistant_message>
+                  <node_edits>
+                    <node_edit role="miniApp" section="code" summary="Update heading">
+                      <operation type="replace_all">
+                        <content><![CDATA[<h1>Retry</h1>]]></content>
+                      </operation>
+                    </node_edit>
+                  </node_edits>
+                </cocaptain_actions>
+                """
+            ]
+        )
+        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
+        let turnPlan = CoCaptainTurnPlan(purpose: .standard, intent: .mutatingWork)
+
+        _ = try await coordinator.run(
+            userMessage: "build a landing page",
+            store: makeStore(),
+            dispatcher: TestActionDispatcher(),
+            turnPlan: turnPlan
+        ) { _ in }
+
+        #expect(llm.receivedMessages.count == 2)
+        #expect(llm.receivedMessages[1].contains("cocaptain_actions"))
+    }
+
+    @MainActor
+    @Test func advisoryChatOnlyResponseDoesNotRetry() async throws {
+        let llm = TestLLMClient(response: "Here are three ideas to explore next.")
+        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
+        let turnPlan = CoCaptainTurnPlan(purpose: .standard, intent: .advisory)
+
+        _ = try await coordinator.run(
+            userMessage: "suggest three useful next improvements",
+            store: makeStore(),
+            dispatcher: TestActionDispatcher(),
+            turnPlan: turnPlan
+        ) { _ in }
+
+        #expect(llm.receivedMessages.count == 1)
     }
 
     @MainActor
@@ -2418,7 +2507,8 @@ private final class ThrowingLLMClient: CoCaptainLLMClient {
         expectsStructuredResponse: Bool,
         availableActions: [AppActionDefinition],
         scope: CoCaptainAgentScope,
-        purpose: CoCaptainTurnPurpose
+        purpose: CoCaptainTurnPurpose,
+        turnIntent: CoCaptainTurnIntent = .generalChat
     ) -> AsyncThrowingStream<CoCaptainLLMStreamEvent, Error> {
         AsyncThrowingStream { continuation in
             continuation.finish(throwing: error)
@@ -2463,7 +2553,8 @@ private final class TestLLMClient: CoCaptainLLMClient {
         expectsStructuredResponse: Bool,
         availableActions: [AppActionDefinition],
         scope: CoCaptainAgentScope,
-        purpose: CoCaptainTurnPurpose
+        purpose: CoCaptainTurnPurpose,
+        turnIntent: CoCaptainTurnIntent = .generalChat
     ) -> AsyncThrowingStream<CoCaptainLLMStreamEvent, Error> {
         receivedMessages.append(userMessage)
         receivedScopes.append(scope)
@@ -2499,7 +2590,8 @@ private final class FailingThenPlainLLMClient: CoCaptainLLMClient {
         expectsStructuredResponse: Bool,
         availableActions: [AppActionDefinition],
         scope: CoCaptainAgentScope,
-        purpose: CoCaptainTurnPurpose
+        purpose: CoCaptainTurnPurpose,
+        turnIntent: CoCaptainTurnIntent = .generalChat
     ) -> AsyncThrowingStream<CoCaptainLLMStreamEvent, Error> {
         if expectsStructuredResponse, context != nil {
             return AsyncThrowingStream { continuation in
@@ -2536,7 +2628,8 @@ private final class FailingThenStructuredLLMClient: CoCaptainLLMClient {
         expectsStructuredResponse: Bool,
         availableActions: [AppActionDefinition],
         scope: CoCaptainAgentScope,
-        purpose: CoCaptainTurnPurpose
+        purpose: CoCaptainTurnPurpose,
+        turnIntent: CoCaptainTurnIntent = .generalChat
     ) -> AsyncThrowingStream<CoCaptainLLMStreamEvent, Error> {
         if expectsStructuredResponse, context != nil {
             return AsyncThrowingStream { continuation in
@@ -2574,7 +2667,8 @@ private final class FailingThenSucceedingLLMClient: CoCaptainLLMClient {
         expectsStructuredResponse: Bool,
         availableActions: [AppActionDefinition],
         scope: CoCaptainAgentScope,
-        purpose: CoCaptainTurnPurpose
+        purpose: CoCaptainTurnPurpose,
+        turnIntent: CoCaptainTurnIntent = .generalChat
     ) -> AsyncThrowingStream<CoCaptainLLMStreamEvent, Error> {
         receivedPurposes.append(purpose)
 
