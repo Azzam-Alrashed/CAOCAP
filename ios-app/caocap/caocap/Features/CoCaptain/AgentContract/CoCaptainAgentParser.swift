@@ -42,14 +42,14 @@ public struct CoCaptainAgentParser {
             extractSelfClosingTags(name: "action", from: $0) 
         }.compactMap { attrs -> CoCaptainAgentAction? in
             guard let id = attrs["id"] else { return nil }
-            return CoCaptainAgentAction(actionID: id)
+            return CoCaptainAgentAction(actionID: id, args: actionArgs(from: attrs))
         }
         
         let pendingActions = extractTags(name: "pending_actions", from: xml).flatMap { 
             extractSelfClosingTags(name: "action", from: $0) 
         }.compactMap { attrs -> CoCaptainAgentAction? in
             guard let id = attrs["id"] else { return nil }
-            return CoCaptainAgentAction(actionID: id)
+            return CoCaptainAgentAction(actionID: id, args: actionArgs(from: attrs))
         }
         
         let nodeEdits = extractTagMatches(name: "node_edit", from: xml).compactMap { item -> CoCaptainNodeEditProposal? in
@@ -230,6 +230,11 @@ public struct CoCaptainAgentParser {
             }
         }
         return attributes
+    }
+
+    private func actionArgs(from attributes: [String: String]) -> [String: String]? {
+        let args = attributes.filter { $0.key != "id" }
+        return args.isEmpty ? nil : args
     }
 
     /// Extracts the raw text from the first `<![CDATA[...]]>` section in the string.
