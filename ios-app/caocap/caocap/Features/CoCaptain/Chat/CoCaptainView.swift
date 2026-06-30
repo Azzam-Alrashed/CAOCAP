@@ -23,9 +23,11 @@ struct CoCaptainView: View {
                     store: viewModel.store,
                     isThinking: viewModel.isThinking,
                     analysisItems: viewModel.analysisItems,
+                    pendingReviewCount: viewModel.pendingReviewCount,
                     onSend: sendCurrentMessage,
                     onStop: viewModel.stopStreaming,
                     onQuickPrompt: sendQuickPrompt,
+                    onFocusPendingReviews: viewModel.focusPendingReviews,
                     onApplySuggestion: viewModel.applySuggestion,
                     onDismissSuggestion: viewModel.dismissSuggestion
                 )
