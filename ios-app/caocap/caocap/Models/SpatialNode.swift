@@ -165,10 +165,24 @@ public struct NodeAgentState: Codable, Equatable, Hashable {
     /// Compact textual memory injected into the CoCaptain system prompt to
     /// preserve context across sessions without sending the full history.
     public var memorySummary: String?
+    /// JSON-encoded pending review records managed by CoCaptain (`NodeAgentReviewRecord`).
+    public var pendingReviewBundlesData: [Data]
 
-    public init(messages: [NodeAgentMessage] = [], memorySummary: String? = nil) {
+    public init(
+        messages: [NodeAgentMessage] = [],
+        memorySummary: String? = nil,
+        pendingReviewBundlesData: [Data] = []
+    ) {
         self.messages = messages
         self.memorySummary = memorySummary
+        self.pendingReviewBundlesData = pendingReviewBundlesData
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.messages = try container.decodeIfPresent([NodeAgentMessage].self, forKey: .messages) ?? []
+        self.memorySummary = try container.decodeIfPresent(String.self, forKey: .memorySummary)
+        self.pendingReviewBundlesData = try container.decodeIfPresent([Data].self, forKey: .pendingReviewBundlesData) ?? []
     }
 }
 

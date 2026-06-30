@@ -72,6 +72,13 @@ public final class AgentPipelineEngine {
                     }
                     
                     if let reviewBundle = result.reviewBundle, !reviewBundle.items.isEmpty {
+                        let timelineItemID = UUID()
+                        NodeAgentReviewPersistence.persist(
+                            timelineItemID: timelineItemID,
+                            bundle: reviewBundle,
+                            nodeID: downstreamNode.id,
+                            store: store
+                        )
                         self.activeAgentStates[downstreamNode.id] = .awaitingReview
                         let summaries = reviewBundle.items
                             .map { "- \($0.targetLabel): \($0.summary)" }

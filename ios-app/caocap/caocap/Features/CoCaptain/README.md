@@ -108,6 +108,15 @@ Node edits store their original section `baseText` when the review bundle is cre
 
 Preserve this conflict guard when refactoring review state.
 
+## Node-Scoped Review Persistence
+
+Pending review bundles on node-scoped CoCaptain sessions are JSON-encoded into
+`NodeAgentState.pendingReviewBundlesData` and restored when the node CoCaptain
+panel reopens. Auto-triggered agent pipeline runs use the same persistence path so
+`awaitingReview` nodes expose Apply/Reject controls after reopening CoCaptain.
+
+Clearing node chat history also clears persisted pending review bundles.
+
 ## Editing Guidance
 
 - Keep sheet UI rendering in `Chat/CoCaptainView`; keep timeline and async state in `Chat/CoCaptainViewModel`.
