@@ -517,6 +517,136 @@ struct CoCaptainAgentTests {
         #expect(viewModel.selectedIndex == 0)
     }
 
+    @Test func parserUsesLastCompleteActionsBlock() throws {
+        let parser = CoCaptainAgentParser()
+        let response =
+            """
+            First attempt.
+
+            <cocaptain_actions>
+              <assistant_message>Old payload.</assistant_message>
+              <safe_actions><action id="go_root"/></safe_actions>
+            </cocaptain_actions>
+
+            Second attempt.
+
+            <cocaptain_actions>
+              <assistant_message>Latest payload.</assistant_message>
+              <safe_actions><action id="open_settings"/></safe_actions>
+            </cocaptain_actions>
+            """
+
+        let parsed = parser.parse(response)
+
+        #expect(parsed.preamble == "First attempt.\n\nSecond attempt.")
+        #expect(parsed.payload?.assistantMessage == "Latest payload.")
+        #expect(parsed.payload?.safeActions.first?.actionID == "open_settings")
+    }
+
+    @Test func parserIgnoresTrailingIncompleteActionsBlock() throws {
+        let parser = CoCaptainAgentParser()
+        let response =
+            """
+            Working on it.
+
+            <cocaptain_actions>
+              <assistant_message>Valid payload.</assistant_message>
+              <safe_actions><action id="go_root"/></safe_actions>
+            </cocaptain_actions>
+
+            <cocaptain_actions>
+              <assistant_message>Still generating...
+            """
+
+        let parsed = parser.parse(response)
+
+        #expect(parsed.payload?.assistantMessage == "Valid payload.")
+        #expect(parsed.payload?.safeActions.first?.actionID == "go_root")
+    }
+
+    @MainActor
+    @Test func validatorRejectsDuplicateAndOverlappingActions() {
+        let payload = CoCaptainAgentPayload(
+            assistantMessage: "Ready",
+            safeActions: [
+                CoCaptainAgentAction(actionID: "go_root"),
+                CoCaptainAgentAction(actionID: "go_root")
+            ],
+            pendingActions: [
+                CoCaptainAgentAction(actionID: "create_node"),
+                CoCaptainAgentAction(actionID: "create_node"),
+                CoCaptainAgentAction(actionID: "go_root")
+            ]
+        )
+
+        let result = CoCaptainAgentValidator().validate(
+            payload: payload,
+            dispatcher: TestActionDispatcher(),
+            requiresAgenticWork: false
+        )
+
+        #expect(!result.isValid)
+        #expect(result.issues.contains { $0.contains("Safe action `go_root` is duplicated.") })
+        #expect(result.issues.contains { $0.contains("Pending action `create_node` is duplicated.") })
+        #expect(result.issues.contains { $0.contains("cannot appear in both") })
+    }
+
+    @Test func functionCallAdapterAcceptsSnakeCaseActionID() throws {
+        let adapter = CoCaptainFunctionCallAgentAdapter()
+
+        let directive = adapter.directive(from: [
+            CoCaptainAgentFunctionCall(
+                name: CoCaptainFunctionCallAgentAdapter.requestAppActionName,
+                arguments: ["action_id": "go_root", "executionMode": "safe"]
+            )
+        ])
+
+        #expect(directive.payload?.safeActions.first?.actionID == "go_root")
+        #expect(directive.diagnostics.isEmpty)
+    }
+
+    @MainActor
+    @Test func commandIntentResolverMatchesGoHomeAndHelpCenter() throws {
+        let resolver = CommandIntentResolver()
+        let actions = TestActionDispatcher().availableActions
+
+        #expect(resolver.resolve("go home", availableActions: actions) == .goRoot)
+        #expect(resolver.resolve("open help center", availableActions: actions) == .help)
+    }
+
+    @MainActor
+    @Test func coordinatorReviewBundleTitleIncludesItemCount() async throws {
+        let dispatcher = TestActionDispatcher()
+        let llm = TestLLMClient(
+            response:
+                """
+                Prepared two changes.
+
+                <cocaptain_actions>
+                  <assistant_message>Prepared two changes.</assistant_message>
+                  <pending_actions><action id="create_node"/></pending_actions>
+                  <node_edits>
+                    <node_edit role="miniApp" section="code" summary="Update headline.">
+                      <operation type="replace_all">
+                        <content><![CDATA[<h1>Updated</h1>]]></content>
+                      </operation>
+                    </node_edit>
+                  </node_edits>
+                </cocaptain_actions>
+                """
+        )
+        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
+
+        let result = try await coordinator.run(
+            userMessage: "update and create",
+            store: makeStore(),
+            dispatcher: dispatcher
+        ) { _ in }
+
+        #expect(result.reviewBundle?.items.count == 2)
+        #expect(result.reviewBundle?.title.contains("2") == true)
+    }
+
     @Test func parserExtractsTrailingStructuredBlock() throws {
         let parser = CoCaptainAgentParser()
         let response =
@@ -2017,6 +2147,14 @@ private final class TestActionDispatcher: AppActionPerforming {
             id: .openSettings,
             title: "Open Settings",
             icon: "gearshape.fill",
+            category: .assistant,
+            isMutating: false,
+            allowsAutonomousExecution: true
+        ),
+        AppActionDefinition(
+            id: .help,
+            title: "Help",
+            icon: "questionmark.circle",
             category: .assistant,
             isMutating: false,
             allowsAutonomousExecution: true
