@@ -409,11 +409,20 @@ public final class CoCaptainAgentCoordinator {
               payload.nodeEdits.count == 1,
               let edit = payload.nodeEdits.first,
               edit.section == .code,
-              let node = patchEngine.resolveNode(nodeID: edit.nodeID, for: edit.role, in: store),
-              let baseCode = node.miniApp?.codeText,
-              !baseCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+              let node = patchEngine.resolveNode(nodeID: edit.nodeID, for: edit.role, in: store) else {
             return nil
         }
+
+        let baseCode = node.miniApp?.codeText ?? ""
+        let trimmedBase = baseCode.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedBase.isEmpty {
+            guard edit.operations.count == 1,
+                  edit.operations.first?.type == .replaceAll,
+                  !edit.verificationChecks.isEmpty else {
+                return nil
+            }
+        }
+
         return CodingLoopTarget(node: node, edit: edit, baseCode: baseCode, store: store)
     }
 
