@@ -25,13 +25,13 @@ struct ReviewBundleView: View {
 
             HStack(spacing: 16) {
                 Spacer()
-                Button("Apply All") {
+                Button(LocalizationManager.shared.localizedString("Apply All")) {
                     viewModel.applyAll(in: bundleID)
                 }
                 .font(.system(size: 12, weight: .semibold))
                 .disabled(!hasPendingItems)
 
-                Button("Reject All") {
+                Button(LocalizationManager.shared.localizedString("Reject All")) {
                     viewModel.rejectAll(in: bundleID)
                 }
                 .font(.system(size: 12, weight: .semibold))
@@ -93,21 +93,30 @@ struct ReviewCardView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             }
 
-            Text(item.preview.isEmpty ? LocalizationManager.shared.localizedString("No preview available.") : item.preview)
-                .font(.system(size: 12, weight: .regular, design: .monospaced))
-                .padding(10)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.black.opacity(0.06))
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            if let baseText = nodeEditBaseText {
+                reviewTextBlock(
+                    title: LocalizationManager.shared.localizedString("Before"),
+                    text: baseText
+                )
+            }
+
+            reviewTextBlock(
+                title: nodeEditBaseText == nil
+                    ? nil
+                    : LocalizationManager.shared.localizedString("After"),
+                text: item.preview.isEmpty
+                    ? LocalizationManager.shared.localizedString("No preview available.")
+                    : item.preview
+            )
 
             HStack {
-                Button("Apply") {
+                Button(LocalizationManager.shared.localizedString("Apply")) {
                     onApply()
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(item.status != .pending)
 
-                Button("Reject") {
+                Button(LocalizationManager.shared.localizedString("Reject")) {
                     onReject()
                 }
                 .buttonStyle(.bordered)
@@ -117,6 +126,29 @@ struct ReviewCardView: View {
         .padding(12)
         .background(Color.white.opacity(0.04))
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    private var nodeEditBaseText: String? {
+        guard case .nodeEdit(_, _, _, let baseText) = item.source else { return nil }
+        let trimmed = baseText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : baseText
+    }
+
+    @ViewBuilder
+    private func reviewTextBlock(title: String?, text: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if let title {
+                Text(title)
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.secondary)
+            }
+            Text(text)
+                .font(.system(size: 12, weight: .regular, design: .monospaced))
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.black.opacity(0.06))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
     }
 
     /// Maps the current review status to a semantic UI color.

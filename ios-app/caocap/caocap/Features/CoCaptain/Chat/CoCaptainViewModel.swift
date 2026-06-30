@@ -218,7 +218,9 @@ public final class CoCaptainViewModel {
                 }
 
                 if let reviewBundle = result.reviewBundle {
-                    items.append(CoCaptainTimelineItem(content: .reviewBundle(reviewBundle)))
+                    let reviewItem = CoCaptainTimelineItem(content: .reviewBundle(reviewBundle))
+                    items.append(reviewItem)
+                    persistNodeReviewBundleIfNeeded(timelineItemID: reviewItem.id, bundle: reviewBundle)
                 }
                 markAssistantResponseCompleted(
                     turnID: turnID,
@@ -298,25 +300,22 @@ public final class CoCaptainViewModel {
                     )
                 )
             )
-            items.append(
-                CoCaptainTimelineItem(
-                    content: .reviewBundle(
-                        ReviewBundleItem(
-                            items: [
-                                PendingReviewItem(
-                                    targetLabel: definition.localizedTitle,
-                                    summary: LocalizationManager.shared.localizedString(
-                                        "Awaiting approval to run %@.",
-                                        arguments: [definition.localizedTitle]
-                                    ),
-                                    preview: definition.localizedTitle,
-                                    source: .appAction(actionID, nil) // args will be handled in handleDirectCommand if needed
-                                )
-                            ]
-                        )
+            let reviewBundle = ReviewBundleItem(
+                items: [
+                    PendingReviewItem(
+                        targetLabel: definition.localizedTitle,
+                        summary: LocalizationManager.shared.localizedString(
+                            "Awaiting approval to run %@.",
+                            arguments: [definition.localizedTitle]
+                        ),
+                        preview: definition.localizedTitle,
+                        source: .appAction(actionID, nil)
                     )
-                )
+                ]
             )
+            let reviewItem = CoCaptainTimelineItem(content: .reviewBundle(reviewBundle))
+            items.append(reviewItem)
+            persistNodeReviewBundleIfNeeded(timelineItemID: reviewItem.id, bundle: reviewBundle)
             markAssistantResponseCompleted(
                 turnID: turnID,
                 purpose: purpose,
@@ -325,6 +324,7 @@ public final class CoCaptainViewModel {
             return true
         }
 
+        store?.createAutoCheckpoint(label: "Before AI Actions")
         let result = actionDispatcher.perform(actionID, source: .agentAutomatic, arguments: nil)
         items.append(
             CoCaptainTimelineItem(
@@ -342,7 +342,7 @@ public final class CoCaptainViewModel {
     /// Applies one user-approved review item. Node edits are revalidated against
     /// their captured base text so stale AI suggestions cannot overwrite newer
     /// user edits.
-    public func applyReviewItem(bundleID: UUID, itemID: UUID) {
+    public func applyReviewItem(bundleID: UUID, itemID: UUID, createCheckpoint: Bool = true) {
         guard let bundleIndex = items.firstIndex(where: { $0.id == bundleID }),
               case .reviewBundle(var bundle) = items[bundleIndex].content,
               let itemIndex = bundle.items.firstIndex(where: { $0.id == itemID }) else {
@@ -351,8 +351,9 @@ public final class CoCaptainViewModel {
 
         var item = bundle.items[itemIndex]
         
-        // Create checkpoint before applying a single item
-        store?.createCheckpoint(label: "Apply Suggestion: \(item.targetLabel)")
+        if createCheckpoint {
+            store?.createCheckpoint(label: "Apply Suggestion: \(item.targetLabel)")
+        }
 
         switch item.source {
         case .appAction(let actionID, let arguments):
@@ -416,6 +417,7 @@ public final class CoCaptainViewModel {
 
         bundle.items[itemIndex] = item
         items[bundleIndex].content = .reviewBundle(bundle)
+        persistNodeReviewBundleIfNeeded(bundleID: bundleID, bundle: bundle)
     }
 
     public func rejectReviewItem(bundleID: UUID, itemID: UUID) {
@@ -429,7 +431,7 @@ public final class CoCaptainViewModel {
         store?.createCheckpoint(label: "Apply All Changes")
         
         for itemID in bundle.items.filter({ $0.status == .pending }).map(\.id) {
-            applyReviewItem(bundleID: bundleID, itemID: itemID)
+            applyReviewItem(bundleID: bundleID, itemID: itemID, createCheckpoint: false)
         }
     }
 
@@ -505,6 +507,7 @@ public final class CoCaptainViewModel {
 
         bundle.items[itemIndex].status = status
         items[bundleIndex].content = .reviewBundle(bundle)
+        persistNodeReviewBundleIfNeeded(bundleID: bundleID, bundle: bundle)
     }
 
     private func updateMessage(id: UUID, text: String) {
@@ -648,16 +651,44 @@ public final class CoCaptainViewModel {
         }
 
         let messages = node.agentState.messages.sorted { $0.createdAt < $1.createdAt }
-        if messages.isEmpty {
-            items = [CoCaptainViewModel.nodeGreetingItem(title: node.displayTitle)]
-        } else {
-            items = messages.map { message in
+        var timeline: [(Date, CoCaptainTimelineItem)] = messages.map { message in
+            (
+                message.createdAt,
                 CoCaptainTimelineItem(
                     id: message.id,
                     content: .message(ChatBubbleItem(id: message.id, text: message.text, isUser: message.isUser))
                 )
-            }
+            )
         }
+
+        for record in NodeAgentReviewPersistence.decode(from: node.agentState) {
+            timeline.append(
+                (
+                    record.createdAt,
+                    CoCaptainTimelineItem(id: record.timelineItemID, content: .reviewBundle(record.bundle))
+                )
+            )
+        }
+
+        if timeline.isEmpty {
+            items = [CoCaptainViewModel.nodeGreetingItem(title: node.displayTitle)]
+        } else {
+            items = timeline.sorted { $0.0 < $1.0 }.map(\.1)
+        }
+    }
+
+    private func persistNodeReviewBundleIfNeeded(timelineItemID: UUID, bundle: ReviewBundleItem) {
+        guard case .node(let nodeID) = scope, let store else { return }
+        NodeAgentReviewPersistence.persist(
+            timelineItemID: timelineItemID,
+            bundle: bundle,
+            nodeID: nodeID,
+            store: store
+        )
+    }
+
+    private func persistNodeReviewBundleIfNeeded(bundleID: UUID, bundle: ReviewBundleItem) {
+        persistNodeReviewBundleIfNeeded(timelineItemID: bundleID, bundle: bundle)
     }
 
     private static func nodeGreetingItem(title: String) -> CoCaptainTimelineItem {
