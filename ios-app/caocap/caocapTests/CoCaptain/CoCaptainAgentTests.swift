@@ -517,6 +517,60 @@ struct CoCaptainAgentTests {
         #expect(viewModel.selectedIndex == 0)
     }
 
+    @Test func functionCallAdapterAcceptsUppercaseExecutionMode() throws {
+        let adapter = CoCaptainFunctionCallAgentAdapter()
+
+        let directive = adapter.directive(from: [
+            CoCaptainAgentFunctionCall(
+                name: CoCaptainFunctionCallAgentAdapter.requestAppActionName,
+                arguments: ["actionId": "go_root", "executionMode": "SAFE"]
+            )
+        ])
+
+        #expect(directive.payload?.safeActions.first?.actionID == "go_root")
+        #expect(directive.diagnostics.isEmpty)
+    }
+
+    @MainActor
+    @Test func coordinatorRetriesDuplicateSafeActions() async throws {
+        let dispatcher = TestActionDispatcher()
+        let llm = TestLLMClient(
+            responses: [
+                """
+                Navigating.
+
+                <cocaptain_actions>
+                  <assistant_message>Navigating.</assistant_message>
+                  <safe_actions>
+                    <action id="go_root"/>
+                    <action id="go_root"/>
+                  </safe_actions>
+                </cocaptain_actions>
+                """,
+                """
+                Navigating.
+
+                <cocaptain_actions>
+                  <assistant_message>Navigating.</assistant_message>
+                  <safe_actions><action id="go_root"/></safe_actions>
+                </cocaptain_actions>
+                """
+            ]
+        )
+        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
+
+        let result = try await coordinator.run(
+            userMessage: "go root",
+            store: makeStore(),
+            dispatcher: dispatcher
+        ) { _ in }
+
+        #expect(llm.receivedMessages.count == 2)
+        #expect(llm.receivedMessages.last?.contains("is duplicated") == true)
+        #expect(dispatcher.executedActionIDs == [.goRoot])
+        #expect(result.executionSummary?.summary.contains("Go to Root") == true)
+    }
+
     @Test func parserUsesLastCompleteActionsBlock() throws {
         let parser = CoCaptainAgentParser()
         let response =
