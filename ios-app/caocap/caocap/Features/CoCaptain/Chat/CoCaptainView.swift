@@ -30,7 +30,14 @@ struct CoCaptainView: View {
                     onDismissSuggestion: viewModel.dismissSuggestion
                 )
             }
-            .navigationTitle("Co-Captain")
+            .navigationTitle(
+                viewModel.pendingReviewCount > 0
+                    ? LocalizationManager.shared.localizedString(
+                        "Co-Captain (%lld)",
+                        arguments: [Int64(viewModel.pendingReviewCount)]
+                    )
+                    : "Co-Captain"
+            )
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
