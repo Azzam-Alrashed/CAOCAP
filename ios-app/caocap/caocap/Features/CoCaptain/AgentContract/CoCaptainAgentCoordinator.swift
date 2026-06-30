@@ -848,7 +848,19 @@ public final class CoCaptainAgentCoordinator {
             }
         }
 
-        return items.isEmpty ? nil : ReviewBundleItem(items: items)
+        return items.isEmpty ? nil : ReviewBundleItem(
+            title: reviewBundleTitle(for: items),
+            items: items
+        )
+    }
+
+    private func reviewBundleTitle(for items: [PendingReviewItem]) -> String {
+        let base = LocalizationManager.shared.localizedString("Pending changes")
+        guard items.count > 1 else { return base }
+        return LocalizationManager.shared.localizedString(
+            "Pending changes (%@)",
+            arguments: [Int64(items.count)]
+        )
     }
 
     /// Trims whitespace and caps the preview at 280 characters to keep the

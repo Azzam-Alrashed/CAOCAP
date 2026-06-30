@@ -28,8 +28,11 @@ public struct CommandIntentResolver {
         case .goRoot:
             return [
                 "go root",
+                "go home",
+                "home",
                 "root",
                 "take me to root",
+                "take me home",
                 "open root",
                 "الجذر",
                 "اذهب للجذر",
@@ -157,10 +160,14 @@ public struct CommandIntentResolver {
             return [
                 "help",
                 "open help",
+                "help center",
+                "open help center",
                 "documentation",
+                "docs",
                 "مساعدة",
                 "المساعدة",
                 "افتح المساعدة",
+                "مركز المساعدة",
                 "التوثيق"
             ]
         case .moveNode:

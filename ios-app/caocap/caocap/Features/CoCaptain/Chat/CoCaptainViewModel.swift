@@ -242,13 +242,9 @@ public final class CoCaptainViewModel {
                 } else if purpose.isConversationalTurn {
                     updateMessage(id: aiMessageID, text: onboardingRetryMessage(for: purpose))
                 } else {
-                    let details = String(reflecting: error)
                     updateMessage(
                         id: aiMessageID,
-                        text: LocalizationManager.shared.localizedString(
-                            "Sorry, I hit an error while contacting the model.\n\n%@",
-                            arguments: [details]
-                        )
+                        text: userFacingModelErrorMessage(from: error)
                     )
                 }
                 markAssistantResponseCompleted(
@@ -557,6 +553,29 @@ public final class CoCaptainViewModel {
             turnID: turnID,
             purpose: purpose,
             succeeded: successful
+        )
+    }
+
+    private func userFacingModelErrorMessage(from error: Error) -> String {
+        if let localized = (error as? LocalizedError)?.errorDescription?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+           !localized.isEmpty {
+            return LocalizationManager.shared.localizedString(
+                "Sorry, I hit an error while contacting the model.\n\n%@",
+                arguments: [localized]
+            )
+        }
+
+        let description = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !description.isEmpty {
+            return LocalizationManager.shared.localizedString(
+                "Sorry, I hit an error while contacting the model.\n\n%@",
+                arguments: [description]
+            )
+        }
+
+        return LocalizationManager.shared.localizedString(
+            "Sorry, I hit an error while contacting the model. Please try again."
         )
     }
 
