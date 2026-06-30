@@ -103,7 +103,8 @@ enum HelpManifest {
             icon: "sparkles",
             bodyParagraphKeys: [
                 "help.article.cocaptain.body1",
-                "help.article.cocaptain.body2"
+                "help.article.cocaptain.body2",
+                "help.article.cocaptain.body3"
             ]
         ),
         HelpArticle(

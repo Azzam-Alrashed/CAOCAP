@@ -117,6 +117,8 @@ panel reopens. Auto-triggered agent pipeline runs use the same persistence path 
 
 Clearing node chat history also clears persisted pending review bundles.
 
+Review cards with a target node include **View on Canvas**, which flies the workspace viewport to that node while CoCaptain stays open.
+
 ## Editing Guidance
 
 - Keep sheet UI rendering in `Chat/CoCaptainView`; keep timeline and async state in `Chat/CoCaptainViewModel`.
