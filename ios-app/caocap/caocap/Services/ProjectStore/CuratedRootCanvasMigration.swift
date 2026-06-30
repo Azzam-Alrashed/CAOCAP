@@ -16,6 +16,7 @@ enum CuratedRootCanvasMigration {
     static let helpNodeCompleteKey = "curatedRootCanvas_v10_help_node_complete"
     static let launchAnchorLayoutCompleteKey = "curatedRootCanvas_v11_launch_anchor_layout_complete"
     static let appIconNodeCompleteKey = "curatedRootCanvas_v12_app_icon_node_complete"
+    static let profileAppIconLayoutCompleteKey = "curatedRootCanvas_v13_profile_app_icon_layout_complete"
     private static let logger = Logger(subsystem: "com.caocap.app", category: "CuratedRootCanvasMigration")
 
     static func runIfNeeded(
@@ -156,6 +157,16 @@ enum CuratedRootCanvasMigration {
                 logger.info("Installed the root App Icon node.")
             } catch {
                 logger.error("Failed to install the root App Icon node: \(error.localizedDescription)")
+            }
+        }
+
+        if !defaults.bool(forKey: profileAppIconLayoutCompleteKey) {
+            do {
+                try refreshProfileAppIconLayout(persistence: persistence)
+                defaults.set(true, forKey: profileAppIconLayoutCompleteKey)
+                logger.info("Repositioned the root Profile and App Icon nodes.")
+            } catch {
+                logger.error("Failed to reposition the root Profile and App Icon nodes: \(error.localizedDescription)")
             }
         }
     }
@@ -663,6 +674,63 @@ enum CuratedRootCanvasMigration {
         )
     }
 
+    /// Moves Profile to the top anchor beside WhatsApp and App Icon into the former Profile grid slot.
+    private static func refreshProfileAppIconLayout(persistence: ProjectPersistenceService) throws {
+        let rootFileName = CanvasFileNaming.rootFileName
+        guard persistence.projectExists(fileName: rootFileName) else { return }
+
+        let snapshot = try persistence.load(fileName: rootFileName)
+        let canonicalByID = Dictionary(uniqueKeysWithValues: RootCanvasProvider.nodes.map { ($0.id, $0) })
+        let canonicalIDs = Set(canonicalByID.keys)
+        guard Set(snapshot.nodes.map(\.id)) == canonicalIDs else { return }
+
+        let legacyProfilePosition = RootCanvasProvider.gridPosition(column: 0, row: 2)
+        let legacyAppIconPosition = CGPoint(x: -250, y: RootCanvasProvider.topAnchorY)
+        let profile = snapshot.nodes.first(where: { $0.id == RootCanvasProvider.profileNodeID })
+        let appIcon = snapshot.nodes.first(where: { $0.id == RootCanvasProvider.appIconNodeID })
+        guard profile?.position == legacyProfilePosition,
+              appIcon?.position == legacyAppIconPosition else {
+            return
+        }
+
+        let unmovedNodeIDs = Set(
+            RootCanvasProvider.nodes
+                .filter {
+                    $0.id != RootCanvasProvider.profileNodeID &&
+                        $0.id != RootCanvasProvider.appIconNodeID
+                }
+                .map(\.id)
+        )
+        let canonicalPositions: [UUID: CGPoint] = Dictionary(
+            uniqueKeysWithValues: RootCanvasProvider.nodes
+                .filter { unmovedNodeIDs.contains($0.id) }
+                .map { ($0.id, $0.position) }
+        )
+        let hasCanonicalUnmovedLayout = snapshot.nodes
+            .filter { unmovedNodeIDs.contains($0.id) }
+            .allSatisfy { canonicalPositions[$0.id] == $0.position }
+        guard hasCanonicalUnmovedLayout else { return }
+
+        let updatedNodes = snapshot.nodes.map { node -> SpatialNode in
+            guard let canonical = canonicalByID[node.id] else { return node }
+            var updated = node
+            updated.position = canonical.position
+            return updated
+        }
+
+        try persistence.save(
+            ProjectSnapshot(
+                schemaVersion: snapshot.schemaVersion,
+                projectName: snapshot.projectName,
+                nodes: updatedNodes,
+                viewportOffset: snapshot.viewportOffset,
+                viewportScale: snapshot.viewportScale,
+                checkpointLabel: snapshot.checkpointLabel
+            ),
+            fileName: rootFileName
+        )
+    }
+
     /// Repositions WhatsApp above the grid and Help below when anchors still use the prior bottom-row layout.
     private static func refreshLaunchAnchorLayout(persistence: ProjectPersistenceService) throws {
         let rootFileName = CanvasFileNaming.rootFileName
@@ -677,7 +745,7 @@ enum CuratedRootCanvasMigration {
             RootCanvasProvider.nodes
                 .filter {
                     $0.id != RootCanvasProvider.whatsAppNodeID &&
-                        $0.id != RootCanvasProvider.appIconNodeID &&
+                        $0.id != RootCanvasProvider.profileNodeID &&
                         $0.id != RootCanvasProvider.helpNodeID
                 }
                 .map(\.id)

@@ -4,6 +4,7 @@ struct AppIconOption: Identifiable, Equatable {
     /// Empty string selects the primary icon; otherwise the alternate appiconset name.
     let id: String
     let displayName: String
+    let subtitle: String
     let previewImageName: String
 
     var alternateIconName: String? {
@@ -16,12 +17,12 @@ enum AppIconService {
     static let storageKey = "selected_app_icon"
 
     static let options: [AppIconOption] = [
-        AppIconOption(id: "", displayName: "Default", previewImageName: "AppIconPreviewDefault"),
-        AppIconOption(id: "AppIcon_0", displayName: "Icon 1", previewImageName: "AppIconPreview0"),
-        AppIconOption(id: "AppIcon_1", displayName: "Icon 2", previewImageName: "AppIconPreview1"),
-        AppIconOption(id: "AppIcon_2", displayName: "Icon 3", previewImageName: "AppIconPreview2"),
-        AppIconOption(id: "AppIcon_3", displayName: "Icon 4", previewImageName: "AppIconPreview3"),
-        AppIconOption(id: "AppIcon_4", displayName: "Icon 5", previewImageName: "AppIconPreview4")
+        AppIconOption(id: "", displayName: "Classic", subtitle: "Astronaut portrait", previewImageName: "AppIconPreviewDefault"),
+        AppIconOption(id: "AppIcon_0", displayName: "Blueprint", subtitle: "Plant logo on sketch grid", previewImageName: "AppIconPreview0"),
+        AppIconOption(id: "AppIcon_1", displayName: "Launch", subtitle: "Rocket on star grid", previewImageName: "AppIconPreview1"),
+        AppIconOption(id: "AppIcon_2", displayName: "Orbit", subtitle: "Deep space rocket", previewImageName: "AppIconPreview2"),
+        AppIconOption(id: "AppIcon_3", displayName: "Nova", subtitle: "Bright rocket trail", previewImageName: "AppIconPreview3"),
+        AppIconOption(id: "AppIcon_4", displayName: "Void", subtitle: "Dark cosmic rocket", previewImageName: "AppIconPreview4")
     ]
 
     static var supportsAlternateIcons: Bool {
