@@ -10,27 +10,31 @@ public struct CoCaptainAgentParser {
 
     /// Parses the structured XML block in the response.
     public func parse(_ response: String) -> CoCaptainParsedResponse {
-        guard let startRange = response.range(of: Self.startTag, options: .backwards),
-              let endRange = response.range(of: Self.endTag, options: .backwards),
-              startRange.lowerBound < endRange.lowerBound else {
-            if let startRange = response.range(of: Self.startTag) {
-                return CoCaptainParsedResponse(
-                    preamble: String(response[..<startRange.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines),
-                    payload: nil
-                )
-            }
-            if let loosePayload = parseLoosePayload(response) {
-                return loosePayload
-            }
-            return CoCaptainParsedResponse(
-                preamble: response.trimmingCharacters(in: .whitespacesAndNewlines),
-                payload: nil
+        if let blockRange = lastCompleteActionsBlock(in: response) {
+            let preamble = String(response[..<blockRange.lowerBound])
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            return parseActionsBlock(
+                xml: String(response[blockRange]),
+                preamble: preamble
             )
         }
 
-        let preamble = String(response[..<startRange.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
-        let xmlRange = startRange.lowerBound..<endRange.upperBound
-        let xml = String(response[xmlRange])
+        if let startRange = response.range(of: Self.startTag) {
+            return CoCaptainParsedResponse(
+                preamble: String(response[..<startRange.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines),
+                payload: nil
+            )
+        }
+        if let loosePayload = parseLoosePayload(response) {
+            return loosePayload
+        }
+        return CoCaptainParsedResponse(
+            preamble: response.trimmingCharacters(in: .whitespacesAndNewlines),
+            payload: nil
+        )
+    }
+
+    private func parseActionsBlock(xml: String, preamble: String) -> CoCaptainParsedResponse {
 
         let assistantMessage = extractTag(name: "assistant_message", from: xml) ?? ""
         
@@ -104,6 +108,23 @@ public struct CoCaptainAgentParser {
         )
 
         return CoCaptainParsedResponse(preamble: preamble, payload: payload)
+    }
+
+    /// Returns the range of the last fully closed `cocaptain_actions` block.
+    /// Earlier complete blocks are ignored so a repaired trailing payload wins.
+    private func lastCompleteActionsBlock(in response: String) -> Range<String.Index>? {
+        var searchStart = response.startIndex
+        var lastComplete: Range<String.Index>?
+
+        while let start = response.range(of: Self.startTag, range: searchStart..<response.endIndex) {
+            guard let end = response.range(of: Self.endTag, range: start.upperBound..<response.endIndex) else {
+                break
+            }
+            lastComplete = start.lowerBound..<end.upperBound
+            searchStart = end.upperBound
+        }
+
+        return lastComplete
     }
 
     /// Returns the text that is safe to stream into the chat bubble.
