@@ -13,9 +13,12 @@ struct NodeView: View {
     /// Current agent execution state for this node, controls badge icons and
     /// pulsing border overlays.
     var agentState: AgentExecutionState = .idle
+    /// Brief pulse ring after fly-to navigation from CoCaptain or search.
+    var isTransientlyFocused: Bool = false
     @State private var isHovering = false
     /// Drives the repeating animation of the "thinking" state border overlay.
     @State private var isPulsing = false
+    @State private var isFocusPulsing = false
     @AppStorage(LocalizationManager.languageStorageKey) private var selectedLanguage = "English"
     
     var body: some View {
@@ -110,6 +113,17 @@ struct NodeView: View {
         .background(backgroundStack)
         .overlay(borderOverlay)
         .overlay(statusOverlay)
+        .overlay(transientFocusOverlay)
+        .onChange(of: isTransientlyFocused) { _, focused in
+            if focused {
+                isFocusPulsing = false
+                withAnimation(Animation.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
+                    isFocusPulsing = true
+                }
+            } else {
+                isFocusPulsing = false
+            }
+        }
         .background(
             GeometryReader { geometry in
                 Color.clear.preference(
@@ -246,6 +260,17 @@ struct NodeView: View {
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
                     .stroke(Color.red.opacity(0.8), lineWidth: 3)
                     .shadow(color: .red, radius: 10)
+            }
+        }
+    }
+
+    /// Short-lived accent ring shown when the canvas flies to this node from review or search.
+    private var transientFocusOverlay: some View {
+        Group {
+            if isTransientlyFocused {
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .stroke(Color.cyan.opacity(isFocusPulsing ? 0.95 : 0.55), lineWidth: 3)
+                    .shadow(color: .cyan.opacity(isFocusPulsing ? 0.55 : 0.25), radius: isFocusPulsing ? 18 : 8)
             }
         }
     }
