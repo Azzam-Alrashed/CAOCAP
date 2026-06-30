@@ -961,7 +961,7 @@ public final class CoCaptainAgentCoordinator {
         let base = LocalizationManager.shared.localizedString("Pending changes")
         guard items.count > 1 else { return base }
         return LocalizationManager.shared.localizedString(
-            "Pending changes (%@)",
+            "Pending changes (%lld)",
             arguments: [Int64(items.count)]
         )
     }
