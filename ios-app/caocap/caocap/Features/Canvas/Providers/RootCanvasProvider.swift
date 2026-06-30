@@ -81,7 +81,7 @@ public enum RootCanvasProvider {
             gridPosition(column: 0, row: 0)
         case settingsNodeID:
             gridPosition(column: 0, row: 1)
-        case profileNodeID:
+        case appIconNodeID:
             gridPosition(column: 0, row: 2)
         case activityNodeID:
             gridPosition(column: 0, row: 3)
@@ -95,7 +95,7 @@ public enum RootCanvasProvider {
             gridPosition(column: 1, row: 3)
         case whatsAppNodeID:
             CGPoint(x: 0, y: topAnchorY)
-        case appIconNodeID:
+        case profileNodeID:
             CGPoint(x: -columnSpacing, y: topAnchorY)
         case helpNodeID:
             CGPoint(x: 0, y: anchorRowYOffset)

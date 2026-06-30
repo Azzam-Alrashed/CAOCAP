@@ -22,7 +22,7 @@ struct RootCanvasProviderTests {
         #expect(nodes[1].theme == .pink)
 
         #expect(nodes[2].id == RootCanvasProvider.profileNodeID)
-        #expect(nodes[2].position == CGPoint(x: -columnSpacing, y: rowY[2]))
+        #expect(nodes[2].position == CGPoint(x: -columnSpacing, y: -550))
         #expect(nodes[2].theme == .blue)
 
         let activity = try #require(nodes.first { $0.id == RootCanvasProvider.activityNodeID })
@@ -58,9 +58,14 @@ struct RootCanvasProviderTests {
         #expect(whatsApp.action == .openWhatsApp)
 
         let appIcon = try #require(nodes.first { $0.id == RootCanvasProvider.appIconNodeID })
-        #expect(appIcon.position == CGPoint(x: -columnSpacing, y: -550))
+        #expect(appIcon.position == CGPoint(x: -columnSpacing, y: rowY[2]))
         #expect(appIcon.theme == .secondary)
         #expect(appIcon.action == .openAppIcon)
+
+        let profile = try #require(nodes.first { $0.id == RootCanvasProvider.profileNodeID })
+        #expect(profile.position == CGPoint(x: -columnSpacing, y: -550))
+        #expect(profile.theme == .blue)
+        #expect(profile.action == .openProfile)
 
         let help = try #require(nodes.first { $0.id == RootCanvasProvider.helpNodeID })
         #expect(help.position == CGPoint(x: 0, y: 550))
