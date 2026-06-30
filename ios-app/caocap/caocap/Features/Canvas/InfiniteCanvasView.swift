@@ -16,20 +16,35 @@ struct InfiniteCanvasView: View {
     /// The central store managing node data and persistence.
     var store: ProjectStore
     
+    /// Node to pulse-highlight after fly-to navigation from CoCaptain or search.
+    var canvasFocusNodeID: UUID?
+    
     /// Callback triggered when a specialized action node is tapped. Its
     /// presence also marks the canvas as non-persistent onboarding mode.
     var onNodeAction: ((NodeAction) -> Void)? = nil
     
     var onNavigateToSubCanvas: ((String) -> Void)? = nil
     var onRecoverUnsupportedProject: (() -> Void)? = nil
+    var onFlyToNode: ((UUID) -> Void)? = nil
     
-    init(store: ProjectStore, viewport: Binding<ViewportState>, currentScale: Binding<CGFloat>, onNodeAction: ((NodeAction) -> Void)? = nil, onNavigateToSubCanvas: ((String) -> Void)? = nil, onRecoverUnsupportedProject: (() -> Void)? = nil) {
+    init(
+        store: ProjectStore,
+        viewport: Binding<ViewportState>,
+        currentScale: Binding<CGFloat>,
+        canvasFocusNodeID: UUID? = nil,
+        onNodeAction: ((NodeAction) -> Void)? = nil,
+        onNavigateToSubCanvas: ((String) -> Void)? = nil,
+        onRecoverUnsupportedProject: (() -> Void)? = nil,
+        onFlyToNode: ((UUID) -> Void)? = nil
+    ) {
         self.store = store
         self._viewport = viewport
         self._currentScale = currentScale
+        self.canvasFocusNodeID = canvasFocusNodeID
         self.onNodeAction = onNodeAction
         self.onNavigateToSubCanvas = onNavigateToSubCanvas
         self.onRecoverUnsupportedProject = onRecoverUnsupportedProject
+        self.onFlyToNode = onFlyToNode
     }
     
     // Drag offsets stay local until the drag ends so links and nodes can track
@@ -99,7 +114,8 @@ struct InfiniteCanvasView: View {
                         NodeView(
                             node: node,
                             isDragging: isDraggingThisNode,
-                            agentState: store.activeAgentStates[node.id] ?? .idle
+                            agentState: store.activeAgentStates[node.id] ?? .idle,
+                            isTransientlyFocused: canvasFocusNodeID == node.id
                         )
                             .tutorialOnboardingAnchor(isEnabled: node.id == RootCanvasProvider.tutorialNodeID)
                             .offset(
@@ -231,10 +247,10 @@ struct InfiniteCanvasView: View {
         .background(backgroundColor)
         .edgesIgnoringSafeArea(.all)
         .sheet(item: $selectedNode) { node in
-            NodeDetailView(node: node, store: store)
+            NodeDetailView(node: node, store: store, onFlyToNode: handleFlyToFromDetail)
         }
         .fullScreenCover(item: $fullScreenMiniApp) { node in
-            NodeDetailView(node: node, store: store)
+            NodeDetailView(node: node, store: store, onFlyToNode: handleFlyToFromDetail)
         }
         .onAppear {
             currentScale = viewport.scale
@@ -253,6 +269,13 @@ struct InfiniteCanvasView: View {
             scale: viewport.scale,
             persist: true
         )
+    }
+
+    /// Dismisses node detail chrome, then flies the workspace camera to the target node.
+    private func handleFlyToFromDetail(_ nodeID: UUID) {
+        selectedNode = nil
+        fullScreenMiniApp = nil
+        onFlyToNode?(nodeID)
     }
 
     /// Converts screen-space gesture movement into the unscaled coordinate

@@ -6,6 +6,7 @@ struct NodeAgentChatView: View {
     let nodeID: UUID
     let store: ProjectStore
     var actionDispatcher: (any AppActionPerforming)?
+    var onFlyToNode: ((UUID) -> Void)?
 
     @State private var viewModel = CoCaptainViewModel()
     @State private var text = ""
@@ -52,6 +53,7 @@ struct NodeAgentChatView: View {
                 nodeID: nodeID,
                 dispatcher: actionDispatcher
             )
+            viewModel.onFlyToNode = onFlyToNode
         }
     }
 
