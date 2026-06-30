@@ -419,6 +419,40 @@
         }
       }
     },
+    "Before" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Before"
+          }
+        },
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قبل"
+          }
+        }
+      }
+    },
+    "After" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "After"
+          }
+        },
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "بعد"
+          }
+        }
+      }
+    },
     "Arabic" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1870,6 +1904,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "organize nodes"
+          }
+        }
+      }
+    },
+    "help.shortcut.pendingReviews" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "show pending reviews"
+          }
+        },
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اعرض المراجعات المعلقة"
           }
         }
       }

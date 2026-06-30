@@ -897,6 +897,31 @@ struct CoCaptainAgentTests {
         #expect(directive.diagnostics.isEmpty)
     }
 
+    @Test func functionCallAdapterPreservesSupplementalArguments() throws {
+        let adapter = CoCaptainFunctionCallAgentAdapter()
+        let directive = adapter.directive(
+            from: [
+                CoCaptainAgentFunctionCall(
+                    name: CoCaptainFunctionCallAgentAdapter.requestAppActionName,
+                    arguments: [
+                        "actionId": "moveNode",
+                        "executionMode": "pending",
+                        "nodeId": "ABC-123",
+                        "x": "120",
+                        "y": "80"
+                    ]
+                )
+            ]
+        )
+
+        let action = try #require(directive.payload?.pendingActions.first)
+        #expect(action.actionID == "moveNode")
+        #expect(action.args?["nodeId"] == "ABC-123")
+        #expect(action.args?["x"] == "120")
+        #expect(action.args?["y"] == "80")
+        #expect(action.args?["executionMode"] == nil)
+    }
+
     @Test func functionCallAdapterReportsMalformedCalls() throws {
         let adapter = CoCaptainFunctionCallAgentAdapter()
 
@@ -2151,6 +2176,21 @@ struct CoCaptainAgentTests {
     }
 
     @MainActor
+    @Test func connectionFallbackShowsDegradedNoticeWhenExecutableWorkMissing() async throws {
+        let llm = FailingThenPlainLLMClient(fallbackResponse: "I can explain the idea, but I cannot apply changes right now.")
+        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
+
+        let result = try await coordinator.run(
+            userMessage: "build a landing page",
+            store: makeStore(),
+            dispatcher: TestActionDispatcher()
+        ) { _ in }
+
+        #expect(result.reviewBundle == nil)
+        #expect(result.visibleText.contains("could not reach the model with full project context") == true)
+    }
+
+    @MainActor
     @Test func nodeScopedReviewBundleReloadsFromPersistedNodeState() throws {
         let store = makeStore()
         let nodeID = store.nodes[0].id
@@ -2437,6 +2477,43 @@ private final class TestLLMClient: CoCaptainLLMClient {
             if !calls.isEmpty {
                 continuation.yield(.functionCalls(calls))
             }
+            continuation.finish()
+        }
+    }
+}
+
+@MainActor
+private final class FailingThenPlainLLMClient: CoCaptainLLMClient {
+    private let fallbackResponse: String
+
+    init(fallbackResponse: String) {
+        self.fallbackResponse = fallbackResponse
+    }
+
+    func resetChat(scope: CoCaptainAgentScope) {}
+
+    func streamAgentEvents(
+        for userMessage: String,
+        context: String?,
+        expectsStructuredResponse: Bool,
+        availableActions: [AppActionDefinition],
+        scope: CoCaptainAgentScope,
+        purpose: CoCaptainTurnPurpose
+    ) -> AsyncThrowingStream<CoCaptainLLMStreamEvent, Error> {
+        if expectsStructuredResponse, context != nil {
+            return AsyncThrowingStream { continuation in
+                continuation.finish(
+                    throwing: NSError(
+                        domain: "CoCaptainFallbackTest",
+                        code: 1,
+                        userInfo: [NSLocalizedDescriptionKey: "Structured request failed"]
+                    )
+                )
+            }
+        }
+
+        return AsyncThrowingStream { continuation in
+            continuation.yield(.text(fallbackResponse))
             continuation.finish()
         }
     }

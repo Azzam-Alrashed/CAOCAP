@@ -72,7 +72,8 @@ enum HelpManifest {
         HelpShortcutItem(id: "activity", titleKey: "Activity", examplePhraseKey: "help.shortcut.activity"),
         HelpShortcutItem(id: "daily", titleKey: "Daily", examplePhraseKey: "help.shortcut.daily"),
         HelpShortcutItem(id: "grid", titleKey: "Toggle Grid", examplePhraseKey: "help.shortcut.grid"),
-        HelpShortcutItem(id: "organize", titleKey: "Organize Nodes", examplePhraseKey: "help.shortcut.organize")
+        HelpShortcutItem(id: "organize", titleKey: "Organize Nodes", examplePhraseKey: "help.shortcut.organize"),
+        HelpShortcutItem(id: "pendingReviews", titleKey: "Pending CoCaptain Reviews", examplePhraseKey: "help.shortcut.pendingReviews")
     ]
 
     static let articles: [HelpArticle] = [
