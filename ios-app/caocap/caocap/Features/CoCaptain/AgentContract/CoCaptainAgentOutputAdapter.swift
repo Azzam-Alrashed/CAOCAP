@@ -135,7 +135,10 @@ public struct CoCaptainFunctionCallAgentAdapter {
             // Default to pending so unknown modes don't silently auto-execute.
             let executionMode = (nonEmptyArgument("executionMode", in: functionCall) ?? "pending")
                 .lowercased()
-            let action = CoCaptainAgentAction(actionID: actionID)
+            let action = CoCaptainAgentAction(
+                actionID: actionID,
+                args: supplementalArguments(from: functionCall)
+            )
 
             switch executionMode {
             case "safe":
@@ -176,6 +179,15 @@ public struct CoCaptainFunctionCallAgentAdapter {
             return nil
         }
         return value
+    }
+
+    private func supplementalArguments(from functionCall: CoCaptainAgentFunctionCall) -> [String: String]? {
+        let reservedKeys = Set(["actionId", "action_id", "executionMode"])
+        let args = functionCall.arguments.filter { key, value in
+            !reservedKeys.contains(key) &&
+                !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+        return args.isEmpty ? nil : args
     }
 }
 
