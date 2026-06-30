@@ -286,6 +286,12 @@ public struct CommandIntentResolver {
 
     /// Normalization removes punctuation and diacritics so aliases can match
     /// common voice/input variations across English and Arabic.
+    static func normalizedCommandInput(_ value: String) -> String {
+        normalized(value)
+    }
+
+    /// Normalization removes punctuation and diacritics so aliases can match
+    /// common voice/input variations across English and Arabic.
     private static func normalized(_ value: String) -> String {
         value
             .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
@@ -306,7 +312,7 @@ public struct CommandIntentResolver {
 
     /// Refuses commands with explicit negation so phrases like "do not create a
     /// project" cannot trigger a mutating action.
-    private static func hasNegation(in normalizedInput: String) -> Bool {
+    static func hasNegation(in normalizedInput: String) -> Bool {
         let negations = [
             "dont",
             "do not",
