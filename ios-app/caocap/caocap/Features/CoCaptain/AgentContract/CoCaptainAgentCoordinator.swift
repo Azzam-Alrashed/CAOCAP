@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 
 /// The interface through which `CoCaptainAgentCoordinator` communicates with
 /// the underlying language model.
@@ -96,6 +97,9 @@ public final class CoCaptainAgentCoordinator {
         self.verifiedCodingLoopEnabled = verifiedCodingLoopEnabled ?? { VerifiedCodingLoopFeature.isEnabled }
     }
 
+    private let logger = Logger(subsystem: "com.caocap.CoCaptainAgentCoordinator", category: "Coordinator")
+    private static let maxAgenticRetries = 2
+
     /// Resets the chat history for the given scope, forwarding directly to the
     /// LLM client. Defaults to the project scope for callers that don't track scope.
     public func resetChat(scope: CoCaptainAgentScope = .project) {
@@ -135,7 +139,7 @@ public final class CoCaptainAgentCoordinator {
                 purpose: purpose,
                 onVisibleText: onVisibleText,
                 onCodingProgress: onCodingProgress,
-                allowAgenticRetry: policy.allowsAgenticRetry
+                agenticRetriesRemaining: policy.allowsAgenticRetry ? Self.maxAgenticRetries : 0
             )
         } catch is CancellationError {
             onCodingProgress(.cancelled)
@@ -155,7 +159,7 @@ public final class CoCaptainAgentCoordinator {
                 purpose: purpose,
                 onVisibleText: onVisibleText,
                 onCodingProgress: onCodingProgress,
-                allowAgenticRetry: false,
+                agenticRetriesRemaining: 0,
                 connectionFallback: true
             )
             return connectionFallbackResult(
@@ -169,9 +173,8 @@ public final class CoCaptainAgentCoordinator {
     /// Executes one full LLM round-trip and processes the response.
     ///
     /// - Parameters:
-    ///   - allowAgenticRetry: When `true` the method may recursively call itself
-    ///     once with a corrective system message if the model's output fails
-    ///     validation. The recursive call always passes `false` to prevent loops.
+    ///   - agenticRetriesRemaining: How many corrective model retries remain when
+    ///     the response fails parsing or validation.
     private func runOnce(
         userMessage: String,
         context: String?,
@@ -182,7 +185,7 @@ public final class CoCaptainAgentCoordinator {
         purpose: CoCaptainTurnPurpose,
         onVisibleText: @escaping (String) -> Void,
         onCodingProgress: @escaping (CoCaptainCodingRunState) -> Void,
-        allowAgenticRetry: Bool,
+        agenticRetriesRemaining: Int,
         connectionFallback: Bool = false
     ) async throws -> CoCaptainAgentRunResult {
         let directive = try await generateDirective(
@@ -202,7 +205,7 @@ public final class CoCaptainAgentCoordinator {
 
         if policy.expectsStructuredResponse {
             if !directive.diagnostics.isEmpty {
-                if allowAgenticRetry {
+                if agenticRetriesRemaining > 0 {
                     return try await runOnce(
                         userMessage: agenticRetryMessage(
                             for: userMessage,
@@ -216,21 +219,19 @@ public final class CoCaptainAgentCoordinator {
                         purpose: purpose,
                         onVisibleText: onVisibleText,
                         onCodingProgress: onCodingProgress,
-                        allowAgenticRetry: false
+                        agenticRetriesRemaining: agenticRetriesRemaining - 1
                     )
                 }
 
-                return CoCaptainAgentRunResult(
+                return validationFailureResult(
                     preamble: directive.preamble,
-                    payloadMessage: nil,
-                    executionSummary: nil,
-                    reviewBundle: validationReviewBundle(issues: directive.diagnostics)
+                    issues: directive.diagnostics
                 )
             }
 
             // Build/edit requests should produce executable work. If the model only
             // chatted back, retry once with a stronger contract before falling back.
-            if payload == nil, allowAgenticRetry, requiresAgenticWork {
+            if payload == nil, agenticRetriesRemaining > 0, requiresAgenticWork {
                 return try await runOnce(
                     userMessage: agenticRetryMessage(
                         for: userMessage,
@@ -246,7 +247,7 @@ public final class CoCaptainAgentCoordinator {
                     purpose: purpose,
                     onVisibleText: onVisibleText,
                     onCodingProgress: onCodingProgress,
-                    allowAgenticRetry: false
+                    agenticRetriesRemaining: agenticRetriesRemaining - 1
                 )
             }
 
@@ -264,7 +265,7 @@ public final class CoCaptainAgentCoordinator {
                 )
 
                 if !validation.isValid {
-                    if allowAgenticRetry {
+                    if agenticRetriesRemaining > 0 {
                         return try await runOnce(
                             userMessage: agenticRetryMessage(
                                 for: userMessage,
@@ -278,15 +279,13 @@ public final class CoCaptainAgentCoordinator {
                             purpose: purpose,
                             onVisibleText: onVisibleText,
                             onCodingProgress: onCodingProgress,
-                            allowAgenticRetry: false
+                            agenticRetriesRemaining: agenticRetriesRemaining - 1
                         )
                     }
 
-                    return CoCaptainAgentRunResult(
+                    return validationFailureResult(
                         preamble: directive.preamble,
-                        payloadMessage: payload.assistantMessage,
-                        executionSummary: nil,
-                        reviewBundle: validationReviewBundle(issues: validation.issues)
+                        issues: validation.issues
                     )
                 }
             }
@@ -298,11 +297,9 @@ public final class CoCaptainAgentCoordinator {
                 requiresVerificationChecks: false
             )
             if !validation.isValid {
-                return CoCaptainAgentRunResult(
+                return validationFailureResult(
                     preamble: directive.preamble,
-                    payloadMessage: payload.assistantMessage,
-                    executionSummary: nil,
-                    reviewBundle: validationReviewBundle(issues: validation.issues)
+                    issues: validation.issues
                 )
             }
         }
@@ -799,21 +796,25 @@ public final class CoCaptainAgentCoordinator {
         return seenIDs.insert(id).inserted
     }
 
-    /// Wraps a list of validation issue strings into a conflicted `ReviewBundleItem`
-    /// so the user can see *why* the model's response was rejected rather than
-    /// receiving a silent failure or a confusing empty chat bubble.
-    private func validationReviewBundle(issues: [String]) -> ReviewBundleItem {
-        ReviewBundleItem(
-            title: LocalizationManager.shared.localizedString("CoCaptain action needs revision"),
-            items: [
-                PendingReviewItem(
-                    targetLabel: LocalizationManager.shared.localizedString("CoCaptain action contract"),
-                    summary: LocalizationManager.shared.localizedString("The assistant response could not be executed safely."),
-                    preview: issues.joined(separator: "\n"),
-                    status: .conflicted,
-                    source: .nodeEdit(role: .miniApp, section: .srs, operations: [], baseText: "")
-                )
-            ]
+    /// Returns a conversational recovery message when the model response cannot
+    /// be executed. Validation details are logged for diagnostics, not shown in UI.
+    private func validationFailureResult(
+        preamble: String,
+        issues: [String]
+    ) -> CoCaptainAgentRunResult {
+        if !issues.isEmpty {
+            logger.debug("CoCaptain validation failure: \(issues.joined(separator: " | "), privacy: .public)")
+        }
+
+        let encouragement = LocalizationManager.shared.localizedString(
+            "cocaptain.validationFailure.encouragement"
+        )
+
+        return CoCaptainAgentRunResult(
+            preamble: preamble,
+            payloadMessage: encouragement,
+            executionSummary: nil,
+            reviewBundle: nil
         )
     }
 
