@@ -1,6 +1,7 @@
 import Foundation
 
 /// Encodes and stores pending CoCaptain review bundles on a node's agent state.
+@MainActor
 enum NodeAgentReviewPersistence {
     static func decode(from agentState: NodeAgentState) -> [NodeAgentReviewRecord] {
         let decoder = JSONDecoder()
