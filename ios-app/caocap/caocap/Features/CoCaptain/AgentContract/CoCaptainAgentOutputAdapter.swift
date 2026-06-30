@@ -126,7 +126,8 @@ public struct CoCaptainFunctionCallAgentAdapter {
                 continue
             }
 
-            guard let actionID = nonEmptyArgument("actionId", in: functionCall) else {
+            guard let actionID = nonEmptyArgument("actionId", in: functionCall)
+                ?? nonEmptyArgument("action_id", in: functionCall) else {
                 diagnostics.append("Function call `\(functionCall.name)` is missing `actionId`.")
                 continue
             }

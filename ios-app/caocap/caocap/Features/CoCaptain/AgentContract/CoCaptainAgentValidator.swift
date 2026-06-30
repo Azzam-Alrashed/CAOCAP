@@ -28,6 +28,11 @@ public struct CoCaptainAgentValidator {
     ) -> CoCaptainAgentValidationResult {
         var issues: [String] = []
 
+        issues.append(contentsOf: duplicateActionIssues(
+            safeActions: payload.safeActions,
+            pendingActions: payload.pendingActions
+        ))
+
         for action in payload.safeActions {
             guard let id = AppActionID(rawValue: action.actionID) else {
                 issues.append("Unknown safe action id `\(action.actionID)`.")
@@ -81,6 +86,33 @@ public struct CoCaptainAgentValidator {
         }
 
         return CoCaptainAgentValidationResult(issues: issues)
+    }
+
+    private func duplicateActionIssues(
+        safeActions: [CoCaptainAgentAction],
+        pendingActions: [CoCaptainAgentAction]
+    ) -> [String] {
+        var issues: [String] = []
+        var seenSafe = Set<String>()
+        var seenPending = Set<String>()
+
+        for action in safeActions {
+            if !seenSafe.insert(action.actionID).inserted {
+                issues.append("Safe action `\(action.actionID)` is duplicated.")
+            }
+        }
+
+        for action in pendingActions {
+            if !seenPending.insert(action.actionID).inserted {
+                issues.append("Pending action `\(action.actionID)` is duplicated.")
+            }
+        }
+
+        for actionID in seenSafe.intersection(seenPending) {
+            issues.append("Action `\(actionID)` cannot appear in both `safeActions` and `pendingActions`.")
+        }
+
+        return issues
     }
 
     private func validate(
