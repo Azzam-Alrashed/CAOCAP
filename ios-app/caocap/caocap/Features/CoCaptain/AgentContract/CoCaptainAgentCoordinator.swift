@@ -724,6 +724,11 @@ public final class CoCaptainAgentCoordinator {
             reviewBundle: result.reviewBundle
         )
     }
+
+    /// Builds a corrective system message that feeds validation issues back to
+    /// the model along with the original request, giving it a second chance to
+    /// produce a conforming `cocaptain_actions` XML block.
+    private func agenticRetryMessage(for userMessage: String, validationIssues: [String]) -> String {
         let issueList = validationIssues.map { "- \($0)" }.joined(separator: "\n")
 
         return """
@@ -748,10 +753,7 @@ public final class CoCaptainAgentCoordinator {
         """
     }
 
-    /// Builds a corrective system message that feeds validation issues back to
-    /// the model along with the original request, giving it a second chance to
-    /// produce a conforming `cocaptain_actions` XML block.
-    private func agenticRetryMessage(for userMessage: String, validationIssues: [String]) -> String {
+    /// Guards against duplicate function-call events that can be emitted by the
     /// streaming SDK when a turn is retried or partially flushed.
     ///
     /// Function calls without an `id` are always accepted because they cannot
