@@ -55,6 +55,14 @@ public final class CoCaptainViewModel {
         return lastMessage.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    /// Count of review items still awaiting user approval in the current timeline.
+    public var pendingReviewCount: Int {
+        items.reduce(into: 0) { count, item in
+            guard case .reviewBundle(let bundle) = item.content else { return }
+            count += bundle.items.filter { $0.status == .pending }.count
+        }
+    }
+
     public init(
         agentCoordinator: CoCaptainAgentCoordinator? = nil
     ) {
