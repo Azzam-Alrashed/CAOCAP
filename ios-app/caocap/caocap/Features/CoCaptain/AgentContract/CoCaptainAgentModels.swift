@@ -56,14 +56,42 @@ public enum CoCaptainTurnPurpose: Hashable {
     }
 }
 
+/// Merges onboarding purpose with per-turn user intent to select execution behavior.
+public struct CoCaptainTurnPlan: Equatable {
+    public let purpose: CoCaptainTurnPurpose
+    public let intent: CoCaptainTurnIntent
+
+    public init(purpose: CoCaptainTurnPurpose, intent: CoCaptainTurnIntent) {
+        self.purpose = purpose
+        self.intent = intent
+    }
+
+    /// Onboarding purposes always stay conversational. Standard turns map intent
+    /// to agentic or advisory execution.
+    var effectivePolicy: CoCaptainTurnExecutionPolicy {
+        switch purpose {
+        case .onboardingWelcome, .onboardingBuildHandoff:
+            return .conversational
+        case .standard:
+            switch intent {
+            case .mutatingWork:
+                return .agentic
+            case .advisory, .generalChat:
+                return .advisory
+            }
+        }
+    }
+}
+
 /// Controls whether a CoCaptain turn runs the full agent contract or stays conversational.
 ///
-/// Derived from `CoCaptainTurnPurpose` so prompt instructions and execution behavior
+/// Derived from `CoCaptainTurnPlan` so prompt instructions and execution behavior
 /// stay aligned in one place.
 struct CoCaptainTurnExecutionPolicy: Equatable {
     enum Kind: Equatable {
         case conversational
         case agentic
+        case advisory
     }
 
     let kind: Kind
@@ -78,6 +106,14 @@ struct CoCaptainTurnExecutionPolicy: Equatable {
         enforcesExecutableWork: true,
         executesActions: true,
         allowsAgenticRetry: true
+    )
+
+    static let advisory = CoCaptainTurnExecutionPolicy(
+        kind: .advisory,
+        expectsStructuredResponse: true,
+        enforcesExecutableWork: false,
+        executesActions: true,
+        allowsAgenticRetry: false
     )
 
     static let conversational = CoCaptainTurnExecutionPolicy(
