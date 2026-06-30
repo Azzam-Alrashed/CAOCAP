@@ -66,7 +66,8 @@ public final class LLMService {
             expectsStructuredResponse: false,
             availableActions: [],
             scope: .project,
-            purpose: .standard
+            purpose: .standard,
+            turnIntent: .generalChat
         )
 
         return AsyncThrowingStream { continuation in
@@ -109,7 +110,8 @@ public final class LLMService {
         expectsStructuredResponse: Bool,
         availableActions: [AppActionDefinition],
         scope: CoCaptainAgentScope = .project,
-        purpose: CoCaptainTurnPurpose = .standard
+        purpose: CoCaptainTurnPurpose = .standard,
+        turnIntent: CoCaptainTurnIntent = .generalChat
     ) -> AsyncThrowingStream<CoCaptainLLMStreamEvent, Error> {
         let prompt = buildPrompt(
             userMessage: userMessage,
@@ -117,7 +119,8 @@ public final class LLMService {
             expectsStructuredResponse: expectsStructuredResponse,
             availableActions: availableActions,
             scope: scope,
-            purpose: purpose
+            purpose: purpose,
+            turnIntent: turnIntent
         )
 
         if case .failure(let error) = tokenUsageLimiter.preflight(
@@ -297,7 +300,8 @@ public final class LLMService {
         expectsStructuredResponse: Bool,
         availableActions: [AppActionDefinition],
         scope: CoCaptainAgentScope,
-        purpose: CoCaptainTurnPurpose
+        purpose: CoCaptainTurnPurpose,
+        turnIntent: CoCaptainTurnIntent
     ) -> String {
         var parts: [String] = []
 
@@ -403,6 +407,10 @@ public final class LLMService {
 
         if let purposeInstructions = purpose.promptInstructions {
             parts.append(purposeInstructions)
+        }
+
+        if let intentInstructions = turnIntent.promptInstructions {
+            parts.append(intentInstructions)
         }
 
         parts.append("User request:\n\(userMessage)")

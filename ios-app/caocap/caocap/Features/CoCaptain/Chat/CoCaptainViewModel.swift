@@ -32,6 +32,8 @@ public final class CoCaptainViewModel {
     @ObservationIgnored
     private let commandIntentResolver = CommandIntentResolver()
     @ObservationIgnored
+    private let turnIntentResolver = CoCaptainTurnIntentResolver()
+    @ObservationIgnored
     private let patchEngine = NodePatchEngine()
     @ObservationIgnored
     private var lastStoreFileName: String?
@@ -209,12 +211,17 @@ public final class CoCaptainViewModel {
             }
 
             do {
+                let turnPlan = CoCaptainTurnPlan(
+                    purpose: purpose,
+                    intent: turnIntentResolver.resolve(text)
+                )
                 let result = try await agentCoordinator.run(
                     userMessage: text,
                     store: store,
                     dispatcher: actionDispatcher,
                     scope: scope,
                     purpose: purpose,
+                    turnPlan: turnPlan,
                     onCodingProgress: { [weak self] state in
                         self?.updateCodingRun(state)
                     },
