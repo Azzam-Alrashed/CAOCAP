@@ -145,7 +145,7 @@ public final class CoCaptainAgentCoordinator {
             guard purpose != .onboardingBuildHandoff else { throw error }
             // Fallback: if the structured+context prompt fails (often with opaque
             // `GenerateContentError error 0`), retry with a minimal prompt so chat stays usable.
-            return try await runOnce(
+            let fallbackResult = try await runOnce(
                 userMessage: userMessage,
                 context: nil,
                 expectsStructuredResponse: false,
@@ -155,7 +155,13 @@ public final class CoCaptainAgentCoordinator {
                 purpose: purpose,
                 onVisibleText: onVisibleText,
                 onCodingProgress: onCodingProgress,
-                allowAgenticRetry: false
+                allowAgenticRetry: false,
+                connectionFallback: true
+            )
+            return connectionFallbackResult(
+                fallbackResult,
+                userMessage: userMessage,
+                purpose: purpose
             )
         }
     }
@@ -176,7 +182,8 @@ public final class CoCaptainAgentCoordinator {
         purpose: CoCaptainTurnPurpose,
         onVisibleText: @escaping (String) -> Void,
         onCodingProgress: @escaping (CoCaptainCodingRunState) -> Void,
-        allowAgenticRetry: Bool
+        allowAgenticRetry: Bool,
+        connectionFallback: Bool = false
     ) async throws -> CoCaptainAgentRunResult {
         let directive = try await generateDirective(
             userMessage: userMessage,
@@ -188,7 +195,7 @@ public final class CoCaptainAgentCoordinator {
             onVisibleText: onVisibleText
         )
         let policy = purpose.executionPolicy
-        let payload = policy.expectsStructuredResponse ? directive.payload : nil
+        let payload = (policy.expectsStructuredResponse || connectionFallback) ? directive.payload : nil
 
         let requiresAgenticWork =
             policy.enforcesExecutableWork && shouldRequireAgenticWork(for: userMessage)
@@ -283,13 +290,29 @@ public final class CoCaptainAgentCoordinator {
                     )
                 }
             }
+        } else if connectionFallback, let payload, policy.executesActions {
+            let validation = validator.validate(
+                payload: payload,
+                dispatcher: dispatcher,
+                requiresAgenticWork: requiresAgenticWork,
+                requiresVerificationChecks: false
+            )
+            if !validation.isValid {
+                return CoCaptainAgentRunResult(
+                    preamble: directive.preamble,
+                    payloadMessage: payload.assistantMessage,
+                    executionSummary: nil,
+                    reviewBundle: validationReviewBundle(issues: validation.issues)
+                )
+            }
         }
 
         if !policy.executesActions {
             return conversationalRunResult(from: directive)
         }
 
-        if let payload,
+        if !connectionFallback,
+           let payload,
            let target = codingLoopTarget(payload: payload, store: store, purpose: purpose) {
             do {
                 return try await runVerifiedCodingLoop(
@@ -315,7 +338,8 @@ public final class CoCaptainAgentCoordinator {
             }
         }
 
-        let executionSummary = executeSafeActions(payload?.safeActions ?? [], dispatcher: dispatcher, store: store)
+        let safeActions = connectionFallback ? [] : (payload?.safeActions ?? [])
+        let executionSummary = executeSafeActions(safeActions, dispatcher: dispatcher, store: store)
         let reviewBundle = buildReviewBundle(
             pendingActions: payload?.pendingActions ?? [],
             nodeEdits: payload?.nodeEdits ?? [],
@@ -658,9 +682,9 @@ public final class CoCaptainAgentCoordinator {
     /// Used to decide whether a chat-only model response is treated as a
     /// contract violation that warrants an agentic retry.
     private func shouldRequireAgenticWork(for userMessage: String) -> Bool {
-        let normalized = userMessage
-            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
-            .lowercased()
+        let normalized = CommandIntentResolver.normalizedCommandInput(userMessage)
+        guard !CommandIntentResolver.hasNegation(in: normalized) else { return false }
+
         let triggers = [
             "build",
             "make",
@@ -677,9 +701,6 @@ public final class CoCaptainAgentCoordinator {
             "write",
             "rewrite",
             "draft",
-            "open",
-            "go",
-            "show",
             "navigate",
             "settings",
             "root",
@@ -728,6 +749,32 @@ public final class CoCaptainAgentCoordinator {
         Original user request:
         \(userMessage)
         """
+    }
+
+    /// When the structured prompt fails, annotate the fallback result so users
+    /// know executable work may not have been staged.
+    private func connectionFallbackResult(
+        _ result: CoCaptainAgentRunResult,
+        userMessage: String,
+        purpose: CoCaptainTurnPurpose
+    ) -> CoCaptainAgentRunResult {
+        guard purpose.executionPolicy.enforcesExecutableWork,
+              shouldRequireAgenticWork(for: userMessage),
+              result.reviewBundle == nil,
+              result.executionSummary == nil else {
+            return result
+        }
+
+        let notice = LocalizationManager.shared.localizedString(
+            "CoCaptain could not reach the model with full project context. Your request was answered in chat only — actions and edits were not applied. Try again when connected."
+        )
+        let preamble = result.preamble.isEmpty ? notice : "\(result.preamble)\n\n\(notice)"
+        return CoCaptainAgentRunResult(
+            preamble: preamble,
+            payloadMessage: result.payloadMessage,
+            executionSummary: result.executionSummary,
+            reviewBundle: result.reviewBundle
+        )
     }
 
     /// Guards against duplicate function-call events that can be emitted by the
@@ -805,6 +852,26 @@ public final class CoCaptainAgentCoordinator {
         for action in pendingActions {
             guard let id = AppActionID(rawValue: action.actionID),
                   let definition = dispatcher?.definition(for: id) else {
+                let reason = AppActionID(rawValue: action.actionID) == nil
+                    ? LocalizationManager.shared.localizedString(
+                        "Unknown pending action id `%@`.",
+                        arguments: [action.actionID]
+                    )
+                    : LocalizationManager.shared.localizedString(
+                        "Pending action `%@` is not available in the current context.",
+                        arguments: [action.actionID]
+                    )
+                items.append(
+                    PendingReviewItem(
+                        targetLabel: action.actionID,
+                        summary: LocalizationManager.shared.localizedString(
+                            "The assistant proposed an action that could not be staged for review."
+                        ),
+                        preview: reason,
+                        status: .conflicted,
+                        source: .nodeEdit(role: .miniApp, section: .srs, operations: [], baseText: "")
+                    )
+                )
                 continue
             }
 
