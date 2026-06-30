@@ -456,7 +456,7 @@ public struct CoCaptainParsedResponse: Hashable {
 
 /// Tracks the lifecycle of a single `PendingReviewItem` as the user
 /// approves, rejects, or encounters a conflict.
-public enum ReviewItemStatus: String, Hashable {
+public enum ReviewItemStatus: String, Hashable, Codable {
     /// The item has not yet been acted upon by the user.
     case pending
     /// The user approved the item and it was applied to the store.
@@ -526,9 +526,9 @@ public struct CoCaptainProductCTAItem: Identifiable, Hashable {
 
 /// Describes the origin of a `PendingReviewItem`, driving how the
 /// coordinator applies or rejects the item when the user acts on it.
-public enum PendingReviewSource: Hashable {
+public enum PendingReviewSource: Hashable, Codable {
     /// An app-level action (e.g. navigate, open settings) waiting for approval.
-    case appAction(AppActionID, [String: String]? = nil)
+    case appAction(AppActionID, [String: String]?)
     /// A proposed node text edit. `baseText` is captured at proposal time so
     /// `NodePatchEngine` can detect intervening changes and flag conflicts.
     case nodeEdit(role: NodeRole, section: CoCaptainNodeEditProposal.MiniAppSection, operations: [NodePatchOperation], baseText: String)
@@ -536,7 +536,7 @@ public enum PendingReviewSource: Hashable {
 
 /// One actionable change within a `ReviewBundleItem`, representing either a
 /// pending app action or a proposed node edit that the user can approve or reject.
-public struct PendingReviewItem: Identifiable, Hashable {
+public struct PendingReviewItem: Identifiable, Hashable, Codable {
     public let id: UUID
     /// The node the edit targets, if applicable. Used to scroll the canvas
     /// to the relevant node when the review card is tapped.
@@ -581,7 +581,7 @@ public struct PendingReviewItem: Identifiable, Hashable {
 ///
 /// The bundle appears as one timeline card with per-item Apply/Reject controls
 /// and bulk Apply All / Reject All buttons.
-public struct ReviewBundleItem: Identifiable, Hashable {
+public struct ReviewBundleItem: Identifiable, Hashable, Codable {
     public let id: UUID
     /// The heading shown at the top of the review card in the timeline.
     public let title: String
@@ -597,6 +597,20 @@ public struct ReviewBundleItem: Identifiable, Hashable {
         self.id = id
         self.title = title
         self.items = items
+    }
+}
+
+/// A review bundle persisted on a node so pending approvals survive scope changes.
+public struct NodeAgentReviewRecord: Codable, Equatable, Hashable, Identifiable {
+    public var id: UUID { timelineItemID }
+    public let timelineItemID: UUID
+    public var bundle: ReviewBundleItem
+    public let createdAt: Date
+
+    public init(timelineItemID: UUID, bundle: ReviewBundleItem, createdAt: Date = Date()) {
+        self.timelineItemID = timelineItemID
+        self.bundle = bundle
+        self.createdAt = createdAt
     }
 }
 
