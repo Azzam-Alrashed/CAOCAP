@@ -658,7 +658,9 @@ public final class CoCaptainAgentCoordinator {
     /// Used to decide whether a chat-only model response is treated as a
     /// contract violation that warrants an agentic retry.
     private func shouldRequireAgenticWork(for userMessage: String) -> Bool {
-        let lowercased = userMessage.lowercased()
+        let normalized = userMessage
+            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+            .lowercased()
         let triggers = [
             "build",
             "make",
@@ -680,10 +682,24 @@ public final class CoCaptainAgentCoordinator {
             "show",
             "navigate",
             "settings",
-            "root"
+            "root",
+            "انشاء",
+            "اضف",
+            "أضف",
+            "عدل",
+            "غير",
+            "حدث",
+            "اصلح",
+            "اكتب",
+            "وثق",
+            "افتح",
+            "اذهب",
+            "اعرض",
+            "الاعدادات",
+            "الإعدادات"
         ]
 
-        return triggers.contains { lowercased.contains($0) }
+        return triggers.contains { normalized.contains($0) }
     }
 
     /// Builds a corrective system message that feeds validation issues back to
