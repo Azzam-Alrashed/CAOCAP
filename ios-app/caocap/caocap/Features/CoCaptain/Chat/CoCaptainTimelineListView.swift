@@ -60,6 +60,12 @@ struct CoCaptainTimelineListView: View {
             .onAppear {
                 restoreScrollPosition(proxy: proxy)
             }
+            .onChange(of: viewModel.lastScrollPosition) { _, position in
+                guard let position else { return }
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
+                    proxy.scrollTo(position, anchor: .center)
+                }
+            }
             }
         }
     }

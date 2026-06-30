@@ -621,6 +621,7 @@ final class AppSessionCoordinator {
     private func flyToNode(_ nodeId: UUID) {
         guard let node = router.activeStore.nodes.first(where: { $0.id == nodeId }) else { return }
         let targetScale = flyToTargetScale(for: node, nodeId: nodeId)
+        HapticsManager.shared.trigger(.light)
         withAnimation(.spring(response: 0.6, dampingFraction: 0.85)) {
             viewport.flyTo(nodePosition: node.position, containerSize: containerSize, targetScale: targetScale)
         }
