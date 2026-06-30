@@ -133,7 +133,8 @@ public struct CoCaptainFunctionCallAgentAdapter {
             }
 
             // Default to pending so unknown modes don't silently auto-execute.
-            let executionMode = nonEmptyArgument("executionMode", in: functionCall) ?? "pending"
+            let executionMode = (nonEmptyArgument("executionMode", in: functionCall) ?? "pending")
+                .lowercased()
             let action = CoCaptainAgentAction(actionID: actionID)
 
             switch executionMode {
