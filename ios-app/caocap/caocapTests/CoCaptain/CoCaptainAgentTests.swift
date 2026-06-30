@@ -1418,7 +1418,7 @@ struct CoCaptainAgentTests {
     }
 
     @MainActor
-    @Test func coordinatorReturnsValidationReviewWhenRetryPayloadIsStillInvalid() async throws {
+    @Test func coordinatorReturnsFriendlyMessageWhenRetryPayloadIsStillInvalid() async throws {
         let dispatcher = TestActionDispatcher()
         let llm = TestLLMClient(
             response:
@@ -1441,8 +1441,9 @@ struct CoCaptainAgentTests {
 
         #expect(dispatcher.executedActionIDs.isEmpty)
         #expect(result.executionSummary == nil)
-        #expect(result.reviewBundle?.items.first?.status == .conflicted)
-        #expect(result.reviewBundle?.items.first?.preview.contains("Unknown safe action id `launch_rocket`.") == true)
+        #expect(result.reviewBundle == nil)
+        #expect(result.payloadMessage?.contains("another run") == true)
+        #expect(llm.receivedMessages.count == 3)
     }
 
     @MainActor

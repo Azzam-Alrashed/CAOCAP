@@ -903,6 +903,23 @@
         }
       }
     },
+    "cocaptain.validationFailure.encouragement" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I hit a snag turning that into a ready-to-review change. Tap send again and I'll take another run at it."
+          }
+        },
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "واجهت مشكلة في تحويل ذلك إلى تغيير جاهز للمراجعة. اضغط إرسال مرة أخرى وسأحاول من جديد."
+          }
+        }
+      }
+    },
     "CoCaptain AI" : {
 
     },
