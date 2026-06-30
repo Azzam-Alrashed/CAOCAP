@@ -882,7 +882,7 @@ public final class CoCaptainAgentCoordinator {
                         "Awaiting approval to run %@.",
                         arguments: [definition.localizedTitle]
                     ),
-                    preview: action.args?.description ?? definition.localizedTitle,
+                    preview: actionPreview(for: action, definition: definition),
                     source: .appAction(id, action.args)
                 )
             )
@@ -935,6 +935,17 @@ public final class CoCaptainAgentCoordinator {
             title: reviewBundleTitle(for: items),
             items: items
         )
+    }
+
+    private func actionPreview(for action: CoCaptainAgentAction, definition: AppActionDefinition) -> String {
+        guard let args = action.args, !args.isEmpty else {
+            return definition.localizedTitle
+        }
+        let formattedArgs = args
+            .sorted { $0.key < $1.key }
+            .map { "\($0.key)=\($0.value)" }
+            .joined(separator: ", ")
+        return "\(definition.localizedTitle)\n\(formattedArgs)"
     }
 
     private func reviewBundleTitle(for items: [PendingReviewItem]) -> String {
