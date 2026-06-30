@@ -32,6 +32,10 @@ public enum AppActionID: String, CaseIterable, Identifiable, Codable, Hashable {
     case toggleHUD = "toggle_hud"
     case showActionsList = "show_actions_list"
     case createSubCanvas = "create_sub_canvas"
+    case openActivity = "open_activity"
+    case openDaily = "open_daily"
+    case openWhatsApp = "open_whatsapp"
+    case openAppIcon = "open_app_icon"
 
     public var id: String { rawValue }
 
@@ -43,6 +47,11 @@ public enum AppActionID: String, CaseIterable, Identifiable, Codable, Hashable {
         case .openProfile: return .openProfile
         case .summonCoCaptain: return .summonCoCaptain
         case .proSubscription: return .proSubscription
+        case .openActivity: return .openActivity
+        case .openDaily: return .openDaily
+        case .openWhatsApp: return .openWhatsApp
+        case .help: return .openHelp
+        case .openAppIcon: return .openAppIcon
         default: return nil
         }
     }
@@ -261,7 +270,8 @@ public final class AppActionDispatcher: AppActionPerforming {
             icon: "questionmark.circle",
             category: .assistant,
             isMutating: false,
-            allowsAutonomousExecution: true
+            allowsAutonomousExecution: false,
+            canPinToCanvas: true
         ),
         AppActionDefinition(
             id: .organizeNodes,
@@ -302,6 +312,42 @@ public final class AppActionDispatcher: AppActionPerforming {
             category: .project,
             isMutating: true,
             allowsAutonomousExecution: false
+        ),
+        AppActionDefinition(
+            id: .openActivity,
+            title: "Activity",
+            icon: "chart.bar.xaxis",
+            category: .assistant,
+            isMutating: false,
+            allowsAutonomousExecution: false,
+            canPinToCanvas: true
+        ),
+        AppActionDefinition(
+            id: .openDaily,
+            title: "Daily",
+            icon: "rosette",
+            category: .assistant,
+            isMutating: false,
+            allowsAutonomousExecution: false,
+            canPinToCanvas: true
+        ),
+        AppActionDefinition(
+            id: .openWhatsApp,
+            title: "WhatsApp",
+            icon: "message.fill",
+            category: .assistant,
+            isMutating: false,
+            allowsAutonomousExecution: false,
+            canPinToCanvas: true
+        ),
+        AppActionDefinition(
+            id: .openAppIcon,
+            title: "App Icon",
+            icon: "app.fill",
+            category: .assistant,
+            isMutating: false,
+            allowsAutonomousExecution: false,
+            canPinToCanvas: true
         )
     ]
 

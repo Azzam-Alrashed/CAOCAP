@@ -2,6 +2,7 @@ import Foundation
 import Observation
 import OSLog
 import SwiftUI
+import UIKit
 import UniformTypeIdentifiers
 
 /// Orchestrates root-session state: routing, actions, palette binding, sheets, and onboarding hooks.
@@ -21,6 +22,8 @@ final class AppSessionCoordinator {
     var showingProfile = false
     var showingActivity = false
     var showingDaily = false
+    var showingHelp = false
+    var showingAppIconPicker = false
     var showConfetti = false
 
     var currentScale: CGFloat = 1.0
@@ -151,6 +154,21 @@ final class AppSessionCoordinator {
         onboarding.startIfNeeded()
     }
 
+    func openTutorialFromHelp() {
+        showingHelp = false
+        handleSubCanvasNavigation(fileName: RootCanvasProvider.tutorialFileName)
+    }
+
+    func restartTutorialFromHelp() {
+        showingHelp = false
+        restartTutorial()
+    }
+
+    func openDemoCanvasFromHelp(fileName: String) {
+        showingHelp = false
+        handleSubCanvasNavigation(fileName: fileName)
+    }
+
     private func restoreTutorialPortalIfNeeded() {
         guard let tutorial = RootCanvasProvider.nodes.first(where: {
             $0.id == RootCanvasProvider.tutorialNodeID
@@ -223,23 +241,8 @@ final class AppSessionCoordinator {
     // MARK: - Node Actions
 
     func handleNodeAction(_ action: NodeAction) {
-        switch action {
-        case .navigateRoot:
-            router.navigate(to: .root, animated: true)
-            currentScale = 1.0
-        case .openSettings:
-            _ = actionDispatcher.perform(.openSettings, source: .user)
-        case .openProfile:
-            _ = actionDispatcher.perform(.openProfile, source: .user)
-        case .summonCoCaptain:
-            _ = actionDispatcher.perform(.summonCoCaptain, source: .user)
-        case .proSubscription:
-            _ = actionDispatcher.perform(.proSubscription, source: .user)
-        case .openActivity:
-            showingActivity = true
-        case .openDaily:
-            showingDaily = true
-        }
+        guard let actionID = action.appActionID else { return }
+        _ = actionDispatcher.perform(actionID, source: .user)
     }
 
     func handleSubCanvasNavigation(fileName: String) {
@@ -508,6 +511,23 @@ final class AppSessionCoordinator {
         }
         actionDispatcher.register(.openProfile) { [weak self] in
             self?.showingProfile = true
+        }
+        actionDispatcher.register(.openActivity) { [weak self] in
+            self?.showingActivity = true
+        }
+        actionDispatcher.register(.openDaily) { [weak self] in
+            self?.showingDaily = true
+        }
+        actionDispatcher.register(.openWhatsApp) {
+            if let url = SupportContact.whatsAppURL {
+                UIApplication.shared.open(url)
+            }
+        }
+        actionDispatcher.register(.help) { [weak self] in
+            self?.showingHelp = true
+        }
+        actionDispatcher.register(.openAppIcon) { [weak self] in
+            self?.showingAppIconPicker = true
         }
         actionDispatcher.register(.openSnapshotBrowser) { [weak self] in
             self?.showingSnapshotBrowser = true

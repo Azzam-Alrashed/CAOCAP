@@ -59,7 +59,7 @@ public class AppRouter {
             fileName: CanvasFileNaming.rootFileName,
             projectName: "Root",
             initialNodes: RootCanvasProvider.nodes,
-            initialViewportScale: 0.5,
+            initialViewportScale: RootCanvasProvider.defaultViewportScale,
             activityRecorder: resolvedActivityRecorder
         )
     }

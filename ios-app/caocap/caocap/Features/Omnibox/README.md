@@ -30,14 +30,14 @@ Some actions can be pinned as shortcut nodes on the active canvas:
 - Open Profile
 - Summon Co-Captain
 - Pro Subscription
+- Activity
+- Daily
+- WhatsApp
+- Help & Documentation
 
 Pin-able rows show an **Add to canvas** affordance. Choosing it calls `ProjectStore.addShortcutNode(for:definition:)` and creates a standard node at the viewport center with the matching `NodeAction`. Selecting the row normally still runs the action immediately through the dispatcher.
 
-All other actions are execute-only from the omnibox.
-
-The root Activity node is intentionally a canvas-owned system action rather
-than an Omnibox command. Its heatmap is spatial dashboard content, while the
-Omnibox remains focused on actions and navigation.
+Root canvas nodes with rich previews (Activity heatmap, Daily progress) remain spatial dashboard content on the home grid. Their actions still route through `AppActionDispatcher` like every other `NodeAction`. The Help node opens the in-app help center sheet.
 
 ## Intent Matching
 
@@ -67,6 +67,7 @@ Preserve this boundary when adding commands.
 ## Editing Guidance
 
 - Add new actions to `AppActionID`, `availableActions`, `configure(...)`, and the dispatcher `switch`.
+- For canvas shortcut nodes, also add `NodeAction.appActionID` in `NodeAction+AppAction.swift`, register the handler in `AppSessionCoordinator.configureActions()`, and wire `pinableNodeAction` when the action should be pinnable.
 - Add aliases in `CommandIntentResolver` only when the phrase is unlikely to be ordinary chat.
 - Set `canPinToCanvas` and `AppActionID.pinableNodeAction` only for shortcut actions that should live on the graph.
 - Keep `CommandPaletteView` presentational; search and selection state belong in the view model.

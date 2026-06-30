@@ -232,6 +232,48 @@ public struct CommandIntentResolver {
                 "انشاء لوحة فرعية",
                 "لوحة فرعية جديدة"
             ]
+        case .openActivity:
+            return [
+                "open activity",
+                "activity",
+                "show activity",
+                "النشاط",
+                "الفعالية",
+                "افتح النشاط",
+                "سجل النشاط"
+            ]
+        case .openDaily:
+            return [
+                "open daily",
+                "daily",
+                "daily challenges",
+                "اليومي",
+                "التحديات اليومية",
+                "افتح اليومي",
+                "التحدي اليومي"
+            ]
+        case .openWhatsApp:
+            return [
+                "open whatsapp",
+                "whatsapp",
+                "message azzam",
+                "contact azzam",
+                "واتساب",
+                "واتس",
+                "افتح واتساب",
+                "راسل عزام"
+            ]
+        case .openAppIcon:
+            return [
+                "app icon",
+                "change app icon",
+                "alternate icon",
+                "home screen icon",
+                "ايقونة التطبيق",
+                "أيقونة التطبيق",
+                "غير ايقونة التطبيق",
+                "تغيير ايقونة التطبيق"
+            ]
         }
     }
 

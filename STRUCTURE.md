@@ -46,6 +46,7 @@ caocap/
 ├── Features/
 │   ├── Activity/
 │   ├── Daily/
+│   ├── Help/
 │   ├── Auth/
 │   ├── Canvas/
 │   │   ├── Components/
@@ -261,6 +262,8 @@ Decoupled backend engines and API clients specific to the CoCaptain agentic flow
 | `CommandIntentResolver.swift` | Maps plain-language command palette and CoCaptain prompts to available app actions. |
 | `ProjectContextBuilder.swift` | Logic to "harvest" the spatial graph and serialize it into a grounded prompt context for the LLM. |
 | `NodePatchEngine.swift` | A precision editing engine that previews partial patches (replace/insert/append) for Mini-App SRS and Code sections. |
+| `MiniAppVerificationService.swift` | Runs staged Mini-App code in an ephemeral offline WebView, captures runtime diagnostics, and evaluates model-authored behavior checks. |
+| `VerifiedCodingLoopFeature.swift` | TestFlight/Debug rollout gate for the verified generate-test-repair loop. |
 
 `ProjectStore` and `ProjectPersistenceService` also maintain checkpoint metadata and saved project snapshots. The infrastructure is used to protect work before significant AI or mutation flows; a full user-facing snapshot browser remains roadmap work.
 
@@ -291,6 +294,17 @@ Local-first building history surfaced by the protected Activity node on the root
 |---|---|
 | `ActivityHeatmapView.swift` | Reusable 17×7 Sunday-to-Saturday save-activity grid with five intensity levels. |
 | `ActivityHistoryView.swift` | Expanded activity sheet with recent totals, active days, and the heatmap legend. |
+
+---
+
+#### `Help/`
+In-app help center opened from the Omnibox and the root Help node.
+
+| File | Responsibility |
+|---|---|
+| `HelpManifest.swift` | Static tutorials, Omnibox shortcut examples, and guide articles. |
+| `HelpView.swift` | Help sheet with sections and navigation callbacks. |
+| `HelpArticleView.swift` | Scrollable getting-started article pages. |
 
 ---
 
@@ -345,9 +359,10 @@ The spatial runtime — the heart of CAOCAP.
 
 | File | Responsibility |
 |---|---|
-| `RootCanvasProvider.swift` | Defines the stable six-node root column, including Activity, and curated child-canvas filenames. |
+| `RootCanvasProvider.swift` | Defines the stable eight-node root grid, including Activity and Daily, and curated child-canvas filenames. |
 | `TutorialCanvasProvider.swift` | Defines the clean workspace used by the interactive tutorial. |
 | `PacManCanvasProvider.swift` | Defines the self-contained, touch-first Pac-Man example Mini-App. |
+| `XOCanvasProvider.swift` | Defines the self-contained, touch-first tic-tac-toe example Mini-App. |
 | `ProjectTemplateProvider.swift` | Supplies the clean default project state and manual Mini-App boilerplate. |
 
 ---

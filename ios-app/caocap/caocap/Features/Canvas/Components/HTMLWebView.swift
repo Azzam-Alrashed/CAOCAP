@@ -10,6 +10,20 @@ struct HTMLWebView: UIViewRepresentable {
     /// `MiniApp` model object.
     let htmlContent: String
 
+    final class Coordinator {
+        private var loadedHTML: String?
+
+        func shouldLoad(_ html: String) -> Bool {
+            guard loadedHTML != html else { return false }
+            loadedHTML = html
+            return true
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
     /// Creates and configures the underlying `WKWebView`.
     /// - Inline media playback is enabled so that `<video>` and `<audio>` tags
     ///   work without requiring the user to enter full-screen.
@@ -31,6 +45,7 @@ struct HTMLWebView: UIViewRepresentable {
     /// Using `loadHTMLString` with a `nil` base URL restricts the page to the
     /// `about:blank` origin, which prevents local-file access from the HTML.
     func updateUIView(_ uiView: WKWebView, context: Context) {
+        guard context.coordinator.shouldLoad(htmlContent) else { return }
         uiView.loadHTMLString(htmlContent, baseURL: nil)
     }
 }

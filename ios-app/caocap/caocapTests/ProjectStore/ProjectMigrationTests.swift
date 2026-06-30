@@ -291,9 +291,10 @@ struct ProjectMigrationTests {
         let migratedRoot = try persistence.load(fileName: CanvasFileNaming.rootFileName)
         #expect(migratedRoot.nodes == RootCanvasProvider.nodes)
         #expect(migratedRoot.viewportOffset == .zero)
-        #expect(migratedRoot.viewportScale == 0.5)
+        #expect(migratedRoot.viewportScale == RootCanvasProvider.defaultViewportScale)
         #expect(persistence.projectExists(fileName: RootCanvasProvider.tutorialFileName))
         #expect(persistence.projectExists(fileName: RootCanvasProvider.pacManFileName))
+        #expect(persistence.projectExists(fileName: RootCanvasProvider.xoFileName))
 
         let customizedRoot = ProjectSnapshot(
             projectName: "Customized",
@@ -522,9 +523,12 @@ struct ProjectMigrationTests {
         CuratedRootCanvasMigration.runIfNeeded(persistence: persistence, defaults: defaults)
 
         let migratedRoot = try persistence.load(fileName: CanvasFileNaming.rootFileName)
-        #expect(migratedRoot.nodes.map(\.id) == RootCanvasProvider.nodes.map(\.id))
-        #expect(migratedRoot.nodes.map(\.position) == RootCanvasProvider.nodes.map(\.position))
-        #expect(migratedRoot.nodes.map(\.theme) == RootCanvasProvider.nodes.map(\.theme))
+        let expectedNodes = RootCanvasProvider.nodes.filter {
+            $0.id != RootCanvasProvider.dailyNodeID && $0.id != RootCanvasProvider.xoNodeID
+        }
+        #expect(migratedRoot.nodes.map(\.id) == expectedNodes.map(\.id))
+        #expect(migratedRoot.nodes.map(\.position) == expectedNodes.map(\.position))
+        #expect(migratedRoot.nodes.map(\.theme) == expectedNodes.map(\.theme))
     }
 
     @Test func curatedRootMigrationInstallsDailyNodeOnLaunchLayout() throws {
@@ -535,14 +539,11 @@ struct ProjectMigrationTests {
         let defaults = try #require(UserDefaults(suiteName: suiteName))
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
-        let launchNodeIDs = [
-            RootCanvasProvider.profileNodeID,
-            RootCanvasProvider.proNodeID,
-            RootCanvasProvider.settingsNodeID,
-            RootCanvasProvider.pacManNodeID,
-            RootCanvasProvider.tutorialNodeID,
-            RootCanvasProvider.activityNodeID
-        ]
+        let launchNodeIDs = RootCanvasProvider.nodes
+            .filter {
+                $0.id != RootCanvasProvider.dailyNodeID && $0.id != RootCanvasProvider.xoNodeID
+            }
+            .map(\.id)
         let launchNodes = launchNodeIDs.enumerated().compactMap { index, id -> SpatialNode? in
             guard var node = RootCanvasProvider.nodes.first(where: { $0.id == id }) else { return nil }
             node.position = RootCanvasProvider.verticalColumnPosition(index: index, count: 6)
@@ -560,8 +561,9 @@ struct ProjectMigrationTests {
         CuratedRootCanvasMigration.runIfNeeded(persistence: persistence, defaults: defaults)
 
         let migratedRoot = try persistence.load(fileName: CanvasFileNaming.rootFileName)
-        #expect(migratedRoot.nodes.map(\.id) == RootCanvasProvider.nodes.map(\.id))
-        #expect(migratedRoot.nodes.map(\.position) == RootCanvasProvider.nodes.map(\.position))
+        let expectedNodes = RootCanvasProvider.nodes.filter { $0.id != RootCanvasProvider.xoNodeID }
+        #expect(migratedRoot.nodes.map(\.id) == expectedNodes.map(\.id))
+        #expect(migratedRoot.nodes.map(\.position) == expectedNodes.map(\.position))
     }
 
     @Test func curatedRootMigrationUpdatesVerticalColumnToConstellationLayout() throws {
@@ -572,11 +574,12 @@ struct ProjectMigrationTests {
         let defaults = try #require(UserDefaults(suiteName: suiteName))
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
-        let verticalNodes = RootCanvasProvider.nodes.enumerated().map { index, node -> SpatialNode in
+        let preGridNodes = RootCanvasProvider.nodes.filter { $0.id != RootCanvasProvider.xoNodeID }
+        let verticalNodes = preGridNodes.enumerated().map { index, node -> SpatialNode in
             var updated = node
             updated.position = RootCanvasProvider.verticalColumnPosition(
                 index: index,
-                count: RootCanvasProvider.nodes.count
+                count: preGridNodes.count
             )
             return updated
         }
@@ -593,7 +596,246 @@ struct ProjectMigrationTests {
         CuratedRootCanvasMigration.runIfNeeded(persistence: persistence, defaults: defaults)
 
         let migratedRoot = try persistence.load(fileName: CanvasFileNaming.rootFileName)
+        #expect(migratedRoot.nodes.count == preGridNodes.count)
+        #expect(migratedRoot.nodes.map(\.id) == preGridNodes.map(\.id))
+        #expect(
+            Dictionary(uniqueKeysWithValues: migratedRoot.nodes.map { ($0.id, $0.position) }) ==
+                Dictionary(uniqueKeysWithValues: preGridNodes.compactMap { node in
+                    guard let position = RootCanvasProvider.legacyConstellationPosition(for: node.id) else {
+                        return nil
+                    }
+                    return (node.id, position)
+                })
+        )
+    }
+
+    @Test func curatedRootMigrationInstallsXOAndGridLayoutFromConstellation() throws {
+        let tempDirectory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: tempDirectory) }
+        let persistence = ProjectPersistenceService(baseDirectory: tempDirectory)
+        let suiteName = "CuratedRootCanvasMigrationTests.grid.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let constellationNodes = RootCanvasProvider.nodes
+            .filter {
+                $0.id != RootCanvasProvider.xoNodeID &&
+                    $0.id != RootCanvasProvider.whatsAppNodeID &&
+                    $0.id != RootCanvasProvider.helpNodeID
+            }
+            .map { node -> SpatialNode in
+                var updated = node
+                updated.position = RootCanvasProvider.legacyConstellationPosition(for: node.id) ?? node.position
+                return updated
+            }
+        try persistence.save(
+            ProjectSnapshot(projectName: "Root", nodes: constellationNodes, viewportOffset: .zero, viewportScale: 0.5),
+            fileName: CanvasFileNaming.rootFileName
+        )
+        defaults.set(true, forKey: CuratedRootCanvasMigration.migrationCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.verticalLayoutCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.activityNodeCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.launchLayoutCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.dailyNodeCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.constellationLayoutCompleteKey)
+
+        CuratedRootCanvasMigration.runIfNeeded(persistence: persistence, defaults: defaults)
+
+        let migratedRoot = try persistence.load(fileName: CanvasFileNaming.rootFileName)
         #expect(migratedRoot.nodes.map(\.id) == RootCanvasProvider.nodes.map(\.id))
+        #expect(migratedRoot.nodes.map(\.position) == RootCanvasProvider.nodes.map(\.position))
+        #expect(persistence.projectExists(fileName: RootCanvasProvider.xoFileName))
+    }
+
+    @Test func curatedRootMigrationUpdatesDefaultViewportScaleOnCanonicalGrid() throws {
+        let tempDirectory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: tempDirectory) }
+        let persistence = ProjectPersistenceService(baseDirectory: tempDirectory)
+        let suiteName = "CuratedRootCanvasMigrationTests.viewport.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        try persistence.save(
+            ProjectSnapshot(
+                projectName: "Root",
+                nodes: RootCanvasProvider.nodes,
+                viewportOffset: .zero,
+                viewportScale: 0.5
+            ),
+            fileName: CanvasFileNaming.rootFileName
+        )
+        defaults.set(true, forKey: CuratedRootCanvasMigration.migrationCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.verticalLayoutCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.activityNodeCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.launchLayoutCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.dailyNodeCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.constellationLayoutCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.xoGridLayoutCompleteKey)
+
+        CuratedRootCanvasMigration.runIfNeeded(persistence: persistence, defaults: defaults)
+
+        let migratedRoot = try persistence.load(fileName: CanvasFileNaming.rootFileName)
+        #expect(migratedRoot.viewportScale == RootCanvasProvider.defaultViewportScale)
+        #expect(migratedRoot.viewportOffset == .zero)
+    }
+
+    @Test func curatedRootMigrationInstallsHelpNodeOnCanonicalGridWithWhatsApp() throws {
+        let tempDirectory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: tempDirectory) }
+        let persistence = ProjectPersistenceService(baseDirectory: tempDirectory)
+        let suiteName = "CuratedRootCanvasMigrationTests.help.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let preHelpNodes = RootCanvasProvider.nodes.filter { $0.id != RootCanvasProvider.helpNodeID }
+        try persistence.save(
+            ProjectSnapshot(
+                projectName: "Root",
+                nodes: preHelpNodes,
+                viewportOffset: .zero,
+                viewportScale: RootCanvasProvider.defaultViewportScale
+            ),
+            fileName: CanvasFileNaming.rootFileName
+        )
+        defaults.set(true, forKey: CuratedRootCanvasMigration.migrationCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.verticalLayoutCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.activityNodeCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.launchLayoutCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.dailyNodeCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.constellationLayoutCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.xoGridLayoutCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.launchViewportScaleCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.whatsAppNodeCompleteKey)
+
+        CuratedRootCanvasMigration.runIfNeeded(persistence: persistence, defaults: defaults)
+
+        let migratedRoot = try persistence.load(fileName: CanvasFileNaming.rootFileName)
+        #expect(migratedRoot.nodes.map(\.id) == RootCanvasProvider.nodes.map(\.id))
+        #expect(migratedRoot.nodes.map(\.position) == RootCanvasProvider.nodes.map(\.position))
+    }
+
+    @Test func curatedRootMigrationRepositionsLegacyBottomAnchorsToTopAndBottom() throws {
+        let tempDirectory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: tempDirectory) }
+        let persistence = ProjectPersistenceService(baseDirectory: tempDirectory)
+        let suiteName = "CuratedRootCanvasMigrationTests.anchors.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let legacyNodes = RootCanvasProvider.nodes.map { node -> SpatialNode in
+            var updated = node
+            if node.id == RootCanvasProvider.whatsAppNodeID {
+                updated.position = CGPoint(x: 0, y: 550)
+            } else if node.id == RootCanvasProvider.helpNodeID {
+                updated.position = CGPoint(x: -125, y: 550)
+            }
+            return updated
+        }
+        try persistence.save(
+            ProjectSnapshot(
+                projectName: "Root",
+                nodes: legacyNodes,
+                viewportOffset: .zero,
+                viewportScale: RootCanvasProvider.defaultViewportScale
+            ),
+            fileName: CanvasFileNaming.rootFileName
+        )
+        defaults.set(true, forKey: CuratedRootCanvasMigration.migrationCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.verticalLayoutCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.activityNodeCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.launchLayoutCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.dailyNodeCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.constellationLayoutCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.xoGridLayoutCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.launchViewportScaleCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.whatsAppNodeCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.helpNodeCompleteKey)
+
+        CuratedRootCanvasMigration.runIfNeeded(persistence: persistence, defaults: defaults)
+
+        let migratedRoot = try persistence.load(fileName: CanvasFileNaming.rootFileName)
+        #expect(migratedRoot.nodes.map(\.position) == RootCanvasProvider.nodes.map(\.position))
+    }
+
+    @Test func curatedRootMigrationInstallsAppIconNodeOnCanonicalGridWithAnchors() throws {
+        let tempDirectory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: tempDirectory) }
+        let persistence = ProjectPersistenceService(baseDirectory: tempDirectory)
+        let suiteName = "CuratedRootCanvasMigrationTests.appIcon.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let preAppIconNodes = RootCanvasProvider.nodes.filter { $0.id != RootCanvasProvider.appIconNodeID }
+        try persistence.save(
+            ProjectSnapshot(
+                projectName: "Root",
+                nodes: preAppIconNodes,
+                viewportOffset: .zero,
+                viewportScale: RootCanvasProvider.defaultViewportScale
+            ),
+            fileName: CanvasFileNaming.rootFileName
+        )
+        defaults.set(true, forKey: CuratedRootCanvasMigration.migrationCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.verticalLayoutCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.activityNodeCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.launchLayoutCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.dailyNodeCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.constellationLayoutCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.xoGridLayoutCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.launchViewportScaleCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.whatsAppNodeCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.helpNodeCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.launchAnchorLayoutCompleteKey)
+
+        CuratedRootCanvasMigration.runIfNeeded(persistence: persistence, defaults: defaults)
+
+        let migratedRoot = try persistence.load(fileName: CanvasFileNaming.rootFileName)
+        #expect(migratedRoot.nodes.map(\.id) == RootCanvasProvider.nodes.map(\.id))
+        #expect(migratedRoot.nodes.map(\.position) == RootCanvasProvider.nodes.map(\.position))
+    }
+
+    @Test func curatedRootMigrationRepositionsProfileAndAppIconOnLegacyLayout() throws {
+        let tempDirectory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: tempDirectory) }
+        let persistence = ProjectPersistenceService(baseDirectory: tempDirectory)
+        let suiteName = "CuratedRootCanvasMigrationTests.profileAppIcon.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let legacyNodes = RootCanvasProvider.nodes.map { node -> SpatialNode in
+            var updated = node
+            if node.id == RootCanvasProvider.profileNodeID {
+                updated.position = RootCanvasProvider.gridPosition(column: 0, row: 2)
+            } else if node.id == RootCanvasProvider.appIconNodeID {
+                updated.position = CGPoint(x: -250, y: RootCanvasProvider.topAnchorY)
+            }
+            return updated
+        }
+        try persistence.save(
+            ProjectSnapshot(
+                projectName: "Root",
+                nodes: legacyNodes,
+                viewportOffset: .zero,
+                viewportScale: RootCanvasProvider.defaultViewportScale
+            ),
+            fileName: CanvasFileNaming.rootFileName
+        )
+        defaults.set(true, forKey: CuratedRootCanvasMigration.migrationCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.verticalLayoutCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.activityNodeCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.launchLayoutCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.dailyNodeCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.constellationLayoutCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.xoGridLayoutCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.launchViewportScaleCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.whatsAppNodeCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.helpNodeCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.launchAnchorLayoutCompleteKey)
+        defaults.set(true, forKey: CuratedRootCanvasMigration.appIconNodeCompleteKey)
+
+        CuratedRootCanvasMigration.runIfNeeded(persistence: persistence, defaults: defaults)
+
+        let migratedRoot = try persistence.load(fileName: CanvasFileNaming.rootFileName)
         #expect(migratedRoot.nodes.map(\.position) == RootCanvasProvider.nodes.map(\.position))
     }
 
