@@ -23,15 +23,16 @@ Supporting services live outside this feature:
 1. The user sends a message through `CoCaptainViewModel`.
 2. Direct commands are resolved locally with `CommandIntentResolver` when possible.
 3. Otherwise, `CoCaptainAgentCoordinator` builds project context from the active `ProjectStore`.
-4. `CoCaptainTurnPurpose` selects both prompt instructions and a turn execution policy.
-5. `LLMService` streams text back into the current assistant bubble.
-6. `CoCaptainAgentOutputAdapter` hides machine output while streaming and turns the final response into a directive.
-7. For agentic turns, `CoCaptainAgentValidator` checks action IDs, action safety, node edit shape, and required agentic work.
-8. Eligible existing Mini-App code edits enter the verified coding loop.
-9. CoCaptain stages the candidate, runs behavioral checks, and may repair it twice without mutating `ProjectStore`.
-10. Safe actions remain buffered until verification succeeds.
-11. The final verified code and pending actions become `ReviewBundleItem` entries.
-12. Applying a review item revalidates the original base node text before writing changes to `ProjectStore`.
+4. `CoCaptainTurnIntentResolver` classifies each standard turn as mutating work, advisory, or general chat.
+5. `CoCaptainTurnPlan` merges turn purpose with resolved intent to select the effective execution policy.
+6. `LLMService` streams text back into the current assistant bubble.
+7. `CoCaptainAgentOutputAdapter` hides machine output while streaming and turns the final response into a directive.
+8. For agentic turns, `CoCaptainAgentValidator` checks action IDs, action safety, node edit shape, and required agentic work.
+9. Eligible existing Mini-App code edits enter the verified coding loop.
+10. CoCaptain stages the candidate, runs behavioral checks, and may repair it twice without mutating `ProjectStore`.
+11. Safe actions remain buffered until verification succeeds.
+12. The final verified code and pending actions become `ReviewBundleItem` entries.
+13. Applying a review item revalidates the original base node text before writing changes to `ProjectStore`.
 
 The core contract is human-in-the-loop code editing. Do not auto-apply node edits without explicit user approval.
 Free-usage and subscription prompts are product CTA timeline items, not review bundles.
@@ -44,16 +45,19 @@ Verification uses a non-persistent WebView, blocks external effects, captures ru
 
 ## Turn Execution Modes
 
-`CoCaptainTurnPurpose` maps to a `CoCaptainTurnExecutionPolicy` in `CoCaptainAgentModels.swift`. The coordinator reads policy flags instead of hardcoding onboarding exceptions.
+`CoCaptainTurnPlan` merges `CoCaptainTurnPurpose` with a resolved `CoCaptainTurnIntent` into a `CoCaptainTurnExecutionPolicy` in `CoCaptainAgentModels.swift`. The coordinator reads `turnPlan.effectivePolicy` instead of hardcoding onboarding exceptions.
 
-| Mode | Purposes | Structured XML | Agentic retry | Execute actions / review |
-|------|----------|----------------|---------------|--------------------------|
-| Agentic | `.standard` | Yes | Yes | Yes |
+| Mode | When | Structured XML | Agentic retry | Execute actions / review |
+|------|------|----------------|---------------|--------------------------|
+| Agentic | Standard turn + `.mutatingWork` intent | Yes | Yes | Yes |
+| Advisory | Standard turn + `.advisory` or `.generalChat` intent | Yes | No | Yes — actions/edits still stage when the model emits them |
 | Conversational | `.onboardingWelcome`, `.onboardingBuildHandoff` | No | No | No — prose only |
+
+`CoCaptainTurnIntentResolver` runs before coordinator execution for standard turns. It reuses `CommandIntentResolver` normalization and negation checks, prefers advisory phrase matches, then mutating phrase matches, and defaults ambiguous standard turns to advisory. Casual messages with no advisory or mutating signals resolve to `.generalChat`.
 
 Conversational turns still receive canvas context and purpose-specific prompt instructions, but the agent contract block is omitted from the LLM prompt. If the model disobeys and emits `cocaptain_actions`, the coordinator ignores the payload and surfaces visible prose only.
 
-When adding a new turn purpose, declare its execution policy in the same enum switch as its prompt instructions.
+When adding a new turn purpose, declare its execution policy in the same enum switch as its prompt instructions. When changing intent classification, update `CoCaptainTurnIntentResolver` tests.
 
 ## Structured Payload Contract
 

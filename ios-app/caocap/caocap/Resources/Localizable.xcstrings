@@ -903,6 +903,23 @@
         }
       }
     },
+    "cocaptain.fallback.editsUnavailable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I answered in chat, but couldn't stage canvas changes for review. Try sending the build request again."
+          }
+        },
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أجبت في المحادثة، لكن لم أتمكن من تجهيز تغييرات اللوحة للمراجعة. حاول إرسال طلب البناء مرة أخرى."
+          }
+        }
+      }
+    },
     "cocaptain.validationFailure.encouragement" : {
       "extractionState" : "manual",
       "localizations" : {
