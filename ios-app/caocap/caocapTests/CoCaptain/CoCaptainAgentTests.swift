@@ -1553,6 +1553,18 @@ struct CoCaptainAgentTests {
     }
 
     @MainActor
+    @Test func flyToReviewTargetInvokesCallback() {
+        let vm = CoCaptainViewModel()
+        let nodeID = UUID()
+        var flownNodeID: UUID?
+        vm.onFlyToNode = { flownNodeID = $0 }
+
+        vm.flyToReviewTarget(nodeID)
+
+        #expect(flownNodeID == nodeID)
+    }
+
+    @MainActor
     @Test func applyAllCreatesSingleCheckpointForBatchApply() {
         let store = makeStore()
         let vm = CoCaptainViewModel()
@@ -1597,6 +1609,64 @@ struct CoCaptainAgentTests {
 
         #expect(store.history.count == checkpointsBefore + 1)
         #expect(store.history.first?.label == "Apply All Changes")
+    }
+
+    @MainActor
+    @Test func applyAllLeavesConflictedItemsWhenOneItemIsStale() {
+        let store = makeStore()
+        let vm = CoCaptainViewModel()
+        vm.store = store
+
+        let miniAppNode = store.nodes.first(where: { $0.title == "Mini-App" })!
+        let baseText = miniAppNode.miniApp?.codeText ?? ""
+        let bundleID = UUID()
+        let staleItemID = UUID()
+        let freshItemID = UUID()
+
+        vm.items.append(CoCaptainTimelineItem(
+            id: bundleID,
+            content: .reviewBundle(ReviewBundleItem(
+                items: [
+                    PendingReviewItem(
+                        id: staleItemID,
+                        targetLabel: "Mini-App CODE",
+                        summary: "Stale change",
+                        preview: "<h1>Stale</h1>",
+                        source: .nodeEdit(
+                            role: .miniApp,
+                            section: .code,
+                            operations: [NodePatchOperation(type: .replaceAll, content: "<h1>Stale</h1>")],
+                            baseText: baseText
+                        )
+                    ),
+                    PendingReviewItem(
+                        id: freshItemID,
+                        targetLabel: "Mini-App SRS",
+                        summary: "Fresh SRS update",
+                        preview: "Fresh SRS",
+                        source: .nodeEdit(
+                            role: .miniApp,
+                            section: .srs,
+                            operations: [NodePatchOperation(type: .replaceAll, content: "Fresh SRS")],
+                            baseText: miniAppNode.miniApp?.srsText ?? ""
+                        )
+                    )
+                ]
+            ))
+        ))
+
+        store.updateMiniAppCode(id: miniAppNode.id, text: "<h1>User edited after review</h1>", persist: false)
+        vm.applyAll(in: bundleID)
+
+        guard case .reviewBundle(let bundle) = vm.items.first(where: { $0.id == bundleID })?.content else {
+            Issue.record("Review bundle missing")
+            return
+        }
+
+        let stale = bundle.items.first { $0.id == staleItemID }
+        let fresh = bundle.items.first { $0.id == freshItemID }
+        #expect(stale?.status == .conflicted)
+        #expect(fresh?.status == .applied)
     }
 
     @MainActor
@@ -2116,6 +2186,41 @@ struct CoCaptainAgentTests {
                   case .reviewBundle(let bundle) = item.content else { return false }
             return bundle.items.first?.preview.contains("Persisted") == true
         })
+    }
+
+    @MainActor
+    @Test func verifiedCodingLoopRunsForGreenfieldReplaceAllWithChecks() async throws {
+        let store = ProjectStore(
+            fileName: "greenfield-\(UUID().uuidString).json",
+            projectName: "Greenfield",
+            initialNodes: [
+                SpatialNode(
+                    type: .miniApp,
+                    position: .zero,
+                    title: "Mini-App",
+                    miniApp: MiniAppState(srsText: "Build a page", codeText: "")
+                )
+            ]
+        )
+        let verifier = TestMiniAppVerifier(results: [TestMiniAppVerifier.passing])
+        let llm = TestLLMClient(
+            response: verifiedEditResponse(replacement: "Built", operation: "replace_all")
+        )
+        let coordinator = CoCaptainAgentCoordinator(
+            llmClient: llm,
+            verifier: verifier,
+            verifiedCodingLoopEnabled: { true }
+        )
+
+        let result = try await coordinator.run(
+            userMessage: "build the mini app",
+            store: store,
+            dispatcher: nil
+        ) { _ in }
+
+        #expect(result.reviewBundle?.items.first?.status == .pending)
+        #expect(result.reviewBundle?.items.first?.preview.contains("Built") == true)
+        #expect(verifier.receivedCodes.count == 1)
     }
 
     @MainActor
