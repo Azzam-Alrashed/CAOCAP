@@ -22,6 +22,10 @@ public final class CoCaptainViewModel {
 
     /// Tracks the ID of the message that was last visible to the user.
     public var lastScrollPosition: UUID?
+    /// One-shot scroll target for actions like "Show Pending Reviews".
+    public var scrollFocusRequest: UUID?
+    /// When true, the timeline should follow new content to the bottom once.
+    public var shouldPinToBottom = false
 
     @ObservationIgnored
     private let agentCoordinator: CoCaptainAgentCoordinator
@@ -76,7 +80,16 @@ public final class CoCaptainViewModel {
     }
 
     public func focusPendingReviews() {
-        lastScrollPosition = firstPendingReviewBundleID
+        scrollFocusRequest = firstPendingReviewBundleID
+    }
+
+    /// ID of the last rendered timeline row, used to detect whether the user is at the bottom.
+    public var bottomTimelineItemID: UUID? {
+        items.last(where: { !$0.isEmptyAssistantMessage })?.id
+    }
+
+    public func requestScrollToBottom() {
+        shouldPinToBottom = true
     }
 
     public init(
@@ -173,6 +186,7 @@ public final class CoCaptainViewModel {
         let userItem = ChatBubbleItem(text: text, isUser: true)
         items.append(CoCaptainTimelineItem(content: .message(userItem)))
         persistNodeMessageIfNeeded(userItem)
+        requestScrollToBottom()
 
         if purpose == .standard,
            handleDirectCommand(text, turnID: turnID, purpose: purpose) {
@@ -246,6 +260,7 @@ public final class CoCaptainViewModel {
                     items.append(reviewItem)
                     persistNodeReviewBundleIfNeeded(timelineItemID: reviewItem.id, bundle: reviewBundle)
                 }
+                requestScrollToBottom()
                 markAssistantResponseCompleted(
                     turnID: turnID,
                     purpose: purpose,
