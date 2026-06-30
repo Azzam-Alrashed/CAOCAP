@@ -302,6 +302,27 @@ struct SettingsView: View {
                                         showingEraseConfirmation = true
                                     }
                                 )
+                                .confirmationDialog(
+                                    "Erase Everything?",
+                                    isPresented: $showingEraseConfirmation,
+                                    titleVisibility: .visible
+                                ) {
+                                    Button("Erase Everything", role: .destructive) {
+                                        isErasingEverything = true
+                                        Task { @MainActor in
+                                            do {
+                                                try await onEraseEverything()
+                                                dismiss()
+                                            } catch {
+                                                isErasingEverything = false
+                                                eraseErrorMessage = error.localizedDescription
+                                            }
+                                        }
+                                    }
+                                    Button("Cancel", role: .cancel) {}
+                                } message: {
+                                    Text("This permanently deletes every local canvas, checkpoint, preference, onboarding answer, and downloaded model, then signs you out. Your cloud account and App Store purchases are not deleted.")
+                                }
                             }
                         }
                         .padding(.horizontal, 20)
@@ -348,27 +369,6 @@ struct SettingsView: View {
                 }
             }
             .preferredColorScheme(currentColorScheme)
-            .confirmationDialog(
-                "Erase Everything?",
-                isPresented: $showingEraseConfirmation,
-                titleVisibility: .visible
-            ) {
-                Button("Erase Everything", role: .destructive) {
-                    isErasingEverything = true
-                    Task { @MainActor in
-                        do {
-                            try await onEraseEverything()
-                            dismiss()
-                        } catch {
-                            isErasingEverything = false
-                            eraseErrorMessage = error.localizedDescription
-                        }
-                    }
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("This permanently deletes every local canvas, checkpoint, preference, onboarding answer, and downloaded model, then signs you out. Your cloud account and App Store purchases are not deleted.")
-            }
             .alert(
                 "Couldn’t Erase Everything",
                 isPresented: Binding(
