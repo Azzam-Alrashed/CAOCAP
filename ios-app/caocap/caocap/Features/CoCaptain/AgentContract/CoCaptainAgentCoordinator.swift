@@ -28,7 +28,8 @@ public protocol CoCaptainLLMClient: AnyObject {
         expectsStructuredResponse: Bool,
         availableActions: [AppActionDefinition],
         scope: CoCaptainAgentScope,
-        purpose: CoCaptainTurnPurpose
+        purpose: CoCaptainTurnPurpose,
+        turnIntent: CoCaptainTurnIntent
     ) -> AsyncThrowingStream<CoCaptainLLMStreamEvent, Error>
 }
 
@@ -115,9 +116,14 @@ public final class CoCaptainAgentCoordinator {
         dispatcher: (any AppActionPerforming)?,
         scope: CoCaptainAgentScope = .project,
         purpose: CoCaptainTurnPurpose = .standard,
+        turnPlan: CoCaptainTurnPlan? = nil,
         onCodingProgress: @escaping (CoCaptainCodingRunState) -> Void = { _ in },
         onVisibleText: @escaping (String) -> Void
     ) async throws -> CoCaptainAgentRunResult {
+        let resolvedTurnPlan = turnPlan ?? CoCaptainTurnPlan(
+            purpose: purpose,
+            intent: CoCaptainTurnIntentResolver().resolve(userMessage)
+        )
         let context = store.map { store in
             switch scope {
             case .project:
@@ -126,7 +132,7 @@ public final class CoCaptainAgentCoordinator {
                 return contextBuilder.buildNodePromptContext(from: store, nodeID: nodeID)
             }
         }
-        let policy = purpose.executionPolicy
+        let policy = resolvedTurnPlan.effectivePolicy
 
         do {
             return try await runOnce(
@@ -137,6 +143,7 @@ public final class CoCaptainAgentCoordinator {
                 dispatcher: dispatcher,
                 scope: scope,
                 purpose: purpose,
+                turnPlan: resolvedTurnPlan,
                 onVisibleText: onVisibleText,
                 onCodingProgress: onCodingProgress,
                 agenticRetriesRemaining: policy.allowsAgenticRetry ? Self.maxAgenticRetries : 0
@@ -157,6 +164,7 @@ public final class CoCaptainAgentCoordinator {
                 dispatcher: dispatcher,
                 scope: scope,
                 purpose: purpose,
+                turnPlan: resolvedTurnPlan,
                 onVisibleText: onVisibleText,
                 onCodingProgress: onCodingProgress,
                 agenticRetriesRemaining: 0,
@@ -164,8 +172,7 @@ public final class CoCaptainAgentCoordinator {
             )
             return connectionFallbackResult(
                 fallbackResult,
-                userMessage: userMessage,
-                purpose: purpose
+                turnPlan: resolvedTurnPlan
             )
         }
     }
@@ -183,6 +190,7 @@ public final class CoCaptainAgentCoordinator {
         dispatcher: (any AppActionPerforming)?,
         scope: CoCaptainAgentScope,
         purpose: CoCaptainTurnPurpose,
+        turnPlan: CoCaptainTurnPlan,
         onVisibleText: @escaping (String) -> Void,
         onCodingProgress: @escaping (CoCaptainCodingRunState) -> Void,
         agenticRetriesRemaining: Int,
@@ -195,13 +203,13 @@ public final class CoCaptainAgentCoordinator {
             availableActions: dispatcher?.availableActions ?? [],
             scope: scope,
             purpose: purpose,
+            turnIntent: turnPlan.intent,
             onVisibleText: onVisibleText
         )
-        let policy = purpose.executionPolicy
+        let policy = turnPlan.effectivePolicy
         let payload = (policy.expectsStructuredResponse || connectionFallback) ? directive.payload : nil
 
-        let requiresAgenticWork =
-            policy.enforcesExecutableWork && shouldRequireAgenticWork(for: userMessage)
+        let requiresAgenticWork = policy.enforcesExecutableWork
 
         if policy.expectsStructuredResponse {
             if !directive.diagnostics.isEmpty {
@@ -217,6 +225,7 @@ public final class CoCaptainAgentCoordinator {
                         dispatcher: dispatcher,
                         scope: scope,
                         purpose: purpose,
+                        turnPlan: turnPlan,
                         onVisibleText: onVisibleText,
                         onCodingProgress: onCodingProgress,
                         agenticRetriesRemaining: agenticRetriesRemaining - 1
@@ -245,6 +254,7 @@ public final class CoCaptainAgentCoordinator {
                     dispatcher: dispatcher,
                     scope: scope,
                     purpose: purpose,
+                    turnPlan: turnPlan,
                     onVisibleText: onVisibleText,
                     onCodingProgress: onCodingProgress,
                     agenticRetriesRemaining: agenticRetriesRemaining - 1
@@ -277,6 +287,7 @@ public final class CoCaptainAgentCoordinator {
                             dispatcher: dispatcher,
                             scope: scope,
                             purpose: purpose,
+                            turnPlan: turnPlan,
                             onVisibleText: onVisibleText,
                             onCodingProgress: onCodingProgress,
                             agenticRetriesRemaining: agenticRetriesRemaining - 1
@@ -320,6 +331,7 @@ public final class CoCaptainAgentCoordinator {
                     dispatcher: dispatcher,
                     scope: scope,
                     purpose: purpose,
+                    turnPlan: turnPlan,
                     onCodingProgress: onCodingProgress
                 )
             } catch is CancellationError {
@@ -359,6 +371,7 @@ public final class CoCaptainAgentCoordinator {
         availableActions: [AppActionDefinition],
         scope: CoCaptainAgentScope,
         purpose: CoCaptainTurnPurpose,
+        turnIntent: CoCaptainTurnIntent,
         onVisibleText: @escaping (String) -> Void
     ) async throws -> CoCaptainAgentDirective {
         var responseText = ""
@@ -370,7 +383,8 @@ public final class CoCaptainAgentCoordinator {
             expectsStructuredResponse: expectsStructuredResponse,
             availableActions: availableActions,
             scope: scope,
-            purpose: purpose
+            purpose: purpose,
+            turnIntent: turnIntent
         )
 
         for try await event in stream {
@@ -431,6 +445,7 @@ public final class CoCaptainAgentCoordinator {
         dispatcher: (any AppActionPerforming)?,
         scope: CoCaptainAgentScope,
         purpose: CoCaptainTurnPurpose,
+        turnPlan: CoCaptainTurnPlan,
         onCodingProgress: @escaping (CoCaptainCodingRunState) -> Void
     ) async throws -> CoCaptainAgentRunResult {
         let startedAt = Date()
@@ -471,7 +486,8 @@ public final class CoCaptainAgentCoordinator {
                     targetNodeID: target.node.id,
                     dispatcher: dispatcher,
                     scope: scope,
-                    purpose: purpose
+                    purpose: purpose,
+                    turnIntent: turnPlan.intent
                 )
                 candidateEdit = repair.edit
                 candidateChecks = repair.edit.verificationChecks
@@ -547,7 +563,8 @@ public final class CoCaptainAgentCoordinator {
                 targetNodeID: target.node.id,
                 dispatcher: dispatcher,
                 scope: scope,
-                purpose: purpose
+                purpose: purpose,
+                turnIntent: turnPlan.intent
             )
             candidateEdit = repair.edit
             candidateChecks = repair.edit.verificationChecks
@@ -569,7 +586,8 @@ public final class CoCaptainAgentCoordinator {
         targetNodeID: UUID,
         dispatcher: (any AppActionPerforming)?,
         scope: CoCaptainAgentScope,
-        purpose: CoCaptainTurnPurpose
+        purpose: CoCaptainTurnPurpose,
+        turnIntent: CoCaptainTurnIntent
     ) async throws -> (edit: CoCaptainNodeEditProposal, message: String) {
         let prompt = """
         Repair the staged Mini-App candidate using the verification feedback below.
@@ -593,6 +611,7 @@ public final class CoCaptainAgentCoordinator {
             availableActions: [],
             scope: scope,
             purpose: purpose,
+            turnIntent: turnIntent,
             onVisibleText: { _ in }
         )
         guard directive.diagnostics.isEmpty,
@@ -682,57 +701,29 @@ public final class CoCaptainAgentCoordinator {
         )
     }
 
-    /// Returns `true` when the user's message contains a keyword that implies
-    /// the model should produce executable output (actions or node edits).
-    ///
-    /// Used to decide whether a chat-only model response is treated as a
-    /// contract violation that warrants an agentic retry.
-    private func shouldRequireAgenticWork(for userMessage: String) -> Bool {
-        let normalized = CommandIntentResolver.normalizedCommandInput(userMessage)
-        guard !CommandIntentResolver.hasNegation(in: normalized) else { return false }
+    /// When the structured prompt fails, annotate the fallback result so users
+    /// know executable work may not have been staged.
+    private func connectionFallbackResult(
+        _ result: CoCaptainAgentRunResult,
+        turnPlan: CoCaptainTurnPlan
+    ) -> CoCaptainAgentRunResult {
+        guard turnPlan.intent.requiresDegradedConnectionNotice,
+              result.reviewBundle == nil,
+              result.executionSummary == nil else {
+            return result
+        }
 
-        let triggers = [
-            "build",
-            "make",
-            "create",
-            "add",
-            "change",
-            "update",
-            "fix",
-            "remove",
-            "style",
-            "implement",
-            "improve",
-            "document",
-            "write",
-            "rewrite",
-            "draft",
-            "navigate",
-            "settings",
-            "root",
-            "انشاء",
-            "اضف",
-            "أضف",
-            "عدل",
-            "غير",
-            "حدث",
-            "اصلح",
-            "اكتب",
-            "وثق",
-            "افتح",
-            "اذهب",
-            "اعرض",
-            "الاعدادات",
-            "الإعدادات"
-        ]
-
-        return triggers.contains { normalized.contains($0) }
+        let notice = LocalizationManager.shared.localizedString(
+            "cocaptain.fallback.editsUnavailable"
+        )
+        let preamble = result.preamble.isEmpty ? notice : "\(result.preamble)\n\n\(notice)"
+        return CoCaptainAgentRunResult(
+            preamble: preamble,
+            payloadMessage: result.payloadMessage,
+            executionSummary: result.executionSummary,
+            reviewBundle: result.reviewBundle
+        )
     }
-
-    /// Builds a corrective system message that feeds validation issues back to
-    /// the model along with the original request, giving it a second chance to
-    /// produce a conforming `cocaptain_actions` XML block.
-    private func agenticRetryMessage(for userMessage: String, validationIssues: [String]) -> String {
         let issueList = validationIssues.map { "- \($0)" }.joined(separator: "\n")
 
         return """
@@ -757,33 +748,10 @@ public final class CoCaptainAgentCoordinator {
         """
     }
 
-    /// When the structured prompt fails, annotate the fallback result so users
-    /// know executable work may not have been staged.
-    private func connectionFallbackResult(
-        _ result: CoCaptainAgentRunResult,
-        userMessage: String,
-        purpose: CoCaptainTurnPurpose
-    ) -> CoCaptainAgentRunResult {
-        guard purpose.executionPolicy.enforcesExecutableWork,
-              shouldRequireAgenticWork(for: userMessage),
-              result.reviewBundle == nil,
-              result.executionSummary == nil else {
-            return result
-        }
-
-        let notice = LocalizationManager.shared.localizedString(
-            "CoCaptain could not reach the model with full project context. Your request was answered in chat only — actions and edits were not applied. Try again when connected."
-        )
-        let preamble = result.preamble.isEmpty ? notice : "\(result.preamble)\n\n\(notice)"
-        return CoCaptainAgentRunResult(
-            preamble: preamble,
-            payloadMessage: result.payloadMessage,
-            executionSummary: result.executionSummary,
-            reviewBundle: result.reviewBundle
-        )
-    }
-
-    /// Guards against duplicate function-call events that can be emitted by the
+    /// Builds a corrective system message that feeds validation issues back to
+    /// the model along with the original request, giving it a second chance to
+    /// produce a conforming `cocaptain_actions` XML block.
+    private func agenticRetryMessage(for userMessage: String, validationIssues: [String]) -> String {
     /// streaming SDK when a turn is retried or partially flushed.
     ///
     /// Function calls without an `id` are always accepted because they cannot
