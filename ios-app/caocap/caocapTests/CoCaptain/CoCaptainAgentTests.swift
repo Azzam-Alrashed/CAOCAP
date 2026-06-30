@@ -1553,6 +1553,53 @@ struct CoCaptainAgentTests {
     }
 
     @MainActor
+    @Test func applyAllCreatesSingleCheckpointForBatchApply() {
+        let store = makeStore()
+        let vm = CoCaptainViewModel()
+        vm.store = store
+
+        let miniAppNode = store.nodes.first(where: { $0.title == "Mini-App" })!
+        let baseText = miniAppNode.miniApp?.codeText ?? ""
+        let bundleID = UUID()
+
+        vm.items.append(CoCaptainTimelineItem(
+            id: bundleID,
+            content: .reviewBundle(ReviewBundleItem(
+                items: [
+                    PendingReviewItem(
+                        targetLabel: "Mini-App CODE 1",
+                        summary: "First change",
+                        preview: "<h1>First</h1>",
+                        source: .nodeEdit(
+                            role: .miniApp,
+                            section: .code,
+                            operations: [NodePatchOperation(type: .replaceAll, content: "<h1>First</h1>")],
+                            baseText: baseText
+                        )
+                    ),
+                    PendingReviewItem(
+                        targetLabel: "Mini-App SRS",
+                        summary: "SRS update",
+                        preview: "Updated SRS",
+                        source: .nodeEdit(
+                            role: .miniApp,
+                            section: .srs,
+                            operations: [NodePatchOperation(type: .replaceAll, content: "Updated SRS")],
+                            baseText: miniAppNode.miniApp?.srsText ?? ""
+                        )
+                    )
+                ]
+            ))
+        ))
+
+        let checkpointsBefore = store.history.count
+        vm.applyAll(in: bundleID)
+
+        #expect(store.history.count == checkpointsBefore + 1)
+        #expect(store.history.first?.label == "Apply All Changes")
+    }
+
+    @MainActor
     @Test func tokenLimitErrorAppendsProUpgradeReviewItem() async throws {
         let dispatcher = TestActionDispatcher()
         let error = TokenUsageLimitError(limitTokens: 20_000, usedTokens: 20_000, requestedTokens: 1_000)
@@ -1918,6 +1965,159 @@ struct CoCaptainAgentTests {
         #expect(verifier.receivedCodes.count == 2)
     }
 
+    @Test func parserExtractsActionAttributesFromXML() throws {
+        let parser = CoCaptainAgentParser()
+        let response =
+            """
+            <cocaptain_actions>
+              <assistant_message>Navigate home.</assistant_message>
+              <pending_actions>
+                <action id="goRoot" label="home"/>
+              </pending_actions>
+            </cocaptain_actions>
+            """
+
+        let parsed = try #require(parser.parse(response).payload)
+        #expect(parsed.pendingActions.count == 1)
+        #expect(parsed.pendingActions[0].actionID == "goRoot")
+        #expect(parsed.pendingActions[0].args?["label"] == "home")
+    }
+
+    @Test func commandIntentResolverRejectsNegatedInput() {
+        let resolver = CommandIntentResolver()
+        let actions = [
+            AppActionDefinition(
+                id: .goRoot,
+                title: "Go to Root",
+                icon: "house.fill",
+                category: .navigation,
+                isMutating: false,
+                allowsAutonomousExecution: true
+            )
+        ]
+
+        #expect(resolver.resolve("don't go home", availableActions: actions) == nil)
+        #expect(resolver.resolve("go home", availableActions: actions) == .goRoot)
+    }
+
+    @MainActor
+    @Test func coordinatorDoesNotRetryAgenticWorkForNegatedRequests() async throws {
+        let llm = TestLLMClient(
+            response:
+                """
+                Sure, I will not change anything.
+
+                <cocaptain_actions>
+                  <assistant_message>Sure, I will not change anything.</assistant_message>
+                </cocaptain_actions>
+                """
+        )
+        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
+
+        _ = try await coordinator.run(
+            userMessage: "don't fix anything please",
+            store: makeStore(),
+            dispatcher: TestActionDispatcher()
+        ) { _ in }
+
+        #expect(llm.receivedMessages.count == 1)
+    }
+
+    @MainActor
+    @Test func coordinatorSurfacesUnknownPendingActionsAsConflictedReview() async throws {
+        let dispatcher = TestActionDispatcher()
+        let llm = TestLLMClient(
+            response:
+                """
+                <cocaptain_actions>
+                  <assistant_message>Pending unknown action.</assistant_message>
+                  <pending_actions><action id="launch_rocket"/></pending_actions>
+                </cocaptain_actions>
+                """
+        )
+        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
+
+        let result = try await coordinator.run(
+            userMessage: "create a rocket",
+            store: makeStore(),
+            dispatcher: dispatcher
+        ) { _ in }
+
+        #expect(result.reviewBundle?.items.count == 1)
+        #expect(result.reviewBundle?.items.first?.status == .conflicted)
+        #expect(result.reviewBundle?.items.first?.preview.contains("launch_rocket") == true)
+    }
+
+    @MainActor
+    @Test func connectionFallbackStagesReviewWithoutExecutingSafeActions() async throws {
+        let dispatcher = TestActionDispatcher()
+        let llm = FailingThenStructuredLLMClient(
+            structuredResponse:
+                """
+                <cocaptain_actions>
+                  <assistant_message>Fallback edit.</assistant_message>
+                  <safe_actions><action id="goRoot"/></safe_actions>
+                  <node_edits>
+                    <node_edit role="miniApp" section="code" summary="Update heading">
+                      <operation type="replace_all">
+                        <content><![CDATA[<h1>Fallback</h1>]]></content>
+                      </operation>
+                    </node_edit>
+                  </node_edits>
+                </cocaptain_actions>
+                """
+        )
+        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
+
+        let result = try await coordinator.run(
+            userMessage: "update the code",
+            store: makeStore(),
+            dispatcher: dispatcher
+        ) { _ in }
+
+        #expect(dispatcher.executedActionIDs.isEmpty)
+        #expect(result.reviewBundle?.items.first?.status == .pending)
+        #expect(result.reviewBundle?.items.first?.preview.contains("Fallback") == true)
+    }
+
+    @MainActor
+    @Test func nodeScopedReviewBundleReloadsFromPersistedNodeState() throws {
+        let store = makeStore()
+        let nodeID = store.nodes[0].id
+        let bundleID = UUID()
+        let reviewBundle = ReviewBundleItem(
+            items: [
+                PendingReviewItem(
+                    targetLabel: "Mini-App CODE",
+                    summary: "Update heading",
+                    preview: "<h1>Persisted</h1>",
+                    source: .nodeEdit(
+                        role: .miniApp,
+                        section: .code,
+                        operations: [NodePatchOperation(type: .replaceAll, content: "<h1>Persisted</h1>")],
+                        baseText: store.nodes[0].miniApp?.codeText ?? ""
+                    )
+                )
+            ]
+        )
+
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let record = NodeAgentReviewRecord(timelineItemID: bundleID, bundle: reviewBundle)
+        var agentState = store.nodes[0].agentState
+        agentState.pendingReviewBundlesData = [try encoder.encode(record)]
+        store.updateNodeAgentState(id: nodeID, agentState: agentState, persist: false)
+
+        let vm = CoCaptainViewModel()
+        vm.configureNodeSession(store: store, nodeID: nodeID)
+
+        #expect(vm.items.contains { item in
+            guard item.id == bundleID,
+                  case .reviewBundle(let bundle) = item.content else { return false }
+            return bundle.items.first?.preview.contains("Persisted") == true
+        })
+    }
+
     @MainActor
     @Test func verifiedCodingLoopReturnsNoReviewAfterThreeFailures() async throws {
         let verifier = TestMiniAppVerifier(
@@ -2132,6 +2332,43 @@ private final class TestLLMClient: CoCaptainLLMClient {
             if !calls.isEmpty {
                 continuation.yield(.functionCalls(calls))
             }
+            continuation.finish()
+        }
+    }
+}
+
+@MainActor
+private final class FailingThenStructuredLLMClient: CoCaptainLLMClient {
+    private let structuredResponse: String
+
+    init(structuredResponse: String) {
+        self.structuredResponse = structuredResponse
+    }
+
+    func resetChat(scope: CoCaptainAgentScope) {}
+
+    func streamAgentEvents(
+        for userMessage: String,
+        context: String?,
+        expectsStructuredResponse: Bool,
+        availableActions: [AppActionDefinition],
+        scope: CoCaptainAgentScope,
+        purpose: CoCaptainTurnPurpose
+    ) -> AsyncThrowingStream<CoCaptainLLMStreamEvent, Error> {
+        if expectsStructuredResponse, context != nil {
+            return AsyncThrowingStream { continuation in
+                continuation.finish(
+                    throwing: NSError(
+                        domain: "CoCaptainFallbackTest",
+                        code: 1,
+                        userInfo: [NSLocalizedDescriptionKey: "Structured request failed"]
+                    )
+                )
+            }
+        }
+
+        return AsyncThrowingStream { continuation in
+            continuation.yield(.text(structuredResponse))
             continuation.finish()
         }
     }
