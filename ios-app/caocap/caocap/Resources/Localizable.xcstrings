@@ -3213,6 +3213,23 @@
         }
       }
     },
+    "Pending changes (%lld)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pending changes (%lld)"
+          }
+        },
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تغييرات بانتظار المراجعة (%lld)"
+          }
+        }
+      }
+    },
     "Permanently remove all data" : {
       "extractionState" : "manual",
       "localizations" : {

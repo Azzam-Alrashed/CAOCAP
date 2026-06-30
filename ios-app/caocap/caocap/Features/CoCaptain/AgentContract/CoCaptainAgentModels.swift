@@ -171,9 +171,9 @@ public enum CoCaptainCodingRunState: Hashable {
         case .planning:
             return LocalizationManager.shared.localizedString("Planning")
         case .building(let attempt):
-            return LocalizationManager.shared.localizedString("Building attempt %@", arguments: [Int64(attempt)])
+            return LocalizationManager.shared.localizedString("Building attempt %lld", arguments: [Int64(attempt)])
         case .testing(let attempt):
-            return LocalizationManager.shared.localizedString("Testing attempt %@", arguments: [Int64(attempt)])
+            return LocalizationManager.shared.localizedString("Testing attempt %lld", arguments: [Int64(attempt)])
         case .repairing:
             return LocalizationManager.shared.localizedString("Repairing")
         case .readyForReview:
@@ -188,9 +188,9 @@ public enum CoCaptainCodingRunState: Hashable {
     public var detail: String? {
         switch self {
         case .repairing(let nextAttempt):
-            return LocalizationManager.shared.localizedString("Preparing attempt %@ from the verification results.", arguments: [Int64(nextAttempt)])
+            return LocalizationManager.shared.localizedString("Preparing attempt %lld from the verification results.", arguments: [Int64(nextAttempt)])
         case .readyForReview(let attempts):
-            return LocalizationManager.shared.localizedString("Verified after %@ attempt(s).", arguments: [Int64(attempts)])
+            return LocalizationManager.shared.localizedString("Verified after %lld attempt(s).", arguments: [Int64(attempts)])
         case .failed(let message):
             return message
         default:
