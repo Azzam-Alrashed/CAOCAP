@@ -369,6 +369,9 @@ final class AppSessionCoordinator {
         commandPalette.onFlyToNode = { [weak self] nodeId in
             self?.flyToNode(nodeId)
         }
+        coCaptain.onFlyToNode = { [weak self] nodeId in
+            self?.flyToNode(nodeId)
+        }
         commandPalette.onSubmitPrompt = { [weak self] prompt in
             self?.submitCoCaptainPrompt(prompt)
         }
