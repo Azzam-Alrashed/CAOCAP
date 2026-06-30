@@ -869,6 +869,40 @@
         }
       }
     },
+    "Co-Captain (%lld)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Co-Captain (%lld)"
+          }
+        },
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "المساعد (%lld)"
+          }
+        }
+      }
+    },
+    "CoCaptain could not reach the model with full project context. Your request was answered in chat only — actions and edits were not applied. Try again when connected." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CoCaptain could not reach the model with full project context. Your request was answered in chat only — actions and edits were not applied. Try again when connected."
+          }
+        },
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تعذر على المساعد الوصول إلى النموذج مع سياق المشروع الكامل. تم الرد على طلبك في المحادثة فقط — لم يتم تطبيق الإجراءات أو التعديلات. حاول مرة أخرى عند الاتصال."
+          }
+        }
+      }
+    },
     "CoCaptain AI" : {
 
     },
@@ -3151,6 +3185,23 @@
         }
       }
     },
+    "Pending CoCaptain Reviews" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pending CoCaptain Reviews"
+          }
+        },
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مراجعات المساعد المعلقة"
+          }
+        }
+      }
+    },
     "Pending changes" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4305,6 +4356,12 @@
             "state" : "translated",
             "value" : "Show Pending Reviews (%lld)"
           }
+        },
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "عرض المراجعات المعلقة (%lld)"
+          }
         }
       }
     },
@@ -5073,6 +5130,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "View on Canvas"
+          }
+        },
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "عرض على اللوحة"
           }
         }
       }

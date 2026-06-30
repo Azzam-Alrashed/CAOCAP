@@ -72,14 +72,12 @@ public final class AgentPipelineEngine {
                     }
                     
                     if let reviewBundle = result.reviewBundle, !reviewBundle.items.isEmpty {
-                        let timelineItemID = UUID()
-                        NodeAgentReviewPersistence.persist(
-                            timelineItemID: timelineItemID,
-                            bundle: reviewBundle,
+                        self.stageReviewBundle(
+                            reviewBundle,
+                            timelineItemID: UUID(),
                             nodeID: downstreamNode.id,
                             store: store
                         )
-                        self.activeAgentStates[downstreamNode.id] = .awaitingReview
                         let summaries = reviewBundle.items
                             .map { "- \($0.targetLabel): \($0.summary)" }
                             .joined(separator: "\n")
@@ -109,5 +107,21 @@ public final class AgentPipelineEngine {
                 }
             }
         }
+    }
+
+    /// Persists a review bundle on the node and marks the pipeline state as awaiting review.
+    func stageReviewBundle(
+        _ reviewBundle: ReviewBundleItem,
+        timelineItemID: UUID,
+        nodeID: UUID,
+        store: ProjectStore
+    ) {
+        NodeAgentReviewPersistence.persist(
+            timelineItemID: timelineItemID,
+            bundle: reviewBundle,
+            nodeID: nodeID,
+            store: store
+        )
+        activeAgentStates[nodeID] = .awaitingReview
     }
 }
