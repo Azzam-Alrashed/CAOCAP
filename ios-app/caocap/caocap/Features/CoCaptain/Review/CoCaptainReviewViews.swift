@@ -20,6 +20,10 @@ struct ReviewBundleView: View {
                     viewModel.applyReviewItem(bundleID: bundleID, itemID: item.id)
                 } onReject: {
                     viewModel.rejectReviewItem(bundleID: bundleID, itemID: item.id)
+                } onFlyTo: {
+                    if let nodeID = item.targetNodeID {
+                        viewModel.flyToReviewTarget(nodeID)
+                    }
                 }
             }
 
@@ -57,6 +61,7 @@ struct ReviewCardView: View {
     let item: PendingReviewItem
     let onApply: () -> Void
     let onReject: () -> Void
+    var onFlyTo: (() -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -110,6 +115,14 @@ struct ReviewCardView: View {
             )
 
             HStack {
+                if item.targetNodeID != nil, let onFlyTo {
+                    Button(LocalizationManager.shared.localizedString("View on Canvas")) {
+                        onFlyTo()
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(item.status != .pending)
+                }
+
                 Button(LocalizationManager.shared.localizedString("Apply")) {
                     onApply()
                 }

@@ -36,6 +36,10 @@ public final class CoCaptainViewModel {
     @ObservationIgnored
     private var activeCodingRunItemID: UUID?
 
+    /// Called when the user asks to fly the canvas to a review target node.
+    @ObservationIgnored
+    public var onFlyToNode: ((UUID) -> Void)?
+
     public var isThinking: Bool = false
     /// The cumulative number of completed assistant turns/responses. This increments whenever a model
     /// streaming task, execution result, or local command finishes. Used to synchronize onboarding prompts.
@@ -61,6 +65,18 @@ public final class CoCaptainViewModel {
             guard case .reviewBundle(let bundle) = item.content else { return }
             count += bundle.items.filter { $0.status == .pending }.count
         }
+    }
+
+    /// Timeline item ID for the first bundle that still has pending review items.
+    public var firstPendingReviewBundleID: UUID? {
+        items.first { item in
+            guard case .reviewBundle(let bundle) = item.content else { return false }
+            return bundle.items.contains { $0.status == .pending }
+        }?.id
+    }
+
+    public func focusPendingReviews() {
+        lastScrollPosition = firstPendingReviewBundleID
     }
 
     public init(
@@ -279,6 +295,10 @@ public final class CoCaptainViewModel {
 
     public func performProductCTA(_ item: CoCaptainProductCTAItem) {
         _ = actionDispatcher?.perform(item.actionID, source: .user, arguments: nil)
+    }
+
+    public func flyToReviewTarget(_ nodeID: UUID) {
+        onFlyToNode?(nodeID)
     }
 
     /// Handles simple app commands locally so navigation does not need a model
