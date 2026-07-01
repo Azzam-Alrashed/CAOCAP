@@ -124,12 +124,18 @@ public final class CoCaptainAgentCoordinator {
             purpose: purpose,
             intent: CoCaptainTurnIntentResolver().resolve(userMessage)
         )
+        let contextDetailLevel: ProjectContextBuilder.DetailLevel =
+            resolvedTurnPlan.intent == .mutatingWork ? .implementation : .product
         let context = store.map { store in
             switch scope {
             case .project:
-                return contextBuilder.buildPromptContext(from: store)
+                return contextBuilder.buildPromptContext(from: store, detailLevel: contextDetailLevel)
             case .node(let nodeID):
-                return contextBuilder.buildNodePromptContext(from: store, nodeID: nodeID)
+                return contextBuilder.buildNodePromptContext(
+                    from: store,
+                    nodeID: nodeID,
+                    detailLevel: contextDetailLevel
+                )
             }
         }
         let policy = resolvedTurnPlan.effectivePolicy

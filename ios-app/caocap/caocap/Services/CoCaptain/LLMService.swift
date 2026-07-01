@@ -338,6 +338,12 @@ public final class LLMService {
                 }
                 .joined(separator: "\n")
 
+            let firebasePersistenceInstructions = turnIntent == .mutatingWork
+                ? """
+                - For Firebase/Firestore persistence, edit the Mini-App **code section** (inline JavaScript): use `window.__caocapFirestore` (and optional `window.__caocapFirestoreDefaultPath`) as described in canvas context; use compat-style `collection`/`doc`/`set`/`add`/`update` calls after null-checks.
+                """
+                : ""
+
             parts.append(
                 """
                 Agent contract:
@@ -368,7 +374,7 @@ public final class LLMService {
                 - Use LOWERCASE role name `miniApp`.
                 - In node-scoped sessions, include `nodeId="UUID"` on every `node_edit` whenever the target node is known.
                 - Code/content changes belong in `node_edits`, not app actions.
-                - For Firebase/Firestore persistence, edit the Mini-App **code section** (inline JavaScript): use `window.__caocapFirestore` (and optional `window.__caocapFirestoreDefaultPath`) as described in canvas context; use compat-style `collection`/`doc`/`set`/`add`/`update` calls after null-checks.
+                \(firebasePersistenceInstructions)
                 - Every node edit needs a non-empty summary and at least one operation.
                 - Exact operations require a non-empty `target`; append/prepend/replace_all do not.
                 - When editing an existing non-empty Mini-App code section, include 1 to 5 behavioral verification checks.

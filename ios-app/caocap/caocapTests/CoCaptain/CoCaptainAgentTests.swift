@@ -80,6 +80,19 @@ struct CoCaptainAgentTests {
     }
 
     @MainActor
+    @Test func productContextOmitsFirebaseImplementationDetails() throws {
+        let store = makeStore()
+        store.nodes[0].miniApp?.firebaseConfigText = #"{"apiKey":"test"}"#
+
+        let context = ProjectContextBuilder().buildPromptContext(from: store, detailLevel: .product)
+
+        #expect(context.contains("SRS Readiness:"))
+        #expect(!context.contains("Mini-App Firebase wiring rules"))
+        #expect(!context.contains("__caocapFirestore"))
+        #expect(!context.contains("Firebase Config:"))
+    }
+
+    @MainActor
     @Test func projectContextIncludesMiniAppsAndExcludesCompiledPreview() throws {
         let store = makeStore()
         store.nodes[0].miniApp?.compiledHTML = "<html>compiled</html>"
