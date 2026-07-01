@@ -673,13 +673,14 @@ public struct ChatBubbleItem: Identifiable, Hashable {
     /// returns a plain-text `AttributedString` as a last resort so the
     /// UI never shows a blank bubble.
     public var markdownText: AttributedString {
+        let source = isUser ? text : ChatBubbleMarkdownNormalizer.normalizeAssistantText(text)
         let fullOptions = AttributedString.MarkdownParsingOptions(
             allowsExtendedAttributes: true,
             interpretedSyntax: .full,
             failurePolicy: .returnPartiallyParsedIfPossible
         )
 
-        if let attributed = try? AttributedString(markdown: text, options: fullOptions) {
+        if let attributed = try? AttributedString(markdown: source, options: fullOptions) {
             return attributed
         }
 
@@ -688,7 +689,7 @@ public struct ChatBubbleItem: Identifiable, Hashable {
             interpretedSyntax: .inlineOnlyPreservingWhitespace,
             failurePolicy: .returnPartiallyParsedIfPossible
         )
-        return (try? AttributedString(markdown: text, options: fallbackOptions)) ?? AttributedString(text)
+        return (try? AttributedString(markdown: source, options: fallbackOptions)) ?? AttributedString(source)
     }
 }
 

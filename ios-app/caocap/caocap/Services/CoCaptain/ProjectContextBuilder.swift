@@ -8,6 +8,14 @@ import Foundation
 /// immediate neighbors so the agent can reason more precisely about a
 /// single Mini-App without losing awareness of the broader canvas.
 public struct ProjectContextBuilder {
+    /// Controls how much implementation detail is included in canvas context.
+    public enum DetailLevel: Hashable {
+        /// Full Mini-App source plus Firebase wiring rules for edit turns.
+        case implementation
+        /// SRS/code summaries without Firebase wiring or config payloads.
+        case product
+    }
+
     /// Maximum characters allowed for the Firebase config section of a prompt.
     /// Config objects can be large JSON; truncation keeps the prompt within model limits.
     private static let maxFirebaseConfigChars = 4_000
@@ -20,10 +28,13 @@ public struct ProjectContextBuilder {
     /// SRS + code sections (with character budgets), and the Firebase wiring
     /// rules so the agent always has them in context.
     @MainActor
-    public func buildPromptContext(from store: ProjectStore) -> String {
+    public func buildPromptContext(
+        from store: ProjectStore,
+        detailLevel: DetailLevel = .implementation
+    ) -> String {
         let miniApps = store.nodes.filter { $0.type == .miniApp }
         let inventory = nodeInventory(store.nodes)
-        let miniAppSections = miniApps.map { miniAppContext(for: $0, selected: false) }
+        let miniAppSections = miniApps.map { miniAppContext(for: $0, selected: false, detailLevel: detailLevel) }
 
         return [
             "Project Name: \(store.projectName)",
@@ -32,7 +43,7 @@ public struct ProjectContextBuilder {
             "Mini-App Count: \(miniApps.count)",
             "Node Graph:\n\(inventory)",
             miniAppSections.isEmpty ? nil : "Mini-Apps:\n\n" + miniAppSections.joined(separator: "\n\n---\n\n"),
-            ProjectContextBuilder.firebaseWiringRulesBulletList()
+            detailLevel == .implementation ? ProjectContextBuilder.firebaseWiringRulesBulletList() : nil
         ]
         .compactMap { $0 }
         .joined(separator: "\n\n")
@@ -45,13 +56,17 @@ public struct ProjectContextBuilder {
     /// to stay within prompt limits. Falls back to the full-project context if
     /// the requested `nodeID` is not found.
     @MainActor
-    public func buildNodePromptContext(from store: ProjectStore, nodeID: UUID) -> String {
+    public func buildNodePromptContext(
+        from store: ProjectStore,
+        nodeID: UUID,
+        detailLevel: DetailLevel = .implementation
+    ) -> String {
         guard let selectedNode = store.nodes.first(where: { $0.id == nodeID }) else {
-            return buildPromptContext(from: store)
+            return buildPromptContext(from: store, detailLevel: detailLevel)
         }
 
         let linkedNodes = linkedNeighbors(of: selectedNode, in: store.nodes)
-        let linkedSections = linkedNodes.map { miniAppContext(for: $0, selected: false) }
+        let linkedSections = linkedNodes.map { miniAppContext(for: $0, selected: false, detailLevel: detailLevel) }
 
         return [
             "Project Name: \(store.projectName)",
@@ -62,10 +77,10 @@ public struct ProjectContextBuilder {
             "Selected Node Type: \(selectedNode.type.rawValue)",
             "Selected Node Role: \(selectedNode.role.rawValue)",
             selectedNode.agentState.memorySummary.map { "Node Agent Memory:\n\($0)" },
-            "Selected Node Context:\n\(miniAppContext(for: selectedNode, selected: true))",
+            "Selected Node Context:\n\(miniAppContext(for: selectedNode, selected: true, detailLevel: detailLevel))",
             linkedSections.isEmpty ? nil : "Linked Neighbor Nodes:\n\n\(linkedSections.joined(separator: "\n\n"))",
             "Project Inventory:\n\(nodeInventory(store.nodes))",
-            ProjectContextBuilder.firebaseWiringRulesBulletList()
+            detailLevel == .implementation ? ProjectContextBuilder.firebaseWiringRulesBulletList() : nil
         ]
         .compactMap { $0 }
         .joined(separator: "\n\n")
@@ -85,7 +100,11 @@ public struct ProjectContextBuilder {
     /// `selected` controls the character budget: the focused node gets a larger
     /// window so the agent can read its full SRS and enough code to reason about
     /// it, while neighbor nodes are capped to a brief summary to save prompt space.
-    private func miniAppContext(for node: SpatialNode, selected: Bool) -> String {
+    private func miniAppContext(
+        for node: SpatialNode,
+        selected: Bool,
+        detailLevel: DetailLevel
+    ) -> String {
         guard node.type == .miniApp, let miniApp = node.miniApp else {
             if node.type == .subCanvas {
                 return "- \(node.title) [subCanvas] links to file: \(node.linkedCanvasFileName ?? "[None]")"
@@ -95,6 +114,19 @@ public struct ProjectContextBuilder {
 
         let srsLimit = selected ? 3_000 : 1_000
         let codeLimit = selected ? 6_000 : 1_600
+
+        if detailLevel == .product {
+            return """
+            - \(node.title) [miniApp] id: \(node.id.uuidString)
+              SRS Readiness: \(miniApp.srsReadinessState.contextLabel)
+              SRS:
+            \(Self.indent(Self.trimmed(miniApp.srsText, limit: srsLimit), spaces: 4))
+
+              Code:
+            \(Self.indent(Self.trimmed(miniApp.codeText, limit: codeLimit), spaces: 4))
+            """
+        }
+
         let firebaseConfig = miniApp.firebaseConfigText.trimmingCharacters(in: .whitespacesAndNewlines)
         let firebaseStatus = FirebasePreviewBootstrap.injectableFirebaseConfig(for: miniApp) == nil ? "not ready" : "ready"
         let firestorePath = miniApp.firebaseFirestorePath?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
