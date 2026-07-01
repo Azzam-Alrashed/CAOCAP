@@ -6,6 +6,7 @@ struct NodeAgentChatView: View {
     let nodeID: UUID
     let store: ProjectStore
     var actionDispatcher: (any AppActionPerforming)?
+    var onFlyToNode: ((UUID) -> Void)?
 
     @State private var viewModel = CoCaptainViewModel()
     @State private var text = ""
@@ -27,9 +28,11 @@ struct NodeAgentChatView: View {
                 store: store,
                 isThinking: viewModel.isThinking,
                 analysisItems: [],
+                pendingReviewCount: viewModel.pendingReviewCount,
                 onSend: sendCurrentMessage,
                 onStop: viewModel.stopStreaming,
                 onQuickPrompt: sendQuickPrompt,
+                onFocusPendingReviews: viewModel.focusPendingReviews,
                 onApplySuggestion: viewModel.applySuggestion,
                 onDismissSuggestion: viewModel.dismissSuggestion
             )
@@ -50,6 +53,7 @@ struct NodeAgentChatView: View {
                 nodeID: nodeID,
                 dispatcher: actionDispatcher
             )
+            viewModel.onFlyToNode = onFlyToNode
         }
     }
 

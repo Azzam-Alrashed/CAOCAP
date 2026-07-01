@@ -32,6 +32,9 @@ final class AppSessionCoordinator {
     var viewport = ViewportState()
     var nodeFrames: [UUID: NodeFrameData] = [:]
     var containerSize: CGSize = .zero
+    /// Briefly highlights a node after fly-to navigation from CoCaptain or the command palette.
+    var canvasFocusNodeID: UUID?
+    @ObservationIgnored private var canvasFocusClearTask: Task<Void, Never>?
 
     var exportURL: URL?
     var showExportSheet = false
@@ -367,7 +370,10 @@ final class AppSessionCoordinator {
             self.commandPalette.nodes = self.router.activeStore.nodes
         }
         commandPalette.onFlyToNode = { [weak self] nodeId in
-            self?.flyToNode(nodeId)
+            self?.focusCanvasNode(nodeId)
+        }
+        coCaptain.onFlyToNode = { [weak self] nodeId in
+            self?.focusCanvasNode(nodeId)
         }
         commandPalette.onSubmitPrompt = { [weak self] prompt in
             self?.submitCoCaptainPrompt(prompt)
@@ -615,11 +621,21 @@ final class AppSessionCoordinator {
         router.activeStore.updateNodeType(id: uuid, type: type)
     }
 
-    private func flyToNode(_ nodeId: UUID) {
+    func focusCanvasNode(_ nodeId: UUID) {
         guard let node = router.activeStore.nodes.first(where: { $0.id == nodeId }) else { return }
         let targetScale = flyToTargetScale(for: node, nodeId: nodeId)
+        HapticsManager.shared.trigger(.light)
         withAnimation(.spring(response: 0.6, dampingFraction: 0.85)) {
             viewport.flyTo(nodePosition: node.position, containerSize: containerSize, targetScale: targetScale)
+        }
+        canvasFocusNodeID = nodeId
+        canvasFocusClearTask?.cancel()
+        canvasFocusClearTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(2.5))
+            guard let self, !Task.isCancelled else { return }
+            if self.canvasFocusNodeID == nodeId {
+                self.canvasFocusNodeID = nil
+            }
         }
     }
 

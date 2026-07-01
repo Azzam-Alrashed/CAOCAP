@@ -126,14 +126,19 @@ public struct CoCaptainFunctionCallAgentAdapter {
                 continue
             }
 
-            guard let actionID = nonEmptyArgument("actionId", in: functionCall) else {
+            guard let actionID = nonEmptyArgument("actionId", in: functionCall)
+                ?? nonEmptyArgument("action_id", in: functionCall) else {
                 diagnostics.append("Function call `\(functionCall.name)` is missing `actionId`.")
                 continue
             }
 
             // Default to pending so unknown modes don't silently auto-execute.
-            let executionMode = nonEmptyArgument("executionMode", in: functionCall) ?? "pending"
-            let action = CoCaptainAgentAction(actionID: actionID)
+            let executionMode = (nonEmptyArgument("executionMode", in: functionCall) ?? "pending")
+                .lowercased()
+            let action = CoCaptainAgentAction(
+                actionID: actionID,
+                args: supplementalArguments(from: functionCall)
+            )
 
             switch executionMode {
             case "safe":
@@ -174,6 +179,15 @@ public struct CoCaptainFunctionCallAgentAdapter {
             return nil
         }
         return value
+    }
+
+    private func supplementalArguments(from functionCall: CoCaptainAgentFunctionCall) -> [String: String]? {
+        let reservedKeys = Set(["actionId", "action_id", "executionMode"])
+        let args = functionCall.arguments.filter { key, value in
+            !reservedKeys.contains(key) &&
+                !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+        return args.isEmpty ? nil : args
     }
 }
 

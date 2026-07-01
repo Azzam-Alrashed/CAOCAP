@@ -186,10 +186,11 @@ final class NodeMutationEngine {
         }
     }
 
-    /// Clears all agent messages from a node's conversation history.
+    /// Clears all agent messages and pending review bundles from a node's session.
     public func clearNodeAgentMessages(nodes: inout [SpatialNode], id: UUID, persist: Bool = true) {
         guard let index = nodes.firstIndex(where: { $0.id == id }) else { return }
         nodes[index].agentState.messages = []
+        nodes[index].agentState.pendingReviewBundlesData = []
         if persist {
             onRequestSave?(true)
         }

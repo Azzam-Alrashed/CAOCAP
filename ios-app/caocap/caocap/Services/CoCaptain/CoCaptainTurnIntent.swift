@@ -1,0 +1,46 @@
+import Foundation
+
+/// Classifies what the user wants from a single CoCaptain turn before the
+/// coordinator selects execution policy and LLM prompt instructions.
+public enum CoCaptainTurnIntent: Hashable {
+    /// The user asked to build, edit, or otherwise change canvas content.
+    case mutatingWork
+    /// The user asked for advice, suggestions, or analysis without applying changes.
+    case advisory
+    /// Casual conversation with no advisory or build/edit signals.
+    case generalChat
+
+    /// Connection-fallback footers apply only when executable canvas work was expected.
+    var requiresDegradedConnectionNotice: Bool {
+        self == .mutatingWork
+    }
+
+    /// Turn-specific prompt guidance appended after purpose instructions.
+    var promptInstructions: String? {
+        switch self {
+        case .mutatingWork:
+            return nil
+        case .advisory:
+            return """
+            Advisory turn objective:
+            - The user is asking for suggestions, recommendations, explanations, comparisons, or opinions — not requesting canvas changes yet.
+            - Answer in clear prose grounded in the supplied context when helpful.
+            - Focus on user-facing product ideas: gameplay, UX, layout, features, polish, and requirements gaps.
+            - When listing multiple suggestions, use a markdown numbered list with a blank line between each item.
+            - Start each item with a short **bold title** on its own line, then one or two sentences of detail.
+            - Do not mention Firebase, Firestore, `window.__caocapFirestore`, nodes, SRS, patches, XML, or other implementation internals unless the user explicitly asked about saving data or backend setup.
+            - Do not request app actions and do not append a `cocaptain_actions` block.
+            - Match the language used by the user.
+            """
+        case .generalChat:
+            return """
+            General chat objective:
+            - The user is having a casual conversation unrelated to making canvas changes.
+            - Answer naturally and concisely.
+            - Do not mention Firebase, Firestore, nodes, SRS, patches, XML, or implementation internals unless the user explicitly asked about them.
+            - Do not request app actions and do not append a `cocaptain_actions` block.
+            - Match the language used by the user.
+            """
+        }
+    }
+}

@@ -260,6 +260,8 @@ Decoupled backend engines and API clients specific to the CoCaptain agentic flow
 | `LLMService.swift` | Interface for the Firebase AI Logic SDK. Manages streaming sessions with the Gemini backend. Also coordinates local on-device MLX model download and inference. |
 | `TokenUsageLimiter.swift` | Local estimated-token quota tracker for free CoCaptain and AI node usage; Pro entitlements bypass the free monthly cap. |
 | `CommandIntentResolver.swift` | Maps plain-language command palette and CoCaptain prompts to available app actions. |
+| `CoCaptainTurnIntentResolver.swift` | Classifies each CoCaptain user message as mutating work, advisory, or general chat before coordinator execution. |
+| `CoCaptainTurnIntent.swift` | Turn intent enum with prompt instructions and connection-fallback notice rules. |
 | `ProjectContextBuilder.swift` | Logic to "harvest" the spatial graph and serialize it into a grounded prompt context for the LLM. |
 | `NodePatchEngine.swift` | A precision editing engine that previews partial patches (replace/insert/append) for Mini-App SRS and Code sections. |
 | `MiniAppVerificationService.swift` | Runs staged Mini-App code in an ephemeral offline WebView, captures runtime diagnostics, and evaluates model-authored behavior checks. |

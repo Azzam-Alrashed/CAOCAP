@@ -56,14 +56,42 @@ public enum CoCaptainTurnPurpose: Hashable {
     }
 }
 
+/// Merges onboarding purpose with per-turn user intent to select execution behavior.
+public struct CoCaptainTurnPlan: Equatable {
+    public let purpose: CoCaptainTurnPurpose
+    public let intent: CoCaptainTurnIntent
+
+    public init(purpose: CoCaptainTurnPurpose, intent: CoCaptainTurnIntent) {
+        self.purpose = purpose
+        self.intent = intent
+    }
+
+    /// Onboarding purposes always stay conversational. Standard turns map intent
+    /// to agentic or advisory execution.
+    var effectivePolicy: CoCaptainTurnExecutionPolicy {
+        switch purpose {
+        case .onboardingWelcome, .onboardingBuildHandoff:
+            return .conversational
+        case .standard:
+            switch intent {
+            case .mutatingWork:
+                return .agentic
+            case .advisory, .generalChat:
+                return .advisory
+            }
+        }
+    }
+}
+
 /// Controls whether a CoCaptain turn runs the full agent contract or stays conversational.
 ///
-/// Derived from `CoCaptainTurnPurpose` so prompt instructions and execution behavior
+/// Derived from `CoCaptainTurnPlan` so prompt instructions and execution behavior
 /// stay aligned in one place.
 struct CoCaptainTurnExecutionPolicy: Equatable {
     enum Kind: Equatable {
         case conversational
         case agentic
+        case advisory
     }
 
     let kind: Kind
@@ -78,6 +106,14 @@ struct CoCaptainTurnExecutionPolicy: Equatable {
         enforcesExecutableWork: true,
         executesActions: true,
         allowsAgenticRetry: true
+    )
+
+    static let advisory = CoCaptainTurnExecutionPolicy(
+        kind: .advisory,
+        expectsStructuredResponse: true,
+        enforcesExecutableWork: false,
+        executesActions: true,
+        allowsAgenticRetry: false
     )
 
     static let conversational = CoCaptainTurnExecutionPolicy(
@@ -171,9 +207,9 @@ public enum CoCaptainCodingRunState: Hashable {
         case .planning:
             return LocalizationManager.shared.localizedString("Planning")
         case .building(let attempt):
-            return LocalizationManager.shared.localizedString("Building attempt %@", arguments: [Int64(attempt)])
+            return LocalizationManager.shared.localizedString("Building attempt %lld", arguments: [Int64(attempt)])
         case .testing(let attempt):
-            return LocalizationManager.shared.localizedString("Testing attempt %@", arguments: [Int64(attempt)])
+            return LocalizationManager.shared.localizedString("Testing attempt %lld", arguments: [Int64(attempt)])
         case .repairing:
             return LocalizationManager.shared.localizedString("Repairing")
         case .readyForReview:
@@ -188,9 +224,9 @@ public enum CoCaptainCodingRunState: Hashable {
     public var detail: String? {
         switch self {
         case .repairing(let nextAttempt):
-            return LocalizationManager.shared.localizedString("Preparing attempt %@ from the verification results.", arguments: [Int64(nextAttempt)])
+            return LocalizationManager.shared.localizedString("Preparing attempt %lld from the verification results.", arguments: [Int64(nextAttempt)])
         case .readyForReview(let attempts):
-            return LocalizationManager.shared.localizedString("Verified after %@ attempt(s).", arguments: [Int64(attempts)])
+            return LocalizationManager.shared.localizedString("Verified after %lld attempt(s).", arguments: [Int64(attempts)])
         case .failed(let message):
             return message
         default:
@@ -456,7 +492,7 @@ public struct CoCaptainParsedResponse: Hashable {
 
 /// Tracks the lifecycle of a single `PendingReviewItem` as the user
 /// approves, rejects, or encounters a conflict.
-public enum ReviewItemStatus: String, Hashable {
+public enum ReviewItemStatus: String, Hashable, Codable {
     /// The item has not yet been acted upon by the user.
     case pending
     /// The user approved the item and it was applied to the store.
@@ -526,9 +562,9 @@ public struct CoCaptainProductCTAItem: Identifiable, Hashable {
 
 /// Describes the origin of a `PendingReviewItem`, driving how the
 /// coordinator applies or rejects the item when the user acts on it.
-public enum PendingReviewSource: Hashable {
+public enum PendingReviewSource: Hashable, Codable {
     /// An app-level action (e.g. navigate, open settings) waiting for approval.
-    case appAction(AppActionID, [String: String]? = nil)
+    case appAction(AppActionID, [String: String]?)
     /// A proposed node text edit. `baseText` is captured at proposal time so
     /// `NodePatchEngine` can detect intervening changes and flag conflicts.
     case nodeEdit(role: NodeRole, section: CoCaptainNodeEditProposal.MiniAppSection, operations: [NodePatchOperation], baseText: String)
@@ -536,7 +572,7 @@ public enum PendingReviewSource: Hashable {
 
 /// One actionable change within a `ReviewBundleItem`, representing either a
 /// pending app action or a proposed node edit that the user can approve or reject.
-public struct PendingReviewItem: Identifiable, Hashable {
+public struct PendingReviewItem: Identifiable, Hashable, Codable {
     public let id: UUID
     /// The node the edit targets, if applicable. Used to scroll the canvas
     /// to the relevant node when the review card is tapped.
@@ -581,7 +617,7 @@ public struct PendingReviewItem: Identifiable, Hashable {
 ///
 /// The bundle appears as one timeline card with per-item Apply/Reject controls
 /// and bulk Apply All / Reject All buttons.
-public struct ReviewBundleItem: Identifiable, Hashable {
+public struct ReviewBundleItem: Identifiable, Hashable, Codable {
     public let id: UUID
     /// The heading shown at the top of the review card in the timeline.
     public let title: String
@@ -597,6 +633,20 @@ public struct ReviewBundleItem: Identifiable, Hashable {
         self.id = id
         self.title = title
         self.items = items
+    }
+}
+
+/// A review bundle persisted on a node so pending approvals survive scope changes.
+public struct NodeAgentReviewRecord: Codable, Equatable, Hashable, Identifiable {
+    public var id: UUID { timelineItemID }
+    public let timelineItemID: UUID
+    public var bundle: ReviewBundleItem
+    public let createdAt: Date
+
+    public init(timelineItemID: UUID, bundle: ReviewBundleItem, createdAt: Date = Date()) {
+        self.timelineItemID = timelineItemID
+        self.bundle = bundle
+        self.createdAt = createdAt
     }
 }
 
@@ -623,13 +673,14 @@ public struct ChatBubbleItem: Identifiable, Hashable {
     /// returns a plain-text `AttributedString` as a last resort so the
     /// UI never shows a blank bubble.
     public var markdownText: AttributedString {
+        let source = isUser ? text : ChatBubbleMarkdownNormalizer.normalizeAssistantText(text)
         let fullOptions = AttributedString.MarkdownParsingOptions(
             allowsExtendedAttributes: true,
             interpretedSyntax: .full,
             failurePolicy: .returnPartiallyParsedIfPossible
         )
 
-        if let attributed = try? AttributedString(markdown: text, options: fullOptions) {
+        if let attributed = try? AttributedString(markdown: source, options: fullOptions) {
             return attributed
         }
 
@@ -638,7 +689,7 @@ public struct ChatBubbleItem: Identifiable, Hashable {
             interpretedSyntax: .inlineOnlyPreservingWhitespace,
             failurePolicy: .returnPartiallyParsedIfPossible
         )
-        return (try? AttributedString(markdown: text, options: fallbackOptions)) ?? AttributedString(text)
+        return (try? AttributedString(markdown: source, options: fallbackOptions)) ?? AttributedString(source)
     }
 }
 
