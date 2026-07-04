@@ -17,6 +17,7 @@ enum CuratedRootCanvasMigration {
     static let launchAnchorLayoutCompleteKey = "curatedRootCanvas_v11_launch_anchor_layout_complete"
     static let appIconNodeCompleteKey = "curatedRootCanvas_v12_app_icon_node_complete"
     static let profileAppIconLayoutCompleteKey = "curatedRootCanvas_v13_profile_app_icon_layout_complete"
+    static let whatsAppTopRightLayoutCompleteKey = "curatedRootCanvas_v14_whatsapp_top_right_layout_complete"
     private static let logger = Logger(subsystem: "com.caocap.app", category: "CuratedRootCanvasMigration")
 
     static func runIfNeeded(
@@ -167,6 +168,16 @@ enum CuratedRootCanvasMigration {
                 logger.info("Repositioned the root Profile and App Icon nodes.")
             } catch {
                 logger.error("Failed to reposition the root Profile and App Icon nodes: \(error.localizedDescription)")
+            }
+        }
+
+        if !defaults.bool(forKey: whatsAppTopRightLayoutCompleteKey) {
+            do {
+                try refreshWhatsAppTopRightLayout(persistence: persistence)
+                defaults.set(true, forKey: whatsAppTopRightLayoutCompleteKey)
+                logger.info("Repositioned the root WhatsApp node to the top-right anchor.")
+            } catch {
+                logger.error("Failed to reposition the root WhatsApp node: \(error.localizedDescription)")
             }
         }
     }
@@ -717,6 +728,40 @@ enum CuratedRootCanvasMigration {
             updated.position = canonical.position
             return updated
         }
+
+        try persistence.save(
+            ProjectSnapshot(
+                schemaVersion: snapshot.schemaVersion,
+                projectName: snapshot.projectName,
+                nodes: updatedNodes,
+                viewportOffset: snapshot.viewportOffset,
+                viewportScale: snapshot.viewportScale,
+                checkpointLabel: snapshot.checkpointLabel
+            ),
+            fileName: rootFileName
+        )
+    }
+
+    /// Moves WhatsApp from the top-center anchor to the top-right, mirroring Profile.
+    private static func refreshWhatsAppTopRightLayout(persistence: ProjectPersistenceService) throws {
+        let rootFileName = CanvasFileNaming.rootFileName
+        guard persistence.projectExists(fileName: rootFileName) else { return }
+
+        let snapshot = try persistence.load(fileName: rootFileName)
+        let legacyWhatsAppPosition = CGPoint(x: 0, y: RootCanvasProvider.topAnchorY)
+        let targetPosition = RootCanvasProvider.gridPosition(for: RootCanvasProvider.whatsAppNodeID)
+
+        let updatedNodes = snapshot.nodes.map { node -> SpatialNode in
+            guard node.id == RootCanvasProvider.whatsAppNodeID,
+                  node.position == legacyWhatsAppPosition else {
+                return node
+            }
+            var updated = node
+            updated.position = targetPosition
+            return updated
+        }
+
+        guard updatedNodes != snapshot.nodes else { return }
 
         try persistence.save(
             ProjectSnapshot(

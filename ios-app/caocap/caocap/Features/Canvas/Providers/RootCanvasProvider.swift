@@ -94,7 +94,8 @@ public enum RootCanvasProvider {
         case dailyNodeID:
             gridPosition(column: 1, row: 3)
         case whatsAppNodeID:
-            CGPoint(x: 0, y: topAnchorY)
+            // Top-right anchor, mirroring Profile on the top-left.
+            CGPoint(x: columnSpacing, y: topAnchorY)
         case profileNodeID:
             CGPoint(x: -columnSpacing, y: topAnchorY)
         case helpNodeID:

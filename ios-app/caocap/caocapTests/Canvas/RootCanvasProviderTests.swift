@@ -53,7 +53,7 @@ struct RootCanvasProviderTests {
         #expect(daily.action == .openDaily)
 
         let whatsApp = try #require(nodes.first { $0.id == RootCanvasProvider.whatsAppNodeID })
-        #expect(whatsApp.position == CGPoint(x: 0, y: -550))
+        #expect(whatsApp.position == CGPoint(x: columnSpacing, y: -550))
         #expect(whatsApp.theme == .green)
         #expect(whatsApp.action == .openWhatsApp)
 

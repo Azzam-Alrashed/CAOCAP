@@ -22,7 +22,8 @@ enum AppIconService {
         AppIconOption(id: "AppIcon_1", displayName: "Launch", subtitle: "Rocket on star grid", previewImageName: "AppIconPreview1"),
         AppIconOption(id: "AppIcon_2", displayName: "Orbit", subtitle: "Deep space rocket", previewImageName: "AppIconPreview2"),
         AppIconOption(id: "AppIcon_3", displayName: "Nova", subtitle: "Bright rocket trail", previewImageName: "AppIconPreview3"),
-        AppIconOption(id: "AppIcon_4", displayName: "Void", subtitle: "Dark cosmic rocket", previewImageName: "AppIconPreview4")
+        AppIconOption(id: "AppIcon_4", displayName: "Void", subtitle: "Dark cosmic rocket", previewImageName: "AppIconPreview4"),
+        AppIconOption(id: "AppIcon_5", displayName: "CoStar", subtitle: "Curious co-pilot porthole", previewImageName: "AppIconPreview5")
     ]
 
     static var supportsAlternateIcons: Bool {

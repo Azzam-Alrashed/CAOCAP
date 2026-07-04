@@ -3,12 +3,13 @@ import Testing
 @testable import caocap
 
 struct AppIconServiceTests {
-    @Test func exposesSixIconOptions() {
-        #expect(AppIconService.options.count == 6)
+    @Test func exposesSevenIconOptions() {
+        #expect(AppIconService.options.count == 7)
         #expect(AppIconService.options.first?.id == "")
         #expect(AppIconService.options.first?.alternateIconName == nil)
-        #expect(AppIconService.options.last?.id == "AppIcon_4")
-        #expect(AppIconService.options.last?.alternateIconName == "AppIcon_4")
+        #expect(AppIconService.options.last?.id == "AppIcon_5")
+        #expect(AppIconService.options.last?.alternateIconName == "AppIcon_5")
+        #expect(AppIconService.options.last?.displayName == "CoStar")
     }
 
     @Test func persistsSelectionInUserDefaults() throws {
