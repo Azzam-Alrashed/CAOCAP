@@ -421,11 +421,9 @@ First-run onboarding for the canvas, Omnibox, and CoCaptain flow. The full funne
 | `MoonStageLayout.swift` | Asset-derived moon geometry and hero stand-line math. |
 | `PersonalizationTheme.swift` | Shared dark-space palette and layout tokens. |
 | `PersonalizationChrome.swift` | Top bar, progress, footnote, bottom navigation, and completion moment. |
-| `PersonalizationCopilotStepContent.swift` | Co-pilot step header and selected info card (no hero layout). |
+| `PersonalizationCopilotStepContent.swift` | Co-pilot step header and floating selected persona text (no card). |
 | `PersonalizationSurveyStepContent.swift` | Survey question scroll content and answer tiles. |
-| `CopilotPickerCard.swift` | Text-only co-pilot selection card with accent glow. |
 | `PersonalizationPrimaryButton.swift` | Gradient continue CTA shared across personalization steps. |
-| `PersonalizationAnswerCard.swift` | Reusable selectable answer tile for survey options. |
 
 Onboarding tooltips must not be presented by feature-local `.popover` modifiers. Feature views should only publish anchors with `onboardingTooltipAnchor(_:)`; the central overlay decides which single tooltip is visible.
 

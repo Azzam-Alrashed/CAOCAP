@@ -83,7 +83,9 @@ enum PersonalizationChrome {
         var body: some View {
             Text(LocalizedStringKey(stringLiteral: footnoteKey))
                 .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(PersonalizationTheme.textMuted)
+                .foregroundStyle(PersonalizationTheme.textSecondary)
+                .shadow(color: .black.opacity(0.55), radius: 6, x: 0, y: 1)
+                .shadow(color: .black.opacity(0.35), radius: 12, x: 0, y: 2)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
                 .padding(.bottom, 8)

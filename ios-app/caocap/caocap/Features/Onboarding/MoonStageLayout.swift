@@ -8,6 +8,8 @@ enum MoonStageLayout {
     static let displayScale: CGFloat = 1.78
     /// Trims transparent padding baked into hero PNG feet.
     static let heroFeetTrim: CGFloat = 6
+    /// Nudges hero feet down onto the visible moon terrain.
+    static let heroStandDownOffset: CGFloat = 40
 
     static func renderedHeight(screenWidth: CGFloat) -> CGFloat {
         (screenWidth / assetAspectRatio) * displayScale
@@ -24,7 +26,7 @@ enum MoonStageLayout {
         screenHeight: CGFloat,
         bottomChromeHeight: CGFloat
     ) -> CGFloat {
-        let raw = standLineY(screenWidth: screenWidth, screenHeight: screenHeight)
+        let raw = standLineY(screenWidth: screenWidth, screenHeight: screenHeight) + heroStandDownOffset
         let chromeClearance = screenHeight - bottomChromeHeight - 8
         return min(raw, chromeClearance)
     }
