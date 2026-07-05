@@ -99,7 +99,7 @@ struct AppSheetsModifier: ViewModifier {
             }
             .sheet(isPresented: $session.showingAppIconPicker) {
                 AppIconPickerView()
-                    .presentationDetents([.medium, .large])
+                    .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
             }
     }
