@@ -30,6 +30,20 @@ CoCaptain, dismiss, and long-press practice steps.
 
 **Steps 2–6 — Survey:** Same five questions as v1 (stable question/answer IDs for analytics).
 
+### Scene compositor
+
+Personalization UI uses one coordinate space via `PersonalizationSceneView`:
+
+1. **Backdrop** — `PersonalizationSpaceBackdrop` (sky + stars only)
+2. **Moon** — `PersonalizationMoonStage` (full-bleed at screen bottom)
+3. **Heroes** — `PersonalizationHeroLayer` (feet aligned to `MoonStageLayout` stand line)
+4. **Content** — TabView pages with step content only (no heroes inside pages)
+5. **Chrome** — top bar, progress, footnote, bottom bar; height measured via `PersonalizationBottomChromeHeightKey`
+
+Hero stand-line Y uses asset geometry plus measured bottom chrome — no hardcoded bar heights.
+
+### Data and integration
+
 - Manifest steps live in `PersonalizationOnboardingManifest.swift` (`steps[]`: copilot picker + survey questions).
 - Answers and `selectedCopilot` persist via `UserProfileStore` as JSON in `UserDefaults` (`personalization_survey_answers_v1`).
 - Chat avatars read the saved copilot via `CopilotAvatarView` (`CopilotPersona` in `Models/CopilotPersona.swift`).

@@ -279,7 +279,7 @@ CDL assets imported into `Assets.xcassets` for personalization v2 and chat avata
 | CoStar hero (picker) | `CopilotHeroCostar` | `costar/hero/costar_hero_wave.png` |
 | Cocaptain avatar (chat) | `CopilotAvatarCocaptain` | `cocaptain/avatar/cocaptain_avatar_idle_low.png` |
 | CoStar avatar (chat) | `CopilotAvatarCostar` | `costar/avatar/costar_avatar_idle_low.png` |
-| Moon stage (personalization picker) | `PersonalizationMoonStage` | Moon-only bottom strip from `intro/cocaptain_wallpaper_moon.png` (y 96–100%, no character) |
+| Moon stage (personalization picker) | `PersonalizationMoonStage` | `intro/personalization_moon_stage.png` — dedicated moon horizon strip, transparent background, no character |
 
 **UI references:** `ui-mockups/onboarding_copilot_picker_mockup.png`, `ui-mockups/onboarding_copilot_hero_select_mockup.png`
 

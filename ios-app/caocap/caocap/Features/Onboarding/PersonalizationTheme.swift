@@ -1,7 +1,11 @@
 import SwiftUI
 
-/// Dark space palette for personalization onboarding.
-enum PersonalizationMoonTheme {
+/// Dark space palette and layout tokens for personalization onboarding.
+enum PersonalizationTheme {
+    static let horizontalInset: CGFloat = 24
+    static let verticalInset: CGFloat = 18
+    static let companionHeroScrollClearance: CGFloat = 148
+
     static let skyTop = Color(hex: "050814")
     static let skyMid = Color(hex: "0D1B2A")
     static let skyBottom = Color(hex: "12082A")

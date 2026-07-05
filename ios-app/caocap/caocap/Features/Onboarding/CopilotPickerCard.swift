@@ -15,7 +15,7 @@ struct CopilotPickerCard: View {
             VStack(spacing: 5) {
                 Text(LocalizedStringKey(stringLiteral: persona.nameKey))
                     .font(.system(size: 17, weight: .bold, design: .rounded))
-                    .foregroundStyle(PersonalizationMoonTheme.textPrimary)
+                    .foregroundStyle(PersonalizationTheme.textPrimary)
 
                 Text(LocalizedStringKey(stringLiteral: persona.roleKey))
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
@@ -23,7 +23,7 @@ struct CopilotPickerCard: View {
 
                 Text(LocalizedStringKey(stringLiteral: persona.taglineKey))
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(PersonalizationMoonTheme.textSecondary)
+                    .foregroundStyle(PersonalizationTheme.textSecondary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
                     .lineLimit(3)
@@ -31,7 +31,7 @@ struct CopilotPickerCard: View {
 
                 Image(systemName: isSelected ? "largecircle.fill.circle" : "circle")
                     .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(isSelected ? accent : PersonalizationMoonTheme.textMuted)
+                    .foregroundStyle(isSelected ? accent : PersonalizationTheme.textMuted)
                     .modifier(BounceOnSelect(isActive: isSelected, reduceMotion: reduceMotion))
                     .padding(.top, 2)
             }
@@ -44,7 +44,7 @@ struct CopilotPickerCard: View {
                         .fill(.ultraThinMaterial.opacity(0.35))
 
                     RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .fill(isSelected ? PersonalizationMoonTheme.cardFillSelected : PersonalizationMoonTheme.cardFill)
+                        .fill(isSelected ? PersonalizationTheme.cardFillSelected : PersonalizationTheme.cardFill)
 
                     if isSelected {
                         RoundedRectangle(cornerRadius: 20, style: .continuous)
@@ -66,11 +66,11 @@ struct CopilotPickerCard: View {
             .overlay {
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .stroke(
-                        isSelected ? accent.opacity(0.95) : PersonalizationMoonTheme.cardStroke,
+                        isSelected ? accent.opacity(0.95) : PersonalizationTheme.cardStroke,
                         lineWidth: isSelected ? 2.5 : 1
                     )
             }
-            .shadow(color: PersonalizationMoonTheme.cardShadow, radius: 10, y: 5)
+            .shadow(color: PersonalizationTheme.cardShadow, radius: 10, y: 5)
             .shadow(color: isSelected ? accent.opacity(0.42) : .clear, radius: 22, y: 2)
             .shadow(color: isSelected ? accent.opacity(0.22) : .clear, radius: 8, y: 0)
         }

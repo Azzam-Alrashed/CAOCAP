@@ -1,41 +1,50 @@
 import SwiftUI
 
-/// Co-pilot selection step in personalization onboarding.
-struct PersonalizationCopilotPickerView: View {
+/// Header and selected co-pilot info card for step 1 (no hero layout).
+struct PersonalizationCopilotStepContent: View {
     let content: CopilotPickerContent
     @Bindable var coordinator: PersonalizationOnboardingCoordinator
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             header
+                .padding(.top, 4)
 
-            Spacer(minLength: isCompactHeight ? 8 : 16)
+            selectedInfoCard
+                .padding(.top, isCompactHeight ? 12 : 16)
 
-            PersonalizationCopilotStage(coordinator: coordinator)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-
-            Text(LocalizedStringKey(stringLiteral: content.footnoteKey))
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(PersonalizationMoonTheme.textMuted)
-                .frame(maxWidth: 520, alignment: .leading)
-                .padding(.top, isCompactHeight ? 4 : 8)
-                .padding(.bottom, 2)
+            Spacer(minLength: 0)
+                .allowsHitTesting(false)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(.top, 4)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private var selectedInfoCard: some View {
+        CopilotPickerCard(
+            persona: coordinator.selectedCopilot,
+            isSelected: true
+        ) {
+            coordinator.selectCopilot(coordinator.selectedCopilot)
+        }
+        .frame(maxWidth: 320)
+        .allowsHitTesting(false)
+        .id(coordinator.selectedCopilot)
+        .animation(reduceMotion ? nil : .spring(response: 0.42, dampingFraction: 0.74), value: coordinator.selectedCopilot)
     }
 
     private var header: some View {
         VStack(alignment: .leading, spacing: isCompactHeight ? 8 : 10) {
             Text(LocalizedStringKey(stringLiteral: content.titleKey))
                 .font(.system(size: titleSize, weight: .black, design: .rounded))
-                .foregroundStyle(PersonalizationMoonTheme.textPrimary)
+                .foregroundStyle(PersonalizationTheme.textPrimary)
                 .shadow(color: .black.opacity(0.35), radius: 8, x: 0, y: 2)
                 .fixedSize(horizontal: false, vertical: true)
 
             Text(LocalizedStringKey(stringLiteral: content.subtitleKey))
                 .font(.system(size: isCompactHeight ? 15 : 16, weight: .medium))
-                .foregroundStyle(PersonalizationMoonTheme.textSecondary)
+                .foregroundStyle(PersonalizationTheme.textSecondary)
                 .shadow(color: .black.opacity(0.28), radius: 6, x: 0, y: 2)
                 .fixedSize(horizontal: false, vertical: true)
         }
