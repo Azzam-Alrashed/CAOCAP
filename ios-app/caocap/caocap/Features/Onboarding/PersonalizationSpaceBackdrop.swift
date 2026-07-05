@@ -1,34 +1,16 @@
 import SwiftUI
 
-/// Dark starry sky backdrop for personalization onboarding.
-struct PersonalizationBackdrop: View {
+/// Starry sky layers for personalization onboarding (no moon).
+struct PersonalizationSpaceBackdrop: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var galaxyPulse = false
 
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [
-                    PersonalizationMoonTheme.skyTop,
-                    PersonalizationMoonTheme.skyMid,
-                    PersonalizationMoonTheme.skyBottom
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
-
+            skyGradient
             galaxyLayer
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
-
             TwinklingStarField(reduceMotion: reduceMotion)
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
-
             ShootingStarLayer(reduceMotion: reduceMotion)
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
         }
         .onAppear {
             guard !reduceMotion else { return }
@@ -36,6 +18,19 @@ struct PersonalizationBackdrop: View {
                 galaxyPulse = true
             }
         }
+    }
+
+    private var skyGradient: some View {
+        LinearGradient(
+            colors: [
+                PersonalizationTheme.skyTop,
+                PersonalizationTheme.skyMid,
+                PersonalizationTheme.skyBottom
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+        .ignoresSafeArea()
     }
 
     private var galaxyLayer: some View {
@@ -66,6 +61,8 @@ struct PersonalizationBackdrop: View {
             .rotationEffect(.degrees(galaxyPulse ? 12 : -6))
             .opacity(galaxyPulse ? 0.55 : 0.40)
         }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
     }
 }
 
@@ -116,6 +113,8 @@ private struct TwinklingStarField: View {
                 }
             }
         }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
     }
 }
 
@@ -135,6 +134,8 @@ private struct ShootingStarLayer: View {
                     drawShootingStar(context: context, size: size, time: time, slot: 1, period: 6.8, seed: 29)
                 }
             }
+            .ignoresSafeArea()
+            .allowsHitTesting(false)
         }
     }
 

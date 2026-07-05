@@ -413,12 +413,17 @@ First-run onboarding for the canvas, Omnibox, and CoCaptain flow. The full funne
 | `OnboardingPopoverCard.swift` | Central onboarding tooltip presentation. Views publish named `OnboardingTooltipAnchor` frames, and a single `onboardingTooltipOverlay()` renders the active step card. |
 | `PersonalizationOnboardingCoordinator.swift` | State machine for co-pilot picker, survey steps, skip nudge, completion moment, v2 re-present logic, and persistence/analytics handoff. |
 | `PersonalizationOnboardingManifest.swift` | Static step catalogue: copilot picker + survey questions with stable IDs. |
-| `PersonalizationOnboardingView.swift` | Full-screen personalization overlay with space backdrop, progress bar, and completion moment. |
-| `PersonalizationCopilotPickerView.swift` | CDL co-pilot selection step (title + shared moon stage). |
-| `PersonalizationCopilotStage.swift` | Shared moon surface with both heroes standing on it and text selection cards. |
-| `PersonalizationBackdrop.swift` | Dark starry sky with animated galaxy and shooting stars for personalization screens. |
-| `PersonalizationMoonTheme.swift` | Shared dark-space palette for personalization UI. |
-| `CopilotPickerCard.swift` | Selectable co-pilot card with hero art and accent glow. |
+| `PersonalizationOnboardingView.swift` | Thin shell: localization, skip dialog, delegates layout to the scene compositor. |
+| `PersonalizationSceneView.swift` | Single-scene compositor: backdrop, moon, heroes, TabView content, and measured bottom chrome. |
+| `PersonalizationSpaceBackdrop.swift` | Starry sky, animated galaxy, and shooting stars (no moon). |
+| `PersonalizationMoonStage.swift` | Full-bleed moon horizon pinned to the screen bottom. |
+| `PersonalizationHeroLayer.swift` | Co-pilot heroes aligned to the moon stand line (picker + companion modes). |
+| `MoonStageLayout.swift` | Asset-derived moon geometry and hero stand-line math. |
+| `PersonalizationTheme.swift` | Shared dark-space palette and layout tokens. |
+| `PersonalizationChrome.swift` | Top bar, progress, footnote, bottom navigation, and completion moment. |
+| `PersonalizationCopilotStepContent.swift` | Co-pilot step header and selected info card (no hero layout). |
+| `PersonalizationSurveyStepContent.swift` | Survey question scroll content and answer tiles. |
+| `CopilotPickerCard.swift` | Text-only co-pilot selection card with accent glow. |
 | `PersonalizationPrimaryButton.swift` | Gradient continue CTA shared across personalization steps. |
 | `PersonalizationAnswerCard.swift` | Reusable selectable answer tile for survey options. |
 

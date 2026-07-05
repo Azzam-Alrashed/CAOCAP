@@ -8,6 +8,7 @@ final class PersonalizationOnboardingCoordinator {
     var currentIndex: Int = 0
     var selections: [String: String] = [:]
     var selectedCopilot: CopilotPersona = .cocaptain
+    var hasUserSelectedCopilot = false
     var showSkipConfirmation = false
     var showCompletionMoment = false
 
@@ -50,6 +51,14 @@ final class PersonalizationOnboardingCoordinator {
         currentIndex == 0
     }
 
+    var showsCompanionCopilotHero: Bool {
+        currentIndex > 0 && !showCompletionMoment
+    }
+
+    var isCopilotPickerStep: Bool {
+        PersonalizationOnboardingManifest.isCopilotPickerStep(at: currentIndex)
+    }
+
     var isLastStep: Bool {
         currentIndex >= PersonalizationOnboardingManifest.lastIndex
     }
@@ -81,6 +90,7 @@ final class PersonalizationOnboardingCoordinator {
 
     func selectCopilot(_ persona: CopilotPersona) {
         selectedCopilot = persona
+        hasUserSelectedCopilot = true
     }
 
     func select(answerID: String, for questionID: String? = nil) {
@@ -120,6 +130,9 @@ final class PersonalizationOnboardingCoordinator {
             parameters: [PersonalizationSurveyAnalytics.stepIndex: String(currentIndex)]
         )
         currentIndex = max(currentIndex - 1, 0)
+        if currentIndex == 0 {
+            hasUserSelectedCopilot = false
+        }
     }
 
     func requestSkip() {
@@ -164,6 +177,7 @@ final class PersonalizationOnboardingCoordinator {
         currentIndex = 0
         selections = [:]
         selectedCopilot = .cocaptain
+        hasUserSelectedCopilot = false
         showSkipConfirmation = false
         showCompletionMoment = false
         didLogSurveyStart = false
