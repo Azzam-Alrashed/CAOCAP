@@ -40,13 +40,7 @@ struct ChatBubbleView: View {
             if message.isUser {
                 Spacer()
             } else {
-                Image("cocaptain")
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 32, height: 32)
-                    .clipShape(Circle())
-                    .overlay(Circle().stroke(Color.blue.opacity(0.3), lineWidth: 1))
-                    .shadow(color: .blue.opacity(0.4), radius: 6)
+                CopilotAvatarView(size: 32)
             }
 
             VStack(alignment: message.isUser ? .trailing : .leading, spacing: 4) {

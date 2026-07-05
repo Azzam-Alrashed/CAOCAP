@@ -269,6 +269,24 @@ Alternate app icons for CAOCAP. **Filled backgrounds** (space navy `#0D1B2A` or 
 
 ---
 
+## I. Personalization app wiring (iOS)
+
+CDL assets imported into `Assets.xcassets` for personalization v2 and chat avatars.
+
+| Asset | App imageset | Source |
+|-------|--------------|--------|
+| Cocaptain hero (picker) | `CopilotHeroCocaptain` | `cocaptain/hero/cocaptain_hero_wave.png` |
+| CoStar hero (picker) | `CopilotHeroCostar` | `costar/hero/costar_hero_wave.png` |
+| Cocaptain avatar (chat) | `CopilotAvatarCocaptain` | `cocaptain/avatar/cocaptain_avatar_idle_low.png` |
+| CoStar avatar (chat) | `CopilotAvatarCostar` | `costar/avatar/costar_avatar_idle_low.png` |
+| Moon stage (personalization picker) | `PersonalizationMoonStage` | Moon-only bottom strip from `intro/cocaptain_wallpaper_moon.png` (y 96–100%, no character) |
+
+**UI references:** `ui-mockups/onboarding_copilot_picker_mockup.png`, `ui-mockups/onboarding_copilot_hero_select_mockup.png`
+
+**Post-process:** White backgrounds knocked out before import. Selection persists as `selectedCopilot` in `PersonalizationSurveyAnswers` (survey `v2`).
+
+---
+
 ## QA checklist (per asset)
 
 - [ ] Thick outer outline, consistent internal detail weight

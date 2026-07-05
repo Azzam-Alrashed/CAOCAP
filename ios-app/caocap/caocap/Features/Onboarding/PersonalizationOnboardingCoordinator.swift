@@ -7,6 +7,7 @@ import Observation
 final class PersonalizationOnboardingCoordinator {
     var currentIndex: Int = 0
     var selections: [String: String] = [:]
+    var selectedCopilot: CopilotPersona = .cocaptain
     var showSkipConfirmation = false
     var showCompletionMoment = false
 
@@ -25,27 +26,40 @@ final class PersonalizationOnboardingCoordinator {
     ) {
         self.profileStore = profileStore
         self.analytics = analytics
-        isCompleted = profileStore.isSurveyCompleted
+        isCompleted = !Self.needsPresentation(profileStore: profileStore)
+
+        if let saved = profileStore.loadAnswers() {
+            selections = saved.selections
+            selectedCopilot = saved.selectedCopilot ?? .cocaptain
+        }
     }
 
     var shouldPresent: Bool {
         !isCompleted
     }
 
-    var currentQuestion: PersonalizationSurveyQuestion {
-        PersonalizationOnboardingManifest.question(at: currentIndex)
+    var currentStep: PersonalizationStepKind {
+        PersonalizationOnboardingManifest.step(at: currentIndex)
+    }
+
+    var currentQuestion: PersonalizationSurveyQuestion? {
+        currentStep.surveyQuestion
     }
 
     var isFirstPage: Bool {
         currentIndex == 0
     }
 
-    var isLastQuestionPage: Bool {
+    var isLastStep: Bool {
         currentIndex >= PersonalizationOnboardingManifest.lastIndex
     }
 
     var canContinue: Bool {
-        selections[currentQuestion.id] != nil
+        if PersonalizationOnboardingManifest.isCopilotPickerStep(at: currentIndex) {
+            return true
+        }
+        guard let question = currentQuestion else { return false }
+        return selections[question.id] != nil
     }
 
     var stepLabel: String {
@@ -65,17 +79,32 @@ final class PersonalizationOnboardingCoordinator {
         )
     }
 
+    func selectCopilot(_ persona: CopilotPersona) {
+        selectedCopilot = persona
+    }
+
     func select(answerID: String, for questionID: String? = nil) {
-        let questionKey = questionID ?? currentQuestion.id
+        let questionKey = questionID ?? currentQuestion?.id
+        guard let questionKey else { return }
         selections[questionKey] = answerID
     }
 
     func next() {
         guard canContinue else { return }
 
-        logAnsweredEvent(for: currentQuestion, stepIndex: currentIndex)
+        if PersonalizationOnboardingManifest.isCopilotPickerStep(at: currentIndex) {
+            analytics.logEvent(
+                PersonalizationSurveyAnalytics.copilotSelected,
+                parameters: [
+                    PersonalizationSurveyAnalytics.copilotID: selectedCopilot.rawValue,
+                    PersonalizationSurveyAnalytics.surveyVersion: PersonalizationOnboardingManifest.surveyVersion
+                ]
+            )
+        } else if let question = currentQuestion {
+            logAnsweredEvent(for: question, stepIndex: currentIndex)
+        }
 
-        if isLastQuestionPage {
+        if isLastStep {
             showCompletionMoment = true
             return
         }
@@ -109,7 +138,8 @@ final class PersonalizationOnboardingCoordinator {
             parameters: [
                 PersonalizationSurveyAnalytics.lastStepIndex: String(currentIndex),
                 PersonalizationSurveyAnalytics.answersProvidedCount: String(selections.count),
-                PersonalizationSurveyAnalytics.surveyVersion: PersonalizationOnboardingManifest.surveyVersion
+                PersonalizationSurveyAnalytics.surveyVersion: PersonalizationOnboardingManifest.surveyVersion,
+                PersonalizationSurveyAnalytics.copilotID: selectedCopilot.rawValue
             ]
         )
         markCompleted()
@@ -122,7 +152,8 @@ final class PersonalizationOnboardingCoordinator {
             PersonalizationSurveyAnalytics.completed,
             parameters: [
                 PersonalizationSurveyAnalytics.surveyVersion: PersonalizationOnboardingManifest.surveyVersion,
-                PersonalizationSurveyAnalytics.answersProvidedCount: String(selections.count)
+                PersonalizationSurveyAnalytics.answersProvidedCount: String(selections.count),
+                PersonalizationSurveyAnalytics.copilotID: selectedCopilot.rawValue
             ]
         )
         markCompleted()
@@ -132,10 +163,17 @@ final class PersonalizationOnboardingCoordinator {
         isCompleted = false
         currentIndex = 0
         selections = [:]
+        selectedCopilot = .cocaptain
         showSkipConfirmation = false
         showCompletionMoment = false
         didLogSurveyStart = false
         profileStore.resetSurvey()
+    }
+
+    private static func needsPresentation(profileStore: UserProfileStore) -> Bool {
+        guard profileStore.isSurveyCompleted else { return true }
+        guard let answers = profileStore.loadAnswers() else { return true }
+        return answers.surveyVersion != PersonalizationSurveyAnswers.currentSurveyVersion
     }
 
     private func persistAnswers(wasSkipped: Bool) {
@@ -143,7 +181,8 @@ final class PersonalizationOnboardingCoordinator {
             selections: selections,
             completedAt: Date(),
             wasSkipped: wasSkipped,
-            surveyVersion: PersonalizationOnboardingManifest.surveyVersion
+            surveyVersion: PersonalizationOnboardingManifest.surveyVersion,
+            selectedCopilot: selectedCopilot
         )
         profileStore.saveAnswers(answers)
     }

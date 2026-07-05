@@ -14,9 +14,44 @@ struct PersonalizationSurveyQuestion: Equatable, Identifiable {
     let options: [PersonalizationSurveyOption]
 }
 
-/// Static catalogue of personalization survey questions.
+/// Static content for the co-pilot picker step.
+struct CopilotPickerContent: Equatable {
+    let titleKey: String
+    let subtitleKey: String
+    let footnoteKey: String
+}
+
+/// One step in the personalization onboarding flow.
+enum PersonalizationStepKind: Equatable, Identifiable {
+    case copilotPicker(CopilotPickerContent)
+    case surveyQuestion(PersonalizationSurveyQuestion)
+
+    var id: String {
+        switch self {
+        case .copilotPicker:
+            return "copilot_picker"
+        case .surveyQuestion(let question):
+            return question.id
+        }
+    }
+
+    var surveyQuestion: PersonalizationSurveyQuestion? {
+        if case .surveyQuestion(let question) = self {
+            return question
+        }
+        return nil
+    }
+}
+
+/// Static catalogue of personalization onboarding steps and survey questions.
 enum PersonalizationOnboardingManifest {
     static let surveyVersion = PersonalizationSurveyAnswers.currentSurveyVersion
+
+    static let copilotPickerContent = CopilotPickerContent(
+        titleKey: "personalization.copilot.title",
+        subtitleKey: "personalization.copilot.subtitle",
+        footnoteKey: "personalization.copilot.footnote"
+    )
 
     static let questions: [PersonalizationSurveyQuestion] = [
         PersonalizationSurveyQuestion(
@@ -80,19 +115,34 @@ enum PersonalizationOnboardingManifest {
         )
     ]
 
+    static let steps: [PersonalizationStepKind] = [
+        .copilotPicker(copilotPickerContent)
+    ] + questions.map { .surveyQuestion($0) }
+
     static var lastIndex: Int {
-        max(questions.count - 1, 0)
+        max(steps.count - 1, 0)
+    }
+
+    static func step(at index: Int) -> PersonalizationStepKind {
+        steps[min(max(index, 0), lastIndex)]
     }
 
     static func question(at index: Int) -> PersonalizationSurveyQuestion {
-        questions[min(max(index, 0), lastIndex)]
+        questions[min(max(index, 0), questions.count - 1)]
     }
 
     static func stepLabel(for index: Int, language: String? = nil) -> String {
         LocalizationManager.shared.localizedString(
             "personalization.stepLabel",
-            arguments: [index + 1, questions.count],
+            arguments: [index + 1, steps.count],
             language: language
         )
+    }
+
+    static func isCopilotPickerStep(at index: Int) -> Bool {
+        if case .copilotPicker = step(at: index) {
+            return true
+        }
+        return false
     }
 }

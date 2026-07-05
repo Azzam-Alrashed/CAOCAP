@@ -39,6 +39,9 @@ struct AppSheetsModifier: ViewModifier {
             }
             .sheet(isPresented: $session.showingSettings) {
                 SettingsView(
+                    onRestartPersonalization: {
+                        session.restartPersonalization()
+                    },
                     onRestartOnboarding: {
                         session.restartOnboarding()
                     },

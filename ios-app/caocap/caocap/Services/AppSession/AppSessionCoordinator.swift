@@ -140,6 +140,12 @@ final class AppSessionCoordinator {
         onboarding.startIfNeeded()
     }
 
+    func restartPersonalization() {
+        personalization.reset()
+        router.navigate(to: .root, addToStack: false, animated: false)
+        syncViewportWithActiveStore()
+    }
+
     func restartOnboarding() {
         restoreTutorialPortalIfNeeded()
         intro.reset()
