@@ -21,6 +21,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         AppConfiguration.shared.configure(authManager: authManager)
+        AppIconService.applySavedIcon()
         return true
     }
 }

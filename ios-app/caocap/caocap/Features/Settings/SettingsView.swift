@@ -3,6 +3,7 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
 
+    var onRestartPersonalization: () -> Void = {}
     var onRestartOnboarding: () -> Void = {}
     var onRestartTutorial: () -> Void = {}
     var onEraseEverything: () async throws -> Void = {}
@@ -267,6 +268,19 @@ struct SettingsView: View {
                             // MARK: - Onboarding
                             SettingsSection("Onboarding") {
                                 SettingsRow(
+                                    icon: "person.crop.circle.badge.questionmark",
+                                    title: "Replay Personalization",
+                                    subtitle: "Choose your co-pilot and update your mission profile",
+                                    color: .indigo,
+                                    action: {
+                                        onRestartPersonalization()
+                                        dismiss()
+                                    }
+                                )
+
+                                Divider().padding(.leading, 56).opacity(0.3)
+
+                                SettingsRow(
                                     icon: "arrow.clockwise.circle",
                                     title: "Restart Onboarding",
                                     subtitle: "Start again from the intro screens",
@@ -302,6 +316,27 @@ struct SettingsView: View {
                                         showingEraseConfirmation = true
                                     }
                                 )
+                                .confirmationDialog(
+                                    "Erase Everything?",
+                                    isPresented: $showingEraseConfirmation,
+                                    titleVisibility: .visible
+                                ) {
+                                    Button("Erase Everything", role: .destructive) {
+                                        isErasingEverything = true
+                                        Task { @MainActor in
+                                            do {
+                                                try await onEraseEverything()
+                                                dismiss()
+                                            } catch {
+                                                isErasingEverything = false
+                                                eraseErrorMessage = error.localizedDescription
+                                            }
+                                        }
+                                    }
+                                    Button("Cancel", role: .cancel) {}
+                                } message: {
+                                    Text("This permanently deletes every local canvas, checkpoint, preference, onboarding answer, and downloaded model, then signs you out. Your cloud account and App Store purchases are not deleted.")
+                                }
                             }
                         }
                         .padding(.horizontal, 20)
@@ -348,27 +383,6 @@ struct SettingsView: View {
                 }
             }
             .preferredColorScheme(currentColorScheme)
-            .confirmationDialog(
-                "Erase Everything?",
-                isPresented: $showingEraseConfirmation,
-                titleVisibility: .visible
-            ) {
-                Button("Erase Everything", role: .destructive) {
-                    isErasingEverything = true
-                    Task { @MainActor in
-                        do {
-                            try await onEraseEverything()
-                            dismiss()
-                        } catch {
-                            isErasingEverything = false
-                            eraseErrorMessage = error.localizedDescription
-                        }
-                    }
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("This permanently deletes every local canvas, checkpoint, preference, onboarding answer, and downloaded model, then signs you out. Your cloud account and App Store purchases are not deleted.")
-            }
             .alert(
                 "Couldn’t Erase Everything",
                 isPresented: Binding(

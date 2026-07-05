@@ -16,6 +16,14 @@ struct caocapTests {
         // Write your test here and use APIs like `#expect(...)` to check expected conditions.
     }
 
+    @Test func introCatalogResolvesArabic() {
+        let title = LocalizationManager.shared.localizedString("intro.step0.title", language: "Arabic")
+        #expect(title == "العد التنازلي للإطلاق.")
+
+        let message = LocalizationManager.shared.localizedString("intro.step0.message", language: "Arabic")
+        #expect(message.contains("كل مهمة"))
+    }
+
     @Test func viewportDragTranslationUsesPhysicalDirections() {
         let viewport = ViewportState(offset: CGSize(width: 10, height: -20), scale: 1.0)
 

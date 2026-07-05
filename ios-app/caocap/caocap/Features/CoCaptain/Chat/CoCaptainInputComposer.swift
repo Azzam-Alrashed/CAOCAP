@@ -6,9 +6,11 @@ struct CoCaptainInputComposer: View {
     let store: ProjectStore?
     let isThinking: Bool
     let analysisItems: [ProjectSuggestion]
+    let pendingReviewCount: Int
     let onSend: () -> Void
     let onStop: () -> Void
     let onQuickPrompt: (String) -> Void
+    let onFocusPendingReviews: () -> Void
     let onApplySuggestion: (ProjectSuggestion) -> Void
     let onDismissSuggestion: (ProjectSuggestion) -> Void
     
@@ -119,6 +121,23 @@ struct CoCaptainInputComposer: View {
                     Label(
                         isContextVisible ? "Hide Canvas Context" : "Show Canvas Context",
                         systemImage: "scope"
+                    )
+                }
+                .disabled(isThinking)
+
+                Divider()
+            }
+
+            if pendingReviewCount > 0 {
+                Button {
+                    onFocusPendingReviews()
+                } label: {
+                    Label(
+                        LocalizationManager.shared.localizedString(
+                            "Show Pending Reviews (%lld)",
+                            arguments: [Int64(pendingReviewCount)]
+                        ),
+                        systemImage: "tray.full"
                     )
                 }
                 .disabled(isThinking)

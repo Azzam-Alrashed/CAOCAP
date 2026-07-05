@@ -10,24 +10,31 @@ public struct CoCaptainAgentParser {
 
     /// Parses the structured XML block in the response.
     public func parse(_ response: String) -> CoCaptainParsedResponse {
-        guard let startRange = response.range(of: Self.startTag, options: .backwards),
-              let endRange = response.range(of: Self.endTag, options: .backwards),
-              startRange.lowerBound < endRange.lowerBound else {
-            if let startRange = response.range(of: Self.startTag) {
-                return CoCaptainParsedResponse(
-                    preamble: String(response[..<startRange.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines),
-                    payload: nil
-                )
-            }
-            return CoCaptainParsedResponse(
-                preamble: response.trimmingCharacters(in: .whitespacesAndNewlines),
-                payload: nil
+        if let blockRange = lastCompleteActionsBlock(in: response) {
+            let preamble = String(response[..<blockRange.lowerBound])
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            return parseActionsBlock(
+                xml: String(response[blockRange]),
+                preamble: preamble
             )
         }
 
-        let preamble = String(response[..<startRange.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
-        let xmlRange = startRange.lowerBound..<endRange.upperBound
-        let xml = String(response[xmlRange])
+        if let startRange = response.range(of: Self.startTag) {
+            return CoCaptainParsedResponse(
+                preamble: String(response[..<startRange.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines),
+                payload: nil
+            )
+        }
+        if let loosePayload = parseLoosePayload(response) {
+            return loosePayload
+        }
+        return CoCaptainParsedResponse(
+            preamble: response.trimmingCharacters(in: .whitespacesAndNewlines),
+            payload: nil
+        )
+    }
+
+    private func parseActionsBlock(xml: String, preamble: String) -> CoCaptainParsedResponse {
 
         let assistantMessage = extractTag(name: "assistant_message", from: xml) ?? ""
         
@@ -35,14 +42,14 @@ public struct CoCaptainAgentParser {
             extractSelfClosingTags(name: "action", from: $0) 
         }.compactMap { attrs -> CoCaptainAgentAction? in
             guard let id = attrs["id"] else { return nil }
-            return CoCaptainAgentAction(actionID: id)
+            return CoCaptainAgentAction(actionID: id, args: actionArgs(from: attrs))
         }
         
         let pendingActions = extractTags(name: "pending_actions", from: xml).flatMap { 
             extractSelfClosingTags(name: "action", from: $0) 
         }.compactMap { attrs -> CoCaptainAgentAction? in
             guard let id = attrs["id"] else { return nil }
-            return CoCaptainAgentAction(actionID: id)
+            return CoCaptainAgentAction(actionID: id, args: actionArgs(from: attrs))
         }
         
         let nodeEdits = extractTagMatches(name: "node_edit", from: xml).compactMap { item -> CoCaptainNodeEditProposal? in
@@ -66,8 +73,31 @@ public struct CoCaptainAgentParser {
                 
                 return NodePatchOperation(type: type, target: target, content: body)
             }
+
+            let verificationChecks = extractTags(name: "verification_checks", from: content).flatMap {
+                extractTagMatches(name: "verification_check", from: $0)
+            }.compactMap { checkItem -> CoCaptainVerificationCheck? in
+                guard let id = checkItem.attributes["id"],
+                      let description = checkItem.attributes["description"],
+                      let scriptContainer = extractTag(name: "script", from: checkItem.content) else {
+                    return nil
+                }
+                let script = extractCDATA(from: scriptContainer) ?? scriptContainer
+                return CoCaptainVerificationCheck(
+                    id: id,
+                    description: description,
+                    script: script
+                )
+            }
             
-            return CoCaptainNodeEditProposal(nodeID: nodeID, role: role, section: section, summary: summary, operations: operations)
+            return CoCaptainNodeEditProposal(
+                nodeID: nodeID,
+                role: role,
+                section: section,
+                summary: summary,
+                operations: operations,
+                verificationChecks: verificationChecks
+            )
         }
 
         let payload = CoCaptainAgentPayload(
@@ -78,6 +108,23 @@ public struct CoCaptainAgentParser {
         )
 
         return CoCaptainParsedResponse(preamble: preamble, payload: payload)
+    }
+
+    /// Returns the range of the last fully closed `cocaptain_actions` block.
+    /// Earlier complete blocks are ignored so a repaired trailing payload wins.
+    private func lastCompleteActionsBlock(in response: String) -> Range<String.Index>? {
+        var searchStart = response.startIndex
+        var lastComplete: Range<String.Index>?
+
+        while let start = response.range(of: Self.startTag, range: searchStart..<response.endIndex) {
+            guard let end = response.range(of: Self.endTag, range: start.upperBound..<response.endIndex) else {
+                break
+            }
+            lastComplete = start.lowerBound..<end.upperBound
+            searchStart = end.upperBound
+        }
+
+        return lastComplete
     }
 
     /// Returns the text that is safe to stream into the chat bubble.
@@ -96,7 +143,7 @@ public struct CoCaptainAgentParser {
     ///   - text: The raw text containing XML.
     /// - Returns: The trimmed inner content, or `nil` if the tag is not found.
     private func extractTag(name: String, from text: String) -> String? {
-        let pattern = "<\(name)>(.*?)</\(name)>"
+        let pattern = "<\(name)\\s*>(.*?)</\(name)\\s*>"
         let regex = try? NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators])
         let nsRange = NSRange(text.startIndex..<text.endIndex, in: text)
         if let match = regex?.firstMatch(in: text, options: [], range: nsRange) {
@@ -118,7 +165,7 @@ public struct CoCaptainAgentParser {
     /// Extracts the inner content of all occurrences of a specified XML tag.
     /// - Returns: An array of trimmed strings for every matching tag.
     private func extractTags(name: String, from text: String) -> [String] {
-        let pattern = "<\(name)[^>]*>(.*?)</\(name)>"
+        let pattern = "<\(name)(?:\\s[^>]*)?>(.*?)</\(name)\\s*>"
         let regex = try? NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators])
         let nsRange = NSRange(text.startIndex..<text.endIndex, in: text)
         let matches = regex?.matches(in: text, options: [], range: nsRange) ?? []
@@ -133,15 +180,14 @@ public struct CoCaptainAgentParser {
     /// Extracts all occurrences of a specified XML tag, parsing both attributes and inner content.
     /// - Returns: An array of `TagMatch` objects containing the parsed data.
     private func extractTagMatches(name: String, from text: String) -> [TagMatch] {
-        let pattern = "<\(name)([^>]*)>(.*?)</\(name)>"
+        let pattern = "<\(name)(\\s[^>]*)?>(.*?)</\(name)\\s*>"
         let regex = try? NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators])
         let nsRange = NSRange(text.startIndex..<text.endIndex, in: text)
         let matches = regex?.matches(in: text, options: [], range: nsRange) ?? []
         return matches.compactMap { match in
-            guard let attrRange = Range(match.range(at: 1), in: text),
-                  let contentRange = Range(match.range(at: 2), in: text) else { return nil }
+            guard let contentRange = Range(match.range(at: 2), in: text) else { return nil }
             
-            let attrString = String(text[attrRange])
+            let attrString = Range(match.range(at: 1), in: text).map { String(text[$0]) } ?? ""
             let content = String(text[contentRange]).trimmingCharacters(in: .whitespacesAndNewlines)
             let attributes = parseAttributes(attrString)
             
@@ -152,7 +198,7 @@ public struct CoCaptainAgentParser {
     /// Extracts the attributes from all self-closing occurrences of a specified XML tag.
     /// - Returns: An array of attribute dictionaries for each matching tag.
     private func extractSelfClosingTags(name: String, from text: String) -> [[String: String]] {
-        let pattern = "<\(name)\\s+([^>]*?)/>"
+        let pattern = "<\(name)\\s+([^>]*?)/\\s*>"
         let regex = try? NSRegularExpression(pattern: pattern, options: [])
         let nsRange = NSRange(text.startIndex..<text.endIndex, in: text)
         let matches = regex?.matches(in: text, options: [], range: nsRange) ?? []
@@ -186,6 +232,11 @@ public struct CoCaptainAgentParser {
         return attributes
     }
 
+    private func actionArgs(from attributes: [String: String]) -> [String: String]? {
+        let args = attributes.filter { $0.key != "id" }
+        return args.isEmpty ? nil : args
+    }
+
     /// Extracts the raw text from the first `<![CDATA[...]]>` section in the string.
     private func extractCDATA(from text: String) -> String? {
         let pattern = "<!\\[CDATA\\[(.*?)\\]\\]>"
@@ -197,5 +248,24 @@ public struct CoCaptainAgentParser {
             }
         }
         return nil
+    }
+
+    private func parseLoosePayload(_ response: String) -> CoCaptainParsedResponse? {
+        guard let objectStart = response.lastIndex(of: "{") else { return nil }
+        let objectText = String(response[objectStart...])
+            .replacingOccurrences(of: "“", with: "\"")
+            .replacingOccurrences(of: "”", with: "\"")
+        guard let data = objectText.data(using: .utf8),
+              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let assistantMessage = object["assistantMessage"] as? String else {
+            return nil
+        }
+
+        let preamble = String(response[..<objectStart])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return CoCaptainParsedResponse(
+            preamble: preamble,
+            payload: CoCaptainAgentPayload(assistantMessage: assistantMessage)
+        )
     }
 }

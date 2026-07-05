@@ -8,6 +8,7 @@ struct NodeDetailView: View {
     let node: SpatialNode
     /// The owning project store, passed through to child sheets.
     let store: ProjectStore
+    var onFlyToNode: ((UUID) -> Void)? = nil
 
     @Environment(\.dismiss) private var dismiss
 
@@ -20,7 +21,7 @@ struct NodeDetailView: View {
 
     var body: some View {
         if currentNode.type == .miniApp {
-            MiniAppPreviewShell(node: currentNode, store: store)
+            MiniAppPreviewShell(node: currentNode, store: store, onFlyToNode: onFlyToNode)
         } else {
             MiniAppSettingsView(node: currentNode, store: store) {
                 dismiss()
@@ -51,6 +52,7 @@ private enum MiniAppTool: String, Identifiable {
 private struct MiniAppPreviewShell: View {
     let node: SpatialNode
     let store: ProjectStore
+    var onFlyToNode: ((UUID) -> Void)? = nil
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.undoManager) private var undoManager
@@ -126,7 +128,15 @@ private struct MiniAppPreviewShell: View {
                 FirebaseConfigNodeEditorView(node: currentNode, store: store)
             case .agent:
                 NavigationStack {
-                    NodeAgentChatView(nodeID: currentNode.id, store: store)
+                    NodeAgentChatView(
+                        nodeID: currentNode.id,
+                        store: store,
+                        actionDispatcher: nil,
+                        onFlyToNode: { nodeID in
+                            activeTool = nil
+                            onFlyToNode?(nodeID)
+                        }
+                    )
                 }
             case .settings:
                 MiniAppSettingsView(node: currentNode, store: store) {

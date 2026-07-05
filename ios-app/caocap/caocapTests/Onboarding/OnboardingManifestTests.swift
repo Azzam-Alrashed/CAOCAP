@@ -21,17 +21,37 @@ struct OnboardingManifestTests {
         #expect(OnboardingManifest.nextStep(after: .longPressFAB) == nil)
 
         #expect(OnboardingManifest.steps.count == 7)
-        #expect(OnboardingCoordinator.Step.openTutorial.stepLabel == "1 of 7")
-        #expect(OnboardingCoordinator.Step.tapFAB.stepLabel == "2 of 7")
-        #expect(OnboardingCoordinator.Step.longPressFAB.stepLabel == "7 of 7")
+        #expect(
+            OnboardingManifest.stepLabel(for: .openTutorial, language: "English") == "1 of 7"
+        )
+        #expect(
+            OnboardingManifest.stepLabel(for: .tapFAB, language: "English") == "2 of 7"
+        )
+        #expect(
+            OnboardingManifest.stepLabel(for: .longPressFAB, language: "English") == "7 of 7"
+        )
+    }
+
+    @Test func catalogResolvesArabicCanvasOnboardingCopy() {
+        let title = LocalizationManager.shared.localizedString(
+            "onboarding.openTutorial.title",
+            language: "Arabic"
+        )
+        #expect(title == "ادخل إلى البرنامج التعليمي")
+
+        let message = LocalizationManager.shared.localizedString(
+            "onboarding.tapFAB.message",
+            language: "Arabic"
+        )
+        #expect(message.contains("لوحة الأوامر"))
     }
 
     @Test func manifestContentIsReadyForPopoverPresentation() {
         for step in OnboardingCoordinator.Step.allCases {
             let content = OnboardingManifest.content(for: step)
 
-            #expect(!content.title.isEmpty)
-            #expect(!content.message.isEmpty)
+            #expect(!content.titleKey.isEmpty)
+            #expect(!content.messageKey.isEmpty)
             #expect(!content.icon.isEmpty)
             #expect(content.step == step)
         }

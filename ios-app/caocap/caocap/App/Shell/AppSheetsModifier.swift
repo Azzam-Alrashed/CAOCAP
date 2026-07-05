@@ -39,6 +39,9 @@ struct AppSheetsModifier: ViewModifier {
             }
             .sheet(isPresented: $session.showingSettings) {
                 SettingsView(
+                    onRestartPersonalization: {
+                        session.restartPersonalization()
+                    },
                     onRestartOnboarding: {
                         session.restartOnboarding()
                     },
@@ -86,6 +89,20 @@ struct AppSheetsModifier: ViewModifier {
             .sheet(isPresented: $session.showingDaily) {
                 DailyChallengesView(store: .shared)
                     .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+            }
+            .sheet(isPresented: $session.showingHelp) {
+                HelpView(
+                    onOpenTutorial: { session.openTutorialFromHelp() },
+                    onRestartTutorial: { session.restartTutorialFromHelp() },
+                    onOpenDemoCanvas: { session.openDemoCanvasFromHelp(fileName: $0) }
+                )
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+            }
+            .sheet(isPresented: $session.showingAppIconPicker) {
+                AppIconPickerView()
+                    .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
             }
     }

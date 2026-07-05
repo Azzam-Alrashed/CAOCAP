@@ -14,7 +14,9 @@ struct UserProfileStoreTests {
                 "build_target": "mobile_apps"
             ],
             completedAt: Date(timeIntervalSince1970: 1_700_000_000),
-            wasSkipped: false
+            wasSkipped: false,
+            surveyVersion: "v2",
+            selectedCopilot: .costar
         )
 
         store.saveAnswers(answers)
@@ -22,6 +24,15 @@ struct UserProfileStoreTests {
 
         #expect(store.isSurveyCompleted)
         #expect(store.loadAnswers() == answers)
+        #expect(store.loadSelectedCopilot() == .costar)
+    }
+
+    @Test func loadSelectedCopilotDefaultsToCocaptain() {
+        let defaults = UserDefaults(suiteName: "UserProfileStoreTests.defaultCopilot")!
+        defaults.removePersistentDomain(forName: "UserProfileStoreTests.defaultCopilot")
+        let store = UserProfileStore(defaults: defaults)
+
+        #expect(store.loadSelectedCopilot() == .cocaptain)
     }
 
     @Test func resetSurveyClearsCompletionAndAnswers() {
@@ -29,12 +40,13 @@ struct UserProfileStoreTests {
         defaults.removePersistentDomain(forName: "UserProfileStoreTests.reset")
         let store = UserProfileStore(defaults: defaults)
 
-        store.saveAnswers(PersonalizationSurveyAnswers(selections: ["coding_level": "experienced"]))
+        store.saveAnswers(PersonalizationSurveyAnswers(selections: ["coding_level": "experienced"], selectedCopilot: .costar))
         store.isSurveyCompleted = true
 
         store.resetSurvey()
 
         #expect(!store.isSurveyCompleted)
         #expect(store.loadAnswers() == nil)
+        #expect(store.loadSelectedCopilot() == .cocaptain)
     }
 }

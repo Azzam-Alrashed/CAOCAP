@@ -28,8 +28,11 @@ public struct CommandIntentResolver {
         case .goRoot:
             return [
                 "go root",
+                "go home",
+                "home",
                 "root",
                 "take me to root",
+                "take me home",
                 "open root",
                 "الجذر",
                 "اذهب للجذر",
@@ -157,10 +160,14 @@ public struct CommandIntentResolver {
             return [
                 "help",
                 "open help",
+                "help center",
+                "open help center",
                 "documentation",
+                "docs",
                 "مساعدة",
                 "المساعدة",
                 "افتح المساعدة",
+                "مركز المساعدة",
                 "التوثيق"
             ]
         case .moveNode:
@@ -232,7 +239,55 @@ public struct CommandIntentResolver {
                 "انشاء لوحة فرعية",
                 "لوحة فرعية جديدة"
             ]
+        case .openActivity:
+            return [
+                "open activity",
+                "activity",
+                "show activity",
+                "النشاط",
+                "الفعالية",
+                "افتح النشاط",
+                "سجل النشاط"
+            ]
+        case .openDaily:
+            return [
+                "open daily",
+                "daily",
+                "daily challenges",
+                "اليومي",
+                "التحديات اليومية",
+                "افتح اليومي",
+                "التحدي اليومي"
+            ]
+        case .openWhatsApp:
+            return [
+                "open whatsapp",
+                "whatsapp",
+                "message azzam",
+                "contact azzam",
+                "واتساب",
+                "واتس",
+                "افتح واتساب",
+                "راسل عزام"
+            ]
+        case .openAppIcon:
+            return [
+                "app icon",
+                "change app icon",
+                "alternate icon",
+                "home screen icon",
+                "ايقونة التطبيق",
+                "أيقونة التطبيق",
+                "غير ايقونة التطبيق",
+                "تغيير ايقونة التطبيق"
+            ]
         }
+    }
+
+    /// Normalization removes punctuation and diacritics so aliases can match
+    /// common voice/input variations across English and Arabic.
+    static func normalizedCommandInput(_ value: String) -> String {
+        normalized(value)
     }
 
     /// Normalization removes punctuation and diacritics so aliases can match
@@ -257,7 +312,7 @@ public struct CommandIntentResolver {
 
     /// Refuses commands with explicit negation so phrases like "do not create a
     /// project" cannot trigger a mutating action.
-    private static func hasNegation(in normalizedInput: String) -> Bool {
+    static func hasNegation(in normalizedInput: String) -> Bool {
         let negations = [
             "dont",
             "do not",
