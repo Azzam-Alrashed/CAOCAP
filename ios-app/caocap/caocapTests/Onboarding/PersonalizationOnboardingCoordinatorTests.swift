@@ -10,42 +10,56 @@ struct PersonalizationOnboardingCoordinatorTests {
         return defaults
     }
 
-    @Test func cannotContinueWithoutSelection() {
+    @Test func copilotStepAllowsContinueByDefault() {
         let coordinator = PersonalizationOnboardingCoordinator(
             profileStore: UserProfileStore(defaults: makeDefaults(suiteName: "PersonalizationOnboardingCoordinatorTests.continue")),
             analytics: NoOpAnalyticsService()
         )
 
-        #expect(!coordinator.canContinue)
+        #expect(coordinator.canContinue)
+        #expect(coordinator.selectedCopilot == .cocaptain)
     }
 
-    @Test func nextRequiresSelectionAndAdvancesIndex() {
+    @Test func nextAdvancesFromCopilotStepToSurvey() {
         let coordinator = PersonalizationOnboardingCoordinator(
             profileStore: UserProfileStore(defaults: makeDefaults(suiteName: "PersonalizationOnboardingCoordinatorTests.next")),
             analytics: NoOpAnalyticsService()
         )
 
-        coordinator.select(answerID: "complete_beginner")
         coordinator.next()
 
         #expect(coordinator.currentIndex == 1)
+        #expect(!coordinator.canContinue)
     }
 
-    @Test func lastQuestionShowsCompletionMoment() {
+    @Test func surveyStepRequiresSelectionBeforeContinue() {
+        let coordinator = PersonalizationOnboardingCoordinator(
+            profileStore: UserProfileStore(defaults: makeDefaults(suiteName: "PersonalizationOnboardingCoordinatorTests.survey")),
+            analytics: NoOpAnalyticsService()
+        )
+
+        coordinator.currentIndex = 1
+        #expect(!coordinator.canContinue)
+
+        coordinator.select(answerID: "complete_beginner", for: "coding_level")
+        #expect(coordinator.canContinue)
+    }
+
+    @Test func lastStepShowsCompletionMoment() {
         let coordinator = PersonalizationOnboardingCoordinator(
             profileStore: UserProfileStore(defaults: makeDefaults(suiteName: "PersonalizationOnboardingCoordinatorTests.completion")),
             analytics: NoOpAnalyticsService()
         )
 
         coordinator.currentIndex = PersonalizationOnboardingManifest.lastIndex
-        coordinator.select(answerID: "short_missions")
+        coordinator.select(answerID: "short_missions", for: "learning_style")
         coordinator.next()
 
         #expect(coordinator.showCompletionMoment)
         #expect(coordinator.shouldPresent)
     }
 
-    @Test func finishAfterCompletionMomentPersistsAnswers() {
+    @Test func finishAfterCompletionMomentPersistsAnswersAndCopilot() {
         let defaults = makeDefaults(suiteName: "PersonalizationOnboardingCoordinatorTests.finish")
         let store = UserProfileStore(defaults: defaults)
         let coordinator = PersonalizationOnboardingCoordinator(
@@ -53,7 +67,8 @@ struct PersonalizationOnboardingCoordinatorTests {
             analytics: NoOpAnalyticsService()
         )
 
-        coordinator.select(answerID: "complete_beginner")
+        coordinator.selectCopilot(.costar)
+        coordinator.select(answerID: "complete_beginner", for: "coding_level")
         coordinator.finishAfterCompletionMoment()
 
         #expect(!coordinator.shouldPresent)
@@ -62,6 +77,8 @@ struct PersonalizationOnboardingCoordinatorTests {
         let saved = store.loadAnswers()
         #expect(saved?.wasSkipped == false)
         #expect(saved?.selections["coding_level"] == "complete_beginner")
+        #expect(saved?.selectedCopilot == .costar)
+        #expect(saved?.surveyVersion == "v2")
     }
 
     @Test func confirmSkipMarksSurveyCompleteWithPartialAnswers() {
@@ -72,7 +89,8 @@ struct PersonalizationOnboardingCoordinatorTests {
             analytics: NoOpAnalyticsService()
         )
 
-        coordinator.select(answerID: "some_basics")
+        coordinator.currentIndex = 1
+        coordinator.select(answerID: "some_basics", for: "coding_level")
         coordinator.confirmSkip()
 
         #expect(!coordinator.shouldPresent)
@@ -81,6 +99,7 @@ struct PersonalizationOnboardingCoordinatorTests {
         let saved = store.loadAnswers()
         #expect(saved?.wasSkipped == true)
         #expect(saved?.selections["coding_level"] == "some_basics")
+        #expect(saved?.selectedCopilot == .cocaptain)
     }
 
     @Test func backDecrementsIndexWhenNotOnFirstPage() {
@@ -93,5 +112,25 @@ struct PersonalizationOnboardingCoordinatorTests {
         coordinator.back()
 
         #expect(coordinator.currentIndex == 1)
+    }
+
+    @Test func v1CompletedUserNeedsPresentationAgain() {
+        let defaults = makeDefaults(suiteName: "PersonalizationOnboardingCoordinatorTests.v1")
+        let store = UserProfileStore(defaults: defaults)
+        store.isSurveyCompleted = true
+        store.saveAnswers(
+            PersonalizationSurveyAnswers(
+                selections: ["coding_level": "experienced"],
+                surveyVersion: "v1"
+            )
+        )
+
+        let coordinator = PersonalizationOnboardingCoordinator(
+            profileStore: store,
+            analytics: NoOpAnalyticsService()
+        )
+
+        #expect(coordinator.shouldPresent)
+        #expect(coordinator.selections["coding_level"] == "experienced")
     }
 }

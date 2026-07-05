@@ -3,8 +3,11 @@ import Testing
 @testable import caocap
 
 struct PersonalizationOnboardingManifestTests {
-    @Test func manifestDefinesFiveUniqueQuestions() {
+    @Test func manifestDefinesSixStepsWithCopilotFirst() {
+        #expect(PersonalizationOnboardingManifest.steps.count == 6)
         #expect(PersonalizationOnboardingManifest.questions.count == 5)
+
+        #expect(PersonalizationOnboardingManifest.isCopilotPickerStep(at: 0))
 
         let questionIDs = PersonalizationOnboardingManifest.questions.map(\.id)
         #expect(Set(questionIDs).count == 5)
@@ -23,16 +26,16 @@ struct PersonalizationOnboardingManifestTests {
         }
     }
 
-    @Test func stepLabelsFollowQuestionCount() {
+    @Test func stepLabelsFollowTotalStepCount() {
         #expect(
             PersonalizationOnboardingManifest.stepLabel(for: 0, language: "English")
-                == "Question 1 of 5"
+                == "Step 1 of 6"
         )
         #expect(
-            PersonalizationOnboardingManifest.stepLabel(for: 4, language: "English")
-                == "Question 5 of 5"
+            PersonalizationOnboardingManifest.stepLabel(for: 5, language: "English")
+                == "Step 6 of 6"
         )
-        #expect(PersonalizationOnboardingManifest.lastIndex == 4)
+        #expect(PersonalizationOnboardingManifest.lastIndex == 5)
     }
 
     @Test func catalogResolvesArabicPersonalizationCopy() {
@@ -47,5 +50,11 @@ struct PersonalizationOnboardingManifestTests {
             language: "Arabic"
         )
         #expect(option == "مبتدئ تماماً")
+
+        let copilotTitle = LocalizationManager.shared.localizedString(
+            "personalization.copilot.title",
+            language: "English"
+        )
+        #expect(copilotTitle == "Choose your co-pilot")
     }
 }

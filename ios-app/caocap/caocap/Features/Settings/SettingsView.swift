@@ -3,6 +3,7 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
 
+    var onRestartPersonalization: () -> Void = {}
     var onRestartOnboarding: () -> Void = {}
     var onRestartTutorial: () -> Void = {}
     var onEraseEverything: () async throws -> Void = {}
@@ -266,6 +267,19 @@ struct SettingsView: View {
                             
                             // MARK: - Onboarding
                             SettingsSection("Onboarding") {
+                                SettingsRow(
+                                    icon: "person.crop.circle.badge.questionmark",
+                                    title: "Replay Personalization",
+                                    subtitle: "Choose your co-pilot and update your mission profile",
+                                    color: .indigo,
+                                    action: {
+                                        onRestartPersonalization()
+                                        dismiss()
+                                    }
+                                )
+
+                                Divider().padding(.leading, 56).opacity(0.3)
+
                                 SettingsRow(
                                     icon: "arrow.clockwise.circle",
                                     title: "Restart Onboarding",

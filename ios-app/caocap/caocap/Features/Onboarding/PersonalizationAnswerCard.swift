@@ -6,51 +6,35 @@ struct PersonalizationAnswerCard: View {
     let isSelected: Bool
     let action: () -> Void
 
-    @Environment(\.colorScheme) private var colorScheme
-
     var body: some View {
         Button(action: action) {
             HStack(spacing: 14) {
                 Text(LocalizedStringKey(stringLiteral: titleKey))
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundStyle(labelColor)
+                    .foregroundStyle(PersonalizationMoonTheme.textPrimary)
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(isSelected ? Color(hex: "2563EB") : labelColor.opacity(0.35))
+                    .foregroundStyle(isSelected ? Color(hex: "2563EB") : PersonalizationMoonTheme.textMuted.opacity(0.45))
             }
             .padding(.horizontal, 18)
             .padding(.vertical, 16)
             .background {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(cardFill)
+                    .fill(PersonalizationMoonTheme.cardFill)
             }
             .overlay {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .stroke(
-                        isSelected ? Color(hex: "2563EB").opacity(0.55) : Color.white.opacity(strokeOpacity),
+                        isSelected ? Color(hex: "2563EB").opacity(0.65) : PersonalizationMoonTheme.cardStroke,
                         lineWidth: isSelected ? 1.5 : 1
                     )
             }
+            .shadow(color: PersonalizationMoonTheme.cardShadow, radius: 8, y: 4)
         }
         .buttonStyle(.plain)
         .animation(.spring(response: 0.28, dampingFraction: 0.86), value: isSelected)
-    }
-
-    private var labelColor: Color {
-        Color(uiColor: .label)
-    }
-
-    private var strokeOpacity: CGFloat {
-        colorScheme == .dark ? 0.38 : 0.62
-    }
-
-    private var cardFill: some ShapeStyle {
-        if isSelected {
-            return AnyShapeStyle(Color(hex: "2563EB").opacity(colorScheme == .dark ? 0.22 : 0.12))
-        }
-        return AnyShapeStyle(.ultraThinMaterial)
     }
 }

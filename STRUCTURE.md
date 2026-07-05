@@ -130,7 +130,8 @@ Pure domain data. No UI, no persistence, no side effects. These structs define t
 | `NodeRole.swift` | Canonical role inference for Mini-App, Sub-Canvas, and custom/action nodes. |
 | `SRSReadinessState.swift` | Domain state for whether a Mini-App SRS section is empty, structured, drafted, or ready. |
 | `SRSScaffold.swift` | Definition of Software Requirements Specification (SRS) templates and check helpers. |
-| `PersonalizationSurveyAnswers.swift` | Codable saved responses from the first-run personalization survey (question ID → answer ID). |
+| `PersonalizationSurveyAnswers.swift` | Codable saved responses from the first-run personalization survey (question ID → answer ID, selected copilot, survey version). |
+| `CopilotPersona.swift` | Cocaptain vs CoStar persona enum; asset names and CDL accent colors for picker and chat avatars. |
 
 ---
 
@@ -403,16 +404,22 @@ Launch transition and global launch-time prompts shown by the root app shell.
 ---
 
 #### `Onboarding/`
-First-run onboarding for the canvas, Omnibox, and CoCaptain flow. The full funnel is: **Intro → Personalization survey → Interactive tutorial**.
+First-run onboarding for the canvas, Omnibox, and CoCaptain flow. The full funnel is: **Intro → Personalization (co-pilot picker + survey) → Interactive tutorial**.
 
 | File | Responsibility |
 |---|---|
 | `OnboardingCoordinator.swift` | Observable state machine for the active tutorial step, popover visibility, delayed presentation, and completion/skipping persistence. |
 | `OnboardingManifest.swift` | Manifest-backed copy, icon, and ordering for every interactive tutorial step. |
 | `OnboardingPopoverCard.swift` | Central onboarding tooltip presentation. Views publish named `OnboardingTooltipAnchor` frames, and a single `onboardingTooltipOverlay()` renders the active step card. |
-| `PersonalizationOnboardingCoordinator.swift` | State machine for the one-question-per-screen personalization survey, skip nudge, completion moment, and persistence/analytics handoff. |
-| `PersonalizationOnboardingManifest.swift` | Static question catalogue with stable question/answer IDs. |
-| `PersonalizationOnboardingView.swift` | Full-screen personalization overlay with progress bar, glass controls, and completion moment. |
+| `PersonalizationOnboardingCoordinator.swift` | State machine for co-pilot picker, survey steps, skip nudge, completion moment, v2 re-present logic, and persistence/analytics handoff. |
+| `PersonalizationOnboardingManifest.swift` | Static step catalogue: copilot picker + survey questions with stable IDs. |
+| `PersonalizationOnboardingView.swift` | Full-screen personalization overlay with space backdrop, progress bar, and completion moment. |
+| `PersonalizationCopilotPickerView.swift` | CDL co-pilot selection step (title + shared moon stage). |
+| `PersonalizationCopilotStage.swift` | Shared moon surface with both heroes standing on it and text selection cards. |
+| `PersonalizationBackdrop.swift` | Dark starry sky with animated galaxy and shooting stars for personalization screens. |
+| `PersonalizationMoonTheme.swift` | Shared dark-space palette for personalization UI. |
+| `CopilotPickerCard.swift` | Selectable co-pilot card with hero art and accent glow. |
+| `PersonalizationPrimaryButton.swift` | Gradient continue CTA shared across personalization steps. |
 | `PersonalizationAnswerCard.swift` | Reusable selectable answer tile for survey options. |
 
 Onboarding tooltips must not be presented by feature-local `.popover` modifiers. Feature views should only publish anchors with `onboardingTooltipAnchor(_:)`; the central overlay decides which single tooltip is visible.

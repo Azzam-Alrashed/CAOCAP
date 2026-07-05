@@ -26,12 +26,7 @@ struct CoCaptainTimelineListView: View {
 
                     if viewModel.isAwaitingFirstResponse {
                         HStack(alignment: .bottom, spacing: 8) {
-                            Image("cocaptain")
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 28, height: 28)
-                                .clipShape(Circle())
-                                .shadow(color: .blue.opacity(0.5), radius: 4, x: 0, y: 0)
+                            CopilotAvatarView(size: 28)
 
                             ThinkingIndicator()
                                 .transition(.opacity.combined(with: .move(edge: .bottom)))
