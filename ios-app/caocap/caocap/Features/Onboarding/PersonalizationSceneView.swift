@@ -14,7 +14,6 @@ struct PersonalizationSceneView: View {
         GeometryReader { geometry in
             let totalBottomChrome = bottomChromeHeight
                 + PersonalizationTheme.verticalInset
-                + geometry.safeAreaInsets.bottom
             let standLineY = MoonStageLayout.heroStandLineY(
                 screenWidth: geometry.size.width,
                 screenHeight: geometry.size.height,
@@ -36,6 +35,15 @@ struct PersonalizationSceneView: View {
                     )
                 }
 
+                if coordinator.isCopilotPickerStep
+                    && !coordinator.showCompletionMoment
+                    && coordinator.hasUserSelectedCopilot {
+                    PersonalizationSelectedCopilotInfo(coordinator: coordinator)
+                        .frame(width: geometry.size.width, height: geometry.size.height)
+                        .transition(PersonalizationSelectedCopilotInfo.appearTransition(reduceMotion: reduceMotion))
+                        .allowsHitTesting(false)
+                }
+
                 if coordinator.showCompletionMoment {
                     PersonalizationChrome.CompletionMoment {
                         coordinator.finishAfterCompletionMoment()
@@ -45,7 +53,13 @@ struct PersonalizationSceneView: View {
                     questionFlow
                 }
             }
+            .animation(copilotPickerAnimation, value: coordinator.hasUserSelectedCopilot)
+            .animation(copilotPickerAnimation, value: coordinator.selectedCopilot)
         }
+    }
+
+    private var copilotPickerAnimation: Animation? {
+        reduceMotion ? nil : .spring(response: 0.44, dampingFraction: 0.78)
     }
 
     private var questionFlow: some View {
@@ -86,7 +100,7 @@ struct PersonalizationSceneView: View {
     private func stepContent(_ step: PersonalizationStepKind) -> some View {
         switch step {
         case .copilotPicker(let content):
-            PersonalizationCopilotStepContent(content: content, coordinator: coordinator)
+            PersonalizationCopilotStepContent(content: content)
         case .surveyQuestion(let question):
             PersonalizationSurveyStepContent(
                 question: question,
