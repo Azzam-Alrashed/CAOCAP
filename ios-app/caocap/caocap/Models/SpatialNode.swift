@@ -2,8 +2,9 @@ import Foundation
 import CoreGraphics
 
 /// Canvas-level actions a node can dispatch to the app when tapped.
-/// These are wired through `AppActionDispatcher` rather than embedded in views
-/// so the canvas remains decoupled from navigation and sheet state.
+/// Node taps resolve to `AppActionID` via `NodeAction.appActionID` and run
+/// through `AppActionDispatcher` so the canvas stays decoupled from navigation
+/// and sheet state.
 public enum NodeAction: String, Codable, Equatable {
     /// Navigate back to the root home canvas.
     case navigateRoot
@@ -19,6 +20,12 @@ public enum NodeAction: String, Codable, Equatable {
     case openActivity
     /// Open today's daily HTML challenges and XP progress.
     case openDaily
+    /// Open a WhatsApp chat with the CAOCAP creator.
+    case openWhatsApp
+    /// Open the in-app help and documentation center.
+    case openHelp
+    /// Open the alternate app icon picker.
+    case openAppIcon
 }
 
 /// Structural kind of a canvas node, determining its rendering, behavior, and default metadata.
@@ -158,10 +165,24 @@ public struct NodeAgentState: Codable, Equatable, Hashable {
     /// Compact textual memory injected into the CoCaptain system prompt to
     /// preserve context across sessions without sending the full history.
     public var memorySummary: String?
+    /// JSON-encoded pending review records managed by CoCaptain (`NodeAgentReviewRecord`).
+    public var pendingReviewBundlesData: [Data]
 
-    public init(messages: [NodeAgentMessage] = [], memorySummary: String? = nil) {
+    public init(
+        messages: [NodeAgentMessage] = [],
+        memorySummary: String? = nil,
+        pendingReviewBundlesData: [Data] = []
+    ) {
         self.messages = messages
         self.memorySummary = memorySummary
+        self.pendingReviewBundlesData = pendingReviewBundlesData
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.messages = try container.decodeIfPresent([NodeAgentMessage].self, forKey: .messages) ?? []
+        self.memorySummary = try container.decodeIfPresent(String.self, forKey: .memorySummary)
+        self.pendingReviewBundlesData = try container.decodeIfPresent([Data].self, forKey: .pendingReviewBundlesData) ?? []
     }
 }
 

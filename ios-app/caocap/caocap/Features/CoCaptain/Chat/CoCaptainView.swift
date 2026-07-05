@@ -23,14 +23,23 @@ struct CoCaptainView: View {
                     store: viewModel.store,
                     isThinking: viewModel.isThinking,
                     analysisItems: viewModel.analysisItems,
+                    pendingReviewCount: viewModel.pendingReviewCount,
                     onSend: sendCurrentMessage,
                     onStop: viewModel.stopStreaming,
                     onQuickPrompt: sendQuickPrompt,
+                    onFocusPendingReviews: viewModel.focusPendingReviews,
                     onApplySuggestion: viewModel.applySuggestion,
                     onDismissSuggestion: viewModel.dismissSuggestion
                 )
             }
-            .navigationTitle("Co-Captain")
+            .navigationTitle(
+                viewModel.pendingReviewCount > 0
+                    ? LocalizationManager.shared.localizedString(
+                        "Co-Captain (%lld)",
+                        arguments: [Int64(viewModel.pendingReviewCount)]
+                    )
+                    : "Co-Captain"
+            )
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {

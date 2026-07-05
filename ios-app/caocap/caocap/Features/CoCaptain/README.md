@@ -16,35 +16,48 @@ Supporting services live outside this feature:
 - `LLMService` streams from Firebase AI Logic.
 - `AppActionDispatcher` performs high-level app actions.
 - `NodePatchEngine` previews and applies exact node edits.
+- `MiniAppVerificationService` executes staged code in an isolated offline WebView.
 
 ## Agent Flow
 
 1. The user sends a message through `CoCaptainViewModel`.
 2. Direct commands are resolved locally with `CommandIntentResolver` when possible.
 3. Otherwise, `CoCaptainAgentCoordinator` builds project context from the active `ProjectStore`.
-4. `CoCaptainTurnPurpose` selects both prompt instructions and a turn execution policy.
-5. `LLMService` streams text back into the current assistant bubble.
-6. `CoCaptainAgentOutputAdapter` hides machine output while streaming and turns the final response into a directive.
-7. For agentic turns, `CoCaptainAgentValidator` checks action IDs, action safety, node edit shape, and required agentic work.
-8. Safe actions are executed immediately through `AppActionDispatcher` only after validation passes.
-9. Mutating app actions and node edits become `ReviewBundleItem` entries.
-10. Applying a review item revalidates the base node text before writing changes to `ProjectStore`.
+4. `CoCaptainTurnIntentResolver` classifies each standard turn as mutating work, advisory, or general chat.
+5. `CoCaptainTurnPlan` merges turn purpose with resolved intent to select the effective execution policy.
+6. `LLMService` streams text back into the current assistant bubble.
+7. `CoCaptainAgentOutputAdapter` hides machine output while streaming and turns the final response into a directive.
+8. For agentic turns, `CoCaptainAgentValidator` checks action IDs, action safety, node edit shape, and required agentic work.
+9. Eligible existing Mini-App code edits enter the verified coding loop.
+10. CoCaptain stages the candidate, runs behavioral checks, and may repair it twice without mutating `ProjectStore`.
+11. Safe actions remain buffered until verification succeeds.
+12. The final verified code and pending actions become `ReviewBundleItem` entries.
+13. Applying a review item revalidates the original base node text before writing changes to `ProjectStore`.
 
 The core contract is human-in-the-loop code editing. Do not auto-apply node edits without explicit user approval.
 Free-usage and subscription prompts are product CTA timeline items, not review bundles.
 
+### Verified Coding Loop
+
+The loop is limited to one existing, non-empty, offline Mini-App code edit. It uses at most three candidates and converts the passing result into one `replace_all` review proposal against the original base text. Blank Mini-Apps, SRS edits, multi-node edits, and network-dependent Mini-Apps continue through their existing paths.
+
+Verification uses a non-persistent WebView, blocks external effects, captures runtime errors and `console.error`, and requires every declared behavioral check to return `true`. Failed or unsupported runs produce diagnostics without an Apply control. The rollout gate is enabled by default in Debug and TestFlight, disabled in production App Store builds, and can be overridden with `cocaptain.verifiedCodingLoopEnabled`.
+
 ## Turn Execution Modes
 
-`CoCaptainTurnPurpose` maps to a `CoCaptainTurnExecutionPolicy` in `CoCaptainAgentModels.swift`. The coordinator reads policy flags instead of hardcoding onboarding exceptions.
+`CoCaptainTurnPlan` merges `CoCaptainTurnPurpose` with a resolved `CoCaptainTurnIntent` into a `CoCaptainTurnExecutionPolicy` in `CoCaptainAgentModels.swift`. The coordinator reads `turnPlan.effectivePolicy` instead of hardcoding onboarding exceptions.
 
-| Mode | Purposes | Structured XML | Agentic retry | Execute actions / review |
-|------|----------|----------------|---------------|--------------------------|
-| Agentic | `.standard` | Yes | Yes | Yes |
+| Mode | When | Structured XML | Agentic retry | Execute actions / review |
+|------|------|----------------|---------------|--------------------------|
+| Agentic | Standard turn + `.mutatingWork` intent | Yes | Yes | Yes |
+| Advisory | Standard turn + `.advisory` or `.generalChat` intent | Yes | No | Yes — actions/edits still stage when the model emits them |
 | Conversational | `.onboardingWelcome`, `.onboardingBuildHandoff` | No | No | No — prose only |
+
+`CoCaptainTurnIntentResolver` runs before coordinator execution for standard turns. It reuses `CommandIntentResolver` normalization and negation checks, prefers advisory phrase matches, then mutating phrase matches, and defaults ambiguous standard turns to advisory. Casual messages with no advisory or mutating signals resolve to `.generalChat`.
 
 Conversational turns still receive canvas context and purpose-specific prompt instructions, but the agent contract block is omitted from the LLM prompt. If the model disobeys and emits `cocaptain_actions`, the coordinator ignores the payload and surfaces visible prose only.
 
-When adding a new turn purpose, declare its execution policy in the same enum switch as its prompt instructions.
+When adding a new turn purpose, declare its execution policy in the same enum switch as its prompt instructions. When changing intent classification, update `CoCaptainTurnIntentResolver` tests.
 
 ## Structured Payload Contract
 
@@ -64,6 +77,13 @@ The model may include one trailing XML block:
       <operation type="replace_all">
         <content><![CDATA[<h1>New text</h1>]]></content>
       </operation>
+      <verification_checks>
+        <verification_check id="headline" description="Headline shows the new text">
+          <script><![CDATA[
+            return document.querySelector("h1")?.textContent === "New text";
+          ]]></script>
+        </verification_check>
+      </verification_checks>
     </node_edit>
   </node_edits>
 </cocaptain_actions>
@@ -78,6 +98,7 @@ Rules:
 - `nodeEdits` target Mini-App nodes by `nodeId`, `role="miniApp"`, and `section="srs"` or `section="code"`, plus `NodePatchOperation` arrays.
 - Node edits require a non-empty summary and at least one operation.
 - Exact operations require a non-empty target.
+- Verified code edits require 1–5 uniquely identified checks. Each offline script must return a Boolean, stay under 2,000 characters, and keep the combined scripts under 8,000 characters.
 
 Invalid structured payloads are not partially executed. The coordinator retries once with parse or validation feedback. If the retry is still invalid, the user sees a conflicted review item rather than a silent no-op or unsafe action.
 
@@ -90,6 +111,17 @@ If this payload changes, update parser/coordinator tests and the prompt contract
 Node edits store their original section `baseText` when the review bundle is created. On apply, the view model checks that the current Mini-App section text still matches that base text before applying operations. This prevents silently overwriting user edits made after the model response.
 
 Preserve this conflict guard when refactoring review state.
+
+## Node-Scoped Review Persistence
+
+Pending review bundles on node-scoped CoCaptain sessions are JSON-encoded into
+`NodeAgentState.pendingReviewBundlesData` and restored when the node CoCaptain
+panel reopens. Auto-triggered agent pipeline runs use the same persistence path so
+`awaitingReview` nodes expose Apply/Reject controls after reopening CoCaptain.
+
+Clearing node chat history also clears persisted pending review bundles.
+
+Review cards with a target node include **View on Canvas**, which flies the workspace viewport to that node while CoCaptain stays open.
 
 ## Editing Guidance
 

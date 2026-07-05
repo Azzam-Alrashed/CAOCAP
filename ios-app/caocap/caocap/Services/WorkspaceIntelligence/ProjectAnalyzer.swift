@@ -35,6 +35,13 @@ public struct ProjectAnalyzer {
         var suggestions: [ProjectSuggestion] = []
 
         let miniApps = nodes.filter { $0.type == .miniApp }
+        let connectedNodeIDs = Set(
+            nodes.flatMap { node -> [UUID] in
+                var ids = node.connectedNodeIds ?? []
+                if let next = node.nextNodeId { ids.append(next) }
+                return ids
+            }
+        )
 
         for miniAppNode in miniApps {
             let srsText = miniAppNode.miniApp?.srsText.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
@@ -47,12 +54,38 @@ public struct ProjectAnalyzer {
                 ))
             }
 
-            let isCodeEmpty = miniAppNode.miniApp?.codeText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true
+            let codeText = miniAppNode.miniApp?.codeText ?? ""
+            let isCodeEmpty = codeText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             if isCodeEmpty {
                 suggestions.append(ProjectSuggestion(
                     title: "\(miniAppNode.title) code is empty",
                     detail: "CoCaptain can generate a starter app from this Mini-App's SRS.",
                     suggestedPrompt: "Generate a starter single-file HTML/CSS/JS app for \(miniAppNode.title).",
+                    severity: .warning
+                ))
+            } else if !codeText.lowercased().contains("<html") {
+                suggestions.append(ProjectSuggestion(
+                    title: "\(miniAppNode.title) code may be incomplete",
+                    detail: "Mini-App code usually starts with a full HTML document. CoCaptain can rebuild it as a single file.",
+                    suggestedPrompt: "Rebuild \(miniAppNode.title) as a complete single-file HTML Mini-App.",
+                    severity: .warning
+                ))
+            }
+
+            if !connectedNodeIDs.contains(miniAppNode.id), miniApps.count > 1 {
+                suggestions.append(ProjectSuggestion(
+                    title: "\(miniAppNode.title) is isolated",
+                    detail: "Link this Mini-App to related nodes so CoCaptain can use neighbor context during edits.",
+                    suggestedPrompt: "Suggest how \(miniAppNode.title) should connect to the other Mini-Apps on this canvas.",
+                    severity: .info
+                ))
+            }
+
+            if !miniAppNode.agentState.pendingReviewBundlesData.isEmpty {
+                suggestions.append(ProjectSuggestion(
+                    title: "\(miniAppNode.title) has pending CoCaptain reviews",
+                    detail: "Open this node's CoCaptain panel to approve or reject staged changes.",
+                    suggestedPrompt: "Summarize the pending review items for \(miniAppNode.title).",
                     severity: .warning
                 ))
             }

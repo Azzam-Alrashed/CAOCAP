@@ -2,6 +2,7 @@ import Foundation
 import Observation
 import OSLog
 import SwiftUI
+import UIKit
 import UniformTypeIdentifiers
 
 /// Orchestrates root-session state: routing, actions, palette binding, sheets, and onboarding hooks.
@@ -21,6 +22,8 @@ final class AppSessionCoordinator {
     var showingProfile = false
     var showingActivity = false
     var showingDaily = false
+    var showingHelp = false
+    var showingAppIconPicker = false
     var showConfetti = false
 
     var currentScale: CGFloat = 1.0
@@ -29,6 +32,9 @@ final class AppSessionCoordinator {
     var viewport = ViewportState()
     var nodeFrames: [UUID: NodeFrameData] = [:]
     var containerSize: CGSize = .zero
+    /// Briefly highlights a node after fly-to navigation from CoCaptain or the command palette.
+    var canvasFocusNodeID: UUID?
+    @ObservationIgnored private var canvasFocusClearTask: Task<Void, Never>?
 
     var exportURL: URL?
     var showExportSheet = false
@@ -134,6 +140,12 @@ final class AppSessionCoordinator {
         onboarding.startIfNeeded()
     }
 
+    func restartPersonalization() {
+        personalization.reset()
+        router.navigate(to: .root, addToStack: false, animated: false)
+        syncViewportWithActiveStore()
+    }
+
     func restartOnboarding() {
         restoreTutorialPortalIfNeeded()
         intro.reset()
@@ -149,6 +161,21 @@ final class AppSessionCoordinator {
         router.navigate(to: .root, addToStack: false, animated: false)
         syncViewportWithActiveStore()
         onboarding.startIfNeeded()
+    }
+
+    func openTutorialFromHelp() {
+        showingHelp = false
+        handleSubCanvasNavigation(fileName: RootCanvasProvider.tutorialFileName)
+    }
+
+    func restartTutorialFromHelp() {
+        showingHelp = false
+        restartTutorial()
+    }
+
+    func openDemoCanvasFromHelp(fileName: String) {
+        showingHelp = false
+        handleSubCanvasNavigation(fileName: fileName)
     }
 
     private func restoreTutorialPortalIfNeeded() {
@@ -223,23 +250,8 @@ final class AppSessionCoordinator {
     // MARK: - Node Actions
 
     func handleNodeAction(_ action: NodeAction) {
-        switch action {
-        case .navigateRoot:
-            router.navigate(to: .root, animated: true)
-            currentScale = 1.0
-        case .openSettings:
-            _ = actionDispatcher.perform(.openSettings, source: .user)
-        case .openProfile:
-            _ = actionDispatcher.perform(.openProfile, source: .user)
-        case .summonCoCaptain:
-            _ = actionDispatcher.perform(.summonCoCaptain, source: .user)
-        case .proSubscription:
-            _ = actionDispatcher.perform(.proSubscription, source: .user)
-        case .openActivity:
-            showingActivity = true
-        case .openDaily:
-            showingDaily = true
-        }
+        guard let actionID = action.appActionID else { return }
+        _ = actionDispatcher.perform(actionID, source: .user)
     }
 
     func handleSubCanvasNavigation(fileName: String) {
@@ -364,7 +376,10 @@ final class AppSessionCoordinator {
             self.commandPalette.nodes = self.router.activeStore.nodes
         }
         commandPalette.onFlyToNode = { [weak self] nodeId in
-            self?.flyToNode(nodeId)
+            self?.focusCanvasNode(nodeId)
+        }
+        coCaptain.onFlyToNode = { [weak self] nodeId in
+            self?.focusCanvasNode(nodeId)
         }
         commandPalette.onSubmitPrompt = { [weak self] prompt in
             self?.submitCoCaptainPrompt(prompt)
@@ -509,6 +524,23 @@ final class AppSessionCoordinator {
         actionDispatcher.register(.openProfile) { [weak self] in
             self?.showingProfile = true
         }
+        actionDispatcher.register(.openActivity) { [weak self] in
+            self?.showingActivity = true
+        }
+        actionDispatcher.register(.openDaily) { [weak self] in
+            self?.showingDaily = true
+        }
+        actionDispatcher.register(.openWhatsApp) {
+            if let url = SupportContact.whatsAppURL {
+                UIApplication.shared.open(url)
+            }
+        }
+        actionDispatcher.register(.help) { [weak self] in
+            self?.showingHelp = true
+        }
+        actionDispatcher.register(.openAppIcon) { [weak self] in
+            self?.showingAppIconPicker = true
+        }
         actionDispatcher.register(.openSnapshotBrowser) { [weak self] in
             self?.showingSnapshotBrowser = true
         }
@@ -595,11 +627,21 @@ final class AppSessionCoordinator {
         router.activeStore.updateNodeType(id: uuid, type: type)
     }
 
-    private func flyToNode(_ nodeId: UUID) {
+    func focusCanvasNode(_ nodeId: UUID) {
         guard let node = router.activeStore.nodes.first(where: { $0.id == nodeId }) else { return }
         let targetScale = flyToTargetScale(for: node, nodeId: nodeId)
+        HapticsManager.shared.trigger(.light)
         withAnimation(.spring(response: 0.6, dampingFraction: 0.85)) {
             viewport.flyTo(nodePosition: node.position, containerSize: containerSize, targetScale: targetScale)
+        }
+        canvasFocusNodeID = nodeId
+        canvasFocusClearTask?.cancel()
+        canvasFocusClearTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(2.5))
+            guard let self, !Task.isCancelled else { return }
+            if self.canvasFocusNodeID == nodeId {
+                self.canvasFocusNodeID = nil
+            }
         }
     }
 

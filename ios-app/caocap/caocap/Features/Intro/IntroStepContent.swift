@@ -66,33 +66,19 @@ struct IntroIllustrationTextPlacement: Equatable {
     )
 }
 
-/// Top chrome layout for illustration pages.
-enum IntroTopBarStyle: Equatable {
-    /// CAOCAP and Skip stacked on the leading edge (intro1, intro3, intro4, intro5).
-    case leadingChrome
-    /// CAOCAP leading, Skip trailing — keeps the left illustration clear (intro2).
-    case splitChrome
-}
-
 /// Data model for a single page in the first-launch intro tour.
 /// Colors are expressed as hex strings so `IntroManifest` stays plain data with no SwiftUI dependency.
 struct IntroStepContent: Equatable, Identifiable {
     /// Stable index that doubles as the `TabView` tag; must match position in `IntroManifest.steps`.
     let id: Int
-    /// Bold headline displayed prominently at the top of the page.
-    let title: String
-    /// Supporting body copy shown below the title.
-    let message: String
-    /// SF Symbol name for the hero icon rendered inside the glassmorphic card.
-    let systemImage: String
+    /// Localization key for the bold headline (`Localizable.xcstrings`).
+    let titleKey: String
+    /// Localization key for the supporting body copy (`Localizable.xcstrings`).
+    let messageKey: String
     /// When set, fills the screen as a full-bleed background; copy and chrome are laid out around it.
     let backgroundImageName: String?
-    /// Layout tuned for illustration backgrounds: headline in the sky, controls in the clear lower band.
-    let usesIllustrationBackground: Bool
-    /// Copy placement when `usesIllustrationBackground` is true.
+    /// Copy placement tuned to each background illustration's open areas.
     let textPlacement: IntroIllustrationTextPlacement?
-    /// Top bar layout when `usesIllustrationBackground` is true.
-    let topBarStyle: IntroTopBarStyle?
     /// Primary brand accent hex for this step (progress dots, chrome tint).
     let accentHex: String
     /// Secondary accent hex paired with the primary for chrome and fallbacks.
@@ -103,15 +89,11 @@ struct IntroStepContent: Equatable, Identifiable {
     let ctaGradientStartHex: String?
     /// Soft CTA gradient end; defaults to `secondaryAccentHex` when nil.
     let ctaGradientEndHex: String?
-    /// Label shown on the CTA button; the last step uses a distinct action phrase.
-    let ctaLabel: String
+    /// Localization key for the CTA button label (`Localizable.xcstrings`).
+    let ctaLabelKey: String
 
     var resolvedTextPlacement: IntroIllustrationTextPlacement {
         textPlacement ?? .intro1
-    }
-
-    var resolvedTopBarStyle: IntroTopBarStyle {
-        topBarStyle ?? .leadingChrome
     }
 
     var resolvedCTAGradientStartHex: String {

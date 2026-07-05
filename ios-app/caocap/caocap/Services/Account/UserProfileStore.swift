@@ -26,6 +26,10 @@ final class UserProfileStore {
         defaults.set(data, forKey: Self.answersKey)
     }
 
+    func loadSelectedCopilot() -> CopilotPersona {
+        loadAnswers()?.selectedCopilot ?? .cocaptain
+    }
+
     func resetSurvey() {
         isSurveyCompleted = false
         defaults.removeObject(forKey: Self.answersKey)

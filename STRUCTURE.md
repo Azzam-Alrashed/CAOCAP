@@ -46,6 +46,7 @@ caocap/
 ├── Features/
 │   ├── Activity/
 │   ├── Daily/
+│   ├── Help/
 │   ├── Auth/
 │   ├── Canvas/
 │   │   ├── Components/
@@ -129,7 +130,8 @@ Pure domain data. No UI, no persistence, no side effects. These structs define t
 | `NodeRole.swift` | Canonical role inference for Mini-App, Sub-Canvas, and custom/action nodes. |
 | `SRSReadinessState.swift` | Domain state for whether a Mini-App SRS section is empty, structured, drafted, or ready. |
 | `SRSScaffold.swift` | Definition of Software Requirements Specification (SRS) templates and check helpers. |
-| `PersonalizationSurveyAnswers.swift` | Codable saved responses from the first-run personalization survey (question ID → answer ID). |
+| `PersonalizationSurveyAnswers.swift` | Codable saved responses from the first-run personalization survey (question ID → answer ID, selected copilot, survey version). |
+| `CopilotPersona.swift` | Cocaptain vs CoStar persona enum; asset names and CDL accent colors for picker and chat avatars. |
 
 ---
 
@@ -259,8 +261,12 @@ Decoupled backend engines and API clients specific to the CoCaptain agentic flow
 | `LLMService.swift` | Interface for the Firebase AI Logic SDK. Manages streaming sessions with the Gemini backend. Also coordinates local on-device MLX model download and inference. |
 | `TokenUsageLimiter.swift` | Local estimated-token quota tracker for free CoCaptain and AI node usage; Pro entitlements bypass the free monthly cap. |
 | `CommandIntentResolver.swift` | Maps plain-language command palette and CoCaptain prompts to available app actions. |
+| `CoCaptainTurnIntentResolver.swift` | Classifies each CoCaptain user message as mutating work, advisory, or general chat before coordinator execution. |
+| `CoCaptainTurnIntent.swift` | Turn intent enum with prompt instructions and connection-fallback notice rules. |
 | `ProjectContextBuilder.swift` | Logic to "harvest" the spatial graph and serialize it into a grounded prompt context for the LLM. |
 | `NodePatchEngine.swift` | A precision editing engine that previews partial patches (replace/insert/append) for Mini-App SRS and Code sections. |
+| `MiniAppVerificationService.swift` | Runs staged Mini-App code in an ephemeral offline WebView, captures runtime diagnostics, and evaluates model-authored behavior checks. |
+| `VerifiedCodingLoopFeature.swift` | TestFlight/Debug rollout gate for the verified generate-test-repair loop. |
 
 `ProjectStore` and `ProjectPersistenceService` also maintain checkpoint metadata and saved project snapshots. The infrastructure is used to protect work before significant AI or mutation flows; a full user-facing snapshot browser remains roadmap work.
 
@@ -291,6 +297,17 @@ Local-first building history surfaced by the protected Activity node on the root
 |---|---|
 | `ActivityHeatmapView.swift` | Reusable 17×7 Sunday-to-Saturday save-activity grid with five intensity levels. |
 | `ActivityHistoryView.swift` | Expanded activity sheet with recent totals, active days, and the heatmap legend. |
+
+---
+
+#### `Help/`
+In-app help center opened from the Omnibox and the root Help node.
+
+| File | Responsibility |
+|---|---|
+| `HelpManifest.swift` | Static tutorials, Omnibox shortcut examples, and guide articles. |
+| `HelpView.swift` | Help sheet with sections and navigation callbacks. |
+| `HelpArticleView.swift` | Scrollable getting-started article pages. |
 
 ---
 
@@ -345,9 +362,10 @@ The spatial runtime — the heart of CAOCAP.
 
 | File | Responsibility |
 |---|---|
-| `RootCanvasProvider.swift` | Defines the stable six-node root column, including Activity, and curated child-canvas filenames. |
+| `RootCanvasProvider.swift` | Defines the stable eight-node root grid, including Activity and Daily, and curated child-canvas filenames. |
 | `TutorialCanvasProvider.swift` | Defines the clean workspace used by the interactive tutorial. |
 | `PacManCanvasProvider.swift` | Defines the self-contained, touch-first Pac-Man example Mini-App. |
+| `XOCanvasProvider.swift` | Defines the self-contained, touch-first tic-tac-toe example Mini-App. |
 | `ProjectTemplateProvider.swift` | Supplies the clean default project state and manual Mini-App boilerplate. |
 
 ---
@@ -386,16 +404,22 @@ Launch transition and global launch-time prompts shown by the root app shell.
 ---
 
 #### `Onboarding/`
-First-run onboarding for the canvas, Omnibox, and CoCaptain flow. The full funnel is: **Intro → Personalization survey → Interactive tutorial**.
+First-run onboarding for the canvas, Omnibox, and CoCaptain flow. The full funnel is: **Intro → Personalization (co-pilot picker + survey) → Interactive tutorial**.
 
 | File | Responsibility |
 |---|---|
 | `OnboardingCoordinator.swift` | Observable state machine for the active tutorial step, popover visibility, delayed presentation, and completion/skipping persistence. |
 | `OnboardingManifest.swift` | Manifest-backed copy, icon, and ordering for every interactive tutorial step. |
 | `OnboardingPopoverCard.swift` | Central onboarding tooltip presentation. Views publish named `OnboardingTooltipAnchor` frames, and a single `onboardingTooltipOverlay()` renders the active step card. |
-| `PersonalizationOnboardingCoordinator.swift` | State machine for the one-question-per-screen personalization survey, skip nudge, completion moment, and persistence/analytics handoff. |
-| `PersonalizationOnboardingManifest.swift` | Static question catalogue with stable question/answer IDs. |
-| `PersonalizationOnboardingView.swift` | Full-screen personalization overlay with progress bar, glass controls, and completion moment. |
+| `PersonalizationOnboardingCoordinator.swift` | State machine for co-pilot picker, survey steps, skip nudge, completion moment, v2 re-present logic, and persistence/analytics handoff. |
+| `PersonalizationOnboardingManifest.swift` | Static step catalogue: copilot picker + survey questions with stable IDs. |
+| `PersonalizationOnboardingView.swift` | Full-screen personalization overlay with space backdrop, progress bar, and completion moment. |
+| `PersonalizationCopilotPickerView.swift` | CDL co-pilot selection step (title + shared moon stage). |
+| `PersonalizationCopilotStage.swift` | Shared moon surface with both heroes standing on it and text selection cards. |
+| `PersonalizationBackdrop.swift` | Dark starry sky with animated galaxy and shooting stars for personalization screens. |
+| `PersonalizationMoonTheme.swift` | Shared dark-space palette for personalization UI. |
+| `CopilotPickerCard.swift` | Selectable co-pilot card with hero art and accent glow. |
+| `PersonalizationPrimaryButton.swift` | Gradient continue CTA shared across personalization steps. |
 | `PersonalizationAnswerCard.swift` | Reusable selectable answer tile for survey options. |
 
 Onboarding tooltips must not be presented by feature-local `.popover` modifiers. Feature views should only publish anchors with `onboardingTooltipAnchor(_:)`; the central overlay decides which single tooltip is visible.

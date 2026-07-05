@@ -72,13 +72,15 @@ struct ContentView: View {
                 canvasID: "root_canvas",
                 viewport: $session.viewport,
                 currentScale: $session.currentScale,
+                canvasFocusNodeID: session.canvasFocusNodeID,
                 onNodeAction: { session.handleNodeAction($0) },
                 onNavigateToSubCanvas: { fileName in
                     session.handleSubCanvasNavigation(fileName: fileName)
                 },
                 onRecoverUnsupportedProject: {
                     session.router.createFreshMiniAppCanvas()
-                }
+                },
+                onFlyToNode: { session.focusCanvasNode($0) }
             )
         case .project(let fileName):
             WorkspaceCanvasView(
@@ -86,13 +88,15 @@ struct ContentView: View {
                 canvasID: "project_canvas_\(fileName)",
                 viewport: $session.viewport,
                 currentScale: $session.currentScale,
+                canvasFocusNodeID: session.canvasFocusNodeID,
                 onNodeAction: { session.handleNodeAction($0) },
                 onNavigateToSubCanvas: { fileName in
                     session.handleSubCanvasNavigation(fileName: fileName)
                 },
                 onRecoverUnsupportedProject: {
                     session.router.createFreshMiniAppCanvas()
-                }
+                },
+                onFlyToNode: { session.focusCanvasNode($0) }
             )
         }
     }

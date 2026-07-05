@@ -4,10 +4,10 @@ import Foundation
 struct OnboardingStepContent: Equatable {
     /// The onboarding step this content belongs to; used for lookup in `OnboardingManifest`.
     let step: OnboardingCoordinator.Step
-    /// Short headline shown in bold at the top of the popover card.
-    let title: String
-    /// Descriptive body copy explaining what the user should do on this step.
-    let message: String
+    /// Catalog key for the short headline shown in bold at the top of the popover card.
+    let titleKey: String
+    /// Catalog key for the descriptive body copy explaining what the user should do on this step.
+    let messageKey: String
     /// SF Symbol name for the step icon displayed in the card header.
     let icon: String
 }
@@ -20,44 +20,44 @@ enum OnboardingManifest {
     static let steps: [OnboardingStepContent] = [
         OnboardingStepContent(
             step: .openTutorial,
-            title: "Enter the Tutorial",
-            message: "Tap the Tutorial node to step inside and learn CAOCAP using its real controls.",
+            titleKey: "onboarding.openTutorial.title",
+            messageKey: "onboarding.openTutorial.message",
             icon: "graduationcap.fill"
         ),
         OnboardingStepContent(
             step: .tapFAB,
-            title: "Your Command Center",
-            message: "Tap this button to open the command palette, your gateway to every action in CAOCAP.",
+            titleKey: "onboarding.tapFAB.title",
+            messageKey: "onboarding.tapFAB.message",
             icon: "hand.tap"
         ),
         OnboardingStepContent(
             step: .typeCoCaptainPrompt,
-            title: "Ask CoCaptain",
-            message: "Type a message like \"hi\" here to turn the command palette into an AI prompt.",
+            titleKey: "onboarding.typeCoCaptainPrompt.title",
+            messageKey: "onboarding.typeCoCaptainPrompt.message",
             icon: "keyboard"
         ),
         OnboardingStepContent(
             step: .submitCoCaptainPrompt,
-            title: "Send to CoCaptain",
-            message: "Tap the Ask CoCaptain row or press return to send your message.",
+            titleKey: "onboarding.submitCoCaptainPrompt.title",
+            messageKey: "onboarding.submitCoCaptainPrompt.message",
             icon: "sparkles"
         ),
         OnboardingStepContent(
             step: .chatCoCaptain,
-            title: "Share Your Idea",
-            message: "Tell CoCaptain what you'd like to build.",
+            titleKey: "onboarding.chatCoCaptain.title",
+            messageKey: "onboarding.chatCoCaptain.message",
             icon: "bubble.left.and.text.bubble.right"
         ),
         OnboardingStepContent(
             step: .dismissCoCaptain,
-            title: "Back to Canvas",
-            message: "Tap Done or drag the panel down.",
+            titleKey: "onboarding.dismissCoCaptain.title",
+            messageKey: "onboarding.dismissCoCaptain.message",
             icon: "arrow.down"
         ),
         OnboardingStepContent(
             step: .longPressFAB,
-            title: "Quick Shortcuts",
-            message: "Press and hold this button to reveal quick actions. Use it to undo/redo and quickly summon CoCaptain.",
+            titleKey: "onboarding.longPressFAB.title",
+            messageKey: "onboarding.longPressFAB.message",
             icon: "hand.tap.fill"
         )
     ]
@@ -84,11 +84,15 @@ enum OnboardingManifest {
         return steps[nextIndex].step
     }
 
-    /// Human-readable progress label such as "3 of 6" used for accessibility and the progress bar.
-    static func stepLabel(for step: OnboardingCoordinator.Step) -> String {
+    /// Human-readable progress label such as "3 of 7" used for accessibility and the progress bar.
+    static func stepLabel(for step: OnboardingCoordinator.Step, language: String? = nil) -> String {
         guard let index = steps.firstIndex(where: { $0.step == step }) else {
             return ""
         }
-        return "\(index + 1) of \(steps.count)"
+        return LocalizationManager.shared.localizedString(
+            "onboarding.canvas.stepLabel",
+            arguments: [index + 1, steps.count],
+            language: language
+        )
     }
 }
