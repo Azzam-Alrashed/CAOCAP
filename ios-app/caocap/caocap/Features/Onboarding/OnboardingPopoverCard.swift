@@ -116,6 +116,36 @@ enum OnboardingTooltipAnchor: Hashable {
     case canvasGestureArea
     /// Anchored to the zoom percentage pill in the canvas HUD.
     case canvasHUDZoom
+    /// Anchored to the practice Mini-App node on the Tutorial canvas.
+    case practiceCanvasNode
+    /// Anchored to the live Mini-App HTML preview area.
+    case miniAppPreviewArea
+    /// Anchored to the floating command button inside the Mini-App preview shell.
+    case miniAppPreviewFAB
+    /// Anchored to the Code row in the preview omnibox tool list.
+    case omniboxMiniAppCodeRow
+    /// Anchored to the save/close control in the code editor.
+    case miniAppCodeEditorSave
+    /// Anchored to the Back to Canvas row in the preview omnibox.
+    case omniboxBackToCanvasRow
+    /// Anchored to the Organize Nodes action row in the omnibox.
+    case omniboxOrganizeRow
+    /// Anchored to the Toggle Grid action row in the omnibox.
+    case omniboxToggleGridRow
+    /// Anchored to the undo bubble on the expanded FAB radial menu.
+    case floatingCommandButtonUndo
+    /// Anchored to the redo bubble on the expanded FAB radial menu.
+    case floatingCommandButtonRedo
+
+    /// Whether this anchor is registered inside the canvas view hierarchy.
+    var isCanvasLocal: Bool {
+        switch self {
+        case .tutorialNode, .practiceCanvasNode, .canvasGestureArea:
+            return true
+        default:
+            return false
+        }
+    }
 }
 
 /// Collects layout anchors for each named onboarding target so the tooltip overlay
@@ -126,6 +156,19 @@ private struct OnboardingTooltipAnchorPreferenceKey: PreferenceKey {
     static func reduce(
         value: inout [OnboardingTooltipAnchor: Anchor<CGRect>],
         nextValue: () -> [OnboardingTooltipAnchor: Anchor<CGRect>]
+    ) {
+        value.merge(nextValue(), uniquingKeysWith: { _, new in new })
+    }
+}
+
+/// Canvas-local targets publish measured frames directly because `anchorPreference`
+/// does not track `.position()`-placed overlays reliably in the infinite canvas.
+private struct OnboardingExplicitAnchorFramePreferenceKey: PreferenceKey {
+    static var defaultValue: [OnboardingTooltipAnchor: CGRect] = [:]
+
+    static func reduce(
+        value: inout [OnboardingTooltipAnchor: CGRect],
+        nextValue: () -> [OnboardingTooltipAnchor: CGRect]
     ) {
         value.merge(nextValue(), uniquingKeysWith: { _, new in new })
     }
@@ -157,14 +200,32 @@ extension View {
         }
     }
 
+    /// Registers the Tutorial practice Mini-App node for onboarding tooltips.
+    func practiceNodeOnboardingAnchor(isEnabled: Bool) -> some View {
+        anchorPreference(key: OnboardingTooltipAnchorPreferenceKey.self, value: .bounds) {
+            isEnabled ? [.practiceCanvasNode: $0] : [:]
+        }
+    }
+
     /// Reads all accumulated anchors and renders the tooltip overlay in a single pass,
     /// avoiding multiple layout passes that could cause jitter.
-    func onboardingTooltipOverlay(isCommandPalettePresented: Bool = false) -> some View {
+    func onboardingExplicitAnchorFrames(_ frames: [OnboardingTooltipAnchor: CGRect]) -> some View {
+        preference(key: OnboardingExplicitAnchorFramePreferenceKey.self, value: frames)
+    }
+
+    func onboardingTooltipOverlay(
+        isCommandPalettePresented: Bool = false,
+        rendersAnchor: @escaping (OnboardingTooltipAnchor) -> Bool = { _ in true }
+    ) -> some View {
         overlayPreferenceValue(OnboardingTooltipAnchorPreferenceKey.self) { anchors in
-            OnboardingTooltipOverlay(
-                anchors: anchors,
-                isCommandPalettePresented: isCommandPalettePresented
-            )
+            overlayPreferenceValue(OnboardingExplicitAnchorFramePreferenceKey.self) { explicitFrames in
+                OnboardingTooltipOverlay(
+                    anchors: anchors,
+                    explicitFrames: explicitFrames,
+                    isCommandPalettePresented: isCommandPalettePresented,
+                    rendersAnchor: rendersAnchor
+                )
+            }
         }
     }
 }
@@ -188,6 +249,26 @@ extension OnboardingCoordinator.Step {
             return .canvasGestureArea
         case .pinchZoom:
             return .canvasHUDZoom
+        case .tapMiniAppNode, .dragCanvasNode:
+            return .practiceCanvasNode
+        case .interactMiniAppPreview:
+            return .miniAppPreviewArea
+        case .openMiniAppOmnibox:
+            return .miniAppPreviewFAB
+        case .openMiniAppCodeTool:
+            return .omniboxMiniAppCodeRow
+        case .saveMiniAppCodeEdit:
+            return .miniAppCodeEditorSave
+        case .returnFromMiniAppPreview:
+            return .omniboxBackToCanvasRow
+        case .openWorkspaceOmnibox:
+            return .floatingCommandButton
+        case .runOrganizeNodes:
+            return .omniboxOrganizeRow
+        case .runToggleGrid:
+            return .omniboxToggleGridRow
+        case .undoCanvasEdit, .redoCanvasEdit:
+            return .floatingCommandButton
         }
     }
 
@@ -198,6 +279,18 @@ extension OnboardingCoordinator.Step {
         if self == .searchFlyToNode, isCommandPalettePresented {
             return .omniboxSearchField
         }
+        if self == .openMiniAppCodeTool, isCommandPalettePresented {
+            return .omniboxMiniAppCodeRow
+        }
+        if self == .returnFromMiniAppPreview, isCommandPalettePresented {
+            return .omniboxBackToCanvasRow
+        }
+        if self == .runOrganizeNodes, isCommandPalettePresented {
+            return .omniboxOrganizeRow
+        }
+        if self == .runToggleGrid, isCommandPalettePresented {
+            return .omniboxToggleGridRow
+        }
         return tooltipAnchor
     }
 
@@ -206,7 +299,10 @@ extension OnboardingCoordinator.Step {
         case .dismissCoCaptain, .pinchZoom:
             return .top
         case .openTutorial, .tapFAB, .typeCoCaptainPrompt, .submitCoCaptainPrompt, .chatCoCaptain,
-             .longPressFAB, .returnToRoot, .panCanvas, .fitAllNodes, .searchFlyToNode, .openPortal:
+             .longPressFAB, .returnToRoot, .panCanvas, .fitAllNodes, .searchFlyToNode, .openPortal,
+             .tapMiniAppNode, .interactMiniAppPreview, .openMiniAppOmnibox, .openMiniAppCodeTool,
+             .saveMiniAppCodeEdit, .returnFromMiniAppPreview, .dragCanvasNode, .openWorkspaceOmnibox,
+             .runOrganizeNodes, .runToggleGrid, .undoCanvasEdit, .redoCanvasEdit:
             return .bottom
         }
     }
@@ -218,7 +314,9 @@ extension OnboardingCoordinator.Step {
 /// with a spring scale-plus-fade animation.
 private struct OnboardingTooltipOverlay: View {
     let anchors: [OnboardingTooltipAnchor: Anchor<CGRect>]
+    let explicitFrames: [OnboardingTooltipAnchor: CGRect]
     let isCommandPalettePresented: Bool
+    let rendersAnchor: (OnboardingTooltipAnchor) -> Bool
 
     @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
     @State private var cardSize = CGSize(width: 290, height: 180)
@@ -227,9 +325,10 @@ private struct OnboardingTooltipOverlay: View {
         GeometryReader { proxy in
             if let onboarding,
                let step = onboarding.currentStep,
-               onboarding.showPopover,
-               let anchor = anchors[step.resolvedTooltipAnchor(isCommandPalettePresented: isCommandPalettePresented)] {
-                let targetFrame = proxy[anchor]
+               onboarding.showPopover {
+                let resolvedAnchor = step.resolvedTooltipAnchor(isCommandPalettePresented: isCommandPalettePresented)
+                if rendersAnchor(resolvedAnchor),
+                   let targetFrame = resolvedTargetFrame(for: resolvedAnchor, in: proxy) {
                 let tooltipCenter = tooltipCenter(
                     for: targetFrame,
                     placement: step.tooltipArrowPlacement,
@@ -260,11 +359,25 @@ private struct OnboardingTooltipOverlay: View {
                 .position(tooltipCenter)
                 .transition(.scale(scale: 0.92).combined(with: .opacity))
                 .zIndex(1000)
+                }
             }
         }
         .animation(.spring(response: 0.35, dampingFraction: 0.82), value: onboarding?.currentStep)
         .animation(.spring(response: 0.35, dampingFraction: 0.82), value: onboarding?.showPopover)
         .animation(.spring(response: 0.35, dampingFraction: 0.82), value: isCommandPalettePresented)
+    }
+
+    private func resolvedTargetFrame(
+        for anchor: OnboardingTooltipAnchor,
+        in proxy: GeometryProxy
+    ) -> CGRect? {
+        if let explicit = explicitFrames[anchor] {
+            return explicit
+        }
+        if let layoutAnchor = anchors[anchor] {
+            return proxy[layoutAnchor]
+        }
+        return nil
     }
 
     /// Computes the center point for the tooltip card, keeping it inset from screen edges

@@ -5,6 +5,8 @@ public enum OnboardingLessonID: String, CaseIterable, Hashable {
     case canvasBasics
     case coCaptainChat
     case canvasNavigation
+    case miniAppPreview
+    case moveAndOrganize
 }
 
 /// A grouped tutorial lesson with at most six gesture-driven steps.
@@ -44,8 +46,8 @@ enum OnboardingLessonsManifest {
         ),
         OnboardingLesson(
             id: .canvasNavigation,
-            titleKey: "onboarding.lesson.powerShortcuts.title",
-            subtitleKey: "onboarding.lesson.powerShortcuts.subtitle",
+            titleKey: "onboarding.lesson.canvasNavigation.title",
+            subtitleKey: "onboarding.lesson.canvasNavigation.subtitle",
             icon: "arrow.uturn.backward.circle.fill",
             accentHex: "F39C12",
             steps: [
@@ -55,6 +57,36 @@ enum OnboardingLessonsManifest {
                 .fitAllNodes,
                 .searchFlyToNode,
                 .openPortal
+            ]
+        ),
+        OnboardingLesson(
+            id: .miniAppPreview,
+            titleKey: "onboarding.lesson.miniAppPreview.title",
+            subtitleKey: "onboarding.lesson.miniAppPreview.subtitle",
+            icon: "app.connected.to.app.below.fill",
+            accentHex: "E84393",
+            steps: [
+                .tapMiniAppNode,
+                .interactMiniAppPreview,
+                .openMiniAppOmnibox,
+                .openMiniAppCodeTool,
+                .saveMiniAppCodeEdit,
+                .returnFromMiniAppPreview
+            ]
+        ),
+        OnboardingLesson(
+            id: .moveAndOrganize,
+            titleKey: "onboarding.lesson.moveAndOrganize.title",
+            subtitleKey: "onboarding.lesson.moveAndOrganize.subtitle",
+            icon: "arrow.up.and.down.and.arrow.left.and.right",
+            accentHex: "74B9FF",
+            steps: [
+                .dragCanvasNode,
+                .openWorkspaceOmnibox,
+                .runOrganizeNodes,
+                .runToggleGrid,
+                .undoCanvasEdit,
+                .redoCanvasEdit
             ]
         )
     ]

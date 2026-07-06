@@ -363,7 +363,7 @@ The spatial runtime — the heart of CAOCAP.
 | File | Responsibility |
 |---|---|
 | `RootCanvasProvider.swift` | Defines the stable eight-node root grid, including Activity and Daily, and curated child-canvas filenames. |
-| `TutorialCanvasProvider.swift` | Defines the clean workspace used by the interactive tutorial. |
+| `TutorialCanvasProvider.swift` | Defines the Tutorial subcanvas, including the seeded Hello World Mini-App used by preview and organize lessons. |
 | `PacManCanvasProvider.swift` | Defines the self-contained, touch-first Pac-Man example Mini-App. |
 | `XOCanvasProvider.swift` | Defines the self-contained, touch-first tic-tac-toe example Mini-App. |
 | `ProjectTemplateProvider.swift` | Supplies the clean default project state and manual Mini-App boilerplate. |
@@ -409,7 +409,7 @@ First-run onboarding for the canvas, Omnibox, and CoCaptain flow. The full funne
 | File | Responsibility |
 |---|---|
 | `OnboardingCoordinator.swift` | Observable state machine for the active tutorial step, lesson, popover visibility, delayed presentation, per-lesson completion, and completion/skipping persistence. |
-| `OnboardingLessonsManifest.swift` | Groups interactive tutorial steps into ≤6-step lessons with unique accent colors; Canvas Navigation is a six-step root-canvas arc; drives Help lesson catalogue. |
+| `OnboardingLessonsManifest.swift` | Groups interactive tutorial steps into ≤6-step lessons with unique accent colors (five lessons: Canvas Basics, CoCaptain Chat, Canvas Navigation, Mini-App Preview, Move & Organize); drives Help lesson catalogue. |
 | `OnboardingManifest.swift` | Manifest-backed copy, icon, and ordering for every interactive tutorial step. |
 | `OnboardingNavigationGestureThresholds.swift` | Pan/pinch threshold math for navigation-lesson gesture completion. |
 | `OnboardingPopoverCard.swift` | Central onboarding tooltip presentation. Views publish named `OnboardingTooltipAnchor` frames, and a single `onboardingTooltipOverlay()` renders the active step card. |

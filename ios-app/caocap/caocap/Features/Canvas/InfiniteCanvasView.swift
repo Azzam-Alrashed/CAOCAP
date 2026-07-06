@@ -134,13 +134,10 @@ struct InfiniteCanvasView: View {
                     .padding(24)
                 }
 
-                Color.clear
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .onboardingTooltipAnchor(.canvasGestureArea)
-                    .allowsHitTesting(false)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .coordinateSpace(name: "canvas")
+            .onboardingExplicitAnchorFrames(canvasExplicitAnchorFrames(canvasSize: geometry.size))
             .contentShape(Rectangle()) // Ensure the entire area is gesture-sensitive.
             .onTapGesture(count: 2) {
                 withAnimation(.spring(response: 0.6, dampingFraction: 0.85)) {
@@ -187,6 +184,10 @@ struct InfiniteCanvasView: View {
             }
         }
         .background(backgroundColor)
+        .onboardingTooltipOverlay(
+            isCommandPalettePresented: commandPalette?.isPresented ?? false,
+            rendersAnchor: { $0.isCanvasLocal }
+        )
         .edgesIgnoringSafeArea(.all)
         .sheet(item: $selectedNode) { node in
             NodeDetailView(
@@ -207,7 +208,12 @@ struct InfiniteCanvasView: View {
         .onAppear {
             currentScale = viewport.scale
         }
-        .onChange(of: onboarding?.showPopover) { _, showPopover in
+        .onChange(of: fullScreenMiniApp?.id) { _, nodeID in
+            guard nodeID == TutorialCanvasProvider.miniAppNodeID,
+                  onboarding?.currentStep == .tapMiniAppNode else { return }
+            onboarding?.completeCurrentStep()
+        }
+        .onChange(of: onboarding?.showPopover ?? false) { _, showPopover in
             guard showPopover == true,
                   let onboarding,
                   let step = onboarding.currentStep,
@@ -236,6 +242,33 @@ struct InfiniteCanvasView: View {
         }
     }
 
+    private func completeOnboardingDragIfNeeded(translation: CGSize) {
+        guard let onboarding, onboarding.currentStep == .dragCanvasNode else { return }
+        let distance = hypot(translation.width, translation.height)
+        if distance >= OnboardingNavigationGestureThresholds.minimumPanDistance {
+            onboarding.completeCurrentStep()
+        }
+    }
+
+    private func canvasExplicitAnchorFrames(canvasSize: CGSize) -> [OnboardingTooltipAnchor: CGRect] {
+        var frames: [OnboardingTooltipAnchor: CGRect] = [
+            .canvasGestureArea: CGRect(origin: .zero, size: canvasSize)
+        ]
+
+        if shouldAnchorTutorialNode,
+           let frameData = nodeFrames[RootCanvasProvider.tutorialNodeID] {
+            frames[.tutorialNode] = frameData.frame
+        }
+
+        if let step = onboarding?.currentStep,
+           step == .tapMiniAppNode || step == .dragCanvasNode,
+           let frameData = nodeFrames[TutorialCanvasProvider.miniAppNodeID] {
+            frames[.practiceCanvasNode] = frameData.frame
+        }
+
+        return frames
+    }
+
     @ViewBuilder
     private func spatialNode(_ node: SpatialNode, containerSize: CGSize) -> some View {
         let currentOffset = nodeDragOffsets[node.id] ?? .zero
@@ -246,9 +279,6 @@ struct InfiniteCanvasView: View {
             isDragging: isDraggingThisNode,
             agentState: store.activeAgentStates[node.id] ?? .idle,
             isTransientlyFocused: canvasFocusNodeID == node.id
-        )
-        .tutorialOnboardingAnchor(
-            isEnabled: node.id == RootCanvasProvider.tutorialNodeID && shouldAnchorTutorialNode
         )
         .offset(
             x: node.position.x + currentOffset.width,
@@ -314,6 +344,10 @@ struct InfiniteCanvasView: View {
                     id: node.id,
                     position: finalPosition,
                     persist: true
+                )
+
+                completeOnboardingDragIfNeeded(
+                    translation: canvasTranslation(for: value.translation)
                 )
 
                 nodeDragOffsets[node.id] = nil

@@ -95,6 +95,78 @@ enum OnboardingManifest {
             titleKey: "onboarding.returnToRoot.title",
             messageKey: "onboarding.returnToRoot.message",
             icon: "arrow.uturn.backward.circle.fill"
+        ),
+        OnboardingStepContent(
+            step: .tapMiniAppNode,
+            titleKey: "onboarding.tapMiniAppNode.title",
+            messageKey: "onboarding.tapMiniAppNode.message",
+            icon: "play.circle.fill"
+        ),
+        OnboardingStepContent(
+            step: .interactMiniAppPreview,
+            titleKey: "onboarding.interactMiniAppPreview.title",
+            messageKey: "onboarding.interactMiniAppPreview.message",
+            icon: "hand.tap"
+        ),
+        OnboardingStepContent(
+            step: .openMiniAppOmnibox,
+            titleKey: "onboarding.openMiniAppOmnibox.title",
+            messageKey: "onboarding.openMiniAppOmnibox.message",
+            icon: "command"
+        ),
+        OnboardingStepContent(
+            step: .openMiniAppCodeTool,
+            titleKey: "onboarding.openMiniAppCodeTool.title",
+            messageKey: "onboarding.openMiniAppCodeTool.message",
+            icon: "chevron.left.forwardslash.chevron.right"
+        ),
+        OnboardingStepContent(
+            step: .saveMiniAppCodeEdit,
+            titleKey: "onboarding.saveMiniAppCodeEdit.title",
+            messageKey: "onboarding.saveMiniAppCodeEdit.message",
+            icon: "square.and.pencil"
+        ),
+        OnboardingStepContent(
+            step: .returnFromMiniAppPreview,
+            titleKey: "onboarding.returnFromMiniAppPreview.title",
+            messageKey: "onboarding.returnFromMiniAppPreview.message",
+            icon: "arrow.uturn.backward"
+        ),
+        OnboardingStepContent(
+            step: .dragCanvasNode,
+            titleKey: "onboarding.dragCanvasNode.title",
+            messageKey: "onboarding.dragCanvasNode.message",
+            icon: "arrow.up.and.down.and.arrow.left.and.right"
+        ),
+        OnboardingStepContent(
+            step: .openWorkspaceOmnibox,
+            titleKey: "onboarding.openWorkspaceOmnibox.title",
+            messageKey: "onboarding.openWorkspaceOmnibox.message",
+            icon: "command"
+        ),
+        OnboardingStepContent(
+            step: .runOrganizeNodes,
+            titleKey: "onboarding.runOrganizeNodes.title",
+            messageKey: "onboarding.runOrganizeNodes.message",
+            icon: "wand.and.stars"
+        ),
+        OnboardingStepContent(
+            step: .runToggleGrid,
+            titleKey: "onboarding.runToggleGrid.title",
+            messageKey: "onboarding.runToggleGrid.message",
+            icon: "grid"
+        ),
+        OnboardingStepContent(
+            step: .undoCanvasEdit,
+            titleKey: "onboarding.undoCanvasEdit.title",
+            messageKey: "onboarding.undoCanvasEdit.message",
+            icon: "arrow.uturn.backward"
+        ),
+        OnboardingStepContent(
+            step: .redoCanvasEdit,
+            titleKey: "onboarding.redoCanvasEdit.title",
+            messageKey: "onboarding.redoCanvasEdit.message",
+            icon: "arrow.uturn.forward"
         )
     ]
 

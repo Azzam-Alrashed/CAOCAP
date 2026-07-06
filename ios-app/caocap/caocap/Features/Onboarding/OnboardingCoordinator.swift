@@ -36,6 +36,30 @@ public class OnboardingCoordinator {
         case openPortal
         /// User must return to the root canvas from a subcanvas via Go Back.
         case returnToRoot
+        /// User must tap the seeded Hello World Mini-App on the Tutorial canvas.
+        case tapMiniAppNode
+        /// User must interact with the live Mini-App preview.
+        case interactMiniAppPreview
+        /// User must open the omnibox from the Mini-App preview shell.
+        case openMiniAppOmnibox
+        /// User must open the Code tool from the preview omnibox.
+        case openMiniAppCodeTool
+        /// User must save a code edit from the code editor.
+        case saveMiniAppCodeEdit
+        /// User must return to the canvas from the Mini-App preview.
+        case returnFromMiniAppPreview
+        /// User must drag the practice node to a new position.
+        case dragCanvasNode
+        /// User must open the omnibox from the canvas FAB.
+        case openWorkspaceOmnibox
+        /// User must run Organize Nodes from the omnibox.
+        case runOrganizeNodes
+        /// User must run Toggle Grid from the omnibox.
+        case runToggleGrid
+        /// User must undo the last canvas edit.
+        case undoCanvasEdit
+        /// User must redo the last undone edit.
+        case redoCanvasEdit
 
         public static func < (lhs: Step, rhs: Step) -> Bool {
             lhs.rawValue < rhs.rawValue
@@ -61,6 +85,18 @@ public class OnboardingCoordinator {
         var isCanvasNavigationGestureStep: Bool {
             switch self {
             case .panCanvas, .pinchZoom, .fitAllNodes:
+                return true
+            default:
+                return false
+            }
+        }
+
+        var blocksCoCaptainPrompt: Bool {
+            switch self {
+            case .returnToRoot, .panCanvas, .pinchZoom, .fitAllNodes, .searchFlyToNode, .openPortal,
+                 .tapMiniAppNode, .interactMiniAppPreview, .openMiniAppOmnibox, .openMiniAppCodeTool,
+                 .saveMiniAppCodeEdit, .returnFromMiniAppPreview, .dragCanvasNode, .openWorkspaceOmnibox,
+                 .runOrganizeNodes, .runToggleGrid, .undoCanvasEdit, .redoCanvasEdit:
                 return true
             default:
                 return false
@@ -104,8 +140,9 @@ public class OnboardingCoordinator {
     // MARK: - Persistence
 
     /// Versioned key so a future onboarding redesign can show the new flow to existing users.
-    private static let completedKey = "onboarding_completed_v6"
-    private static let legacyCompletedKey = "onboarding_completed_v5"
+    private static let completedKey = "onboarding_completed_v7"
+    private static let legacyCompletedKey = "onboarding_completed_v6"
+    private static let legacyV5CompletedKey = "onboarding_completed_v5"
     private static let lessonCompletedKeyPrefix = "onboarding_lesson_completed_"
     private static let legacyCanvasNavigationLessonKey = "onboarding_lesson_completed_powerShortcuts"
 
@@ -232,6 +269,7 @@ public class OnboardingCoordinator {
     public func reset() {
         UserDefaults.standard.removeObject(forKey: Self.completedKey)
         UserDefaults.standard.removeObject(forKey: Self.legacyCompletedKey)
+        UserDefaults.standard.removeObject(forKey: Self.legacyV5CompletedKey)
         UserDefaults.standard.removeObject(forKey: Self.legacyCanvasNavigationLessonKey)
         for lessonID in OnboardingLessonID.allCases {
             UserDefaults.standard.removeObject(forKey: Self.lessonCompletionKey(for: lessonID))
@@ -265,8 +303,16 @@ public class OnboardingCoordinator {
     private func migratePersistenceIfNeeded() {
         let defaults = UserDefaults.standard
 
+        if defaults.bool(forKey: Self.legacyV5CompletedKey), !defaults.bool(forKey: Self.legacyCompletedKey) {
+            defaults.set(true, forKey: Self.legacyCompletedKey)
+        }
+
         if defaults.bool(forKey: Self.legacyCompletedKey), !defaults.bool(forKey: Self.completedKey) {
-            defaults.set(true, forKey: Self.completedKey)
+            for lessonID in [OnboardingLessonID.canvasBasics, .coCaptainChat, .canvasNavigation] {
+                if !defaults.bool(forKey: Self.lessonCompletionKey(for: lessonID)) {
+                    defaults.set(true, forKey: Self.lessonCompletionKey(for: lessonID))
+                }
+            }
         }
 
         if defaults.bool(forKey: Self.legacyCanvasNavigationLessonKey),

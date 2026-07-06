@@ -73,6 +73,7 @@ private struct MiniAppPreviewShell: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.undoManager) private var undoManager
+    @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
     /// Drives which tool sheet is currently presented.
     @State private var activeTool: MiniAppTool?
     @State private var showingPublish = false
@@ -90,6 +91,13 @@ private struct MiniAppPreviewShell: View {
             if let html = currentNode.miniApp?.compiledHTML {
                 HTMLWebView(htmlContent: html)
                     .ignoresSafeArea()
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        if onboarding?.currentStep == .interactMiniAppPreview {
+                            onboarding?.completeCurrentStep()
+                        }
+                    }
+                    .onboardingTooltipAnchor(.miniAppPreviewArea)
             } else {
                 Text("No preview to display.")
                     .foregroundStyle(.secondary)
@@ -111,8 +119,18 @@ private struct MiniAppPreviewShell: View {
                     store.undoStackChanged += 1
                 },
                 canUndo: undoManager?.canUndo ?? false,
-                canRedo: undoManager?.canRedo ?? false
+                canRedo: undoManager?.canRedo ?? false,
+                isOnboardingHighlighted: onboarding?.showPopover == true
+                    && onboarding?.currentStep == .openMiniAppOmnibox
             )
+            .onboardingTooltipAnchor(.miniAppPreviewFAB)
+        }
+        .onboardingTooltipOverlay(
+            isCommandPalettePresented: commandPalette?.isPresented ?? false
+        )
+        .onChange(of: commandPalette?.isPresented ?? false) { _, isPresented in
+            guard isPresented, onboarding?.currentStep == .openMiniAppOmnibox else { return }
+            onboarding?.completeCurrentStep()
         }
         .onAppear {
             guard let commandPalette else { return }
@@ -167,10 +185,16 @@ private struct MiniAppPreviewShell: View {
         case .publish:
             showingPublish = true
         case .backToCanvas:
+            if onboarding?.currentStep == .returnFromMiniAppPreview {
+                onboarding?.completeCurrentStep()
+            }
             dismiss()
         default:
             if let miniAppTool = MiniAppTool(tool) {
                 activeTool = miniAppTool
+                if miniAppTool == .code, onboarding?.currentStep == .openMiniAppCodeTool {
+                    onboarding?.completeCurrentStep()
+                }
             }
         }
     }

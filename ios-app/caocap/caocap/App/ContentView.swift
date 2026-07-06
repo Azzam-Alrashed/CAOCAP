@@ -37,13 +37,22 @@ struct ContentView: View {
                     },
                     onUndo: {
                         session.performUndo(undoManager: undoManager)
+                        if session.onboarding.currentStep == .undoCanvasEdit {
+                            session.onboarding.completeCurrentStep()
+                        }
                     },
                     onRedo: {
                         session.performRedo(undoManager: undoManager)
+                        if session.onboarding.currentStep == .redoCanvasEdit {
+                            session.onboarding.completeCurrentStep()
+                        }
                     }
                 )
             }
-            .onboardingTooltipOverlay(isCommandPalettePresented: session.commandPalette.isPresented)
+            .onboardingTooltipOverlay(
+                isCommandPalettePresented: session.commandPalette.isPresented,
+                rendersAnchor: { !$0.isCanvasLocal }
+            )
             .background(Color.black.ignoresSafeArea())
             .overlay { launchOverlay }
             .overlay { introOverlay }
@@ -161,12 +170,18 @@ struct ContentView: View {
             },
             onUndo: {
                 session.performUndo(undoManager: undoManager)
+                if session.onboarding.currentStep == .undoCanvasEdit {
+                    session.onboarding.completeCurrentStep()
+                }
             },
             onSummonCoCaptain: {
                 _ = session.actionDispatcher.perform(.summonCoCaptain, source: .user)
             },
             onRedo: {
                 session.performRedo(undoManager: undoManager)
+                if session.onboarding.currentStep == .redoCanvasEdit {
+                    session.onboarding.completeCurrentStep()
+                }
             },
             canUndo: (session.router.activeStore.undoStackChanged >= 0) && (undoManager?.canUndo ?? false),
             canRedo: (session.router.activeStore.undoStackChanged >= 0) && (undoManager?.canRedo ?? false),
@@ -183,6 +198,9 @@ struct ContentView: View {
             isOnboardingHighlighted: session.onboarding.showPopover && (
                 session.onboarding.currentStep == .tapFAB
                 || session.onboarding.currentStep == .longPressFAB
+                || session.onboarding.currentStep == .openWorkspaceOmnibox
+                || session.onboarding.currentStep == .undoCanvasEdit
+                || session.onboarding.currentStep == .redoCanvasEdit
                 || (session.onboarding.currentStep == .searchFlyToNode && !session.commandPalette.isPresented)
                 || (session.onboarding.currentStep == .returnToRoot && !session.commandPalette.isPresented)
             )

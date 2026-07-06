@@ -573,6 +573,7 @@ private struct OmniboxSearchResultsView: View {
                 ) {
                     viewModel.selectPreviewTool(tool)
                 }
+                .modifier(MiniAppPreviewToolOnboardingAnchor(tool: tool))
                 .id("preview-tool-\(tool.id)")
             }
         }
@@ -634,6 +635,7 @@ private struct OmniboxSearchResultsView: View {
             onSelect: { viewModel.executeAction(action) },
             onPin: action.canPinToCanvas ? { viewModel.pinAction(action) } : nil
         )
+        .modifier(AppActionOnboardingAnchor(actionID: action.id))
         .id(action.id.rawValue)
     }
 
@@ -721,6 +723,21 @@ private struct MiniAppPreviewToolRow: View {
     }
 }
 
+private struct MiniAppPreviewToolOnboardingAnchor: ViewModifier {
+    let tool: MiniAppPreviewTool
+
+    func body(content: Content) -> some View {
+        switch tool {
+        case .code:
+            content.onboardingTooltipAnchor(.omniboxMiniAppCodeRow)
+        case .backToCanvas:
+            content.onboardingTooltipAnchor(.omniboxBackToCanvasRow)
+        default:
+            content
+        }
+    }
+}
+
 struct AppActionRow: View {
     let item: AppActionDefinition
     let isSelected: Bool
@@ -769,6 +786,21 @@ struct AppActionRow: View {
             }
         }
         .omniboxRowStyle(isSelected: isSelected)
+    }
+}
+
+private struct AppActionOnboardingAnchor: ViewModifier {
+    let actionID: AppActionID
+
+    func body(content: Content) -> some View {
+        switch actionID {
+        case .organizeNodes:
+            content.onboardingTooltipAnchor(.omniboxOrganizeRow)
+        case .toggleGrid:
+            content.onboardingTooltipAnchor(.omniboxToggleGridRow)
+        default:
+            content
+        }
     }
 }
 

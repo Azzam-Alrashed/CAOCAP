@@ -35,9 +35,21 @@ struct OnboardingManifestTests {
         #expect(OnboardingManifest.nextStep(after: .pinchZoom) == .fitAllNodes)
         #expect(OnboardingManifest.nextStep(after: .fitAllNodes) == .searchFlyToNode)
         #expect(OnboardingManifest.nextStep(after: .searchFlyToNode) == .openPortal)
-        #expect(OnboardingManifest.nextStep(after: .openPortal) == nil)
+        #expect(OnboardingManifest.nextStep(after: .openPortal) == .tapMiniAppNode)
+        #expect(OnboardingManifest.nextStep(after: .tapMiniAppNode) == .interactMiniAppPreview)
+        #expect(OnboardingManifest.nextStep(after: .interactMiniAppPreview) == .openMiniAppOmnibox)
+        #expect(OnboardingManifest.nextStep(after: .openMiniAppOmnibox) == .openMiniAppCodeTool)
+        #expect(OnboardingManifest.nextStep(after: .openMiniAppCodeTool) == .saveMiniAppCodeEdit)
+        #expect(OnboardingManifest.nextStep(after: .saveMiniAppCodeEdit) == .returnFromMiniAppPreview)
+        #expect(OnboardingManifest.nextStep(after: .returnFromMiniAppPreview) == .dragCanvasNode)
+        #expect(OnboardingManifest.nextStep(after: .dragCanvasNode) == .openWorkspaceOmnibox)
+        #expect(OnboardingManifest.nextStep(after: .openWorkspaceOmnibox) == .runOrganizeNodes)
+        #expect(OnboardingManifest.nextStep(after: .runOrganizeNodes) == .runToggleGrid)
+        #expect(OnboardingManifest.nextStep(after: .runToggleGrid) == .undoCanvasEdit)
+        #expect(OnboardingManifest.nextStep(after: .undoCanvasEdit) == .redoCanvasEdit)
+        #expect(OnboardingManifest.nextStep(after: .redoCanvasEdit) == nil)
 
-        #expect(OnboardingLessonsManifest.lessons.count == 3)
+        #expect(OnboardingLessonsManifest.lessons.count == 5)
         #expect(OnboardingLessonsManifest.lesson(for: .coCaptainChat).steps == [
             .chatCoCaptain,
             .dismissCoCaptain,
@@ -50,6 +62,22 @@ struct OnboardingManifestTests {
             .fitAllNodes,
             .searchFlyToNode,
             .openPortal
+        ])
+        #expect(OnboardingLessonsManifest.lesson(for: .miniAppPreview).steps == [
+            .tapMiniAppNode,
+            .interactMiniAppPreview,
+            .openMiniAppOmnibox,
+            .openMiniAppCodeTool,
+            .saveMiniAppCodeEdit,
+            .returnFromMiniAppPreview
+        ])
+        #expect(OnboardingLessonsManifest.lesson(for: .moveAndOrganize).steps == [
+            .dragCanvasNode,
+            .openWorkspaceOmnibox,
+            .runOrganizeNodes,
+            .runToggleGrid,
+            .undoCanvasEdit,
+            .redoCanvasEdit
         ])
         #expect(
             OnboardingManifest.stepLabel(
@@ -93,6 +121,20 @@ struct OnboardingManifestTests {
                 language: "English"
             ) == "6 of 6"
         )
+        #expect(
+            OnboardingManifest.stepLabel(
+                for: .tapMiniAppNode,
+                lessonID: .miniAppPreview,
+                language: "English"
+            ) == "1 of 6"
+        )
+        #expect(
+            OnboardingManifest.stepLabel(
+                for: .dragCanvasNode,
+                lessonID: .moveAndOrganize,
+                language: "English"
+            ) == "1 of 6"
+        )
     }
 
     @Test func catalogResolvesArabicCanvasOnboardingCopy() {
@@ -134,6 +176,18 @@ struct OnboardingManifestTests {
         #expect(OnboardingCoordinator.Step.fitAllNodes.tooltipAnchor == .canvasGestureArea)
         #expect(OnboardingCoordinator.Step.searchFlyToNode.tooltipAnchor == .floatingCommandButton)
         #expect(OnboardingCoordinator.Step.returnToRoot.tooltipAnchor == .floatingCommandButton)
+        #expect(OnboardingCoordinator.Step.tapMiniAppNode.tooltipAnchor == .practiceCanvasNode)
+        #expect(OnboardingCoordinator.Step.interactMiniAppPreview.tooltipAnchor == .miniAppPreviewArea)
+        #expect(OnboardingCoordinator.Step.openMiniAppOmnibox.tooltipAnchor == .miniAppPreviewFAB)
+        #expect(OnboardingCoordinator.Step.openMiniAppCodeTool.tooltipAnchor == .omniboxMiniAppCodeRow)
+        #expect(OnboardingCoordinator.Step.saveMiniAppCodeEdit.tooltipAnchor == .miniAppCodeEditorSave)
+        #expect(OnboardingCoordinator.Step.returnFromMiniAppPreview.tooltipAnchor == .omniboxBackToCanvasRow)
+        #expect(OnboardingCoordinator.Step.dragCanvasNode.tooltipAnchor == .practiceCanvasNode)
+        #expect(OnboardingCoordinator.Step.openWorkspaceOmnibox.tooltipAnchor == .floatingCommandButton)
+        #expect(OnboardingCoordinator.Step.runOrganizeNodes.tooltipAnchor == .omniboxOrganizeRow)
+        #expect(OnboardingCoordinator.Step.runToggleGrid.tooltipAnchor == .omniboxToggleGridRow)
+        #expect(OnboardingCoordinator.Step.undoCanvasEdit.tooltipAnchor == .floatingCommandButton)
+        #expect(OnboardingCoordinator.Step.redoCanvasEdit.tooltipAnchor == .floatingCommandButton)
         #expect(
             OnboardingCoordinator.Step.returnToRoot.resolvedTooltipAnchor(isCommandPalettePresented: true)
                 == .commandPaletteGoBack
@@ -141,6 +195,14 @@ struct OnboardingManifestTests {
         #expect(
             OnboardingCoordinator.Step.searchFlyToNode.resolvedTooltipAnchor(isCommandPalettePresented: true)
                 == .omniboxSearchField
+        )
+        #expect(
+            OnboardingCoordinator.Step.openMiniAppCodeTool.resolvedTooltipAnchor(isCommandPalettePresented: true)
+                == .omniboxMiniAppCodeRow
+        )
+        #expect(
+            OnboardingCoordinator.Step.runOrganizeNodes.resolvedTooltipAnchor(isCommandPalettePresented: true)
+                == .omniboxOrganizeRow
         )
     }
 
@@ -237,5 +299,18 @@ struct OnboardingManifestTests {
 
         #expect(startedLesson == .canvasNavigation)
         #expect(onboarding.currentStep == .returnToRoot)
+    }
+
+    @Test func tutorialCanvasProviderSeedsPracticeMiniApp() {
+        #expect(TutorialCanvasProvider.snapshot.nodes.count == 1)
+        #expect(TutorialCanvasProvider.snapshot.nodes.first?.id == TutorialCanvasProvider.miniAppNodeID)
+        #expect(TutorialCanvasProvider.snapshot.nodes.first?.type == .miniApp)
+    }
+
+    @Test func newLessonStepsBlockCoCaptainPromptSubmission() {
+        #expect(OnboardingCoordinator.Step.tapMiniAppNode.blocksCoCaptainPrompt)
+        #expect(OnboardingCoordinator.Step.dragCanvasNode.blocksCoCaptainPrompt)
+        #expect(OnboardingCoordinator.Step.runOrganizeNodes.blocksCoCaptainPrompt)
+        #expect(!OnboardingCoordinator.Step.chatCoCaptain.blocksCoCaptainPrompt)
     }
 }
