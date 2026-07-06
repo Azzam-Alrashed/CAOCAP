@@ -24,7 +24,9 @@ struct ContentView: View {
                 floatingCommandButtonView
                     .environment(\.layoutDirection, .leftToRight)
 
-                CommandPaletteView(viewModel: session.commandPalette)
+                if session.commandPalette.miniAppPreviewContext == nil {
+                    CommandPaletteView(viewModel: session.commandPalette)
+                }
 
                 KeyboardShortcutBridge(
                     onOpenCommandPalette: {
@@ -73,6 +75,7 @@ struct ContentView: View {
                 viewport: $session.viewport,
                 currentScale: $session.currentScale,
                 canvasFocusNodeID: session.canvasFocusNodeID,
+                commandPalette: session.commandPalette,
                 onNodeAction: { session.handleNodeAction($0) },
                 onNavigateToSubCanvas: { fileName in
                     session.handleSubCanvasNavigation(fileName: fileName)
@@ -89,6 +92,7 @@ struct ContentView: View {
                 viewport: $session.viewport,
                 currentScale: $session.currentScale,
                 canvasFocusNodeID: session.canvasFocusNodeID,
+                commandPalette: session.commandPalette,
                 onNodeAction: { session.handleNodeAction($0) },
                 onNavigateToSubCanvas: { fileName in
                     session.handleSubCanvasNavigation(fileName: fileName)

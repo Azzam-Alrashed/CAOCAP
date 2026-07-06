@@ -8,7 +8,7 @@ The Canvas feature is CAOCAP's spatial runtime. It renders the infinite workspac
 - `InfiniteCanvasView` owns transient interaction state: active viewport gestures, selected node, node drag offsets, and whether a node is currently being dragged.
 - `ViewportState` owns pan and zoom math. Keep gesture calculations here instead of spreading geometry math through views.
 - `NodeView` renders one node. It should stay presentational.
-- `NodeDetailView` opens Mini-App nodes into a full-screen running preview with FAB actions for SRS, Code, Firebase, Agent, Settings, and Back to Canvas.
+- `NodeDetailView` opens Mini-App nodes into a full-screen running preview with the shared omnibox (FAB tap and sparkles) plus MINI-APP tool rows for SRS, Code, Firebase, Agent, Settings, Publish, and Back to Canvas.
 - Providers under `Providers/` define the root constellation, curated Tutorial
   and Pac-Man canvases, and generic Mini-App starter content.
 - The protected Activity action node renders the device-wide 17-week save
@@ -50,7 +50,7 @@ When changing gestures or connection rendering, test pan, zoom, drag, and arrow 
 - Create/open a project and confirm nodes render at the expected zoom.
 - Drag a node, pan the canvas, pinch zoom, then reopen the project and verify persisted state.
 - Edit a Mini-App's Code tool and confirm the Mini-App preview updates.
-- Open a Mini-App node full-screen and confirm the FAB routes to SRS, Code, Firebase, Agent, Settings, Publish, and Back to Canvas.
+- Open a Mini-App node full-screen and confirm FAB tap and sparkles open the omnibox; verify MINI-APP rows route to SRS, Code, Firebase, Agent, Settings, Publish, and Back to Canvas.
 - Pro users: publish a Mini-App, confirm live GitHub Pages URL, and verify Safari Add to Home Screen steps appear.
 - Check connection arrows while dragging nodes and at multiple zoom levels.
 - Verify action nodes on the Home screen navigate to correct destinations.

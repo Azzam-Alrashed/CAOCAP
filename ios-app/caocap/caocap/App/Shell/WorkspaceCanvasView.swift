@@ -7,6 +7,7 @@ struct WorkspaceCanvasView: View {
     @Binding var viewport: ViewportState
     @Binding var currentScale: CGFloat
     var canvasFocusNodeID: UUID?
+    var commandPalette: CommandPaletteViewModel?
     let onNodeAction: (NodeAction) -> Void
     let onNavigateToSubCanvas: (String) -> Void
     let onRecoverUnsupportedProject: () -> Void
@@ -18,6 +19,7 @@ struct WorkspaceCanvasView: View {
             viewport: $viewport,
             currentScale: $currentScale,
             canvasFocusNodeID: canvasFocusNodeID,
+            commandPalette: commandPalette,
             onNodeAction: onNodeAction,
             onNavigateToSubCanvas: onNavigateToSubCanvas,
             onRecoverUnsupportedProject: onRecoverUnsupportedProject,

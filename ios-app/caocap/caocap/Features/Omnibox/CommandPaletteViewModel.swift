@@ -2,6 +2,54 @@ import SwiftUI
 import Observation
 import OSLog
 
+/// Mini-App preview tools surfaced in the omnibox while a full-screen preview is open.
+public enum MiniAppPreviewTool: String, CaseIterable, Identifiable {
+    case srs
+    case code
+    case firebase
+    case agent
+    case settings
+    case publish
+    case backToCanvas
+
+    public var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .srs: return "SRS"
+        case .code: return "Code"
+        case .firebase: return "Firebase"
+        case .agent: return "Agent"
+        case .settings: return "Settings"
+        case .publish: return "Publish"
+        case .backToCanvas: return "Back to Canvas"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .srs: return "doc.text"
+        case .code: return "chevron.left.forwardslash.chevron.right"
+        case .firebase: return "flame"
+        case .agent: return "sparkles"
+        case .settings: return "gearshape"
+        case .publish: return "square.and.arrow.up"
+        case .backToCanvas: return "arrow.uturn.backward"
+        }
+    }
+}
+
+/// Active Mini-App preview session metadata used to render preview-only omnibox rows.
+public struct MiniAppPreviewPaletteContext {
+    public let nodeID: UUID
+    public var onSelectTool: (MiniAppPreviewTool) -> Void
+
+    public init(nodeID: UUID, onSelectTool: @escaping (MiniAppPreviewTool) -> Void) {
+        self.nodeID = nodeID
+        self.onSelectTool = onSelectTool
+    }
+}
+
 /// UI state for the command palette. It deliberately emits only `AppActionID`
 /// values so action execution remains centralized in `AppActionDispatcher`.
 @Observable
@@ -37,6 +85,8 @@ public class CommandPaletteViewModel {
     /// The current canvas nodes; searched by `nodeResults` when the query is non-empty.
     public var nodes: [SpatialNode] = []
     public var mode: CommandPaletteMode = .search
+    /// When set, the palette renders Mini-App preview tool rows and hides the canvas overlay copy.
+    public var miniAppPreviewContext: MiniAppPreviewPaletteContext?
     /// When `true` the palette automatically moves the selection to the CoCaptain prompt row
     /// instead of the first command, letting the user hit Return to send a message immediately.
     public var prefersPromptSubmission: Bool = false {
@@ -76,6 +126,17 @@ public class CommandPaletteViewModel {
         creationCatalog.search(query: query)
     }
 
+    public var filteredPreviewTools: [MiniAppPreviewTool] {
+        guard miniAppPreviewContext != nil else { return [] }
+        let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedQuery.isEmpty { return MiniAppPreviewTool.allCases }
+        return MiniAppPreviewTool.allCases.filter {
+            $0.title.localizedCaseInsensitiveContains(trimmedQuery)
+        }
+    }
+
+    public var previewToolCount: Int { filteredPreviewTools.count }
+
     private static let hiddenCreationActionIDs: Set<AppActionID> = [
         .createNode,
         .createFirebaseNode,
@@ -105,7 +166,7 @@ public class CommandPaletteViewModel {
     private var nodeCreationResultsStartIndex: Int { nodeResultCount + actionResultCount }
     private var promptRowIndex: Int { nodeResultCount + actionResultCount + nodeCreationResultCount }
 
-    public var promptSelectionIndex: Int { promptRowIndex }
+    public var promptSelectionIndex: Int { selectionOffset + promptRowIndex }
     
     /// Called by the host when an action should be executed; avoids duplicating dispatch logic here.
     public var onExecute: ((AppActionID) -> Void)?
@@ -125,12 +186,18 @@ public class CommandPaletteViewModel {
     private let creationCatalog = NodeCreationCatalog()
 
     private var totalResultCount: Int {
-        var count = nodeResultCount + nodeCreationResultCount + actionResultCount
+        var count = previewToolCount + nodeResultCount + nodeCreationResultCount + actionResultCount
         if canSubmitPrompt {
             count += 1
         }
         return count
     }
+
+    public func selectionIndex(forPreviewToolAt index: Int) -> Int {
+        index
+    }
+
+    private var selectionOffset: Int { previewToolCount }
     
     public init() {}
     
@@ -163,23 +230,36 @@ public class CommandPaletteViewModel {
     }
     
     public func confirmSelection() {
+        let previewTools = filteredPreviewTools
+        if selectedIndex < previewTools.count {
+            selectPreviewTool(previewTools[selectedIndex])
+            return
+        }
+
+        let adjustedIndex = selectedIndex - selectionOffset
         let nodeResults = nodeResults
         let nodeCreationResults = nodeCreationResults
         let actions = filteredActions
         let prioritizedCount = prioritizedNavigationActionCount
-        
-        if selectedIndex < prioritizedCount {
-            executeAction(actions[selectedIndex])
-        } else if selectedIndex >= nodeResultsStartIndex && selectedIndex < remainingActionsStartIndex {
-            flyToNode(nodeResults[selectedIndex - nodeResultsStartIndex])
-        } else if selectedIndex >= remainingActionsStartIndex && selectedIndex < nodeCreationResultsStartIndex {
-            let actionIndex = prioritizedCount + selectedIndex - remainingActionsStartIndex
+
+        if adjustedIndex < prioritizedCount {
+            executeAction(actions[adjustedIndex])
+        } else if adjustedIndex >= nodeResultsStartIndex && adjustedIndex < remainingActionsStartIndex {
+            flyToNode(nodeResults[adjustedIndex - nodeResultsStartIndex])
+        } else if adjustedIndex >= remainingActionsStartIndex && adjustedIndex < nodeCreationResultsStartIndex {
+            let actionIndex = prioritizedCount + adjustedIndex - remainingActionsStartIndex
             executeAction(actions[actionIndex])
-        } else if selectedIndex >= nodeCreationResultsStartIndex && selectedIndex < promptRowIndex {
-            createNode(nodeCreationResults[selectedIndex - nodeCreationResultsStartIndex])
-        } else if canSubmitPrompt && selectedIndex == promptRowIndex {
+        } else if adjustedIndex >= nodeCreationResultsStartIndex && adjustedIndex < promptRowIndex {
+            createNode(nodeCreationResults[adjustedIndex - nodeCreationResultsStartIndex])
+        } else if canSubmitPrompt && adjustedIndex == promptRowIndex {
             submitPromptIfNeeded()
         }
+    }
+
+    public func selectPreviewTool(_ tool: MiniAppPreviewTool) {
+        logger.info("Selecting Mini-App preview tool: \(tool.title)")
+        miniAppPreviewContext?.onSelectTool(tool)
+        setPresented(false)
     }
     
     /// Emits the chosen action ID and dismisses. The view model does not perform
@@ -216,20 +296,20 @@ public class CommandPaletteViewModel {
 
     /// Maps a node-result list index into the unified `selectedIndex` space.
     public func selectionIndex(forNodeResultAt index: Int) -> Int {
-        nodeResultsStartIndex + index
+        selectionOffset + nodeResultsStartIndex + index
     }
 
     /// Maps a node-creation list index into the unified `selectedIndex` space.
     public func selectionIndex(forNodeCreationResultAt index: Int) -> Int {
-        nodeCreationResultsStartIndex + index
+        selectionOffset + nodeCreationResultsStartIndex + index
     }
 
     /// Maps an action list index into the unified `selectedIndex` space.
     public func selectionIndex(forActionAt index: Int) -> Int {
         if index < prioritizedNavigationActionCount {
-            return index
+            return selectionOffset + index
         }
-        return remainingActionsStartIndex + index - prioritizedNavigationActionCount
+        return selectionOffset + remainingActionsStartIndex + index - prioritizedNavigationActionCount
     }
 
     public var canSubmitPrompt: Bool {
