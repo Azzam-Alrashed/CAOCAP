@@ -4,7 +4,7 @@ First-run onboarding in CAOCAP is a three-phase funnel:
 
 1. **Intro** (`Features/Intro/`) — motivational full-bleed story screens (`intro_completed_v1`).
 2. **Personalization** (`PersonalizationOnboarding*.swift`) — CDL co-pilot picker + one-question-per-screen survey, saved locally and logged to Firebase Analytics (`personalization_survey_completed_v1`, survey version `v2`).
-3. **Interactive tutorial** (`OnboardingCoordinator`) — opens through the Tutorial portal, then continues with gesture-driven tooltips on the live canvas (`onboarding_completed_v3`).
+3. **Interactive tutorial** (`OnboardingCoordinator`) — opens through the Tutorial portal, then continues with gesture-driven tooltips on the live canvas (`onboarding_completed_v5`). Steps are grouped into three lessons (≤6 steps each) defined in `OnboardingLessonsManifest.swift`; each lesson has a unique accent color. Skipped users can relaunch individual lessons from Help → **Interactive lessons**.
 
 ## Flow ownership
 

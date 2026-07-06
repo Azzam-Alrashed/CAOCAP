@@ -24,6 +24,8 @@ public class OnboardingCoordinator {
         case dismissCoCaptain
         /// User must long-press the FAB to reveal the quick-action radial menu.
         case longPressFAB
+        /// User must return to the root canvas from the Tutorial subcanvas.
+        case returnToRoot
 
         public static func < (lhs: Step, rhs: Step) -> Bool {
             lhs.rawValue < rhs.rawValue
@@ -41,8 +43,9 @@ public class OnboardingCoordinator {
             OnboardingManifest.content(for: self).icon
         }
 
-        var stepLabel: String {
-            OnboardingManifest.stepLabel(for: self)
+        func stepLabel(in lessonID: OnboardingLessonID?) -> String {
+            guard let lessonID else { return "" }
+            return OnboardingLessonsManifest.stepLabel(for: self, in: lessonID)
         }
     }
 
@@ -50,6 +53,9 @@ public class OnboardingCoordinator {
 
     /// The currently active onboarding step. `nil` means onboarding is complete or skipped.
     public var currentStep: Step? = nil
+
+    /// The lesson currently being taught.
+    public var activeLessonID: OnboardingLessonID? = nil
 
     /// Whether to show the popover for the current step.
     public var showPopover: Bool = false
@@ -63,17 +69,30 @@ public class OnboardingCoordinator {
     @ObservationIgnored
     private var popoverTask: Task<Void, Never>?
 
+    @ObservationIgnored
+    private var advancesThroughLessons = false
+
     // MARK: - Persistence
 
     /// Versioned key so a future onboarding redesign can show the new flow to existing users.
-    private static let completedKey = "onboarding_completed_v3"
-    /// Persists the last in-progress step so the coordinator could resume mid-flow if needed
-    /// (currently always resets to the first step on re-launch for a coherent experience).
-    private static let stepKey = "onboarding_current_step_v3"
+    private static let completedKey = "onboarding_completed_v5"
+    private static let lessonCompletedKeyPrefix = "onboarding_lesson_completed_"
 
     public var isCompleted: Bool {
         get { UserDefaults.standard.bool(forKey: Self.completedKey) }
         set { UserDefaults.standard.set(newValue, forKey: Self.completedKey) }
+    }
+
+    public var completedLessonIDs: Set<OnboardingLessonID> {
+        Set(
+            OnboardingLessonID.allCases.filter { lessonID in
+                UserDefaults.standard.bool(forKey: Self.lessonCompletionKey(for: lessonID))
+            }
+        )
+    }
+
+    public func isLessonCompleted(_ lessonID: OnboardingLessonID) -> Bool {
+        completedLessonIDs.contains(lessonID)
     }
 
     // MARK: - Lifecycle
@@ -84,15 +103,27 @@ public class OnboardingCoordinator {
     public func startIfNeeded() {
         guard !isCompleted else { return }
 
-        // If the user closed the app mid-onboarding, reset back to the beginning for a cohesive flow
-        guard let firstStep = OnboardingManifest.firstStep else {
+        guard let lessonID = OnboardingLessonsManifest.firstIncompleteLesson(
+            completedLessonIDs: completedLessonIDs
+        ) else {
             markComplete()
             return
         }
 
-        currentStep = firstStep
-        UserDefaults.standard.set(firstStep.rawValue, forKey: Self.stepKey)
+        startLesson(lessonID, advancesThroughLessons: true)
+    }
 
+    /// Starts a specific lesson. Used for first-run progression and Help relaunches.
+    public func startLesson(_ lessonID: OnboardingLessonID, advancesThroughLessons: Bool) {
+        let lesson = OnboardingLessonsManifest.lesson(for: lessonID)
+        guard let firstStep = lesson.steps.first else {
+            markComplete()
+            return
+        }
+
+        self.advancesThroughLessons = advancesThroughLessons
+        activeLessonID = lessonID
+        currentStep = firstStep
         schedulePopover(after: initialDelay)
     }
 
@@ -109,23 +140,38 @@ public class OnboardingCoordinator {
 
     /// Call when the user performs the action for the current step.
     public func completeCurrentStep() {
-        guard let step = currentStep else { return }
+        guard let step = currentStep, let lessonID = activeLessonID else { return }
+        let lesson = OnboardingLessonsManifest.lesson(for: lessonID)
         showPopover = false
 
-        if let next = OnboardingManifest.nextStep(after: step) {
-            UserDefaults.standard.set(next.rawValue, forKey: Self.stepKey)
+        if let next = OnboardingLessonsManifest.nextStep(after: step, in: lesson) {
             currentStep = next
             schedulePopover(after: interStepDelay)
-        } else {
+            return
+        }
+
+        markLessonComplete(lessonID)
+
+        if advancesThroughLessons,
+           let nextLessonID = OnboardingLessonsManifest.nextLesson(after: lessonID),
+           !isLessonCompleted(nextLessonID) {
+            startLesson(nextLessonID, advancesThroughLessons: true)
+            return
+        }
+
+        if completedLessonIDs.count == OnboardingLessonID.allCases.count {
             markComplete()
+        } else {
+            activeLessonID = nil
+            currentStep = nil
         }
     }
 
     /// Move directly to a specific step (e.g. when resetting back to Step 1).
     public func moveToStep(_ step: Step) {
         showPopover = false
+        activeLessonID = OnboardingLessonsManifest.lesson(containing: step)?.id
         currentStep = step
-        UserDefaults.standard.set(step.rawValue, forKey: Self.stepKey)
         schedulePopover(after: interStepDelay)
     }
 
@@ -145,16 +191,32 @@ public class OnboardingCoordinator {
     /// Reset onboarding (for Settings).
     public func reset() {
         UserDefaults.standard.removeObject(forKey: Self.completedKey)
-        UserDefaults.standard.removeObject(forKey: Self.stepKey)
+        for lessonID in OnboardingLessonID.allCases {
+            UserDefaults.standard.removeObject(forKey: Self.lessonCompletionKey(for: lessonID))
+        }
+        activeLessonID = nil
         currentStep = nil
         showPopover = false
+        advancesThroughLessons = false
         popoverTask?.cancel()
+    }
+
+    private func markLessonComplete(_ lessonID: OnboardingLessonID) {
+        UserDefaults.standard.set(true, forKey: Self.lessonCompletionKey(for: lessonID))
     }
 
     private func markComplete() {
         popoverTask?.cancel()
+        for lessonID in OnboardingLessonID.allCases {
+            markLessonComplete(lessonID)
+        }
+        activeLessonID = nil
         currentStep = nil
         isCompleted = true
-        UserDefaults.standard.removeObject(forKey: Self.stepKey)
+        advancesThroughLessons = false
+    }
+
+    private static func lessonCompletionKey(for lessonID: OnboardingLessonID) -> String {
+        lessonCompletedKeyPrefix + lessonID.rawValue
     }
 }

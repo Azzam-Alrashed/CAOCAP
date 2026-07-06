@@ -41,7 +41,7 @@ struct ContentView: View {
                     }
                 )
             }
-            .onboardingTooltipOverlay()
+            .onboardingTooltipOverlay(isCommandPalettePresented: session.commandPalette.isPresented)
             .background(Color.black.ignoresSafeArea())
             .overlay { launchOverlay }
             .overlay { introOverlay }
@@ -176,8 +176,11 @@ struct ContentView: View {
                     session.onboarding.completeCurrentStep()
                 }
             },
-            isOnboardingHighlighted: session.onboarding.showPopover &&
-                (session.onboarding.currentStep == .tapFAB || session.onboarding.currentStep == .longPressFAB)
+            isOnboardingHighlighted: session.onboarding.showPopover && (
+                session.onboarding.currentStep == .tapFAB
+                || session.onboarding.currentStep == .longPressFAB
+                || (session.onboarding.currentStep == .returnToRoot && !session.commandPalette.isPresented)
+            )
         )
     }
 }

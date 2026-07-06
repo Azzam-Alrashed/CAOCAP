@@ -306,7 +306,7 @@ In-app help center opened from the Omnibox and the root Help node.
 | File | Responsibility |
 |---|---|
 | `HelpManifest.swift` | Static tutorials, Omnibox shortcut examples, and guide articles. |
-| `HelpView.swift` | Help sheet with sections and navigation callbacks. |
+| `HelpView.swift` | Help sheet with interactive lessons, tutorials, shortcuts, and navigation callbacks. |
 | `HelpArticleView.swift` | Scrollable getting-started article pages. |
 
 ---
@@ -408,7 +408,8 @@ First-run onboarding for the canvas, Omnibox, and CoCaptain flow. The full funne
 
 | File | Responsibility |
 |---|---|
-| `OnboardingCoordinator.swift` | Observable state machine for the active tutorial step, popover visibility, delayed presentation, and completion/skipping persistence. |
+| `OnboardingCoordinator.swift` | Observable state machine for the active tutorial step, lesson, popover visibility, delayed presentation, per-lesson completion, and completion/skipping persistence. |
+| `OnboardingLessonsManifest.swift` | Groups interactive tutorial steps into ≤6-step lessons with unique accent colors; drives Help lesson catalogue. |
 | `OnboardingManifest.swift` | Manifest-backed copy, icon, and ordering for every interactive tutorial step. |
 | `OnboardingPopoverCard.swift` | Central onboarding tooltip presentation. Views publish named `OnboardingTooltipAnchor` frames, and a single `onboardingTooltipOverlay()` renders the active step card. |
 | `PersonalizationOnboardingCoordinator.swift` | State machine for co-pilot picker, survey steps, skip nudge, completion moment, v2 re-present logic, and persistence/analytics handoff. |
