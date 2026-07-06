@@ -52,7 +52,7 @@ struct PersonalizationOnboardingCoordinatorTests {
         )
 
         coordinator.currentIndex = PersonalizationOnboardingManifest.lastIndex
-        coordinator.select(answerID: "short_missions", for: "learning_style")
+        coordinator.select(answerID: "experiment_with_help", for: "learning_style")
         coordinator.next()
 
         #expect(coordinator.showCompletionMoment)

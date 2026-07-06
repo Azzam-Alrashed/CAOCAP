@@ -134,6 +134,11 @@ final class AppSessionCoordinator {
         onboarding.startIfNeeded()
     }
 
+    /// Re-opens the intro tour while personalization remains in progress.
+    func returnToIntroFromPersonalization() {
+        intro.reset()
+    }
+
     /// Starts the gesture tutorial only when intro and personalization are both complete.
     func startInteractiveOnboardingIfNeeded() {
         guard !personalization.shouldPresent else { return }

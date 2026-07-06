@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// Compact language picker for the first-launch intro, writing to the same
+/// Compact language picker for intro and personalization onboarding, writing to the same
 /// `app_language` preference used by Settings and the app root locale.
-struct IntroLanguageButton: View {
+struct OnboardingLanguageButton: View {
     @AppStorage(LocalizationManager.languageStorageKey) private var selectedLanguage = "English"
     let usesLightChrome: Bool
 

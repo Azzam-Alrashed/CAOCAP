@@ -25,12 +25,16 @@ enum PersonalizationChrome {
 
                 Spacer(minLength: 0)
 
-                Button(action: onSkip) {
-                    Text(LocalizedStringKey("Skip"))
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(PersonalizationTheme.textSecondary)
+                HStack(spacing: 12) {
+                    OnboardingLanguageButton(usesLightChrome: true)
+
+                    Button(action: onSkip) {
+                        Text(LocalizedStringKey("Skip"))
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(PersonalizationTheme.textSecondary)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
             .frame(height: 56, alignment: .top)
         }
@@ -96,38 +100,58 @@ enum PersonalizationChrome {
 
     struct BottomBar: View {
         let isFirstPage: Bool
+        let isLastStep: Bool
         let canContinue: Bool
         let reduceMotion: Bool
         let onBack: () -> Void
+        let onBackToIntro: () -> Void
         let onContinue: () -> Void
 
         var body: some View {
             HStack(spacing: 12) {
                 Button {
                     withAnimation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.86)) {
-                        onBack()
+                        if isFirstPage {
+                            onBackToIntro()
+                        } else {
+                            onBack()
+                        }
                     }
                 } label: {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(PersonalizationTheme.textPrimary.opacity(isFirstPage ? 0.28 : 0.88))
+                        .foregroundStyle(backButtonForeground)
                         .frame(width: 48, height: 52)
-                        .background(PersonalizationTheme.cardFill, in: Circle())
+                        .background(backButtonBackground, in: Circle())
                         .overlay {
                             Circle()
-                                .stroke(PersonalizationTheme.cardStroke, lineWidth: 1)
+                                .stroke(OnboardingGlassChrome.inactiveStroke, lineWidth: 1)
                         }
                 }
                 .buttonStyle(.plain)
-                .disabled(isFirstPage)
+                .accessibilityLabel(
+                    Text(LocalizedStringKey(isFirstPage ? "Back to intro" : "Back"))
+                )
 
-                PersonalizationPrimaryButton(titleKey: "Continue", isEnabled: canContinue) {
+                PersonalizationPrimaryButton(
+                    titleKey: "Continue",
+                    isEnabled: canContinue,
+                    isLastStep: isLastStep
+                ) {
                     withAnimation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.86)) {
                         onContinue()
                     }
                 }
             }
             .padding(.bottom, 6)
+        }
+
+        private var backButtonForeground: Color {
+            Color(hex: "1E3A5F").opacity(0.88)
+        }
+
+        private var backButtonBackground: some ShapeStyle {
+            AnyShapeStyle(Color.white.opacity(0.82))
         }
     }
 
@@ -160,7 +184,12 @@ enum PersonalizationChrome {
 
                 Spacer(minLength: 0)
 
-                PersonalizationPrimaryButton(titleKey: "Enter mission control", isEnabled: true, action: onEnter)
+                PersonalizationPrimaryButton(
+                    titleKey: "Enter mission control",
+                    isEnabled: true,
+                    isLastStep: true,
+                    action: onEnter
+                )
                     .padding(.bottom, 6)
             }
             .padding(.horizontal, PersonalizationTheme.horizontalInset)

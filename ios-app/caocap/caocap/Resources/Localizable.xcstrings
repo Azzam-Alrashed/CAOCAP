@@ -1540,6 +1540,23 @@
         }
       }
     },
+    "Back to intro" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "العودة إلى المقدمة"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Back to intro"
+          }
+        }
+      }
+    },
     "Go Back" : {
       "extractionState" : "manual",
       "localizations" : {
