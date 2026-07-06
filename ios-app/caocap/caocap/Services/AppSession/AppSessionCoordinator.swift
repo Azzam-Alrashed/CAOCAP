@@ -178,6 +178,28 @@ final class AppSessionCoordinator {
         restartTutorial()
     }
 
+    func startLessonFromHelp(_ lessonID: OnboardingLessonID) {
+        showingHelp = false
+        restoreTutorialPortalIfNeeded()
+
+        switch lessonID {
+        case .canvasBasics:
+            router.navigate(to: .root, addToStack: false, animated: false)
+            syncViewportWithActiveStore()
+        case .coCaptainChat:
+            handleSubCanvasNavigation(fileName: RootCanvasProvider.tutorialFileName)
+            coCaptain.configureProjectSession(
+                store: router.activeStore,
+                dispatcher: actionDispatcher
+            )
+            presentCoCaptain()
+        case .powerShortcuts:
+            handleSubCanvasNavigation(fileName: RootCanvasProvider.tutorialFileName)
+        }
+
+        onboarding.startLesson(lessonID, advancesThroughLessons: false)
+    }
+
     func openDemoCanvasFromHelp(fileName: String) {
         showingHelp = false
         handleSubCanvasNavigation(fileName: fileName)
@@ -485,7 +507,11 @@ final class AppSessionCoordinator {
             self.currentScale = 1.0
         }
         actionDispatcher.register(.goBack) { [weak self] in
-            self?.router.goBack()
+            guard let self else { return }
+            self.router.goBack()
+            if self.onboarding.currentStep == .returnToRoot {
+                self.onboarding.completeCurrentStep()
+            }
         }
         actionDispatcher.register(.createNode) { [weak self] in
             self?.router.activeStore.addNode(type: .miniApp)

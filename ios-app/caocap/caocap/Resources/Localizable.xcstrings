@@ -1921,6 +1921,23 @@
         }
       }
     },
+    "help.section.lessons" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الدروس التفاعلية"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Interactive lessons"
+          }
+        }
+      }
+    },
     "help.section.tutorials" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2941,6 +2958,108 @@
         }
       }
     },
+    "onboarding.lesson.canvasBasics.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "٤ خطوات · افتح البرنامج التعليمي ولوحة الأوامر"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "4 steps · Open the tutorial and command palette"
+          }
+        }
+      }
+    },
+    "onboarding.lesson.canvasBasics.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أساسيات اللوحة"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Canvas basics"
+          }
+        }
+      }
+    },
+    "onboarding.lesson.coCaptainChat.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "خطوتان · تحدث مع CoCaptain وأغلق اللوحة"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2 steps · Chat with CoCaptain and dismiss the panel"
+          }
+        }
+      }
+    },
+    "onboarding.lesson.coCaptainChat.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "محادثة CoCaptain"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CoCaptain chat"
+          }
+        }
+      }
+    },
+    "onboarding.lesson.powerShortcuts.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "خطوتان · اختصارات FAB والعودة للخلف"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2 steps · FAB shortcuts and Go Back"
+          }
+        }
+      }
+    },
+    "onboarding.lesson.powerShortcuts.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اختصارات متقدمة"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Power shortcuts"
+          }
+        }
+      }
+    },
     "onboarding.chatCoCaptain.message" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3039,6 +3158,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Quick Shortcuts"
+          }
+        }
+      }
+    },
+    "onboarding.returnToRoot.message" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "افتح لوحة الأوامر، ثم اختر العودة للخلف لمغادرة مساحة عمل البرنامج التعليمي."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open the command palette, then choose Go Back to leave the Tutorial workspace."
+          }
+        }
+      }
+    },
+    "onboarding.returnToRoot.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "العودة إلى اللوحة الرئيسية"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Back to the main canvas"
           }
         }
       }

@@ -150,6 +150,13 @@ struct CommandPaletteView: View {
                                                         onPin: action.canPinToCanvas ? { viewModel.pinAction(action) } : nil
                                                     )
                                                     .id(action.id.rawValue)
+                                                    .background {
+                                                        if action.id == .goBack,
+                                                           onboarding?.currentStep == .returnToRoot {
+                                                            Color.clear
+                                                                .onboardingTooltipAnchor(.commandPaletteGoBack)
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }

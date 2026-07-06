@@ -10,6 +10,17 @@ struct OnboardingManifestTests {
         #expect(Set(manifestSteps).count == OnboardingCoordinator.Step.allCases.count)
     }
 
+    @Test func lessonsCoverEveryStepOnceWithSixOrFewerStepsEach() {
+        let lessonSteps = OnboardingLessonsManifest.lessons.flatMap(\.steps)
+
+        #expect(lessonSteps == OnboardingCoordinator.Step.allCases)
+        #expect(Set(lessonSteps).count == OnboardingCoordinator.Step.allCases.count)
+
+        for lesson in OnboardingLessonsManifest.lessons {
+            #expect(lesson.steps.count <= OnboardingLessonsManifest.maxStepsPerLesson)
+        }
+    }
+
     @Test func manifestDrivesStepLabelsAndProgression() {
         #expect(OnboardingManifest.firstStep == .openTutorial)
         #expect(OnboardingManifest.nextStep(after: .openTutorial) == .tapFAB)
@@ -18,17 +29,30 @@ struct OnboardingManifestTests {
         #expect(OnboardingManifest.nextStep(after: .submitCoCaptainPrompt) == .chatCoCaptain)
         #expect(OnboardingManifest.nextStep(after: .chatCoCaptain) == .dismissCoCaptain)
         #expect(OnboardingManifest.nextStep(after: .dismissCoCaptain) == .longPressFAB)
-        #expect(OnboardingManifest.nextStep(after: .longPressFAB) == nil)
+        #expect(OnboardingManifest.nextStep(after: .longPressFAB) == .returnToRoot)
+        #expect(OnboardingManifest.nextStep(after: .returnToRoot) == nil)
 
-        #expect(OnboardingManifest.steps.count == 7)
+        #expect(OnboardingLessonsManifest.lessons.count == 3)
         #expect(
-            OnboardingManifest.stepLabel(for: .openTutorial, language: "English") == "1 of 7"
+            OnboardingManifest.stepLabel(
+                for: .openTutorial,
+                lessonID: .canvasBasics,
+                language: "English"
+            ) == "1 of 4"
         )
         #expect(
-            OnboardingManifest.stepLabel(for: .tapFAB, language: "English") == "2 of 7"
+            OnboardingManifest.stepLabel(
+                for: .tapFAB,
+                lessonID: .canvasBasics,
+                language: "English"
+            ) == "2 of 4"
         )
         #expect(
-            OnboardingManifest.stepLabel(for: .longPressFAB, language: "English") == "7 of 7"
+            OnboardingManifest.stepLabel(
+                for: .returnToRoot,
+                lessonID: .powerShortcuts,
+                language: "English"
+            ) == "2 of 2"
         )
     }
 
@@ -65,12 +89,18 @@ struct OnboardingManifestTests {
         #expect(OnboardingCoordinator.Step.chatCoCaptain.tooltipAnchor == .coCaptainInput)
         #expect(OnboardingCoordinator.Step.dismissCoCaptain.tooltipAnchor == .coCaptainDoneButton)
         #expect(OnboardingCoordinator.Step.longPressFAB.tooltipAnchor == .floatingCommandButton)
+        #expect(OnboardingCoordinator.Step.returnToRoot.tooltipAnchor == .floatingCommandButton)
+        #expect(
+            OnboardingCoordinator.Step.returnToRoot.resolvedTooltipAnchor(isCommandPalettePresented: true)
+                == .commandPaletteGoBack
+        )
     }
 
     @MainActor
     @Test func hidingPopoverDoesNotAdvanceCurrentStep() {
         let onboarding = OnboardingCoordinator()
         onboarding.currentStep = .chatCoCaptain
+        onboarding.activeLessonID = .coCaptainChat
         onboarding.showPopover = true
 
         onboarding.hidePopoverForCurrentStep()
@@ -83,6 +113,7 @@ struct OnboardingManifestTests {
     @Test func successfulHandoffCompletionAdvancesToDismissStep() {
         let onboarding = OnboardingCoordinator()
         onboarding.currentStep = .chatCoCaptain
+        onboarding.activeLessonID = .coCaptainChat
 
         let completion = CoCaptainTurnCompletion(
             turnID: UUID(),
@@ -103,6 +134,7 @@ struct OnboardingManifestTests {
     @Test func failedHandoffCompletionDoesNotAdvanceFromChatStep() {
         let onboarding = OnboardingCoordinator()
         onboarding.currentStep = .chatCoCaptain
+        onboarding.activeLessonID = .coCaptainChat
 
         let completion = CoCaptainTurnCompletion(
             turnID: UUID(),
@@ -116,6 +148,34 @@ struct OnboardingManifestTests {
             onboarding.completeCurrentStep()
         }
 
+        #expect(onboarding.currentStep == .chatCoCaptain)
+    }
+
+    @MainActor
+    @Test func standaloneLessonCompletionDoesNotAutoStartNextLesson() {
+        let onboarding = OnboardingCoordinator()
+        onboarding.startLesson(.canvasBasics, advancesThroughLessons: false)
+        onboarding.currentStep = .submitCoCaptainPrompt
+
+        onboarding.completeCurrentStep()
+
+        #expect(onboarding.isLessonCompleted(.canvasBasics))
+        #expect(onboarding.currentStep == nil)
+        #expect(onboarding.activeLessonID == nil)
+        #expect(!onboarding.isLessonCompleted(.coCaptainChat))
+    }
+
+    @MainActor
+    @Test func firstRunLessonCompletionAdvancesToNextLesson() {
+        let onboarding = OnboardingCoordinator()
+        onboarding.startLesson(.canvasBasics, advancesThroughLessons: true)
+        onboarding.currentStep = .submitCoCaptainPrompt
+        onboarding.showPopover = true
+
+        onboarding.completeCurrentStep()
+
+        #expect(onboarding.isLessonCompleted(.canvasBasics))
+        #expect(onboarding.activeLessonID == .coCaptainChat)
         #expect(onboarding.currentStep == .chatCoCaptain)
     }
 }

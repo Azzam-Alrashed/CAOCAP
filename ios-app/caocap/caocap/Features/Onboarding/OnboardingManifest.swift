@@ -15,7 +15,7 @@ struct OnboardingStepContent: Equatable {
 /// Static registry of all first-run onboarding steps.
 /// Each step has its content defined here; `OnboardingCoordinator` drives the sequence.
 /// To add a new step: add the case to `OnboardingCoordinator.Step`, add the content here,
-/// and handle the new anchor in `OnboardingPopoverCard`.
+/// assign it to a lesson in `OnboardingLessonsManifest`, and handle the anchor in `OnboardingPopoverCard`.
 enum OnboardingManifest {
     static let steps: [OnboardingStepContent] = [
         OnboardingStepContent(
@@ -59,12 +59,18 @@ enum OnboardingManifest {
             titleKey: "onboarding.longPressFAB.title",
             messageKey: "onboarding.longPressFAB.message",
             icon: "hand.tap.fill"
+        ),
+        OnboardingStepContent(
+            step: .returnToRoot,
+            titleKey: "onboarding.returnToRoot.title",
+            messageKey: "onboarding.returnToRoot.message",
+            icon: "arrow.uturn.backward.circle.fill"
         )
     ]
 
     /// The step to show first; `nil` if the steps array is somehow empty.
     static var firstStep: OnboardingCoordinator.Step? {
-        steps.first?.step
+        OnboardingLessonsManifest.allSteps.first
     }
 
     /// Returns the content for a given step. Crashes with a `preconditionFailure` if
@@ -76,23 +82,21 @@ enum OnboardingManifest {
         return content
     }
 
-    /// Returns the next step after the given one, or `nil` if `step` is the last.
+    /// Returns the next step after the given one across the full tutorial sequence.
     static func nextStep(after step: OnboardingCoordinator.Step) -> OnboardingCoordinator.Step? {
-        guard let index = steps.firstIndex(where: { $0.step == step }) else { return nil }
-        let nextIndex = steps.index(after: index)
-        guard steps.indices.contains(nextIndex) else { return nil }
-        return steps[nextIndex].step
+        guard let index = OnboardingLessonsManifest.allSteps.firstIndex(of: step) else { return nil }
+        let nextIndex = OnboardingLessonsManifest.allSteps.index(after: index)
+        guard OnboardingLessonsManifest.allSteps.indices.contains(nextIndex) else { return nil }
+        return OnboardingLessonsManifest.allSteps[nextIndex]
     }
 
-    /// Human-readable progress label such as "3 of 7" used for accessibility and the progress bar.
-    static func stepLabel(for step: OnboardingCoordinator.Step, language: String? = nil) -> String {
-        guard let index = steps.firstIndex(where: { $0.step == step }) else {
-            return ""
-        }
-        return LocalizationManager.shared.localizedString(
-            "onboarding.canvas.stepLabel",
-            arguments: [index + 1, steps.count],
-            language: language
-        )
+    /// Human-readable progress label such as "3 of 4" scoped to the active lesson.
+    static func stepLabel(
+        for step: OnboardingCoordinator.Step,
+        lessonID: OnboardingLessonID?,
+        language: String? = nil
+    ) -> String {
+        guard let lessonID else { return "" }
+        return OnboardingLessonsManifest.stepLabel(for: step, in: lessonID, language: language)
     }
 }

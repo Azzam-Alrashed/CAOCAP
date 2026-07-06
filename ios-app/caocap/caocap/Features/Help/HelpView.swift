@@ -5,8 +5,10 @@ struct HelpView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
 
+    var completedLessonIDs: Set<OnboardingLessonID> = []
     var onOpenTutorial: () -> Void = {}
     var onRestartTutorial: () -> Void = {}
+    var onStartLesson: (OnboardingLessonID) -> Void = { _ in }
     var onOpenDemoCanvas: (String) -> Void = { _ in }
 
     var body: some View {
@@ -14,6 +16,12 @@ struct HelpView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 32) {
                     header
+
+                    SettingsSection("help.section.lessons") {
+                        ForEach(OnboardingLessonsManifest.lessons) { lesson in
+                            lessonRow(lesson)
+                        }
+                    }
 
                     SettingsSection("help.section.tutorials") {
                         ForEach(HelpManifest.tutorials) { item in
@@ -85,6 +93,51 @@ struct HelpView: View {
                 .font(.system(size: 15, weight: .medium))
                 .foregroundStyle(.secondary)
         }
+    }
+
+    private func lessonRow(_ lesson: OnboardingLesson) -> some View {
+        Button {
+            dismiss()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                onStartLesson(lesson.id)
+            }
+        } label: {
+            HStack(spacing: 16) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(lesson.accentColor.opacity(0.15))
+                        .frame(width: 32, height: 32)
+                    Image(systemName: lesson.icon)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(lesson.accentColor)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(LocalizedStringKey(lesson.titleKey))
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(.primary)
+                    Text(LocalizedStringKey(lesson.subtitleKey))
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                if completedLessonIDs.contains(lesson.id) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(lesson.accentColor)
+                } else {
+                    Image(systemName: "play.circle.fill")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(lesson.accentColor.opacity(0.85))
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     private func shortcutRow(_ shortcut: HelpShortcutItem) -> some View {
