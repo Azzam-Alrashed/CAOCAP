@@ -390,6 +390,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_ASSET_PATHS = "\"caocap/Preview Content\"";
+				DEVELOPMENT_TEAM = NQUCPJVZ5U;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = caocap/Resources/Config/Info.plist;
@@ -426,6 +427,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_ASSET_PATHS = "\"caocap/Preview Content\"";
+				DEVELOPMENT_TEAM = NQUCPJVZ5U;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = caocap/Resources/Config/Info.plist;

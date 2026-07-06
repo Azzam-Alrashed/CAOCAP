@@ -2998,13 +2998,13 @@
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "خطوتان · تحدث مع CoCaptain وأغلق اللوحة"
+            "value" : "٣ خطوات · تحدث مع CoCaptain واستخدم الاختصارات السريعة"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "2 steps · Chat with CoCaptain and dismiss the panel"
+            "value" : "3 steps · Chat with CoCaptain and use quick shortcuts"
           }
         }
       }
@@ -3032,13 +3032,13 @@
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "خطوتان · اختصارات FAB والعودة للخلف"
+            "value" : "خطوة واحدة · العودة إلى اللوحة الرئيسية"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "2 steps · FAB shortcuts and Go Back"
+            "value" : "1 step · Return to the main canvas"
           }
         }
       }
@@ -3049,13 +3049,13 @@
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "اختصارات متقدمة"
+            "value" : "التنقل في اللوحة"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Power shortcuts"
+            "value" : "Canvas Navigation"
           }
         }
       }

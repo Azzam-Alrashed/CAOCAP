@@ -33,6 +33,12 @@ struct OnboardingManifestTests {
         #expect(OnboardingManifest.nextStep(after: .returnToRoot) == nil)
 
         #expect(OnboardingLessonsManifest.lessons.count == 3)
+        #expect(OnboardingLessonsManifest.lesson(for: .coCaptainChat).steps == [
+            .chatCoCaptain,
+            .dismissCoCaptain,
+            .longPressFAB
+        ])
+        #expect(OnboardingLessonsManifest.lesson(for: .powerShortcuts).steps == [.returnToRoot])
         #expect(
             OnboardingManifest.stepLabel(
                 for: .openTutorial,
@@ -49,10 +55,17 @@ struct OnboardingManifestTests {
         )
         #expect(
             OnboardingManifest.stepLabel(
+                for: .longPressFAB,
+                lessonID: .coCaptainChat,
+                language: "English"
+            ) == "3 of 3"
+        )
+        #expect(
+            OnboardingManifest.stepLabel(
                 for: .returnToRoot,
                 lessonID: .powerShortcuts,
                 language: "English"
-            ) == "2 of 2"
+            ) == "1 of 1"
         )
     }
 

@@ -40,15 +40,15 @@ enum OnboardingLessonsManifest {
             subtitleKey: "onboarding.lesson.coCaptainChat.subtitle",
             icon: "sparkles",
             accentHex: "6C5CE7",
-            steps: [.chatCoCaptain, .dismissCoCaptain]
+            steps: [.chatCoCaptain, .dismissCoCaptain, .longPressFAB]
         ),
         OnboardingLesson(
             id: .powerShortcuts,
             titleKey: "onboarding.lesson.powerShortcuts.title",
             subtitleKey: "onboarding.lesson.powerShortcuts.subtitle",
-            icon: "hand.tap.fill",
+            icon: "arrow.uturn.backward.circle.fill",
             accentHex: "F39C12",
-            steps: [.longPressFAB, .returnToRoot]
+            steps: [.returnToRoot]
         )
     ]
 

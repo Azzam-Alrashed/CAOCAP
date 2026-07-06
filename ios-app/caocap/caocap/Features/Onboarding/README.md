@@ -22,7 +22,7 @@ First-run onboarding in CAOCAP is a three-phase funnel:
 
 The tutorial begins on the root canvas. Its first tooltip points to the stable
 Tutorial portal; opening that subcanvas advances into the existing FAB, Omnibox,
-CoCaptain, dismiss, and long-press practice steps.
+CoCaptain, dismiss, long-press, and canvas navigation practice steps.
 
 ## Personalization (v2)
 
