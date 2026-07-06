@@ -29,20 +29,37 @@ struct PersonalizationOnboardingCoordinatorTests {
         coordinator.next()
 
         #expect(coordinator.currentIndex == 1)
-        #expect(!coordinator.canContinue)
+        #expect(coordinator.canContinue)
     }
 
-    @Test func surveyStepRequiresSelectionBeforeContinue() {
+    @Test func surveyStepAllowsContinueWithoutSelectionAndMarksUnanswered() {
         let coordinator = PersonalizationOnboardingCoordinator(
             profileStore: UserProfileStore(defaults: makeDefaults(suiteName: "PersonalizationOnboardingCoordinatorTests.survey")),
             analytics: NoOpAnalyticsService()
         )
 
         coordinator.currentIndex = 1
-        #expect(!coordinator.canContinue)
+        #expect(coordinator.canContinue)
 
+        coordinator.next()
+
+        #expect(coordinator.currentIndex == 2)
+        #expect(
+            coordinator.selections["coding_level"] == PersonalizationSurveyAnswers.unansweredAnswerID
+        )
+        #expect(!coordinator.isAnswered(questionID: "coding_level"))
+    }
+
+    @Test func surveyStepStillAcceptsExplicitSelection() {
+        let coordinator = PersonalizationOnboardingCoordinator(
+            profileStore: UserProfileStore(defaults: makeDefaults(suiteName: "PersonalizationOnboardingCoordinatorTests.surveySelect")),
+            analytics: NoOpAnalyticsService()
+        )
+
+        coordinator.currentIndex = 1
         coordinator.select(answerID: "complete_beginner", for: "coding_level")
         #expect(coordinator.canContinue)
+        #expect(coordinator.isAnswered(questionID: "coding_level"))
     }
 
     @Test func lastStepShowsCompletionMoment() {

@@ -53,7 +53,9 @@ struct PersonalizationSurveyStepContent: View {
                         .font(.system(size: titleSize, weight: .black, design: .rounded))
                         .foregroundStyle(PersonalizationTheme.textPrimary)
                         .shadow(color: .black.opacity(0.35), radius: 8, x: 0, y: 2)
-                        .fixedSize(horizontal: false, vertical: true)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
                     Text(LocalizedStringKey(stringLiteral: question.subtitleKey))
                         .font(.system(size: 16, weight: .medium))
@@ -67,7 +69,8 @@ struct PersonalizationSurveyStepContent: View {
                     ForEach(question.options) { option in
                         PersonalizationAnswerCard(
                             titleKey: option.titleKey,
-                            isSelected: coordinator.selectedAnswerID(for: question.id) == option.id
+                            isSelected: coordinator.isAnswered(questionID: question.id)
+                                && coordinator.selectedAnswerID(for: question.id) == option.id
                         ) {
                             coordinator.select(answerID: option.id, for: question.id)
                         }
