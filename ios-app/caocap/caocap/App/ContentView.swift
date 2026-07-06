@@ -126,9 +126,15 @@ struct ContentView: View {
         if !session.isLaunching
             && !session.intro.shouldPresent
             && session.personalization.shouldPresent {
-            PersonalizationOnboardingView(coordinator: session.personalization) {
-                session.finishPersonalizationFlow()
-            }
+            PersonalizationOnboardingView(
+                coordinator: session.personalization,
+                onBackToIntro: {
+                    session.returnToIntroFromPersonalization()
+                },
+                onFinish: {
+                    session.finishPersonalizationFlow()
+                }
+            )
             .transition(.opacity)
             .zIndex(75)
         }

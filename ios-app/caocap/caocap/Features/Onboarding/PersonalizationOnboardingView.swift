@@ -3,6 +3,7 @@ import SwiftUI
 /// Full-screen personalization flow shown after the motivational intro.
 struct PersonalizationOnboardingView: View {
     @Bindable var coordinator: PersonalizationOnboardingCoordinator
+    let onBackToIntro: () -> Void
     let onFinish: () -> Void
 
     @AppStorage(LocalizationManager.languageStorageKey) private var selectedLanguage = "English"
@@ -13,6 +14,7 @@ struct PersonalizationOnboardingView: View {
             coordinator: coordinator,
             selectedLanguage: selectedLanguage,
             reduceMotion: reduceMotion,
+            onBackToIntro: onBackToIntro,
             onContinue: {
                 coordinator.next()
             },
@@ -43,5 +45,9 @@ struct PersonalizationOnboardingView: View {
 }
 
 #Preview {
-    PersonalizationOnboardingView(coordinator: PersonalizationOnboardingCoordinator()) {}
+    PersonalizationOnboardingView(
+        coordinator: PersonalizationOnboardingCoordinator(),
+        onBackToIntro: {},
+        onFinish: {}
+    )
 }

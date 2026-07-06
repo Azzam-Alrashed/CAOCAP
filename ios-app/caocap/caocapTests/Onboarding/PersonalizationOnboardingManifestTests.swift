@@ -15,7 +15,7 @@ struct PersonalizationOnboardingManifestTests {
         for question in PersonalizationOnboardingManifest.questions {
             #expect(!question.titleKey.isEmpty)
             #expect(!question.subtitleKey.isEmpty)
-            #expect(!question.options.isEmpty)
+            #expect(question.options.count == 4)
 
             let optionIDs = question.options.map(\.id)
             #expect(Set(optionIDs).count == optionIDs.count)

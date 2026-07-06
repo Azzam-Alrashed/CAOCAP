@@ -5,6 +5,7 @@ struct PersonalizationSceneView: View {
     @Bindable var coordinator: PersonalizationOnboardingCoordinator
     let selectedLanguage: String
     let reduceMotion: Bool
+    let onBackToIntro: () -> Void
     let onContinue: () -> Void
     let onFinish: () -> Void
 
@@ -120,9 +121,11 @@ struct PersonalizationSceneView: View {
 
             PersonalizationChrome.BottomBar(
                 isFirstPage: coordinator.isFirstPage,
+                isLastStep: coordinator.isLastStep,
                 canContinue: coordinator.canContinue,
                 reduceMotion: reduceMotion,
                 onBack: { coordinator.back() },
+                onBackToIntro: onBackToIntro,
                 onContinue: onContinue
             )
         }

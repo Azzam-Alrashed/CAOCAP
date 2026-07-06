@@ -1,12 +1,5 @@
 import SwiftUI
 
-/// Frosted-glass styling for illustration intro bottom chrome (CTA + pagination).
-private enum IntroGlassChrome {
-    static let stroke = Color.white.opacity(0.62)
-    static let inactiveStroke = Color.white.opacity(0.38)
-    static let shadow = Color.black.opacity(0.1)
-}
-
 /// Full-screen intro tour that wraps an `IntroCoordinator`.
 /// Steps are displayed in a paged `TabView` and the user can navigate forwards,
 /// backwards, or skip entirely. A continuous "breathing" scale animation runs on
@@ -76,7 +69,7 @@ struct IntroView: View {
             Spacer(minLength: 0)
 
             HStack(spacing: 12) {
-                IntroLanguageButton(usesLightChrome: true)
+                OnboardingLanguageButton(usesLightChrome: true)
 
                 Button {
                     finishIntro(skipping: true)
@@ -144,10 +137,10 @@ struct IntroView: View {
                     }
                     .overlay {
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .stroke(IntroGlassChrome.stroke, lineWidth: 1)
+                            .stroke(OnboardingGlassChrome.stroke, lineWidth: 1)
                     }
                     .shadow(
-                        color: IntroGlassChrome.shadow,
+                        color: OnboardingGlassChrome.shadow,
                         radius: 12,
                         x: 0,
                         y: 6
@@ -168,7 +161,7 @@ struct IntroView: View {
     }
 
     private var backButtonStroke: Color {
-        IntroGlassChrome.inactiveStroke
+        OnboardingGlassChrome.inactiveStroke
     }
 
     private var ctaForeground: Color {
@@ -180,7 +173,7 @@ struct IntroView: View {
     }
 
     private var ctaShadowColor: Color {
-        IntroGlassChrome.shadow
+        OnboardingGlassChrome.shadow
     }
 
     private func finishIntro(skipping: Bool) {
@@ -310,7 +303,7 @@ private struct IntroProgressDots: View {
             .overlay {
                 Capsule()
                     .stroke(
-                        isActive ? IntroGlassChrome.stroke : IntroGlassChrome.inactiveStroke,
+                        isActive ? OnboardingGlassChrome.stroke : OnboardingGlassChrome.inactiveStroke,
                         lineWidth: 1
                     )
             }

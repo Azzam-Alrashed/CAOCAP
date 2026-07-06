@@ -73,8 +73,7 @@ enum PersonalizationOnboardingManifest {
                 PersonalizationSurveyOption(id: "mobile_apps", titleKey: "personalization.build_target.mobile_apps"),
                 PersonalizationSurveyOption(id: "web_apps", titleKey: "personalization.build_target.web_apps"),
                 PersonalizationSurveyOption(id: "games", titleKey: "personalization.build_target.games"),
-                PersonalizationSurveyOption(id: "personal_tools", titleKey: "personalization.build_target.personal_tools"),
-                PersonalizationSurveyOption(id: "exploring", titleKey: "personalization.build_target.exploring")
+                PersonalizationSurveyOption(id: "personal_tools", titleKey: "personalization.build_target.personal_tools")
             ]
         ),
         PersonalizationSurveyQuestion(
@@ -85,8 +84,7 @@ enum PersonalizationOnboardingManifest {
                 PersonalizationSurveyOption(id: "learn_from_scratch", titleKey: "personalization.motivation.learn_from_scratch"),
                 PersonalizationSurveyOption(id: "build_without_devs", titleKey: "personalization.motivation.build_without_devs"),
                 PersonalizationSurveyOption(id: "creative_skills", titleKey: "personalization.motivation.creative_skills"),
-                PersonalizationSurveyOption(id: "teach_others", titleKey: "personalization.motivation.teach_others"),
-                PersonalizationSurveyOption(id: "curious", titleKey: "personalization.motivation.curious")
+                PersonalizationSurveyOption(id: "teach_others", titleKey: "personalization.motivation.teach_others")
             ]
         ),
         PersonalizationSurveyQuestion(
@@ -97,8 +95,7 @@ enum PersonalizationOnboardingManifest {
                 PersonalizationSurveyOption(id: "ship_something_real", titleKey: "personalization.main_goal.ship_something_real"),
                 PersonalizationSurveyOption(id: "understand_software", titleKey: "personalization.main_goal.understand_software"),
                 PersonalizationSurveyOption(id: "build_confidence", titleKey: "personalization.main_goal.build_confidence"),
-                PersonalizationSurveyOption(id: "have_fun", titleKey: "personalization.main_goal.have_fun"),
-                PersonalizationSurveyOption(id: "career_prep", titleKey: "personalization.main_goal.career_prep")
+                PersonalizationSurveyOption(id: "have_fun", titleKey: "personalization.main_goal.have_fun")
             ]
         ),
         PersonalizationSurveyQuestion(
@@ -109,8 +106,7 @@ enum PersonalizationOnboardingManifest {
                 PersonalizationSurveyOption(id: "build_first", titleKey: "personalization.learning_style.build_first"),
                 PersonalizationSurveyOption(id: "step_by_step", titleKey: "personalization.learning_style.step_by_step"),
                 PersonalizationSurveyOption(id: "big_picture", titleKey: "personalization.learning_style.big_picture"),
-                PersonalizationSurveyOption(id: "experiment_with_help", titleKey: "personalization.learning_style.experiment_with_help"),
-                PersonalizationSurveyOption(id: "short_missions", titleKey: "personalization.learning_style.short_missions")
+                PersonalizationSurveyOption(id: "experiment_with_help", titleKey: "personalization.learning_style.experiment_with_help")
             ]
         )
     ]
