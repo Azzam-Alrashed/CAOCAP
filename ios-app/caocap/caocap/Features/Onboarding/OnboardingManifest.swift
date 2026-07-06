@@ -61,6 +61,36 @@ enum OnboardingManifest {
             icon: "hand.tap.fill"
         ),
         OnboardingStepContent(
+            step: .panCanvas,
+            titleKey: "onboarding.panCanvas.title",
+            messageKey: "onboarding.panCanvas.message",
+            icon: "hand.draw"
+        ),
+        OnboardingStepContent(
+            step: .pinchZoom,
+            titleKey: "onboarding.pinchZoom.title",
+            messageKey: "onboarding.pinchZoom.message",
+            icon: "arrow.up.left.and.arrow.down.right"
+        ),
+        OnboardingStepContent(
+            step: .fitAllNodes,
+            titleKey: "onboarding.fitAllNodes.title",
+            messageKey: "onboarding.fitAllNodes.message",
+            icon: "arrow.up.left.and.down.right.magnifyingglass"
+        ),
+        OnboardingStepContent(
+            step: .searchFlyToNode,
+            titleKey: "onboarding.searchFlyToNode.title",
+            messageKey: "onboarding.searchFlyToNode.message",
+            icon: "magnifyingglass"
+        ),
+        OnboardingStepContent(
+            step: .openPortal,
+            titleKey: "onboarding.openPortal.title",
+            messageKey: "onboarding.openPortal.message",
+            icon: "arrow.right.circle.fill"
+        ),
+        OnboardingStepContent(
             step: .returnToRoot,
             titleKey: "onboarding.returnToRoot.title",
             messageKey: "onboarding.returnToRoot.message",

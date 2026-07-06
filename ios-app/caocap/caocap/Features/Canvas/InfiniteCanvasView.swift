@@ -6,6 +6,7 @@ import UIKit
 /// until a gesture is committed.
 struct InfiniteCanvasView: View {
     @Environment(\.colorScheme) var colorScheme
+    @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
     
     /// Tracks the current panning and zooming state of the canvas.
     @Binding var viewport: ViewportState
@@ -60,6 +61,11 @@ struct InfiniteCanvasView: View {
     @State private var isDraggingNode = false
     /// Caches rendered dimensions of nodes to calculate precise fly-to padding.
     @State private var nodeFrames: [UUID: NodeFrameData] = [:]
+
+    private var shouldAnchorTutorialNode: Bool {
+        guard let step = onboarding?.currentStep else { return false }
+        return step == .openTutorial || step == .openPortal
+    }
     
     var body: some View {
         GeometryReader { geometry in
@@ -79,6 +85,7 @@ struct InfiniteCanvasView: View {
                             .onEnded { _ in
                                 viewport.handleDragEnded()
                                 persistViewportIfNeeded()
+                                completeOnboardingPanIfNeeded()
                             }
                     )
                 
@@ -117,7 +124,9 @@ struct InfiniteCanvasView: View {
                             agentState: store.activeAgentStates[node.id] ?? .idle,
                             isTransientlyFocused: canvasFocusNodeID == node.id
                         )
-                            .tutorialOnboardingAnchor(isEnabled: node.id == RootCanvasProvider.tutorialNodeID)
+                            .tutorialOnboardingAnchor(
+                                isEnabled: node.id == RootCanvasProvider.tutorialNodeID && shouldAnchorTutorialNode
+                            )
                             .offset(
                                 x: node.position.x + currentOffset.width,
                                 y: node.position.y + currentOffset.height
@@ -201,6 +210,11 @@ struct InfiniteCanvasView: View {
                     .frame(maxWidth: 460)
                     .padding(24)
                 }
+
+                Color.clear
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .onboardingTooltipAnchor(.canvasGestureArea)
+                    .allowsHitTesting(false)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .coordinateSpace(name: "canvas")
@@ -210,6 +224,9 @@ struct InfiniteCanvasView: View {
                     viewport.fitTo(nodes: store.nodes, containerSize: geometry.size)
                 }
                 HapticsManager.shared.trigger(.medium)
+                if onboarding?.currentStep == .fitAllNodes {
+                    onboarding?.completeCurrentStep()
+                }
             }
             .gesture(
                 TrackpadPanGesture(
@@ -221,6 +238,7 @@ struct InfiniteCanvasView: View {
                         guard !isDraggingNode else { return }
                         viewport.handleDragEnded()
                         persistViewportIfNeeded()
+                        completeOnboardingPanIfNeeded()
                     }
                 )
             )
@@ -238,6 +256,7 @@ struct InfiniteCanvasView: View {
                         viewport.handleMagnificationEnded()
                         currentScale = viewport.scale
                         persistViewportIfNeeded()
+                        completeOnboardingPinchIfNeeded()
                     }
             )
             .onPreferenceChange(NodeFramePreferenceKey.self) { value in
@@ -254,6 +273,33 @@ struct InfiniteCanvasView: View {
         }
         .onAppear {
             currentScale = viewport.scale
+        }
+        .onChange(of: onboarding?.showPopover) { _, showPopover in
+            guard showPopover == true,
+                  let onboarding,
+                  let step = onboarding.currentStep,
+                  step == .panCanvas || step == .pinchZoom else { return }
+            onboarding.captureGestureBaseline(offset: viewport.offset, scale: viewport.scale)
+        }
+    }
+    
+    private func completeOnboardingPanIfNeeded() {
+        guard let onboarding, onboarding.currentStep == .panCanvas else { return }
+        if OnboardingNavigationGestureThresholds.didMeetPanThreshold(
+            from: onboarding.gestureStepBaselineOffset,
+            to: viewport.offset
+        ) {
+            onboarding.completeCurrentStep()
+        }
+    }
+
+    private func completeOnboardingPinchIfNeeded() {
+        guard let onboarding, onboarding.currentStep == .pinchZoom else { return }
+        if OnboardingNavigationGestureThresholds.didMeetPinchThreshold(
+            from: onboarding.gestureStepBaselineScale,
+            to: viewport.scale
+        ) {
+            onboarding.completeCurrentStep()
         }
     }
     

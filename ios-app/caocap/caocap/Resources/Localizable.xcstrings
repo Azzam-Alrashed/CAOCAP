@@ -3032,13 +3032,13 @@
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "خطوة واحدة · العودة إلى اللوحة الرئيسية"
+            "value" : "٦ خطوات · العودة للخلف والتحرك والتكبير والقفز بين اللوحات"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1 step · Return to the main canvas"
+            "value" : "6 steps · Go Back, move, zoom, and jump across canvases"
           }
         }
       }
@@ -3124,6 +3124,176 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Back to Canvas"
+          }
+        }
+      }
+    },
+    "onboarding.panCanvas.message" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اسحب بإصبع واحد على الخلفية المنقطة لتحريك اللوحة واستكشاف العقد."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drag with one finger on the dotted background to move the canvas and explore nodes."
+          }
+        }
+      }
+    },
+    "onboarding.panCanvas.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تحريك اللوحة"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pan the canvas"
+          }
+        }
+      }
+    },
+    "onboarding.pinchZoom.message" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قرّب أو بعّد بإصبعين لتغيير مستوى التكبير. راقب النسبة في الشريط العلوي."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinch in or out with two fingers to change zoom. Watch the percentage in the top bar."
+          }
+        }
+      }
+    },
+    "onboarding.pinchZoom.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تكبير اللوحة"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinch to zoom"
+          }
+        }
+      }
+    },
+    "onboarding.fitAllNodes.message" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "انقر مرتين على مساحة فارغة لإطار جميع العقد دفعة واحدة."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Double-tap empty space to frame every node at once."
+          }
+        }
+      }
+    },
+    "onboarding.fitAllNodes.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "إطار الكل"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fit everything"
+          }
+        }
+      }
+    },
+    "onboarding.searchFlyToNode.message" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "افتح لوحة الأوامر، ابحث عن Tutorial، ثم اختر العقدة للقفز إليها."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open the command palette, search for Tutorial, then select the node to fly to it."
+          }
+        }
+      }
+    },
+    "onboarding.searchFlyToNode.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "القفز إلى عقدة"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jump to a node"
+          }
+        }
+      }
+    },
+    "onboarding.openPortal.message" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "انقر على بوابة Tutorial لفتح اللوحة الفرعية المرتبطة."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tap the Tutorial portal to open its linked subcanvas."
+          }
+        }
+      }
+    },
+    "onboarding.openPortal.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "فتح بوابة"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open a portal"
           }
         }
       }

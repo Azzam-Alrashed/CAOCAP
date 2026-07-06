@@ -64,6 +64,7 @@ struct CanvasHUDView: View {
                             .font(.system(size: 10))
                             .foregroundStyle(.secondary)
                     }
+                    .onboardingTooltipAnchor(.canvasHUDZoom)
 
                     Divider().frame(height: 16)
 

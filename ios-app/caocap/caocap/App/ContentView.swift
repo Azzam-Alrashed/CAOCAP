@@ -179,6 +179,7 @@ struct ContentView: View {
             isOnboardingHighlighted: session.onboarding.showPopover && (
                 session.onboarding.currentStep == .tapFAB
                 || session.onboarding.currentStep == .longPressFAB
+                || (session.onboarding.currentStep == .searchFlyToNode && !session.commandPalette.isPresented)
                 || (session.onboarding.currentStep == .returnToRoot && !session.commandPalette.isPresented)
             )
         )

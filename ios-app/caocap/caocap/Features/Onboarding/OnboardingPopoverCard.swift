@@ -112,6 +112,10 @@ enum OnboardingTooltipAnchor: Hashable {
     case coCaptainDoneButton
     /// Anchored to the Go Back row in the command palette navigation section.
     case commandPaletteGoBack
+    /// Anchored to the main canvas gesture area used for pan, pinch, and fit-all steps.
+    case canvasGestureArea
+    /// Anchored to the zoom percentage pill in the canvas HUD.
+    case canvasHUDZoom
 }
 
 /// Collects layout anchors for each named onboarding target so the tooltip overlay
@@ -168,9 +172,9 @@ extension View {
 extension OnboardingCoordinator.Step {
     var tooltipAnchor: OnboardingTooltipAnchor {
         switch self {
-        case .openTutorial:
+        case .openTutorial, .openPortal:
             return .tutorialNode
-        case .tapFAB, .longPressFAB:
+        case .tapFAB, .longPressFAB, .searchFlyToNode, .returnToRoot:
             return .floatingCommandButton
         case .typeCoCaptainPrompt:
             return .omniboxSearchField
@@ -180,8 +184,10 @@ extension OnboardingCoordinator.Step {
             return .coCaptainInput
         case .dismissCoCaptain:
             return .coCaptainDoneButton
-        case .returnToRoot:
-            return .floatingCommandButton
+        case .panCanvas, .fitAllNodes:
+            return .canvasGestureArea
+        case .pinchZoom:
+            return .canvasHUDZoom
         }
     }
 
@@ -189,14 +195,18 @@ extension OnboardingCoordinator.Step {
         if self == .returnToRoot, isCommandPalettePresented {
             return .commandPaletteGoBack
         }
+        if self == .searchFlyToNode, isCommandPalettePresented {
+            return .omniboxSearchField
+        }
         return tooltipAnchor
     }
 
     var tooltipArrowPlacement: UnifiedBubbleWithArrowShape.ArrowPlacement {
         switch self {
-        case .dismissCoCaptain:
+        case .dismissCoCaptain, .pinchZoom:
             return .top
-        case .openTutorial, .tapFAB, .typeCoCaptainPrompt, .submitCoCaptainPrompt, .chatCoCaptain, .longPressFAB, .returnToRoot:
+        case .openTutorial, .tapFAB, .typeCoCaptainPrompt, .submitCoCaptainPrompt, .chatCoCaptain,
+             .longPressFAB, .returnToRoot, .panCanvas, .fitAllNodes, .searchFlyToNode, .openPortal:
             return .bottom
         }
     }

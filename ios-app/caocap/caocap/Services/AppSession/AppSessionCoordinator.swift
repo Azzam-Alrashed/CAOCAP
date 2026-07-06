@@ -51,6 +51,12 @@ final class AppSessionCoordinator {
     private var actionsConfigured = false
     @ObservationIgnored private var activeUndoManager: UndoManager?
 
+    init() {
+        onboarding.onLessonWillStart = { [weak self] lessonID in
+            self?.prepareWorkspace(for: lessonID)
+        }
+    }
+
     private enum StorageKey {
         static let gridOpacity = "grid_opacity"
         static let lastGridOpacity = "last_grid_opacity"
@@ -193,11 +199,29 @@ final class AppSessionCoordinator {
                 dispatcher: actionDispatcher
             )
             presentCoCaptain()
-        case .powerShortcuts:
-            handleSubCanvasNavigation(fileName: RootCanvasProvider.tutorialFileName)
+        case .canvasNavigation:
+            prepareWorkspace(for: .canvasNavigation)
         }
 
         onboarding.startLesson(lessonID, advancesThroughLessons: false)
+    }
+
+    func prepareWorkspace(for lessonID: OnboardingLessonID) {
+        switch lessonID {
+        case .canvasBasics, .coCaptainChat:
+            break
+        case .canvasNavigation:
+            commandPalette.setPresented(false)
+            coCaptain.setPresented(false)
+            restoreTutorialPortalIfNeeded()
+
+            if case .root = router.currentWorkspace {
+                router.navigateToSubCanvas(fileName: RootCanvasProvider.tutorialFileName)
+            }
+
+            syncViewportWithActiveStore()
+            commandPalette.nodes = router.activeStore.nodes
+        }
     }
 
     func openDemoCanvasFromHelp(fileName: String) {
@@ -283,9 +307,13 @@ final class AppSessionCoordinator {
 
     func handleSubCanvasNavigation(fileName: String) {
         router.navigateToSubCanvas(fileName: fileName)
-        if fileName == RootCanvasProvider.tutorialFileName,
-           onboarding.currentStep == .openTutorial {
+        guard fileName == RootCanvasProvider.tutorialFileName else { return }
+
+        switch onboarding.currentStep {
+        case .openTutorial, .openPortal:
             onboarding.completeCurrentStep()
+        default:
+            break
         }
     }
 
@@ -674,9 +702,21 @@ final class AppSessionCoordinator {
                 self.canvasFocusNodeID = nil
             }
         }
+
+        if onboarding.currentStep == .searchFlyToNode,
+           nodeId == RootCanvasProvider.tutorialNodeID {
+            onboarding.completeCurrentStep()
+        }
     }
 
     private func submitCoCaptainPrompt(_ prompt: String) {
+        if let step = onboarding.currentStep,
+           step == .returnToRoot
+               || step.isCanvasNavigationGestureStep
+               || step == .searchFlyToNode
+               || step == .openPortal {
+            return
+        }
         coCaptain.configureProjectSession(store: router.activeStore, dispatcher: actionDispatcher)
         let purpose: CoCaptainTurnPurpose =
             onboarding.currentStep == .submitCoCaptainPrompt ? .onboardingWelcome : .standard

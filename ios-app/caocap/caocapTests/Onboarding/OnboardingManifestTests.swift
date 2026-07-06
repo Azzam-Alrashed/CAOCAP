@@ -30,7 +30,12 @@ struct OnboardingManifestTests {
         #expect(OnboardingManifest.nextStep(after: .chatCoCaptain) == .dismissCoCaptain)
         #expect(OnboardingManifest.nextStep(after: .dismissCoCaptain) == .longPressFAB)
         #expect(OnboardingManifest.nextStep(after: .longPressFAB) == .returnToRoot)
-        #expect(OnboardingManifest.nextStep(after: .returnToRoot) == nil)
+        #expect(OnboardingManifest.nextStep(after: .returnToRoot) == .panCanvas)
+        #expect(OnboardingManifest.nextStep(after: .panCanvas) == .pinchZoom)
+        #expect(OnboardingManifest.nextStep(after: .pinchZoom) == .fitAllNodes)
+        #expect(OnboardingManifest.nextStep(after: .fitAllNodes) == .searchFlyToNode)
+        #expect(OnboardingManifest.nextStep(after: .searchFlyToNode) == .openPortal)
+        #expect(OnboardingManifest.nextStep(after: .openPortal) == nil)
 
         #expect(OnboardingLessonsManifest.lessons.count == 3)
         #expect(OnboardingLessonsManifest.lesson(for: .coCaptainChat).steps == [
@@ -38,7 +43,14 @@ struct OnboardingManifestTests {
             .dismissCoCaptain,
             .longPressFAB
         ])
-        #expect(OnboardingLessonsManifest.lesson(for: .powerShortcuts).steps == [.returnToRoot])
+        #expect(OnboardingLessonsManifest.lesson(for: .canvasNavigation).steps == [
+            .returnToRoot,
+            .panCanvas,
+            .pinchZoom,
+            .fitAllNodes,
+            .searchFlyToNode,
+            .openPortal
+        ])
         #expect(
             OnboardingManifest.stepLabel(
                 for: .openTutorial,
@@ -63,9 +75,23 @@ struct OnboardingManifestTests {
         #expect(
             OnboardingManifest.stepLabel(
                 for: .returnToRoot,
-                lessonID: .powerShortcuts,
+                lessonID: .canvasNavigation,
                 language: "English"
-            ) == "1 of 1"
+            ) == "1 of 6"
+        )
+        #expect(
+            OnboardingManifest.stepLabel(
+                for: .panCanvas,
+                lessonID: .canvasNavigation,
+                language: "English"
+            ) == "2 of 6"
+        )
+        #expect(
+            OnboardingManifest.stepLabel(
+                for: .openPortal,
+                lessonID: .canvasNavigation,
+                language: "English"
+            ) == "6 of 6"
         )
     }
 
@@ -96,16 +122,25 @@ struct OnboardingManifestTests {
 
     @Test func everyOnboardingStepDeclaresASingleTooltipAnchor() {
         #expect(OnboardingCoordinator.Step.openTutorial.tooltipAnchor == .tutorialNode)
+        #expect(OnboardingCoordinator.Step.openPortal.tooltipAnchor == .tutorialNode)
         #expect(OnboardingCoordinator.Step.tapFAB.tooltipAnchor == .floatingCommandButton)
         #expect(OnboardingCoordinator.Step.typeCoCaptainPrompt.tooltipAnchor == .omniboxSearchField)
         #expect(OnboardingCoordinator.Step.submitCoCaptainPrompt.tooltipAnchor == .omniboxPromptRow)
         #expect(OnboardingCoordinator.Step.chatCoCaptain.tooltipAnchor == .coCaptainInput)
         #expect(OnboardingCoordinator.Step.dismissCoCaptain.tooltipAnchor == .coCaptainDoneButton)
         #expect(OnboardingCoordinator.Step.longPressFAB.tooltipAnchor == .floatingCommandButton)
+        #expect(OnboardingCoordinator.Step.panCanvas.tooltipAnchor == .canvasGestureArea)
+        #expect(OnboardingCoordinator.Step.pinchZoom.tooltipAnchor == .canvasHUDZoom)
+        #expect(OnboardingCoordinator.Step.fitAllNodes.tooltipAnchor == .canvasGestureArea)
+        #expect(OnboardingCoordinator.Step.searchFlyToNode.tooltipAnchor == .floatingCommandButton)
         #expect(OnboardingCoordinator.Step.returnToRoot.tooltipAnchor == .floatingCommandButton)
         #expect(
             OnboardingCoordinator.Step.returnToRoot.resolvedTooltipAnchor(isCommandPalettePresented: true)
                 == .commandPaletteGoBack
+        )
+        #expect(
+            OnboardingCoordinator.Step.searchFlyToNode.resolvedTooltipAnchor(isCommandPalettePresented: true)
+                == .omniboxSearchField
         )
     }
 
@@ -190,5 +225,17 @@ struct OnboardingManifestTests {
         #expect(onboarding.isLessonCompleted(.canvasBasics))
         #expect(onboarding.activeLessonID == .coCaptainChat)
         #expect(onboarding.currentStep == .chatCoCaptain)
+    }
+
+    @MainActor
+    @Test func lessonWillStartCallbackFiresBeforeFirstStep() {
+        let onboarding = OnboardingCoordinator()
+        var startedLesson: OnboardingLessonID?
+        onboarding.onLessonWillStart = { startedLesson = $0 }
+
+        onboarding.startLesson(.canvasNavigation, advancesThroughLessons: false)
+
+        #expect(startedLesson == .canvasNavigation)
+        #expect(onboarding.currentStep == .returnToRoot)
     }
 }

@@ -4,7 +4,7 @@ import SwiftUI
 public enum OnboardingLessonID: String, CaseIterable, Hashable {
     case canvasBasics
     case coCaptainChat
-    case powerShortcuts
+    case canvasNavigation
 }
 
 /// A grouped tutorial lesson with at most six gesture-driven steps.
@@ -43,12 +43,19 @@ enum OnboardingLessonsManifest {
             steps: [.chatCoCaptain, .dismissCoCaptain, .longPressFAB]
         ),
         OnboardingLesson(
-            id: .powerShortcuts,
+            id: .canvasNavigation,
             titleKey: "onboarding.lesson.powerShortcuts.title",
             subtitleKey: "onboarding.lesson.powerShortcuts.subtitle",
             icon: "arrow.uturn.backward.circle.fill",
             accentHex: "F39C12",
-            steps: [.returnToRoot]
+            steps: [
+                .returnToRoot,
+                .panCanvas,
+                .pinchZoom,
+                .fitAllNodes,
+                .searchFlyToNode,
+                .openPortal
+            ]
         )
     ]
 
