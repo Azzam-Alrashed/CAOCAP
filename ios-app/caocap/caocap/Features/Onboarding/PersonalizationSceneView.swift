@@ -77,19 +77,13 @@ struct PersonalizationSceneView: View {
             .padding(.top, 8)
             .id(selectedLanguage)
 
-            TabView(selection: $coordinator.currentIndex) {
-                ForEach(Array(PersonalizationOnboardingManifest.steps.enumerated()), id: \.offset) { index, step in
-                    stepContent(step)
-                        .tag(index)
-                }
-            }
-            .id(selectedLanguage)
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            .animation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.86), value: coordinator.currentIndex)
-            .allowsHitTesting(!coordinator.isCopilotPickerStep)
-
-            Spacer(minLength: 0)
-                .allowsHitTesting(!coordinator.isCopilotPickerStep)
+            stepContent(PersonalizationOnboardingManifest.step(at: coordinator.currentIndex))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .id("\(selectedLanguage)-\(coordinator.currentIndex)")
+                .animation(
+                    reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.86),
+                    value: coordinator.currentIndex
+                )
 
             bottomChrome
         }

@@ -2,6 +2,9 @@ import Foundation
 
 /// Saved responses from the first-run personalization survey.
 struct PersonalizationSurveyAnswers: Codable, Equatable {
+    /// Answer identifier recorded when the user continues without choosing an option.
+    static let unansweredAnswerID = "unanswered"
+
     /// Manifest question identifier → selected answer identifier.
     var selections: [String: String]
     var completedAt: Date
@@ -26,5 +29,10 @@ struct PersonalizationSurveyAnswers: Codable, Equatable {
         self.wasSkipped = wasSkipped
         self.surveyVersion = surveyVersion
         self.selectedCopilot = selectedCopilot
+    }
+
+    /// Count of questions with an explicit answer choice (excludes `unanswered` placeholders).
+    var answeredSelectionCount: Int {
+        selections.values.filter { $0 != Self.unansweredAnswerID }.count
     }
 }

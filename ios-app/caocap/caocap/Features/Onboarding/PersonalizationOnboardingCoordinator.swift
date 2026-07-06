@@ -67,8 +67,12 @@ final class PersonalizationOnboardingCoordinator {
         if PersonalizationOnboardingManifest.isCopilotPickerStep(at: currentIndex) {
             return true
         }
-        guard let question = currentQuestion else { return false }
-        return selections[question.id] != nil
+        return currentQuestion != nil
+    }
+
+    func isAnswered(questionID: String) -> Bool {
+        guard let answerID = selections[questionID] else { return false }
+        return answerID != PersonalizationSurveyAnswers.unansweredAnswerID
     }
 
     var stepLabel: String {
@@ -111,6 +115,9 @@ final class PersonalizationOnboardingCoordinator {
                 ]
             )
         } else if let question = currentQuestion {
+            if selections[question.id] == nil {
+                selections[question.id] = PersonalizationSurveyAnswers.unansweredAnswerID
+            }
             logAnsweredEvent(for: question, stepIndex: currentIndex)
         }
 
@@ -150,7 +157,7 @@ final class PersonalizationOnboardingCoordinator {
             PersonalizationSurveyAnalytics.skipped,
             parameters: [
                 PersonalizationSurveyAnalytics.lastStepIndex: String(currentIndex),
-                PersonalizationSurveyAnalytics.answersProvidedCount: String(selections.count),
+                PersonalizationSurveyAnalytics.answersProvidedCount: String(answeredSelectionCount),
                 PersonalizationSurveyAnalytics.surveyVersion: PersonalizationOnboardingManifest.surveyVersion,
                 PersonalizationSurveyAnalytics.copilotID: selectedCopilot.rawValue
             ]
@@ -165,7 +172,7 @@ final class PersonalizationOnboardingCoordinator {
             PersonalizationSurveyAnalytics.completed,
             parameters: [
                 PersonalizationSurveyAnalytics.surveyVersion: PersonalizationOnboardingManifest.surveyVersion,
-                PersonalizationSurveyAnalytics.answersProvidedCount: String(selections.count),
+                PersonalizationSurveyAnalytics.answersProvidedCount: String(answeredSelectionCount),
                 PersonalizationSurveyAnalytics.copilotID: selectedCopilot.rawValue
             ]
         )
@@ -188,6 +195,10 @@ final class PersonalizationOnboardingCoordinator {
         guard profileStore.isSurveyCompleted else { return true }
         guard let answers = profileStore.loadAnswers() else { return true }
         return answers.surveyVersion != PersonalizationSurveyAnswers.currentSurveyVersion
+    }
+
+    private var answeredSelectionCount: Int {
+        selections.values.filter { $0 != PersonalizationSurveyAnswers.unansweredAnswerID }.count
     }
 
     private func persistAnswers(wasSkipped: Bool) {
