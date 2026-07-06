@@ -52,7 +52,7 @@ final class PersonalizationOnboardingCoordinator {
     }
 
     var showsCompanionCopilotHero: Bool {
-        currentIndex > 0 && !showCompletionMoment
+        currentIndex > 0
     }
 
     var isCopilotPickerStep: Bool {
