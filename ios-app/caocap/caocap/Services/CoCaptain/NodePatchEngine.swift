@@ -54,6 +54,12 @@ public enum NodePatchError: LocalizedError, Hashable {
     }
 }
 
+/// Result of applying patch operations for review staging.
+public struct NodePatchResolvedApply: Hashable {
+    public let resultText: String
+    public let canonicalOperations: [NodePatchOperation]
+}
+
 /// A before-and-after snapshot produced by `NodePatchEngine.preview`.
 /// The UI presents this to the user before committing any change.
 public struct NodePatchPreview: Hashable {
@@ -95,16 +101,6 @@ public struct NodePatchEngine {
     }
 
     /// Computes the result of applying `operations` without persisting anything.
-    ///
-    /// - Parameters:
-    ///   - nodeID: Optional UUID of a specific Mini-App node. Falls back to role-based lookup.
-    ///   - role: The canonical role used when `nodeID` is `nil`.
-    ///   - section: Which Mini-App section (`.srs` or `.code`) to patch.
-    ///   - operations: The ordered list of operations to simulate.
-    ///   - store: The active project whose nodes are searched.
-    /// - Returns: A `NodePatchPreview` the UI can show for approval.
-    /// - Throws: `NodePatchError` when the node cannot be found or an exact-match
-    ///   operation fails to locate its target.
     @MainActor
     public func preview(
         nodeID: UUID? = nil,
@@ -131,8 +127,55 @@ public struct NodePatchEngine {
         return NodePatchPreview(nodeID: node.id, role: node.role, section: section, originalText: originalText, resultText: resultText)
     }
 
-    /// Applies operations in order. Exact operations fail fast when their target
-    /// text is missing, preventing model output from silently editing the wrong area.
+    /// Previews a patch and returns canonical `replace_all` operations for review/apply.
+    @MainActor
+    public func previewResolving(
+        nodeID: UUID? = nil,
+        role: NodeRole,
+        section: CoCaptainNodeEditProposal.MiniAppSection = .code,
+        operations: [NodePatchOperation],
+        in store: ProjectStore
+    ) throws -> (preview: NodePatchPreview, canonicalOperations: [NodePatchOperation]) {
+        guard let node = resolveNode(nodeID: nodeID, for: role, in: store) else {
+            if let nodeID {
+                throw NodePatchError.missingNodeID(nodeID)
+            }
+            throw NodePatchError.missingNode(role)
+        }
+
+        let originalText: String
+        switch section {
+        case .srs:
+            originalText = node.miniApp?.srsText ?? ""
+        case .code:
+            originalText = node.miniApp?.codeText ?? ""
+        }
+
+        let resolved = try applyResolvingTargets(operations: operations, to: originalText)
+        let preview = NodePatchPreview(
+            nodeID: node.id,
+            role: node.role,
+            section: section,
+            originalText: originalText,
+            resultText: resolved.resultText
+        )
+        return (preview, resolved.canonicalOperations)
+    }
+
+    /// Applies operations and returns a single canonical `replace_all` for staging.
+    public func applyResolvingTargets(
+        operations: [NodePatchOperation],
+        to text: String
+    ) throws -> NodePatchResolvedApply {
+        let resultText = try apply(operations: operations, to: text)
+        return NodePatchResolvedApply(
+            resultText: resultText,
+            canonicalOperations: [NodePatchOperation(type: .replaceAll, content: resultText)]
+        )
+    }
+
+    /// Applies operations in order. Exact operations resolve targets with flexible
+    /// matching (case, whitespace, punctuation) but still conflict when ambiguous.
     public func apply(operations: [NodePatchOperation], to text: String) throws -> String {
         var updatedText = text
 
@@ -141,17 +184,20 @@ public struct NodePatchEngine {
             case .replaceAll:
                 updatedText = operation.content
             case .replaceExact:
-                guard let target = operation.target, let range = updatedText.range(of: target) else {
+                guard let target = operation.target,
+                      let range = PatchTargetMatcher.uniqueRange(of: target, in: updatedText) else {
                     throw NodePatchError.conflict("Could not find exact text to replace.")
                 }
                 updatedText.replaceSubrange(range, with: operation.content)
             case .insertBeforeExact:
-                guard let target = operation.target, let range = updatedText.range(of: target) else {
+                guard let target = operation.target,
+                      let range = PatchTargetMatcher.uniqueRange(of: target, in: updatedText) else {
                     throw NodePatchError.conflict("Could not find exact text to insert before.")
                 }
                 updatedText.insert(contentsOf: operation.content, at: range.lowerBound)
             case .insertAfterExact:
-                guard let target = operation.target, let range = updatedText.range(of: target) else {
+                guard let target = operation.target,
+                      let range = PatchTargetMatcher.uniqueRange(of: target, in: updatedText) else {
                     throw NodePatchError.conflict("Could not find exact text to insert after.")
                 }
                 updatedText.insert(contentsOf: operation.content, at: range.upperBound)
@@ -163,5 +209,152 @@ public struct NodePatchEngine {
         }
 
         return updatedText
+    }
+}
+
+/// Flexible target matching for patch operations. Returns a range only when the
+/// match is unique to avoid editing the wrong occurrence.
+private enum PatchTargetMatcher {
+    static func uniqueRange(of target: String, in text: String) -> Range<String.Index>? {
+        guard !target.isEmpty else { return nil }
+
+        if let range = singleLiteralRange(of: target, in: text, options: []) { return range }
+        if let range = singleLiteralRange(
+            of: target,
+            in: text,
+            options: [.caseInsensitive, .diacriticInsensitive]
+        ) { return range }
+        if let range = tokenSequenceRange(of: target, in: text) { return range }
+        return whitespaceFlexibleRange(of: target, in: text)
+    }
+
+    private static func singleLiteralRange(
+        of target: String,
+        in text: String,
+        options: String.CompareOptions
+    ) -> Range<String.Index>? {
+        var match: Range<String.Index>?
+        var searchStart = text.startIndex
+
+        while searchStart < text.endIndex,
+              let range = text.range(of: target, options: options, range: searchStart..<text.endIndex) {
+            if match != nil {
+                return nil
+            }
+            match = range
+            searchStart = range.upperBound
+        }
+
+        return match
+    }
+
+    private static func whitespaceFlexibleRange(of target: String, in text: String) -> Range<String.Index>? {
+        let targetWords = normalizedWords(in: target)
+        guard !targetWords.isEmpty else { return nil }
+
+        let pattern = targetWords
+            .map { NSRegularExpression.escapedPattern(for: $0) }
+            .joined(separator: "\\s+")
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else {
+            return nil
+        }
+
+        let nsRange = NSRange(text.startIndex..<text.endIndex, in: text)
+        let matches = regex.matches(in: text, range: nsRange)
+        guard matches.count == 1, let match = matches.first,
+              let range = Range(match.range, in: text) else {
+            return nil
+        }
+
+        return range
+    }
+
+    private static func tokenSequenceRange(of target: String, in text: String) -> Range<String.Index>? {
+        let targetTokens = alphanumericTokens(in: target)
+        guard !targetTokens.isEmpty else { return nil }
+
+        let sourceTokens = tokenSpans(in: text)
+        guard sourceTokens.count >= targetTokens.count else { return nil }
+
+        var matches: [Range<String.Index>] = []
+
+        for startIndex in 0...(sourceTokens.count - targetTokens.count) {
+            let slice = sourceTokens[startIndex..<(startIndex + targetTokens.count)]
+            let sliceTokens = slice.map(\.token)
+            guard zip(sliceTokens, targetTokens).allSatisfy({
+                $0.caseInsensitiveCompare($1) == .orderedSame
+            }) else {
+                continue
+            }
+
+            let first = slice.first!.range.lowerBound
+            var lastUpper = slice.last!.range.upperBound
+            while lastUpper < text.endIndex, text[lastUpper].isPunctuation {
+                lastUpper = text.index(after: lastUpper)
+            }
+            matches.append(first..<lastUpper)
+        }
+
+        guard matches.count == 1 else { return nil }
+        return matches[0]
+    }
+
+    private static func normalizedWords(in text: String) -> [String] {
+        text
+            .components(separatedBy: .whitespacesAndNewlines)
+            .filter { !$0.isEmpty }
+    }
+
+    private static func alphanumericTokens(in text: String) -> [String] {
+        var tokens: [String] = []
+        var current = ""
+
+        for character in text {
+            if character.isLetter || character.isNumber {
+                current.append(character)
+            } else if !current.isEmpty {
+                tokens.append(current)
+                current = ""
+            }
+        }
+
+        if !current.isEmpty {
+            tokens.append(current)
+        }
+
+        return tokens
+    }
+
+    private struct TokenSpan {
+        let token: String
+        let range: Range<String.Index>
+    }
+
+    private static func tokenSpans(in text: String) -> [TokenSpan] {
+        var spans: [TokenSpan] = []
+        var tokenStart: String.Index?
+        var current = ""
+
+        var index = text.startIndex
+        while index < text.endIndex {
+            let character = text[index]
+            if character.isLetter || character.isNumber {
+                if tokenStart == nil {
+                    tokenStart = index
+                }
+                current.append(character)
+            } else if let start = tokenStart {
+                spans.append(TokenSpan(token: current, range: start..<index))
+                tokenStart = nil
+                current = ""
+            }
+            index = text.index(after: index)
+        }
+
+        if let start = tokenStart {
+            spans.append(TokenSpan(token: current, range: start..<text.endIndex))
+        }
+
+        return spans
     }
 }

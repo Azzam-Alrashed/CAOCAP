@@ -264,7 +264,7 @@ Decoupled backend engines and API clients specific to the CoCaptain agentic flow
 | `CoCaptainTurnIntentResolver.swift` | Classifies each CoCaptain user message as mutating work, advisory, or general chat before coordinator execution. |
 | `CoCaptainTurnIntent.swift` | Turn intent enum with prompt instructions and connection-fallback notice rules. |
 | `ProjectContextBuilder.swift` | Logic to "harvest" the spatial graph and serialize it into a grounded prompt context for the LLM. |
-| `NodePatchEngine.swift` | A precision editing engine that previews partial patches (replace/insert/append) for Mini-App SRS and Code sections. |
+| `NodePatchEngine.swift` | Previews and applies Mini-App SRS/code patches with flexible exact-target matching and canonical `replace_all` staging. |
 | `MiniAppVerificationService.swift` | Runs staged Mini-App code in an ephemeral offline WebView, captures runtime diagnostics, and evaluates model-authored behavior checks. |
 | `VerifiedCodingLoopFeature.swift` | TestFlight/Debug rollout gate for the verified generate-test-repair loop. |
 

@@ -377,6 +377,7 @@ public final class LLMService {
                 \(firebasePersistenceInstructions)
                 - Every node edit needs a non-empty summary and at least one operation.
                 - Exact operations require a non-empty `target`; append/prepend/replace_all do not.
+                - For existing mini-app code sections at or below 200 lines or 8 KB, prefer `replace_all` with the full updated document plus verification checks instead of `replace_exact` for small text tweaks.
                 - When editing an existing non-empty Mini-App code section, include 1 to 5 behavioral verification checks.
                 - Each verification script must be offline, deterministic, and return the Boolean value `true` only when its described behavior works.
                 - Verification scripts may inspect the DOM and simulate local interactions, but must not use Firebase, network requests, remote resources, timers longer than 2 seconds, or external services.

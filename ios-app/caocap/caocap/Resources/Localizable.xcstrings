@@ -2962,13 +2962,13 @@
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "اطلب من CoCaptain إعادة تسمية العنوان من «Hello World» إلى «Hello CAOCAP» أو اسمك."
+            "value": "اطلب من CoCaptain إعادة تسمية العنوان من «Hello World!» إلى «Hello CAOCAP» أو اسمك."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ask CoCaptain to rename the title from ‘Hello World’ to ‘Hello CAOCAP’ or your name."
+            "value": "Ask CoCaptain to rename the title from ‘Hello World!’ to ‘Hello CAOCAP’ or your name."
           }
         }
       }
@@ -2979,13 +2979,13 @@
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "غيّر لون الزر إلى الأزرق"
+            "value": "غيّر Hello World! إلى Hello CAOCAP"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Change the button color to blue"
+            "value": "Change Hello World! to Hello CAOCAP"
           }
         }
       }
@@ -3030,13 +3030,13 @@
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "اطلب من CoCaptain إعادة تسمية العنوان من «Hello World» إلى «Hello CAOCAP» أو اسمك."
+            "value": "اطلب من CoCaptain إعادة تسمية العنوان من «Hello World!» إلى «Hello CAOCAP» أو اسمك."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ask CoCaptain to rename the title from ‘Hello World’ to ‘Hello CAOCAP’ or your name."
+            "value": "Ask CoCaptain to rename the title from ‘Hello World!’ to ‘Hello CAOCAP’ or your name."
           }
         }
       }

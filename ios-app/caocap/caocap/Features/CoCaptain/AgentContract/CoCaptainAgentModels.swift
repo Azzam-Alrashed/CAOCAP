@@ -42,8 +42,10 @@ public enum CoCaptainTurnPurpose: Hashable {
         case .onboardingGuidedEdit:
             return """
             Onboarding guided edit objective:
-            - The user is editing the active demo mini-app during onboarding (for example Pac-Man or XO).
-            - Propose exactly one small HTML/CSS change to the CODE section, such as color, speed label, or background styling.
+            - The user is editing the active demo mini-app during onboarding (for example the Tutorial Hello World mini-app, Pac-Man, or XO).
+            - Prefer exactly one small visible CODE change, such as renaming the headline/title or adjusting headline styling.
+            - For small existing mini-apps, use `replace_all` with the full updated single-file HTML document plus 1 headline verification check.
+            - When renaming the Tutorial headline, update the `<h1>` text from `Hello World!` to the requested title.
             - Keep the change visible in the live preview and easy for a beginner to understand.
             - Do not modify SRS, Firebase, or any node other than the currently active mini-app.
             - Match the language used by the user when summarizing the change.

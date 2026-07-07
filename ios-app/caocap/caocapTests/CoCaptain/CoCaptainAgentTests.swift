@@ -2404,6 +2404,79 @@ struct CoCaptainAgentTests {
         })
     }
 
+    @MainActor
+    @Test func forgivingStagingAcceptsLooseReplaceExactWithoutCodingLoop() async throws {
+        let llm = TestLLMClient(
+            response: looseHeadlineEditResponse(replacement: "hello azzam", target: "hello world")
+        )
+        let coordinator = CoCaptainAgentCoordinator(
+            llmClient: llm,
+            verifiedCodingLoopEnabled: { false }
+        )
+
+        let result = try await coordinator.run(
+            userMessage: "change hello world to hello azzam",
+            store: makeStore(),
+            dispatcher: nil
+        ) { _ in }
+
+        let item = try #require(result.reviewBundle?.items.first)
+        #expect(item.status == .pending)
+        guard case .nodeEdit(_, _, let operations, _) = item.source else {
+            Issue.record("Expected node edit review item")
+            return
+        }
+        #expect(operations.count == 1)
+        #expect(operations.first?.type == .replaceAll)
+        #expect(item.preview.contains("hello azzam"))
+    }
+
+    @MainActor
+    @Test func verifiedCodingLoopRunsForOnboardingGuidedEdit() async throws {
+        let verifier = TestMiniAppVerifier(results: [TestMiniAppVerifier.passing])
+        let llm = TestLLMClient(
+            response: looseHeadlineEditResponse(replacement: "hello azzam", target: "hello world")
+        )
+        let coordinator = CoCaptainAgentCoordinator(
+            llmClient: llm,
+            verifier: verifier,
+            verifiedCodingLoopEnabled: { true }
+        )
+
+        let result = try await coordinator.run(
+            userMessage: "change hello world to hello azzam",
+            store: makeStore(),
+            dispatcher: nil,
+            purpose: .onboardingGuidedEdit
+        ) { _ in }
+
+        let item = try #require(result.reviewBundle?.items.first)
+        #expect(item.status == .pending)
+        #expect(item.preview.contains("hello azzam"))
+        #expect(verifier.receivedCodes.count == 1)
+    }
+
+    private func looseHeadlineEditResponse(replacement: String, target: String) -> String {
+        """
+        <cocaptain_actions>
+          <assistant_message>Changed the heading.</assistant_message>
+          <node_edits>
+            <node_edit role="miniApp" section="code" summary="Update heading">
+              <operation type="replace_exact">
+                <target>\(target)</target>
+                <content><![CDATA[\(replacement)]]></content>
+              </operation>
+              <verification_checks>
+                <verification_check id="heading" description="Heading shows \(replacement)">
+                  <script><![CDATA[return document.querySelector("h1")?.textContent === "\(replacement)";]]></script>
+                </verification_check>
+              </verification_checks>
+            </node_edit>
+          </node_edits>
+        </cocaptain_actions>
+        """
+    }
+
     private func verifiedEditResponse(
         replacement: String,
         operation: String = "replace_exact"

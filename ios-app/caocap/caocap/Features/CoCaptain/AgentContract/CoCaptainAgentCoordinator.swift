@@ -328,6 +328,18 @@ public final class CoCaptainAgentCoordinator {
         if !connectionFallback,
            let payload,
            let target = codingLoopTarget(payload: payload, store: store, purpose: purpose) {
+            // #region agent log
+            CoCaptainDebugLog.write(
+                hypothesisId: "C",
+                location: "CoCaptainAgentCoordinator.runOnce",
+                message: "verified_coding_loop_entered",
+                data: [
+                    "purpose": String(describing: purpose),
+                    "nodeEditCount": String(payload.nodeEdits.count),
+                    "targetNodeID": target.node.id.uuidString
+                ]
+            )
+            // #endregion
             do {
                 return try await runVerifiedCodingLoop(
                     originalRequest: userMessage,
@@ -355,6 +367,19 @@ public final class CoCaptainAgentCoordinator {
 
         let safeActions = connectionFallback ? [] : (payload?.safeActions ?? [])
         let executionSummary = executeSafeActions(safeActions, dispatcher: dispatcher, store: store)
+        // #region agent log
+        CoCaptainDebugLog.write(
+            hypothesisId: "A",
+            location: "CoCaptainAgentCoordinator.runOnce",
+            message: "build_review_bundle_path",
+            data: [
+                "purpose": String(describing: purpose),
+                "nodeEditCount": String(payload?.nodeEdits.count ?? 0),
+                "pendingActionCount": String(payload?.pendingActions.count ?? 0),
+                "hasStore": store == nil ? "false" : "true"
+            ]
+        )
+        // #endregion
         let reviewBundle = buildReviewBundle(
             pendingActions: payload?.pendingActions ?? [],
             nodeEdits: payload?.nodeEdits ?? [],
@@ -415,13 +440,22 @@ public final class CoCaptainAgentCoordinator {
         let store: ProjectStore
     }
 
+    private func supportsVerifiedCodingLoop(purpose: CoCaptainTurnPurpose) -> Bool {
+        switch purpose {
+        case .standard, .onboardingGuidedEdit:
+            return true
+        case .onboardingWelcome, .onboardingBuildHandoff:
+            return false
+        }
+    }
+
     private func codingLoopTarget(
         payload: CoCaptainAgentPayload,
         store: ProjectStore?,
         purpose: CoCaptainTurnPurpose
     ) -> CodingLoopTarget? {
         guard verifiedCodingLoopEnabled(),
-              purpose == .standard,
+              supportsVerifiedCodingLoop(purpose: purpose),
               let store,
               payload.nodeEdits.count == 1,
               let edit = payload.nodeEdits.first,
@@ -476,10 +510,12 @@ public final class CoCaptainAgentCoordinator {
             onCodingProgress(.building(attempt: attempt))
 
             do {
-                currentCode = try patchEngine.apply(
+                let baseText = attempt == 1 ? target.baseCode : currentCode
+                let resolved = try patchEngine.applyResolvingTargets(
                     operations: candidateEdit.operations,
-                    to: attempt == 1 ? target.baseCode : currentCode
+                    to: baseText
                 )
+                currentCode = resolved.resultText
             } catch {
                 lastFeedback = "- invalidCandidate: \(error.localizedDescription)"
                 if attempt == 3 { break }
@@ -580,6 +616,17 @@ public final class CoCaptainAgentCoordinator {
         let message = lastFeedback.isEmpty
             ? "CoCaptain could not produce a verified change."
             : "No verified change is ready. \(lastFeedback)"
+        // #region agent log
+        CoCaptainDebugLog.write(
+            hypothesisId: "C",
+            location: "CoCaptainAgentCoordinator.runVerifiedCodingLoop",
+            message: "coding_loop_failed",
+            data: [
+                "attempts": String(attempt),
+                "lastFeedback": lastFeedback
+            ]
+        )
+        // #endregion
         onCodingProgress(.failed(message))
         logCodingCompletion(startedAt: startedAt, attempts: attempt, outcome: "failed")
         return codingLoopFailureResult(preamble: initialDirective.preamble, message: message)
@@ -877,7 +924,14 @@ public final class CoCaptainAgentCoordinator {
         if let store {
             for edit in nodeEdits {
                 do {
-                    let preview = try patchEngine.preview(nodeID: edit.nodeID, role: edit.role, section: edit.section, operations: edit.operations, in: store)
+                    let resolved = try patchEngine.previewResolving(
+                        nodeID: edit.nodeID,
+                        role: edit.role,
+                        section: edit.section,
+                        operations: edit.operations,
+                        in: store
+                    )
+                    let preview = resolved.preview
                     let targetNode = store.nodes.first(where: { $0.id == preview.nodeID })
                     let sectionLabel = edit.section.rawValue.uppercased()
                     items.append(
@@ -886,10 +940,28 @@ public final class CoCaptainAgentCoordinator {
                             targetLabel: "\(targetNode?.displayTitle ?? edit.role.localizedDisplayName) \(sectionLabel)",
                             summary: edit.summary,
                             preview: previewSnippet(for: preview.resultText),
-                            source: .nodeEdit(role: edit.role, section: edit.section, operations: edit.operations, baseText: preview.originalText)
+                            source: .nodeEdit(
+                                role: edit.role,
+                                section: edit.section,
+                                operations: resolved.canonicalOperations,
+                                baseText: preview.originalText
+                            )
                         )
                     )
                 } catch {
+                    // #region agent log
+                    CoCaptainDebugLog.write(
+                        hypothesisId: "B",
+                        location: "CoCaptainAgentCoordinator.buildReviewBundle",
+                        message: "preview_resolving_failed",
+                        data: [
+                            "summary": edit.summary,
+                            "operationTypes": edit.operations.map(\.type.rawValue).joined(separator: ","),
+                            "target": edit.operations.compactMap(\.target).joined(separator: "|"),
+                            "error": error.localizedDescription
+                        ]
+                    )
+                    // #endregion
                     items.append(
                         PendingReviewItem(
                             targetNodeID: edit.nodeID,

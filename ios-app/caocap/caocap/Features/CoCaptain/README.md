@@ -15,7 +15,7 @@ Supporting services live outside this feature:
 - `ProjectContextBuilder` serializes the canvas for the model.
 - `LLMService` streams from Firebase AI Logic.
 - `AppActionDispatcher` performs high-level app actions.
-- `NodePatchEngine` previews and applies exact node edits.
+- `NodePatchEngine` previews and applies node edits using flexible target matching for all exact operations.
 - `MiniAppVerificationService` executes staged code in an isolated offline WebView.
 
 ## Agent Flow
@@ -40,6 +40,19 @@ Free-usage and subscription prompts are product CTA timeline items, not review b
 ### Verified Coding Loop
 
 The loop is limited to one existing, non-empty, offline Mini-App code edit. It uses at most three candidates and converts the passing result into one `replace_all` review proposal against the original base text. Blank Mini-Apps, SRS edits, multi-node edits, and network-dependent Mini-Apps continue through their existing paths.
+
+The loop runs for standard mutating turns and `.onboardingGuidedEdit`. Candidate patches use forgiving target resolution before verification or repair.
+
+### Flexible Patch Matching
+
+`NodePatchEngine.apply` resolves `replace_exact` / insert-exact targets with one matcher (`PatchTargetMatcher`). It tries, in order:
+
+1. Literal match
+2. Case-insensitive unique match
+3. Token-sequence unique match (ignores punctuation differences such as `hello world` vs `Hello World!`)
+4. Whitespace-flexible unique match
+
+Review staging still normalizes successful results to a single canonical `replace_all` operation. Ambiguous multi-match targets still conflict.
 
 Verification uses a non-persistent WebView, blocks external effects, captures runtime errors and `console.error`, and requires every declared behavioral check to return `true`. Failed or unsupported runs produce diagnostics without an Apply control. The rollout gate is enabled by default in Debug and TestFlight, disabled in production App Store builds, and can be overridden with `cocaptain.verifiedCodingLoopEnabled`.
 

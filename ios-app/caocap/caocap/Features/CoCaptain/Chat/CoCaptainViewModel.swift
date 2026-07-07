@@ -234,6 +234,24 @@ public final class CoCaptainViewModel {
                     }
                 )
 
+                // #region agent log
+                let reviewStatuses = result.reviewBundle?.items.map {
+                    "\($0.targetLabel):\($0.status.rawValue)"
+                }.joined(separator: ";") ?? "none"
+                CoCaptainDebugLog.write(
+                    hypothesisId: "A,B,C,E",
+                    location: "CoCaptainViewModel.sendMessage",
+                    message: "coordinator_run_completed",
+                    data: [
+                        "purpose": String(describing: purpose),
+                        "hasReviewBundle": result.reviewBundle == nil ? "false" : "true",
+                        "reviewItemStatuses": reviewStatuses,
+                        "payloadMessage": result.payloadMessage ?? "",
+                        "preambleLength": String(result.preamble.count)
+                    ]
+                )
+                // #endregion
+
                 let hasUsableResponse =
                     !result.visibleText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
                     result.executionSummary != nil ||
@@ -448,6 +466,18 @@ public final class CoCaptainViewModel {
             guard currentText == baseText else {
                 item.status = .conflicted
                 item.conflictDescription = LocalizationManager.shared.localizedString("This node was edited after the suggestion was generated. Ask Co-Captain to revise.")
+                // #region agent log
+                CoCaptainDebugLog.write(
+                    hypothesisId: "D",
+                    location: "CoCaptainViewModel.applyReviewItem",
+                    message: "base_text_stale",
+                    data: [
+                        "targetLabel": item.targetLabel,
+                        "baseLength": String(baseText.count),
+                        "currentLength": String(currentText.count)
+                    ]
+                )
+                // #endregion
                 break
             }
 
@@ -475,6 +505,17 @@ public final class CoCaptainViewModel {
             } catch {
                 item.status = .conflicted
                 item.conflictDescription = error.localizedDescription
+                // #region agent log
+                CoCaptainDebugLog.write(
+                    hypothesisId: "B,D",
+                    location: "CoCaptainViewModel.applyReviewItem",
+                    message: "apply_patch_failed",
+                    data: [
+                        "targetLabel": item.targetLabel,
+                        "error": error.localizedDescription
+                    ]
+                )
+                // #endregion
             }
         }
 
