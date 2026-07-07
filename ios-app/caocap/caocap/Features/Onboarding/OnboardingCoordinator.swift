@@ -240,8 +240,23 @@ public class OnboardingCoordinator {
                 OnboardingAnalytics.cocaptainReviewShown,
                 parameters: [OnboardingAnalytics.lessonID: lessonID]
             )
-            completeCurrentStep()
+            advancePastReviewStep()
         }
+    }
+
+    /// Moves from the review step to apply when apply is not the next step in the active lesson.
+    private func advancePastReviewStep() {
+        guard let lessonID = activeLessonID else { return }
+        let lesson = OnboardingLessonsManifest.lesson(for: lessonID)
+        showPopover = false
+        logStepCompleted(.reviewCoCaptainChange, lessonID: lessonID)
+
+        if let next = OnboardingLessonsManifest.nextStep(after: .reviewCoCaptainChange, in: lesson) {
+            currentStep = next
+        } else {
+            currentStep = .applyCoCaptainChange
+        }
+        schedulePopover(after: interStepDelay)
     }
 
     private func schedulePopover(after delay: TimeInterval) {
@@ -269,6 +284,11 @@ public class OnboardingCoordinator {
             } else {
                 schedulePopover(after: interStepDelay)
             }
+            return
+        }
+
+        if step == .reviewCoCaptainChange {
+            advancePastReviewStep()
             return
         }
 

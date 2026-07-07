@@ -16,7 +16,7 @@ Use this script with a curious non-developer. Do not coach unless they are block
 | 2 | Uses `go back` in omnibox and returns to root | | |
 | 3 | Searches for Pac-Man or XO and flies to it | | |
 | 4 | Opens selected game portal | | |
-| 5 | Asks CoCaptain for one small game change | | |
+| 5 | Asks CoCaptain to rename the title, taps Apply All, sees confetti, then returns to the main canvas | | |
 | 6 | Sees review card and taps Apply | | |
 | 7 | Opens Help from command palette | | |
 | 8 | Can point to Guides/docs/tutorial continuation in Help | | |

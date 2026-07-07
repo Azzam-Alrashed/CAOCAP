@@ -49,8 +49,8 @@ enum OnboardingLessonsManifest {
                 .typeCoCaptainPrompt,
                 .submitCoCaptainPrompt,
                 .chatCoCaptain,
-                .dismissCoCaptain,
-                .longPressFAB
+                .applyCoCaptainChange,
+                .tapGoBackAction
             ]
         ),
         OnboardingLesson(
@@ -60,14 +60,10 @@ enum OnboardingLessonsManifest {
             icon: "command",
             accentHex: "F39C12",
             steps: [
-                .returnToRoot,
-                .typeGoBackInOmnibox,
-                .tapGoBackAction,
                 .searchFlyToNode,
                 .openPortal,
                 .chatCoCaptainGameEdit,
-                .reviewCoCaptainChange,
-                .applyCoCaptainChange
+                .reviewCoCaptainChange
             ]
         ),
         OnboardingLesson(
@@ -88,6 +84,9 @@ enum OnboardingLessonsManifest {
             icon: "sparkles",
             accentHex: "6C5CE7",
             steps: [
+                .returnToRoot,
+                .longPressFAB,
+                .dismissCoCaptain,
                 .tapMiniAppNode,
                 .interactMiniAppPreview,
                 .openMiniAppCodeTool,
@@ -102,6 +101,7 @@ enum OnboardingLessonsManifest {
             icon: "arrow.up.and.down.and.arrow.left.and.right",
             accentHex: "74B9FF",
             steps: [
+                .typeGoBackInOmnibox,
                 .panCanvas,
                 .pinchZoom,
                 .fitAllNodes,

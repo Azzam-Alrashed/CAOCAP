@@ -7,12 +7,14 @@ struct TimelineItemView: View {
     let viewModel: CoCaptainViewModel
     @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
 
+    private var isOnboardingReviewAnchorActive: Bool {
+        guard let onboarding else { return false }
+        return onboarding.showPopover && onboarding.currentStep == .reviewCoCaptainChange
+    }
+
     private var isOnboardingApplyAnchorActive: Bool {
         guard let onboarding else { return false }
-        return onboarding.showPopover && (
-            onboarding.currentStep == .reviewCoCaptainChange
-            || onboarding.currentStep == .applyCoCaptainChange
-        )
+        return onboarding.showPopover && onboarding.currentStep == .applyCoCaptainChange
     }
 
     var body: some View {
@@ -31,6 +33,7 @@ struct TimelineItemView: View {
                     bundle: bundle,
                     viewModel: viewModel,
                     bundleID: item.id,
+                    isOnboardingReviewAnchorActive: isOnboardingReviewAnchorActive,
                     isOnboardingApplyAnchorActive: isOnboardingApplyAnchorActive
                 )
             case .codingRun(let state):

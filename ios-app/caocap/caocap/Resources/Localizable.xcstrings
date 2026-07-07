@@ -2962,13 +2962,13 @@
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "اطلب من CoCaptain تغييراً صغيراً — مثل لون الزر أو العنوان."
+            "value": "اطلب من CoCaptain إعادة تسمية العنوان من «Hello World» إلى «Hello CAOCAP» أو اسمك."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ask CoCaptain for a small change — like the button color or headline."
+            "value": "Ask CoCaptain to rename the title from ‘Hello World’ to ‘Hello CAOCAP’ or your name."
           }
         }
       }
@@ -3030,13 +3030,13 @@
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "اطلب من CoCaptain تغييراً بسيطاً في اللعبة، مثل اللون أو السرعة."
+            "value": "اطلب من CoCaptain إعادة تسمية العنوان من «Hello World» إلى «Hello CAOCAP» أو اسمك."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ask CoCaptain to rename the title from 'Hello World' to 'Hello CAOCAP' or your name."
+            "value": "Ask CoCaptain to rename the title from ‘Hello World’ to ‘Hello CAOCAP’ or your name."
           }
         }
       }
@@ -3166,13 +3166,13 @@
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "اضغط «تطبيق» لتحديث المعاينة. أنت من يقرر ما يدخل تطبيقك."
+            "value": "اضغط «تطبيق الكل» لتحديث المعاينة. أنت من يقرر ما يدخل تطبيقك."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tap Apply to update the preview. You decide what goes into your app."
+            "value": "Tap Apply All to update the preview. You decide what goes into your app."
           }
         }
       }
@@ -3251,13 +3251,13 @@
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "العودة إلى اللوحة"
+            "value": "أغلق CoCaptain"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Back to Canvas"
+            "value": "Close CoCaptain"
           }
         }
       }
@@ -3642,13 +3642,13 @@
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "اضغط صف «العودة للخلف» أو اضغط إدخال للعودة إلى اللوحة الرئيسية."
+            "value": "افتح لوحة الأوامر، اكتب «العودة للخلف»، ثم اضغط صف العودة للوحة الرئيسية."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tap the Go Back row or press return to return to the main canvas."
+            "value": "Open the command button, type “go back”, then tap Go Back to return to the main canvas."
           }
         }
       }
@@ -3659,13 +3659,13 @@
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "العودة للخلف"
+            "value": "العودة إلى اللوحة"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Go Back"
+            "value": "Back to canvas"
           }
         }
       }

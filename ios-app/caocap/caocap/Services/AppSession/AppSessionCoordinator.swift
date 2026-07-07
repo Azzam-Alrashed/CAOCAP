@@ -225,11 +225,7 @@ final class AppSessionCoordinator {
         commandPalette.setPresented(false)
         coCaptain.setPresented(false)
         restoreTutorialPortalIfNeeded()
-
-        if case .root = router.currentWorkspace {
-            router.navigateToSubCanvas(fileName: RootCanvasProvider.tutorialFileName)
-        }
-
+        router.navigate(to: .root, addToStack: false, animated: false)
         syncViewportWithActiveStore()
         commandPalette.nodes = router.activeStore.nodes
     }
@@ -398,7 +394,11 @@ final class AppSessionCoordinator {
                 } else if (self.onboarding.currentStep == .typeGoBackInOmnibox
                             || self.onboarding.currentStep == .tapGoBackAction),
                           !self.commandPalette.isPresented {
-                    self.onboarding.moveToStep(.returnToRoot)
+                    if self.onboarding.activeLessonID == .canvasBasics {
+                        self.onboarding.moveToStep(.tapGoBackAction)
+                    } else {
+                        self.onboarding.moveToStep(.returnToRoot)
+                    }
                 } else if self.onboarding.currentStep == .openHelpCenter,
                           !self.showingHelp {
                     self.onboarding.moveToStep(.tapFAB)
@@ -416,12 +416,17 @@ final class AppSessionCoordinator {
             onboardingInitialCoCaptainSuccessBaseline = nil
             if onboarding.currentStep == .dismissCoCaptain {
                 onboarding.completeCurrentStep()
-            } else if onboarding.currentStep == .submitCoCaptainPrompt
-                        || onboarding.currentStep == .chatCoCaptain {
+            } else if onboarding.currentStep == .submitCoCaptainPrompt {
                 onboarding.moveToStep(.typeCoCaptainPrompt)
-            } else if onboarding.currentStep == .chatCoCaptainGameEdit
-                        || onboarding.currentStep == .reviewCoCaptainChange
+            } else if onboarding.currentStep == .chatCoCaptain
                         || onboarding.currentStep == .applyCoCaptainChange {
+                if coCaptainHasPendingOnboardingReview {
+                    onboarding.moveToStep(.applyCoCaptainChange)
+                } else {
+                    onboarding.moveToStep(.chatCoCaptain)
+                }
+            } else if onboarding.currentStep == .chatCoCaptainGameEdit
+                        || onboarding.currentStep == .reviewCoCaptainChange {
                 onboarding.moveToStep(.chatCoCaptainGameEdit)
             }
         }
@@ -520,15 +525,7 @@ final class AppSessionCoordinator {
             self?.focusCanvasNode(nodeId)
         }
         coCaptain.onReviewItemApplied = { [weak self] _, _ in
-            guard let self else { return }
-            if self.onboarding.currentStep == .applyCoCaptainChange {
-                let lessonID = self.onboarding.activeLessonID?.rawValue ?? OnboardingLessonID.omniboxNavigation.rawValue
-                AnalyticsService.shared.logEvent(
-                    OnboardingAnalytics.cocaptainReviewApplied,
-                    parameters: [OnboardingAnalytics.lessonID: lessonID]
-                )
-                self.onboarding.completeCurrentStep()
-            }
+            self?.handleOnboardingReviewApplied()
         }
         coCaptain.onOnboardingReviewFallback = { [weak self] in
             let lessonID = self?.onboarding.activeLessonID?.rawValue ?? OnboardingLessonID.omniboxNavigation.rawValue
@@ -850,6 +847,43 @@ final class AppSessionCoordinator {
         guard onboarding.currentStep == .submitCoCaptainPrompt else { return }
         onboardingInitialCoCaptainSuccessBaseline = coCaptain.successfulAssistantResponseCount
         onboarding.hidePopoverForCurrentStep()
+    }
+
+    private func handleOnboardingReviewApplied() {
+        guard onboarding.currentStep == .applyCoCaptainChange,
+              !coCaptainHasPendingOnboardingReview else {
+            return
+        }
+
+        let lessonID = onboarding.activeLessonID?.rawValue ?? OnboardingLessonID.omniboxNavigation.rawValue
+        AnalyticsService.shared.logEvent(
+            OnboardingAnalytics.cocaptainReviewApplied,
+            parameters: [OnboardingAnalytics.lessonID: lessonID]
+        )
+
+        coCaptain.setPresented(false)
+
+        if onboarding.activeLessonID == .canvasBasics {
+            celebrateChallengeCompletion()
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(2.5))
+                guard let self,
+                      self.onboarding.currentStep == .applyCoCaptainChange else {
+                    return
+                }
+                self.onboarding.completeCurrentStep()
+            }
+            return
+        }
+
+        onboarding.completeCurrentStep()
+    }
+
+    private var coCaptainHasPendingOnboardingReview: Bool {
+        coCaptain.items.contains { item in
+            guard case .reviewBundle(let bundle) = item.content else { return false }
+            return bundle.items.contains { $0.status == .pending }
+        }
     }
 
     private func advanceInitialCoCaptainOnboardingIfReady() {

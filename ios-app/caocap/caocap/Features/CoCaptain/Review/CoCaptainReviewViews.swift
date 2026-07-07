@@ -6,6 +6,7 @@ struct ReviewBundleView: View {
     let bundle: ReviewBundleItem
     let viewModel: CoCaptainViewModel
     let bundleID: UUID
+    var isOnboardingReviewAnchorActive: Bool = false
     var isOnboardingApplyAnchorActive: Bool = false
 
     var body: some View {
@@ -30,7 +31,7 @@ struct ReviewBundleView: View {
                             viewModel.flyToReviewTarget(nodeID)
                         }
                     },
-                    isOnboardingApplyAnchorActive: isOnboardingApplyAnchorActive
+                    isOnboardingReviewAnchorActive: isOnboardingReviewAnchorActive
                 )
             }
 
@@ -41,6 +42,11 @@ struct ReviewBundleView: View {
                 }
                 .font(.system(size: 12, weight: .semibold))
                 .disabled(!hasPendingItems)
+                .background {
+                    if isOnboardingApplyAnchorActive, hasPendingItems {
+                        Color.clear.onboardingTooltipAnchor(.coCaptainReviewApply)
+                    }
+                }
 
                 Button(LocalizationManager.shared.localizedString("Reject All")) {
                     viewModel.rejectAll(in: bundleID)
@@ -69,7 +75,7 @@ struct ReviewCardView: View {
     let onApply: () -> Void
     let onReject: () -> Void
     var onFlyTo: (() -> Void)? = nil
-    var isOnboardingApplyAnchorActive: Bool = false
+    var isOnboardingReviewAnchorActive: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -137,7 +143,7 @@ struct ReviewCardView: View {
                 .buttonStyle(.borderedProminent)
                 .disabled(item.status != .pending)
                 .background {
-                    if isOnboardingApplyAnchorActive, item.status == .pending {
+                    if isOnboardingReviewAnchorActive, item.status == .pending {
                         Color.clear.onboardingTooltipAnchor(.coCaptainReviewApply)
                     }
                 }
