@@ -418,10 +418,19 @@ struct CommandPaletteView: View {
         }
         .onChange(of: onboarding?.currentStep) { _, step in
             viewModel.prefersPromptSubmission = step == .submitCoCaptainPrompt
+            if step == .openMiniAppCodeTool {
+                viewModel.selectPreviewCodeToolIfAvailable()
+            } else if step == .returnFromMiniAppPreview {
+                viewModel.selectPreviewBackToCanvasToolIfAvailable()
+            }
         }
         .onDisappear {
             dictation.stop()
         }
+        .onboardingTooltipOverlay(
+            isCommandPalettePresented: viewModel.isPresented,
+            rendersAnchor: { $0.isPreviewOmniboxLocal }
+        )
     }
 
     /// A button that clears the current query text in the Omnibox.
@@ -724,14 +733,21 @@ private struct MiniAppPreviewToolRow: View {
 }
 
 private struct MiniAppPreviewToolOnboardingAnchor: ViewModifier {
+    @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
     let tool: MiniAppPreviewTool
 
     func body(content: Content) -> some View {
         switch tool {
         case .code:
-            content.onboardingTooltipAnchor(.omniboxMiniAppCodeRow)
+            content.onboardingExplicitAnchorFrame(
+                .omniboxMiniAppCodeRow,
+                isEnabled: onboarding?.currentStep == .openMiniAppCodeTool && onboarding?.showPopover == true
+            )
         case .backToCanvas:
-            content.onboardingTooltipAnchor(.omniboxBackToCanvasRow)
+            content.onboardingExplicitAnchorFrame(
+                .omniboxBackToCanvasRow,
+                isEnabled: onboarding?.currentStep == .returnFromMiniAppPreview && onboarding?.showPopover == true
+            )
         default:
             content
         }

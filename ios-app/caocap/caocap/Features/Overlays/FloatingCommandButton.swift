@@ -38,6 +38,7 @@ struct FloatingCommandButton: View {
     var onDragSummon: (() -> Void)? = nil
     
     var isOnboardingHighlighted: Bool = false
+    var tooltipAnchor: OnboardingTooltipAnchor = .floatingCommandButton
     
     // Onboarding breathing animation state
     @State private var isBreathing: Bool = false
@@ -121,7 +122,7 @@ struct FloatingCommandButton: View {
                 }
                 .frame(width: buttonSize, height: buttonSize)
                 .scaleEffect(buttonScale)
-                .onboardingTooltipAnchor(.floatingCommandButton)
+                .onboardingTooltipAnchor(tooltipAnchor)
                 .simultaneousGesture(
                     LongPressGesture(minimumDuration: 0.25)
                         .onEnded { _ in

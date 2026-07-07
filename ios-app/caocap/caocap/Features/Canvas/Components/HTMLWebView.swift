@@ -9,14 +9,28 @@ struct HTMLWebView: UIViewRepresentable {
     /// The complete HTML string to render, typically the `compiledHTML` of a
     /// `MiniApp` model object.
     let htmlContent: String
+    /// Called when the user taps inside the rendered web content.
+    var onUserInteraction: (() -> Void)? = nil
 
-    final class Coordinator {
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
         private var loadedHTML: String?
+        var onUserInteraction: (() -> Void)?
 
         func shouldLoad(_ html: String) -> Bool {
             guard loadedHTML != html else { return false }
             loadedHTML = html
             return true
+        }
+
+        @objc func handleWebViewTap() {
+            onUserInteraction?()
+        }
+
+        func gestureRecognizer(
+            _ gestureRecognizer: UIGestureRecognizer,
+            shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer
+        ) -> Bool {
+            true
         }
     }
 
@@ -38,6 +52,15 @@ struct HTMLWebView: UIViewRepresentable {
         webView.backgroundColor = .clear
         webView.scrollView.isScrollEnabled = false
         webView.scrollView.backgroundColor = .clear
+
+        context.coordinator.onUserInteraction = onUserInteraction
+        let tapRecognizer = UITapGestureRecognizer(
+            target: context.coordinator,
+            action: #selector(Coordinator.handleWebViewTap)
+        )
+        tapRecognizer.delegate = context.coordinator
+        webView.addGestureRecognizer(tapRecognizer)
+
         return webView
     }
     
@@ -45,6 +68,7 @@ struct HTMLWebView: UIViewRepresentable {
     /// Using `loadHTMLString` with a `nil` base URL restricts the page to the
     /// `about:blank` origin, which prevents local-file access from the HTML.
     func updateUIView(_ uiView: WKWebView, context: Context) {
+        context.coordinator.onUserInteraction = onUserInteraction
         guard context.coordinator.shouldLoad(htmlContent) else { return }
         uiView.loadHTMLString(htmlContent, baseURL: nil)
     }

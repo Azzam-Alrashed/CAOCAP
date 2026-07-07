@@ -197,6 +197,16 @@ public class CommandPaletteViewModel {
         index
     }
 
+    public func selectPreviewCodeToolIfAvailable() {
+        guard let index = filteredPreviewTools.firstIndex(of: .code) else { return }
+        selectedIndex = index
+    }
+
+    public func selectPreviewBackToCanvasToolIfAvailable() {
+        guard let index = filteredPreviewTools.firstIndex(of: .backToCanvas) else { return }
+        selectedIndex = index
+    }
+
     private var selectionOffset: Int { previewToolCount }
     
     public init() {}

@@ -146,6 +146,27 @@ enum OnboardingTooltipAnchor: Hashable {
             return false
         }
     }
+
+    /// Whether this anchor is owned by the Mini-App preview shell or its tool sheets.
+    var isPreviewShellLocal: Bool {
+        switch self {
+        case .miniAppPreviewArea, .miniAppPreviewFAB, .omniboxMiniAppCodeRow,
+             .omniboxBackToCanvasRow, .miniAppCodeEditorSave:
+            return true
+        default:
+            return false
+        }
+    }
+
+    /// Whether this anchor is rendered inside the preview omnibox list.
+    var isPreviewOmniboxLocal: Bool {
+        switch self {
+        case .omniboxMiniAppCodeRow, .omniboxBackToCanvasRow:
+            return true
+        default:
+            return false
+        }
+    }
 }
 
 /// Collects layout anchors for each named onboarding target so the tooltip overlay
@@ -211,6 +232,24 @@ extension View {
     /// avoiding multiple layout passes that could cause jitter.
     func onboardingExplicitAnchorFrames(_ frames: [OnboardingTooltipAnchor: CGRect]) -> some View {
         preference(key: OnboardingExplicitAnchorFramePreferenceKey.self, value: frames)
+    }
+
+    /// Publishes a measured frame for one onboarding anchor. Prefer this over
+    /// `anchorPreference` for rows inside scroll views where layout anchors drift.
+    func onboardingExplicitAnchorFrame(
+        _ anchor: OnboardingTooltipAnchor,
+        isEnabled: Bool,
+        coordinateSpace: CoordinateSpace = .global
+    ) -> some View {
+        background {
+            if isEnabled {
+                GeometryReader { proxy in
+                    Color.clear.onboardingExplicitAnchorFrames([
+                        anchor: proxy.frame(in: coordinateSpace)
+                    ])
+                }
+            }
+        }
     }
 
     func onboardingTooltipOverlay(

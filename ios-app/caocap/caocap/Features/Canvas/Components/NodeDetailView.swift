@@ -89,14 +89,15 @@ private struct MiniAppPreviewShell: View {
             Color(uiColor: .systemBackground).ignoresSafeArea()
 
             if let html = currentNode.miniApp?.compiledHTML {
-                HTMLWebView(htmlContent: html)
-                    .ignoresSafeArea()
-                    .contentShape(Rectangle())
-                    .onTapGesture {
+                HTMLWebView(
+                    htmlContent: html,
+                    onUserInteraction: {
                         if onboarding?.currentStep == .interactMiniAppPreview {
                             onboarding?.completeCurrentStep()
                         }
                     }
+                )
+                    .ignoresSafeArea()
                     .onboardingTooltipAnchor(.miniAppPreviewArea)
             } else {
                 Text("No preview to display.")
@@ -121,12 +122,13 @@ private struct MiniAppPreviewShell: View {
                 canUndo: undoManager?.canUndo ?? false,
                 canRedo: undoManager?.canRedo ?? false,
                 isOnboardingHighlighted: onboarding?.showPopover == true
-                    && onboarding?.currentStep == .openMiniAppOmnibox
+                    && onboarding?.currentStep == .openMiniAppOmnibox,
+                tooltipAnchor: .miniAppPreviewFAB
             )
-            .onboardingTooltipAnchor(.miniAppPreviewFAB)
         }
         .onboardingTooltipOverlay(
-            isCommandPalettePresented: commandPalette?.isPresented ?? false
+            isCommandPalettePresented: commandPalette?.isPresented ?? false,
+            rendersAnchor: { $0 == .miniAppPreviewArea || $0 == .miniAppPreviewFAB }
         )
         .onChange(of: commandPalette?.isPresented ?? false) { _, isPresented in
             guard isPresented, onboarding?.currentStep == .openMiniAppOmnibox else { return }
