@@ -3,13 +3,13 @@ import SwiftUI
 /// Identifies one interactive tutorial lesson shown in Help and during first-run onboarding.
 public enum OnboardingLessonID: String, CaseIterable, Hashable {
     case canvasBasics
-    case coCaptainChat
-    case canvasNavigation
+    case omniboxNavigation
     case miniAppPreview
+    case coCaptainChat
     case moveAndOrganize
 }
 
-/// A grouped tutorial lesson with at most six gesture-driven steps.
+/// A grouped tutorial lesson with at most nine gesture-driven steps.
 struct OnboardingLesson: Identifiable, Hashable {
     let id: OnboardingLessonID
     let titleKey: String
@@ -25,7 +25,7 @@ struct OnboardingLesson: Identifiable, Hashable {
 
 /// Static registry of interactive tutorial lessons.
 enum OnboardingLessonsManifest {
-    static let maxStepsPerLesson = 6
+    static let maxStepsPerLesson = 9
 
     static let lessons: [OnboardingLesson] = [
         OnboardingLesson(
@@ -34,27 +34,18 @@ enum OnboardingLessonsManifest {
             subtitleKey: "onboarding.lesson.canvasBasics.subtitle",
             icon: "graduationcap.fill",
             accentHex: "00B894",
-            steps: [.openTutorial, .tapFAB, .typeCoCaptainPrompt, .submitCoCaptainPrompt]
+            steps: [.openTutorial, .panCanvas, .pinchZoom, .fitAllNodes, .tapFAB]
         ),
         OnboardingLesson(
-            id: .coCaptainChat,
-            titleKey: "onboarding.lesson.coCaptainChat.title",
-            subtitleKey: "onboarding.lesson.coCaptainChat.subtitle",
-            icon: "sparkles",
-            accentHex: "6C5CE7",
-            steps: [.chatCoCaptain, .dismissCoCaptain, .longPressFAB]
-        ),
-        OnboardingLesson(
-            id: .canvasNavigation,
-            titleKey: "onboarding.lesson.canvasNavigation.title",
-            subtitleKey: "onboarding.lesson.canvasNavigation.subtitle",
-            icon: "arrow.uturn.backward.circle.fill",
+            id: .omniboxNavigation,
+            titleKey: "onboarding.lesson.omniboxNavigation.title",
+            subtitleKey: "onboarding.lesson.omniboxNavigation.subtitle",
+            icon: "command",
             accentHex: "F39C12",
             steps: [
                 .returnToRoot,
-                .panCanvas,
-                .pinchZoom,
-                .fitAllNodes,
+                .typeGoBackInOmnibox,
+                .tapGoBackAction,
                 .searchFlyToNode,
                 .openPortal
             ]
@@ -68,10 +59,25 @@ enum OnboardingLessonsManifest {
             steps: [
                 .tapMiniAppNode,
                 .interactMiniAppPreview,
-                .openMiniAppOmnibox,
                 .openMiniAppCodeTool,
                 .saveMiniAppCodeEdit,
                 .returnFromMiniAppPreview
+            ]
+        ),
+        OnboardingLesson(
+            id: .coCaptainChat,
+            titleKey: "onboarding.lesson.coCaptainChat.title",
+            subtitleKey: "onboarding.lesson.coCaptainChat.subtitle",
+            icon: "sparkles",
+            accentHex: "6C5CE7",
+            steps: [
+                .typeCoCaptainPrompt,
+                .submitCoCaptainPrompt,
+                .chatCoCaptain,
+                .reviewCoCaptainChange,
+                .applyCoCaptainChange,
+                .dismissCoCaptain,
+                .longPressFAB
             ]
         ),
         OnboardingLesson(
@@ -82,9 +88,7 @@ enum OnboardingLessonsManifest {
             accentHex: "74B9FF",
             steps: [
                 .dragCanvasNode,
-                .openWorkspaceOmnibox,
                 .runOrganizeNodes,
-                .runToggleGrid,
                 .undoCanvasEdit,
                 .redoCanvasEdit
             ]

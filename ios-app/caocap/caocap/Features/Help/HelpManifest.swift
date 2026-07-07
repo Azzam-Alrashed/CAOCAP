@@ -78,6 +78,17 @@ enum HelpManifest {
 
     static let articles: [HelpArticle] = [
         HelpArticle(
+            id: "nextSteps",
+            titleKey: "help.article.nextSteps.title",
+            subtitleKey: "help.article.nextSteps.subtitle",
+            icon: "flag.checkered",
+            bodyParagraphKeys: [
+                "help.article.nextSteps.body1",
+                "help.article.nextSteps.body2",
+                "help.article.nextSteps.body3"
+            ]
+        ),
+        HelpArticle(
             id: "canvas",
             titleKey: "help.article.canvas.title",
             subtitleKey: "help.article.canvas.subtitle",

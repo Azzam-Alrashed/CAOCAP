@@ -70,7 +70,9 @@ public class CommandPaletteViewModel {
             // so that pressing Enter (which can re-trigger didSet with the
             // same value) doesn't clobber the arrow-key selection.
             guard query != oldValue else { return }
-            if prefersPromptSubmission {
+            if prefersGoBackSelection {
+                selectGoBackActionIfAvailable()
+            } else if prefersPromptSubmission {
                 selectPromptRowIfAvailable()
             } else {
                 selectedIndex = 0
@@ -94,6 +96,15 @@ public class CommandPaletteViewModel {
             guard prefersPromptSubmission != oldValue else { return }
             if prefersPromptSubmission {
                 selectPromptRowIfAvailable()
+            }
+        }
+    }
+    /// When `true` the palette keeps the Go Back action row selected so Return executes it.
+    public var prefersGoBackSelection: Bool = false {
+        didSet {
+            guard prefersGoBackSelection != oldValue else { return }
+            if prefersGoBackSelection {
+                selectGoBackActionIfAvailable()
             }
         }
     }
@@ -232,6 +243,15 @@ public class CommandPaletteViewModel {
         case .down:
             selectedIndex = (selectedIndex + 1) % count
         }
+    }
+
+    public func selectGoBackActionIfAvailable() {
+        guard let index = filteredActions.firstIndex(where: { $0.id == .goBack }) else { return }
+        selectedIndex = selectionIndex(forActionAt: index)
+    }
+
+    public var showsGoBackAction: Bool {
+        filteredActions.contains { $0.id == .goBack }
     }
 
     public func selectPromptRowIfAvailable() {

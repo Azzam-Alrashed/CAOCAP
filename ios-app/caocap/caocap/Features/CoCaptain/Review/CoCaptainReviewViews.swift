@@ -6,6 +6,7 @@ struct ReviewBundleView: View {
     let bundle: ReviewBundleItem
     let viewModel: CoCaptainViewModel
     let bundleID: UUID
+    var isOnboardingApplyAnchorActive: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -16,15 +17,21 @@ struct ReviewBundleView: View {
             }
 
             ForEach(bundle.items) { item in
-                ReviewCardView(item: item) {
-                    viewModel.applyReviewItem(bundleID: bundleID, itemID: item.id)
-                } onReject: {
-                    viewModel.rejectReviewItem(bundleID: bundleID, itemID: item.id)
-                } onFlyTo: {
-                    if let nodeID = item.targetNodeID {
-                        viewModel.flyToReviewTarget(nodeID)
-                    }
-                }
+                ReviewCardView(
+                    item: item,
+                    onApply: {
+                        viewModel.applyReviewItem(bundleID: bundleID, itemID: item.id)
+                    },
+                    onReject: {
+                        viewModel.rejectReviewItem(bundleID: bundleID, itemID: item.id)
+                    },
+                    onFlyTo: {
+                        if let nodeID = item.targetNodeID {
+                            viewModel.flyToReviewTarget(nodeID)
+                        }
+                    },
+                    isOnboardingApplyAnchorActive: isOnboardingApplyAnchorActive
+                )
             }
 
             HStack(spacing: 16) {
@@ -62,6 +69,7 @@ struct ReviewCardView: View {
     let onApply: () -> Void
     let onReject: () -> Void
     var onFlyTo: (() -> Void)? = nil
+    var isOnboardingApplyAnchorActive: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -128,6 +136,11 @@ struct ReviewCardView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(item.status != .pending)
+                .background {
+                    if isOnboardingApplyAnchorActive, item.status == .pending {
+                        Color.clear.onboardingTooltipAnchor(.coCaptainReviewApply)
+                    }
+                }
 
                 Button(LocalizationManager.shared.localizedString("Reject")) {
                     onReject()

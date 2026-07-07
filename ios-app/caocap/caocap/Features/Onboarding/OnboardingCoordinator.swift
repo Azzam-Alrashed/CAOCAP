@@ -12,50 +12,52 @@ public class OnboardingCoordinator {
     public enum Step: Int, CaseIterable, Comparable {
         /// User must open the Tutorial portal on the root canvas.
         case openTutorial = 0
-        /// User must tap the floating command button (FAB) to open the command palette.
-        case tapFAB
-        /// User must type any text in the omnibox search field.
-        case typeCoCaptainPrompt
-        /// User must send the typed text to CoCaptain via the prompt row or Return key.
-        case submitCoCaptainPrompt
-        /// User must type a message inside the CoCaptain chat panel.
-        case chatCoCaptain
-        /// User must dismiss the CoCaptain panel by tapping Done or dragging it down.
-        case dismissCoCaptain
-        /// User must long-press the FAB to reveal the quick-action radial menu.
-        case longPressFAB
         /// User must drag the canvas background to pan around the workspace.
         case panCanvas
         /// User must pinch the canvas to zoom in or out.
         case pinchZoom
         /// User must double-tap empty canvas space to fit all nodes in view.
         case fitAllNodes
+        /// User must tap the floating command button (FAB) to open the command palette.
+        case tapFAB
+        /// User must open the omnibox from a subcanvas to begin navigation practice.
+        case returnToRoot
+        /// User must type "go back" in the omnibox search field.
+        case typeGoBackInOmnibox
+        /// User must tap the Go Back action row or press return to navigate up.
+        case tapGoBackAction
         /// User must search for and fly to the Tutorial node via the command palette.
         case searchFlyToNode
         /// User must tap the Tutorial portal node to open its linked subcanvas.
         case openPortal
-        /// User must return to the root canvas from a subcanvas via Go Back.
-        case returnToRoot
         /// User must tap the seeded Hello World Mini-App on the Tutorial canvas.
         case tapMiniAppNode
         /// User must interact with the live Mini-App preview.
         case interactMiniAppPreview
-        /// User must open the omnibox from the Mini-App preview shell.
-        case openMiniAppOmnibox
         /// User must open the Code tool from the preview omnibox.
         case openMiniAppCodeTool
         /// User must save a code edit from the code editor.
         case saveMiniAppCodeEdit
         /// User must return to the canvas from the Mini-App preview.
         case returnFromMiniAppPreview
+        /// User must type any text in the omnibox search field.
+        case typeCoCaptainPrompt
+        /// User must send the typed text to CoCaptain via the prompt row or Return key.
+        case submitCoCaptainPrompt
+        /// User must ask CoCaptain for a small guided change to the Hello World app.
+        case chatCoCaptain
+        /// User must review the pending CoCaptain change card.
+        case reviewCoCaptainChange
+        /// User must tap Apply on the CoCaptain review card.
+        case applyCoCaptainChange
+        /// User must dismiss the CoCaptain panel by tapping Done or dragging it down.
+        case dismissCoCaptain
+        /// User must long-press the FAB to reveal the quick-action radial menu.
+        case longPressFAB
         /// User must drag the practice node to a new position.
         case dragCanvasNode
-        /// User must open the omnibox from the canvas FAB.
-        case openWorkspaceOmnibox
         /// User must run Organize Nodes from the omnibox.
         case runOrganizeNodes
-        /// User must run Toggle Grid from the omnibox.
-        case runToggleGrid
         /// User must undo the last canvas edit.
         case undoCanvasEdit
         /// User must redo the last undone edit.
@@ -93,10 +95,10 @@ public class OnboardingCoordinator {
 
         var blocksCoCaptainPrompt: Bool {
             switch self {
-            case .returnToRoot, .panCanvas, .pinchZoom, .fitAllNodes, .searchFlyToNode, .openPortal,
-                 .tapMiniAppNode, .interactMiniAppPreview, .openMiniAppOmnibox, .openMiniAppCodeTool,
-                 .saveMiniAppCodeEdit, .returnFromMiniAppPreview, .dragCanvasNode, .openWorkspaceOmnibox,
-                 .runOrganizeNodes, .runToggleGrid, .undoCanvasEdit, .redoCanvasEdit:
+            case .returnToRoot, .typeGoBackInOmnibox, .tapGoBackAction, .panCanvas, .pinchZoom, .fitAllNodes,
+                 .searchFlyToNode, .openPortal, .tapMiniAppNode, .interactMiniAppPreview, .openMiniAppCodeTool,
+                 .saveMiniAppCodeEdit, .returnFromMiniAppPreview, .dragCanvasNode, .runOrganizeNodes,
+                 .undoCanvasEdit, .redoCanvasEdit, .reviewCoCaptainChange, .applyCoCaptainChange:
                 return true
             default:
                 return false
@@ -137,14 +139,22 @@ public class OnboardingCoordinator {
     @ObservationIgnored
     public var onLessonWillStart: ((OnboardingLessonID) -> Void)?
 
+    /// Called when the user finishes the full interactive tutorial sequence.
+    @ObservationIgnored
+    public var onTutorialCompleted: (() -> Void)?
+
+    @ObservationIgnored
+    private let analytics: any AnalyticsTracking
+
     // MARK: - Persistence
 
     /// Versioned key so a future onboarding redesign can show the new flow to existing users.
-    private static let completedKey = "onboarding_completed_v7"
-    private static let legacyCompletedKey = "onboarding_completed_v6"
+    private static let completedKey = "onboarding_completed_v8"
+    private static let legacyCompletedKey = "onboarding_completed_v7"
     private static let legacyV5CompletedKey = "onboarding_completed_v5"
     private static let lessonCompletedKeyPrefix = "onboarding_lesson_completed_"
     private static let legacyCanvasNavigationLessonKey = "onboarding_lesson_completed_powerShortcuts"
+    private static let legacyCanvasNavigationLessonIDKey = "onboarding_lesson_completed_canvasNavigation"
 
     public var isCompleted: Bool {
         get { UserDefaults.standard.bool(forKey: Self.completedKey) }
@@ -165,7 +175,12 @@ public class OnboardingCoordinator {
 
     // MARK: - Lifecycle
 
-    public init() {
+    public convenience init() {
+        self.init(analytics: AnalyticsService.shared)
+    }
+
+    init(analytics: any AnalyticsTracking) {
+        self.analytics = analytics
         migratePersistenceIfNeeded()
     }
 
@@ -192,6 +207,7 @@ public class OnboardingCoordinator {
         }
 
         onLessonWillStart?(lessonID)
+        logLessonStarted(lessonID)
 
         self.advancesThroughLessons = advancesThroughLessons
         activeLessonID = lessonID
@@ -202,6 +218,23 @@ public class OnboardingCoordinator {
     func captureGestureBaseline(offset: CGSize, scale: CGFloat) {
         gestureStepBaselineOffset = offset
         gestureStepBaselineScale = scale
+    }
+
+    private func scheduleReviewStepHandoff() {
+        popoverTask?.cancel()
+        popoverTask = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(interStepDelay))
+            guard !Task.isCancelled else { return }
+            showPopover = true
+            try? await Task.sleep(for: .seconds(2.5))
+            guard !Task.isCancelled else { return }
+            guard currentStep == .reviewCoCaptainChange else { return }
+            analytics.logEvent(
+                OnboardingAnalytics.cocaptainReviewShown,
+                parameters: [OnboardingAnalytics.lessonID: OnboardingLessonID.coCaptainChat.rawValue]
+            )
+            completeCurrentStep()
+        }
     }
 
     private func schedulePopover(after delay: TimeInterval) {
@@ -220,14 +253,20 @@ public class OnboardingCoordinator {
         guard let step = currentStep, let lessonID = activeLessonID else { return }
         let lesson = OnboardingLessonsManifest.lesson(for: lessonID)
         showPopover = false
+        logStepCompleted(step, lessonID: lessonID)
 
         if let next = OnboardingLessonsManifest.nextStep(after: step, in: lesson) {
             currentStep = next
-            schedulePopover(after: interStepDelay)
+            if next == .reviewCoCaptainChange {
+                scheduleReviewStepHandoff()
+            } else {
+                schedulePopover(after: interStepDelay)
+            }
             return
         }
 
         markLessonComplete(lessonID)
+        logLessonCompleted(lessonID)
 
         if advancesThroughLessons,
            let nextLessonID = OnboardingLessonsManifest.nextLesson(after: lessonID),
@@ -258,11 +297,33 @@ public class OnboardingCoordinator {
         showPopover = false
     }
 
-    /// Skip the entire onboarding.
+    /// Skip the active lesson and continue to the next incomplete lesson when appropriate.
     public func skip() {
         popoverTask?.cancel()
         showPopover = false
-        markComplete()
+
+        guard let lessonID = activeLessonID else {
+            markComplete()
+            return
+        }
+
+        logLessonSkipped(lessonID)
+        markLessonComplete(lessonID)
+
+        if advancesThroughLessons,
+           let nextLessonID = OnboardingLessonsManifest.nextLesson(after: lessonID),
+           !isLessonCompleted(nextLessonID) {
+            startLesson(nextLessonID, advancesThroughLessons: true)
+            return
+        }
+
+        if completedLessonIDs.count == OnboardingLessonID.allCases.count {
+            markComplete()
+        } else {
+            activeLessonID = nil
+            currentStep = nil
+            advancesThroughLessons = false
+        }
     }
 
     /// Reset onboarding (for Settings).
@@ -294,6 +355,38 @@ public class OnboardingCoordinator {
         currentStep = nil
         isCompleted = true
         advancesThroughLessons = false
+        onTutorialCompleted?()
+    }
+
+    private func logLessonStarted(_ lessonID: OnboardingLessonID) {
+        analytics.logEvent(
+            OnboardingAnalytics.lessonStarted,
+            parameters: [OnboardingAnalytics.lessonID: lessonID.rawValue]
+        )
+    }
+
+    private func logLessonCompleted(_ lessonID: OnboardingLessonID) {
+        analytics.logEvent(
+            OnboardingAnalytics.lessonCompleted,
+            parameters: [OnboardingAnalytics.lessonID: lessonID.rawValue]
+        )
+    }
+
+    private func logLessonSkipped(_ lessonID: OnboardingLessonID) {
+        analytics.logEvent(
+            OnboardingAnalytics.lessonSkipped,
+            parameters: [OnboardingAnalytics.lessonID: lessonID.rawValue]
+        )
+    }
+
+    private func logStepCompleted(_ step: Step, lessonID: OnboardingLessonID) {
+        analytics.logEvent(
+            OnboardingAnalytics.stepCompleted,
+            parameters: [
+                OnboardingAnalytics.lessonID: lessonID.rawValue,
+                OnboardingAnalytics.stepID: String(step.rawValue)
+            ]
+        )
     }
 
     private static func lessonCompletionKey(for lessonID: OnboardingLessonID) -> String {
@@ -308,17 +401,22 @@ public class OnboardingCoordinator {
         }
 
         if defaults.bool(forKey: Self.legacyCompletedKey), !defaults.bool(forKey: Self.completedKey) {
-            for lessonID in [OnboardingLessonID.canvasBasics, .coCaptainChat, .canvasNavigation] {
-                if !defaults.bool(forKey: Self.lessonCompletionKey(for: lessonID)) {
-                    defaults.set(true, forKey: Self.lessonCompletionKey(for: lessonID))
-                }
+            for lessonID in OnboardingLessonID.allCases {
+                defaults.removeObject(forKey: Self.lessonCompletionKey(for: lessonID))
             }
+            defaults.set(true, forKey: Self.completedKey)
         }
 
         if defaults.bool(forKey: Self.legacyCanvasNavigationLessonKey),
-           !defaults.bool(forKey: Self.lessonCompletionKey(for: .canvasNavigation)) {
-            defaults.set(true, forKey: Self.lessonCompletionKey(for: .canvasNavigation))
+           !defaults.bool(forKey: Self.lessonCompletionKey(for: .omniboxNavigation)) {
+            defaults.set(true, forKey: Self.lessonCompletionKey(for: .omniboxNavigation))
             defaults.removeObject(forKey: Self.legacyCanvasNavigationLessonKey)
+        }
+
+        if defaults.bool(forKey: Self.legacyCanvasNavigationLessonIDKey),
+           !defaults.bool(forKey: Self.lessonCompletionKey(for: .omniboxNavigation)) {
+            defaults.set(true, forKey: Self.lessonCompletionKey(for: .omniboxNavigation))
+            defaults.removeObject(forKey: Self.legacyCanvasNavigationLessonIDKey)
         }
     }
 }

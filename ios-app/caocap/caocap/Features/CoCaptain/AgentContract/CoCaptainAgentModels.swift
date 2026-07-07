@@ -9,6 +9,7 @@ public enum CoCaptainTurnPurpose: Hashable {
     case standard
     case onboardingWelcome
     case onboardingBuildHandoff
+    case onboardingGuidedEdit
 
     var promptInstructions: String? {
         switch self {
@@ -38,13 +39,22 @@ public enum CoCaptainTurnPurpose: Hashable {
             - Do not mention onboarding, internal tools, nodes, SRS, patches, XML, or Firebase.
             - Do not request app actions, propose edits, invoke tools, or emit a `cocaptain_actions` block.
             """
+        case .onboardingGuidedEdit:
+            return """
+            Onboarding guided edit objective:
+            - The user is editing the seeded Hello World mini-app during onboarding.
+            - Propose exactly one small HTML change to the CODE section, such as updating the headline text or button color.
+            - Keep the change visible in the live preview and easy for a beginner to understand.
+            - Do not modify SRS, Firebase, or any node other than the active Hello World mini-app.
+            - Match the language used by the user when summarizing the change.
+            """
         }
     }
 
     /// Selects how the coordinator executes this turn: full agentic pipeline or prose-only chat.
     var executionPolicy: CoCaptainTurnExecutionPolicy {
         switch self {
-        case .standard:
+        case .standard, .onboardingGuidedEdit:
             return .agentic
         case .onboardingWelcome, .onboardingBuildHandoff:
             return .conversational
@@ -72,6 +82,8 @@ public struct CoCaptainTurnPlan: Equatable {
         switch purpose {
         case .onboardingWelcome, .onboardingBuildHandoff:
             return .conversational
+        case .onboardingGuidedEdit:
+            return .agentic
         case .standard:
             switch intent {
             case .mutatingWork:
@@ -133,19 +145,26 @@ public struct CoCaptainTurnCompletion: Equatable {
     public let turnID: UUID
     public let purpose: CoCaptainTurnPurpose
     public let succeeded: Bool
+    public let presentedReviewBundle: Bool
 
     public init(
         turnID: UUID,
         purpose: CoCaptainTurnPurpose,
-        succeeded: Bool
+        succeeded: Bool,
+        presentedReviewBundle: Bool = false
     ) {
         self.turnID = turnID
         self.purpose = purpose
         self.succeeded = succeeded
+        self.presentedReviewBundle = presentedReviewBundle
     }
 
     var shouldAdvanceToCanvasDismissal: Bool {
         purpose == .onboardingBuildHandoff && succeeded
+    }
+
+    var shouldAdvanceToOnboardingReview: Bool {
+        purpose == .onboardingGuidedEdit && succeeded && presentedReviewBundle
     }
 }
 

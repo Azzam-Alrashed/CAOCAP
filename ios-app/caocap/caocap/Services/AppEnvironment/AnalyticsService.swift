@@ -20,6 +20,20 @@ struct NoOpAnalyticsService: AnalyticsTracking {
     func logEvent(_ name: String, parameters: [String: String]?) {}
 }
 
+/// Stable event names and parameter keys for interactive onboarding analytics.
+enum OnboardingAnalytics {
+    static let lessonStarted = "onboarding_lesson_started"
+    static let lessonCompleted = "onboarding_lesson_completed"
+    static let lessonSkipped = "onboarding_lesson_skipped"
+    static let stepCompleted = "onboarding_step_completed"
+    static let cocaptainReviewShown = "onboarding_cocaptain_review_shown"
+    static let cocaptainReviewApplied = "onboarding_cocaptain_review_applied"
+    static let cocaptainReviewFallback = "onboarding_cocaptain_review_fallback"
+
+    static let lessonID = "lesson_id"
+    static let stepID = "step_id"
+}
+
 /// Stable event names and parameter keys for the personalization survey.
 enum PersonalizationSurveyAnalytics {
     static let started = "personalization_survey_started"

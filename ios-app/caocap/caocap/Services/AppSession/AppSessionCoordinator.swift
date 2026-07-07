@@ -55,6 +55,9 @@ final class AppSessionCoordinator {
         onboarding.onLessonWillStart = { [weak self] lessonID in
             self?.prepareWorkspace(for: lessonID)
         }
+        onboarding.onTutorialCompleted = { [weak self] in
+            self?.celebrateTutorialGraduation()
+        }
     }
 
     private enum StorageKey {
@@ -192,17 +195,12 @@ final class AppSessionCoordinator {
         case .canvasBasics:
             router.navigate(to: .root, addToStack: false, animated: false)
             syncViewportWithActiveStore()
-        case .coCaptainChat:
-            handleSubCanvasNavigation(fileName: RootCanvasProvider.tutorialFileName)
-            coCaptain.configureProjectSession(
-                store: router.activeStore,
-                dispatcher: actionDispatcher
-            )
-            presentCoCaptain()
-        case .canvasNavigation:
-            prepareWorkspace(for: .canvasNavigation)
+        case .omniboxNavigation:
+            prepareOmniboxNavigationWorkspace()
         case .miniAppPreview, .moveAndOrganize:
-            prepareWorkspace(for: lessonID)
+            prepareTutorialLessonWorkspace()
+        case .coCaptainChat:
+            prepareCoCaptainLessonWorkspace()
         }
 
         onboarding.startLesson(lessonID, advancesThroughLessons: false)
@@ -210,21 +208,47 @@ final class AppSessionCoordinator {
 
     func prepareWorkspace(for lessonID: OnboardingLessonID) {
         switch lessonID {
-        case .canvasBasics, .coCaptainChat:
-            break
-        case .canvasNavigation:
-            commandPalette.setPresented(false)
-            coCaptain.setPresented(false)
-            restoreTutorialPortalIfNeeded()
-
-            if case .root = router.currentWorkspace {
-                router.navigateToSubCanvas(fileName: RootCanvasProvider.tutorialFileName)
-            }
-
+        case .canvasBasics:
+            router.navigate(to: .root, addToStack: false, animated: false)
             syncViewportWithActiveStore()
-            commandPalette.nodes = router.activeStore.nodes
+        case .omniboxNavigation:
+            prepareOmniboxNavigationWorkspace()
         case .miniAppPreview, .moveAndOrganize:
             prepareTutorialLessonWorkspace()
+        case .coCaptainChat:
+            prepareCoCaptainLessonWorkspace()
+        }
+    }
+
+    private func prepareOmniboxNavigationWorkspace() {
+        commandPalette.setPresented(false)
+        coCaptain.setPresented(false)
+        restoreTutorialPortalIfNeeded()
+
+        if case .root = router.currentWorkspace {
+            router.navigateToSubCanvas(fileName: RootCanvasProvider.tutorialFileName)
+        }
+
+        syncViewportWithActiveStore()
+        commandPalette.nodes = router.activeStore.nodes
+    }
+
+    private func prepareCoCaptainLessonWorkspace() {
+        prepareTutorialLessonWorkspace()
+        coCaptain.configureNodeSession(
+            store: router.activeStore,
+            nodeID: TutorialCanvasProvider.miniAppNodeID,
+            dispatcher: actionDispatcher
+        )
+        presentCoCaptain()
+    }
+
+    private func celebrateTutorialGraduation() {
+        HapticsManager.shared.notification(.success)
+        showConfetti = true
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(2.5))
+            self?.showConfetti = false
         }
     }
 
@@ -280,6 +304,9 @@ final class AppSessionCoordinator {
         onboarding = OnboardingCoordinator()
         onboarding.onLessonWillStart = { [weak self] lessonID in
             self?.prepareWorkspace(for: lessonID)
+        }
+        onboarding.onTutorialCompleted = { [weak self] in
+            self?.celebrateTutorialGraduation()
         }
         viewport = ViewportState()
         currentScale = 1
@@ -339,14 +366,22 @@ final class AppSessionCoordinator {
     func handleCommandPalettePresentationChange(isPresented: Bool) {
         if isPresented {
             commandPalette.nodes = router.activeStore.nodes
-            if onboarding.currentStep == .tapFAB || onboarding.currentStep == .openWorkspaceOmnibox {
+            if onboarding.currentStep == .tapFAB || onboarding.currentStep == .returnToRoot
+                || onboarding.currentStep == .runOrganizeNodes {
                 onboarding.completeCurrentStep()
             }
-        } else if onboarding.currentStep == .typeCoCaptainPrompt || onboarding.currentStep == .submitCoCaptainPrompt {
+        } else if onboarding.currentStep == .typeCoCaptainPrompt
+                    || onboarding.currentStep == .submitCoCaptainPrompt
+                    || onboarding.currentStep == .typeGoBackInOmnibox
+                    || onboarding.currentStep == .tapGoBackAction {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 if (self.onboarding.currentStep == .typeCoCaptainPrompt || self.onboarding.currentStep == .submitCoCaptainPrompt),
                    !self.coCaptain.isPresented {
-                    self.onboarding.moveToStep(.tapFAB)
+                    self.onboarding.moveToStep(.typeCoCaptainPrompt)
+                } else if (self.onboarding.currentStep == .typeGoBackInOmnibox
+                            || self.onboarding.currentStep == .tapGoBackAction),
+                          !self.commandPalette.isPresented {
+                    self.onboarding.moveToStep(.returnToRoot)
                 }
             }
         }
@@ -361,8 +396,11 @@ final class AppSessionCoordinator {
             onboardingInitialCoCaptainSuccessBaseline = nil
             if onboarding.currentStep == .dismissCoCaptain {
                 onboarding.completeCurrentStep()
-            } else if onboarding.currentStep == .submitCoCaptainPrompt || onboarding.currentStep == .chatCoCaptain {
-                onboarding.moveToStep(.longPressFAB)
+            } else if onboarding.currentStep == .submitCoCaptainPrompt
+                        || onboarding.currentStep == .chatCoCaptain
+                        || onboarding.currentStep == .reviewCoCaptainChange
+                        || onboarding.currentStep == .applyCoCaptainChange {
+                onboarding.moveToStep(.typeCoCaptainPrompt)
             }
         }
     }
@@ -452,6 +490,22 @@ final class AppSessionCoordinator {
         }
         coCaptain.onFlyToNode = { [weak self] nodeId in
             self?.focusCanvasNode(nodeId)
+        }
+        coCaptain.onReviewItemApplied = { [weak self] _, _ in
+            guard let self else { return }
+            if self.onboarding.currentStep == .applyCoCaptainChange {
+                AnalyticsService.shared.logEvent(
+                    OnboardingAnalytics.cocaptainReviewApplied,
+                    parameters: [OnboardingAnalytics.lessonID: OnboardingLessonID.coCaptainChat.rawValue]
+                )
+                self.onboarding.completeCurrentStep()
+            }
+        }
+        coCaptain.onOnboardingReviewFallback = {
+            AnalyticsService.shared.logEvent(
+                OnboardingAnalytics.cocaptainReviewFallback,
+                parameters: [OnboardingAnalytics.lessonID: OnboardingLessonID.coCaptainChat.rawValue]
+            )
         }
         commandPalette.onSubmitPrompt = { [weak self] prompt in
             self?.submitCoCaptainPrompt(prompt)
@@ -554,7 +608,7 @@ final class AppSessionCoordinator {
         actionDispatcher.register(.goBack) { [weak self] in
             guard let self else { return }
             self.router.goBack()
-            if self.onboarding.currentStep == .returnToRoot {
+            if self.onboarding.currentStep == .tapGoBackAction {
                 self.onboarding.completeCurrentStep()
             }
         }
@@ -574,9 +628,6 @@ final class AppSessionCoordinator {
         }
         actionDispatcher.register(.toggleGrid) { [weak self] in
             self?.toggleGrid()
-            if self?.onboarding.currentStep == .runToggleGrid {
-                self?.onboarding.completeCurrentStep()
-            }
         }
         actionDispatcher.register(.shareCanvas) { [weak self] in
             guard let self else { return }

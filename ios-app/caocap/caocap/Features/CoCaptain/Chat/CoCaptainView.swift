@@ -65,7 +65,7 @@ struct CoCaptainView: View {
             hideChatOnboardingWhenTypingChanges(from: oldValue, to: newValue)
         }
         .onChange(of: viewModel.lastTurnCompletion) { _, completion in
-            advanceChatOnboardingIfHandoffFinished(completion)
+            advanceOnboardingAfterGuidedEdit(completion)
         }
         .onChange(of: onboarding?.currentStep) { _, step in
             if step == .chatCoCaptain {
@@ -102,10 +102,14 @@ struct CoCaptainView: View {
         case .some(.submitCoCaptainPrompt):
             return .onboardingWelcome
         case .some(.chatCoCaptain):
-            return .onboardingBuildHandoff
+            return .onboardingGuidedEdit
         default:
             return .standard
         }
+    }
+
+    private var guidedEditQuickPrompt: String {
+        LocalizationManager.shared.localizedString("onboarding.chatCoCaptain.quickPrompt")
     }
 
     /// Hides the onboarding tooltip if the user begins typing a message in the text field.
@@ -136,13 +140,12 @@ struct CoCaptainView: View {
         onboarding?.hidePopoverForCurrentStep()
     }
 
-    /// Shows the Back to Canvas step only after the exact onboarding handoff
-    /// response succeeds. The coordinator applies its existing inter-step delay.
-    private func advanceChatOnboardingIfHandoffFinished(
+    /// Advances to the review step once the guided onboarding edit produces a review bundle.
+    private func advanceOnboardingAfterGuidedEdit(
         _ completion: CoCaptainTurnCompletion?
     ) {
         guard onboarding?.currentStep == .chatCoCaptain,
-              completion?.shouldAdvanceToCanvasDismissal == true else {
+              completion?.shouldAdvanceToOnboardingReview == true else {
             return
         }
 

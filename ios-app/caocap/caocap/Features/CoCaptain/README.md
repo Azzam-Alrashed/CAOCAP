@@ -52,10 +52,13 @@ Verification uses a non-persistent WebView, blocks external effects, captures ru
 | Agentic | Standard turn + `.mutatingWork` intent | Yes | Yes | Yes |
 | Advisory | Standard turn + `.advisory` or `.generalChat` intent | Yes | No | Yes — actions/edits still stage when the model emits them |
 | Conversational | `.onboardingWelcome`, `.onboardingBuildHandoff` | No | No | No — prose only |
+| Agentic (onboarding) | `.onboardingGuidedEdit` | Yes | Yes | Yes — stages a Hello World code edit for review/apply during lesson 4 |
 
 `CoCaptainTurnIntentResolver` runs before coordinator execution for standard turns. It reuses `CommandIntentResolver` normalization and negation checks, prefers advisory phrase matches, then mutating phrase matches, and defaults ambiguous standard turns to advisory. Casual messages with no advisory or mutating signals resolve to `.generalChat`.
 
 Conversational turns still receive canvas context and purpose-specific prompt instructions, but the agent contract block is omitted from the LLM prompt. If the model disobeys and emits `cocaptain_actions`, the coordinator ignores the payload and surfaces visible prose only.
+
+`CoCaptainTurnCompletion.shouldAdvanceToOnboardingReview` is `true` when a guided-edit turn succeeds and presents a review bundle. If the model or network fails, `OnboardingCoCaptainReviewFixture` injects a local review bundle so onboarding never hard-blocks.
 
 When adding a new turn purpose, declare its execution policy in the same enum switch as its prompt instructions. When changing intent classification, update `CoCaptainTurnIntentResolver` tests.
 

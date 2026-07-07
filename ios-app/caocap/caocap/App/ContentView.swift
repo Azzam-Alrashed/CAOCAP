@@ -60,9 +60,17 @@ struct ContentView: View {
             .overlay { updatePromptOverlay }
             .overlay {
                 if session.showConfetti {
-                    ConfettiCelebrationView()
-                        .zIndex(95)
-                        .transition(.opacity)
+                    ZStack {
+                        ConfettiCelebrationView()
+                        VStack {
+                            Spacer()
+                            TutorialGraduationBanner()
+                                .padding(.horizontal, 24)
+                                .padding(.bottom, 48)
+                        }
+                    }
+                    .zIndex(95)
+                    .transition(.opacity)
                 }
             }
             .modifier(AppSheetsModifier(session: session))
@@ -198,11 +206,14 @@ struct ContentView: View {
             isOnboardingHighlighted: session.onboarding.showPopover && (
                 session.onboarding.currentStep == .tapFAB
                 || session.onboarding.currentStep == .longPressFAB
-                || session.onboarding.currentStep == .openWorkspaceOmnibox
+                || session.onboarding.currentStep == .runOrganizeNodes
                 || session.onboarding.currentStep == .undoCanvasEdit
+                || session.onboarding.currentStep == .redoCanvasEdit
                 || session.onboarding.currentStep == .redoCanvasEdit
                 || (session.onboarding.currentStep == .searchFlyToNode && !session.commandPalette.isPresented)
                 || (session.onboarding.currentStep == .returnToRoot && !session.commandPalette.isPresented)
+                || (session.onboarding.currentStep == .typeGoBackInOmnibox && !session.commandPalette.isPresented)
+                || (session.onboarding.currentStep == .tapGoBackAction && !session.commandPalette.isPresented)
             )
         )
     }

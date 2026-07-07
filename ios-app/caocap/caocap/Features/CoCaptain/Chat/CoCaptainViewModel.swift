@@ -55,6 +55,9 @@ public final class CoCaptainViewModel {
     public private(set) var successfulAssistantResponseCount: Int = 0
     /// The most recent terminal outcome, including the purpose of the exact turn
     /// that completed. Onboarding observes this instead of global counters.
+    public var onReviewItemApplied: ((UUID, UUID) -> Void)?
+    public var onOnboardingReviewFallback: (() -> Void)?
+
     public private(set) var lastTurnCompletion: CoCaptainTurnCompletion?
     public var isAwaitingFirstResponse: Bool {
         guard isThinking,
@@ -266,12 +269,16 @@ public final class CoCaptainViewModel {
                     let reviewItem = CoCaptainTimelineItem(content: .reviewBundle(reviewBundle))
                     items.append(reviewItem)
                     persistNodeReviewBundleIfNeeded(timelineItemID: reviewItem.id, bundle: reviewBundle)
+                } else if purpose == .onboardingGuidedEdit {
+                    presentOnboardingReviewFallback(turnID: turnID, replacingMessageID: aiMessageID)
+                    return
                 }
                 requestScrollToBottom()
                 markAssistantResponseCompleted(
                     turnID: turnID,
                     purpose: purpose,
-                    successful: hasUsableResponse
+                    successful: hasUsableResponse,
+                    presentedReviewBundle: result.reviewBundle != nil
                 )
             } catch {
                 if error is CancellationError || Task.isCancelled {
@@ -281,6 +288,11 @@ public final class CoCaptainViewModel {
                         purpose: purpose,
                         successful: false
                     )
+                    return
+                }
+
+                if purpose == .onboardingGuidedEdit {
+                    presentOnboardingReviewFallback(turnID: turnID, replacingMessageID: aiMessageID)
                     return
                 }
 
@@ -468,6 +480,9 @@ public final class CoCaptainViewModel {
         bundle.items[itemIndex] = item
         items[bundleIndex].content = .reviewBundle(bundle)
         persistNodeReviewBundleIfNeeded(bundleID: bundleID, bundle: bundle)
+        if item.status == .applied {
+            onReviewItemApplied?(bundleID, itemID)
+        }
     }
 
     public func rejectReviewItem(bundleID: UUID, itemID: UUID) {
@@ -584,7 +599,8 @@ public final class CoCaptainViewModel {
     private func markAssistantResponseCompleted(
         turnID: UUID,
         purpose: CoCaptainTurnPurpose,
-        successful: Bool
+        successful: Bool,
+        presentedReviewBundle: Bool = false
     ) {
         completedAssistantResponseCount += 1
         if successful {
@@ -593,19 +609,62 @@ public final class CoCaptainViewModel {
         recordTurnCompletion(
             turnID: turnID,
             purpose: purpose,
-            successful: successful
+            successful: successful,
+            presentedReviewBundle: presentedReviewBundle
         )
     }
 
     private func recordTurnCompletion(
         turnID: UUID,
         purpose: CoCaptainTurnPurpose,
-        successful: Bool
+        successful: Bool,
+        presentedReviewBundle: Bool = false
     ) {
         lastTurnCompletion = CoCaptainTurnCompletion(
             turnID: turnID,
             purpose: purpose,
-            succeeded: successful
+            succeeded: successful,
+            presentedReviewBundle: presentedReviewBundle
+        )
+    }
+
+    private func presentOnboardingReviewFallback(
+        turnID: UUID,
+        replacingMessageID: UUID
+    ) {
+        removeEmptyMessage(id: replacingMessageID)
+
+        guard case .node(let nodeID) = scope,
+              let store,
+              let node = store.nodes.first(where: { $0.id == nodeID }),
+              let baseText = node.miniApp?.codeText else {
+            markAssistantResponseCompleted(
+                turnID: turnID,
+                purpose: .onboardingGuidedEdit,
+                successful: false
+            )
+            return
+        }
+
+        appendAssistantMessage(
+            LocalizationManager.shared.localizedString(
+                "onboarding.guidedEdit.fallback.message"
+            )
+        )
+        let bundle = OnboardingCoCaptainReviewFixture.makeBundle(
+            nodeID: nodeID,
+            baseText: baseText
+        )
+        let reviewItem = CoCaptainTimelineItem(content: .reviewBundle(bundle))
+        items.append(reviewItem)
+        persistNodeReviewBundleIfNeeded(timelineItemID: reviewItem.id, bundle: bundle)
+        onOnboardingReviewFallback?()
+        requestScrollToBottom()
+        markAssistantResponseCompleted(
+            turnID: turnID,
+            purpose: .onboardingGuidedEdit,
+            successful: true,
+            presentedReviewBundle: true
         )
     }
 
@@ -641,6 +700,10 @@ public final class CoCaptainViewModel {
         case .onboardingBuildHandoff:
             return LocalizationManager.shared.localizedString(
                 "I couldn't finish preparing our next step. Please try sending your idea again."
+            )
+        case .onboardingGuidedEdit:
+            return LocalizationManager.shared.localizedString(
+                "I couldn't prepare that change. Please try asking again."
             )
         case .standard:
             return LocalizationManager.shared.localizedString(

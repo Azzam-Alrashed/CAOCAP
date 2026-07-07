@@ -122,7 +122,7 @@ private struct MiniAppPreviewShell: View {
                 canUndo: undoManager?.canUndo ?? false,
                 canRedo: undoManager?.canRedo ?? false,
                 isOnboardingHighlighted: onboarding?.showPopover == true
-                    && onboarding?.currentStep == .openMiniAppOmnibox,
+                    && onboarding?.currentStep == .runOrganizeNodes,
                 tooltipAnchor: .miniAppPreviewFAB
             )
         }
@@ -130,9 +130,9 @@ private struct MiniAppPreviewShell: View {
             isCommandPalettePresented: commandPalette?.isPresented ?? false,
             rendersAnchor: { $0 == .miniAppPreviewArea || $0 == .miniAppPreviewFAB }
         )
-        .onChange(of: commandPalette?.isPresented ?? false) { _, isPresented in
-            guard isPresented, onboarding?.currentStep == .openMiniAppOmnibox else { return }
-            onboarding?.completeCurrentStep()
+        .onChange(of: onboarding?.currentStep) { _, step in
+            guard step == .openMiniAppCodeTool else { return }
+            commandPalette?.setPresented(true)
         }
         .onAppear {
             guard let commandPalette else { return }

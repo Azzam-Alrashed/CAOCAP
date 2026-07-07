@@ -5,6 +5,15 @@ import SwiftUI
 struct TimelineItemView: View {
     let item: CoCaptainTimelineItem
     let viewModel: CoCaptainViewModel
+    @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
+
+    private var isOnboardingApplyAnchorActive: Bool {
+        guard let onboarding else { return false }
+        return onboarding.showPopover && (
+            onboarding.currentStep == .reviewCoCaptainChange
+            || onboarding.currentStep == .applyCoCaptainChange
+        )
+    }
 
     var body: some View {
         switch item.content {
@@ -17,7 +26,12 @@ struct TimelineItemView: View {
                 viewModel.performProductCTA(cta)
             }
         case .reviewBundle(let bundle):
-            ReviewBundleView(bundle: bundle, viewModel: viewModel, bundleID: item.id)
+            ReviewBundleView(
+                bundle: bundle,
+                viewModel: viewModel,
+                bundleID: item.id,
+                isOnboardingApplyAnchorActive: isOnboardingApplyAnchorActive
+            )
         case .codingRun(let state):
             CodingRunProgressView(state: state)
         }

@@ -136,6 +136,8 @@ enum OnboardingTooltipAnchor: Hashable {
     case floatingCommandButtonUndo
     /// Anchored to the redo bubble on the expanded FAB radial menu.
     case floatingCommandButtonRedo
+    /// Anchored to the Apply button on a CoCaptain review card.
+    case coCaptainReviewApply
 
     /// Whether this anchor is registered inside the canvas view hierarchy.
     var isCanvasLocal: Bool {
@@ -274,14 +276,18 @@ extension OnboardingCoordinator.Step {
         switch self {
         case .openTutorial, .openPortal:
             return .tutorialNode
-        case .tapFAB, .longPressFAB, .searchFlyToNode, .returnToRoot:
+        case .tapFAB, .longPressFAB, .searchFlyToNode, .returnToRoot, .typeGoBackInOmnibox:
             return .floatingCommandButton
+        case .tapGoBackAction:
+            return .commandPaletteGoBack
         case .typeCoCaptainPrompt:
             return .omniboxSearchField
         case .submitCoCaptainPrompt:
             return .omniboxPromptRow
         case .chatCoCaptain:
             return .coCaptainInput
+        case .reviewCoCaptainChange, .applyCoCaptainChange:
+            return .coCaptainReviewApply
         case .dismissCoCaptain:
             return .coCaptainDoneButton
         case .panCanvas, .fitAllNodes:
@@ -292,31 +298,28 @@ extension OnboardingCoordinator.Step {
             return .practiceCanvasNode
         case .interactMiniAppPreview:
             return .miniAppPreviewArea
-        case .openMiniAppOmnibox:
-            return .miniAppPreviewFAB
         case .openMiniAppCodeTool:
             return .omniboxMiniAppCodeRow
         case .saveMiniAppCodeEdit:
             return .miniAppCodeEditorSave
         case .returnFromMiniAppPreview:
             return .omniboxBackToCanvasRow
-        case .openWorkspaceOmnibox:
-            return .floatingCommandButton
         case .runOrganizeNodes:
             return .omniboxOrganizeRow
-        case .runToggleGrid:
-            return .omniboxToggleGridRow
         case .undoCanvasEdit, .redoCanvasEdit:
             return .floatingCommandButton
         }
     }
 
     func resolvedTooltipAnchor(isCommandPalettePresented: Bool) -> OnboardingTooltipAnchor {
-        if self == .returnToRoot, isCommandPalettePresented {
-            return .commandPaletteGoBack
-        }
         if self == .searchFlyToNode, isCommandPalettePresented {
             return .omniboxSearchField
+        }
+        if self == .typeGoBackInOmnibox, isCommandPalettePresented {
+            return .omniboxSearchField
+        }
+        if self == .tapGoBackAction, isCommandPalettePresented {
+            return .commandPaletteGoBack
         }
         if self == .openMiniAppCodeTool, isCommandPalettePresented {
             return .omniboxMiniAppCodeRow
@@ -327,21 +330,18 @@ extension OnboardingCoordinator.Step {
         if self == .runOrganizeNodes, isCommandPalettePresented {
             return .omniboxOrganizeRow
         }
-        if self == .runToggleGrid, isCommandPalettePresented {
-            return .omniboxToggleGridRow
-        }
         return tooltipAnchor
     }
 
     var tooltipArrowPlacement: UnifiedBubbleWithArrowShape.ArrowPlacement {
         switch self {
-        case .dismissCoCaptain, .pinchZoom:
+        case .dismissCoCaptain, .pinchZoom, .reviewCoCaptainChange, .applyCoCaptainChange:
             return .top
         case .openTutorial, .tapFAB, .typeCoCaptainPrompt, .submitCoCaptainPrompt, .chatCoCaptain,
-             .longPressFAB, .returnToRoot, .panCanvas, .fitAllNodes, .searchFlyToNode, .openPortal,
-             .tapMiniAppNode, .interactMiniAppPreview, .openMiniAppOmnibox, .openMiniAppCodeTool,
-             .saveMiniAppCodeEdit, .returnFromMiniAppPreview, .dragCanvasNode, .openWorkspaceOmnibox,
-             .runOrganizeNodes, .runToggleGrid, .undoCanvasEdit, .redoCanvasEdit:
+             .longPressFAB, .returnToRoot, .typeGoBackInOmnibox, .tapGoBackAction, .panCanvas, .fitAllNodes, .searchFlyToNode, .openPortal,
+             .tapMiniAppNode, .interactMiniAppPreview, .openMiniAppCodeTool,
+             .saveMiniAppCodeEdit, .returnFromMiniAppPreview, .dragCanvasNode,
+             .runOrganizeNodes, .undoCanvasEdit, .redoCanvasEdit:
             return .bottom
         }
     }

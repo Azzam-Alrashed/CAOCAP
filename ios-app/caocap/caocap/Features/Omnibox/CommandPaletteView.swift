@@ -16,13 +16,16 @@ struct CommandPaletteView: View {
         guard let onboarding else { return false }
         return onboarding.showPopover && (
             onboarding.currentStep == .typeCoCaptainPrompt ||
-            onboarding.currentStep == .submitCoCaptainPrompt
+            onboarding.currentStep == .submitCoCaptainPrompt ||
+            onboarding.currentStep == .tapGoBackAction
         )
     }
     
     private var isSearchBarGlowActive: Bool {
         guard let onboarding else { return false }
-        return onboarding.currentStep == .typeCoCaptainPrompt && onboarding.showPopover
+        return (onboarding.currentStep == .typeCoCaptainPrompt
+            || onboarding.currentStep == .typeGoBackInOmnibox)
+            && onboarding.showPopover
     }
 
     private var isCoCaptainRowOnboardingActive: Bool {
@@ -30,6 +33,13 @@ struct CommandPaletteView: View {
         return onboarding.currentStep == .submitCoCaptainPrompt &&
             onboarding.showPopover &&
             viewModel.canSubmitPrompt
+    }
+
+    private var isGoBackRowOnboardingActive: Bool {
+        guard let onboarding else { return false }
+        return onboarding.currentStep == .tapGoBackAction &&
+            onboarding.showPopover &&
+            viewModel.showsGoBackAction
     }
 
     private var dictationLocaleOption: DictationLocaleOption {
@@ -152,7 +162,7 @@ struct CommandPaletteView: View {
                                                     .id(action.id.rawValue)
                                                     .background {
                                                         if action.id == .goBack,
-                                                           onboarding?.currentStep == .returnToRoot {
+                                                           onboarding?.currentStep == .tapGoBackAction {
                                                             Color.clear
                                                                 .onboardingTooltipAnchor(.commandPaletteGoBack)
                                                         }
@@ -164,6 +174,7 @@ struct CommandPaletteView: View {
                                         OmniboxSearchResultsView(
                                             viewModel: viewModel,
                                             isCoCaptainRowOnboardingActive: isCoCaptainRowOnboardingActive,
+                                            isGoBackRowOnboardingActive: isGoBackRowOnboardingActive,
                                             isBreathing: isBreathing,
                                             promptRowAnchor: .omniboxPromptRow
                                         )
@@ -244,11 +255,12 @@ struct CommandPaletteView: View {
                                             OmniboxSearchResultsView(
                                                 viewModel: viewModel,
                                                 isCoCaptainRowOnboardingActive: isCoCaptainRowOnboardingActive,
+                                                isGoBackRowOnboardingActive: isGoBackRowOnboardingActive,
                                                 isBreathing: isBreathing,
                                                 promptRowAnchor: .omniboxPromptRow
                                             )
                                         }
-                                        .padding(.top, isCoCaptainRowOnboardingActive ? 20 : 12)
+                                        .padding(.top, (isCoCaptainRowOnboardingActive || isGoBackRowOnboardingActive) ? 20 : 12)
                                         .padding(.bottom, 8)
                                     }
                                     .frame(maxHeight: 250)
@@ -376,6 +388,7 @@ struct CommandPaletteView: View {
         }
         .onAppear {
             viewModel.prefersPromptSubmission = onboarding?.currentStep == .submitCoCaptainPrompt
+            viewModel.prefersGoBackSelection = onboarding?.currentStep == .tapGoBackAction
             if isShowPopoverActive {
                 withAnimation(
                     .easeInOut(duration: 1.8)
@@ -401,6 +414,7 @@ struct CommandPaletteView: View {
         }
         .onChange(of: viewModel.query) { _, _ in
             viewModel.prefersPromptSubmission = onboarding?.currentStep == .submitCoCaptainPrompt
+            viewModel.prefersGoBackSelection = onboarding?.currentStep == .tapGoBackAction
         }
         .onChange(of: viewModel.canSubmitPrompt) { _, canSubmitPrompt in
             if canSubmitPrompt {
@@ -416,12 +430,31 @@ struct CommandPaletteView: View {
                 }
             }
         }
+        .onChange(of: viewModel.showsGoBackAction) { _, showsGoBackAction in
+            if showsGoBackAction {
+                if onboarding?.currentStep == .typeGoBackInOmnibox {
+                    viewModel.selectGoBackActionIfAvailable()
+                    onboarding?.completeCurrentStep()
+                } else if onboarding?.currentStep == .tapGoBackAction {
+                    viewModel.selectGoBackActionIfAvailable()
+                }
+            } else {
+                if viewModel.isPresented && onboarding?.currentStep == .tapGoBackAction {
+                    onboarding?.moveToStep(.typeGoBackInOmnibox)
+                }
+            }
+        }
         .onChange(of: onboarding?.currentStep) { _, step in
             viewModel.prefersPromptSubmission = step == .submitCoCaptainPrompt
+            viewModel.prefersGoBackSelection = step == .tapGoBackAction
             if step == .openMiniAppCodeTool {
                 viewModel.selectPreviewCodeToolIfAvailable()
             } else if step == .returnFromMiniAppPreview {
                 viewModel.selectPreviewBackToCanvasToolIfAvailable()
+            } else if step == .typeGoBackInOmnibox {
+                viewModel.query = ""
+            } else if step == .tapGoBackAction {
+                viewModel.selectGoBackActionIfAvailable()
             }
         }
         .onDisappear {
@@ -564,6 +597,7 @@ extension View {
 private struct OmniboxSearchResultsView: View {
     @Bindable var viewModel: CommandPaletteViewModel
     let isCoCaptainRowOnboardingActive: Bool
+    let isGoBackRowOnboardingActive: Bool
     let isBreathing: Bool
     let promptRowAnchor: OnboardingTooltipAnchor
 
@@ -638,13 +672,20 @@ private struct OmniboxSearchResultsView: View {
     }
 
     private func actionRow(_ action: AppActionDefinition, at index: Int) -> some View {
-        AppActionRow(
+        let isGoBackOnboardingRow = action.id == .goBack && isGoBackRowOnboardingActive
+        return AppActionRow(
             item: action,
             isSelected: viewModel.selectionIndex(forActionAt: index) == viewModel.selectedIndex,
             onSelect: { viewModel.executeAction(action) },
             onPin: action.canPinToCanvas ? { viewModel.pinAction(action) } : nil
         )
         .modifier(AppActionOnboardingAnchor(actionID: action.id))
+        .onboardingGlow(isActive: isGoBackOnboardingRow, isBreathing: isBreathing)
+        .background {
+            if isGoBackOnboardingRow {
+                Color.clear.onboardingTooltipAnchor(.commandPaletteGoBack)
+            }
+        }
         .id(action.id.rawValue)
     }
 
