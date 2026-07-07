@@ -1008,6 +1008,226 @@
         }
       }
     },
+    "Needs another try": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يحتاج محاولة أخرى"
+          }
+        }
+      }
+    },
+    "Quick question": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "سؤال سريع"
+          }
+        }
+      }
+    },
+    "Which one did you mean?": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "أيّها كنت تقصد؟"
+          }
+        }
+      }
+    },
+    "Never mind": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا عليك"
+          }
+        }
+      }
+    },
+    "Or type your own answer below.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "أو اكتب إجابتك الخاصة بالأسفل."
+          }
+        }
+      }
+    },
+    "Want to try one of these instead?": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "هل تريد تجربة أحد هذه الخيارات؟"
+          }
+        }
+      }
+    },
+    "Try that again, please": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "حاول مرة أخرى من فضلك"
+          }
+        }
+      }
+    },
+    "Break it into smaller steps": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "قسّمها إلى خطوات أصغر"
+          }
+        }
+      }
+    },
+    "Suggest what we could do next": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اقترح ما يمكننا فعله بعد ذلك"
+          }
+        }
+      }
+    },
+    "I found a few places that could match. Pick the one you meant and I'll make the change.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "وجدت أكثر من مكان مطابق. اختر المكان الذي تقصده وسأقوم بالتغيير."
+          }
+        }
+      }
+    },
+    "I couldn't find that exact text in your app, so nothing was changed. Tell me what you'd like to change and I'll take another look.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لم أجد هذا النص في تطبيقك، لذلك لم يتغير شيء. أخبرني بما تريد تغييره وسأحاول مرة أخرى."
+          }
+        }
+      }
+    },
+    "That text appears in more than one place and I don't want to change the wrong one. Try describing the exact spot you mean.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "هذا النص يظهر في أكثر من مكان ولا أريد تغيير المكان الخطأ. حاول وصف الموضع الذي تقصده بالضبط."
+          }
+        }
+      }
+    },
+    "I need you to pick which spot to change before I continue.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "أحتاج منك اختيار المكان المراد تغييره قبل أن أكمل."
+          }
+        }
+      }
+    },
+    "the heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "العنوان الرئيسي"
+          }
+        }
+      }
+    },
+    "the browser tab title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "عنوان تبويب المتصفح"
+          }
+        }
+      }
+    },
+    "the button": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الزر"
+          }
+        }
+      }
+    },
+    "the link": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الرابط"
+          }
+        }
+      }
+    },
+    "the paragraph": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الفقرة"
+          }
+        }
+      }
+    },
+    "the list item": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "عنصر القائمة"
+          }
+        }
+      }
+    },
+    "the text": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "النص"
+          }
+        }
+      }
+    },
     "Connect Inputs": {
       "extractionState": "stale",
       "localizations": {

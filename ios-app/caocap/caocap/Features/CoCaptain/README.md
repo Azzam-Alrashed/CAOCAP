@@ -47,12 +47,27 @@ The loop runs for standard mutating turns and `.onboardingGuidedEdit`. Candidate
 
 `NodePatchEngine.apply` resolves `replace_exact` / insert-exact targets with one matcher (`PatchTargetMatcher`). It tries, in order:
 
-1. Literal match
-2. Case-insensitive unique match
-3. Token-sequence unique match (ignores punctuation differences such as `hello world` vs `Hello World!`)
-4. Whitespace-flexible unique match
+1. Semantic alias resolution (beginner phrases like `title`, `headline`, `heading`, `big text` resolve to the page's `<h1>` inner text, never the `<title>` tag)
+2. Literal match
+3. Case-insensitive match
+4. Token-sequence match (ignores punctuation differences such as `hello world` vs `Hello World!`)
+5. Whitespace-flexible match
 
-Review staging still normalizes successful results to a single canonical `replace_all` operation. Ambiguous multi-match targets still conflict.
+Each tier returns a 3-way `Resolution` (`unique` / `ambiguous` / `none`) instead of silently failing:
+
+- **Unique** matches apply normally. Review staging still normalizes successful results to a single canonical `replace_all` operation.
+- **Ambiguous** matches (2+ hits in one tier) throw `NodePatchError.ambiguous` carrying `PatchMatchCandidate` values — plain-language labels plus a context slice that occurs exactly once in the text, so a later pick re-resolves deterministically.
+- **No match** computes up to three near-match candidates from token overlap ("did you mean one of these?"); only when no decent candidate exists does the edit conflict, with friendly mentor-tone copy.
+
+### Clarification Flow (Never Reject, Always Guide)
+
+Ambiguity never dead-ends:
+
+- `buildReviewBundle` converts `NodePatchError.ambiguous` into a `.needsClarification` review item whose card asks "Which one did you mean?" with one tappable button per candidate.
+- The verified coding loop bails out on first-attempt ambiguity (an LLM repair cannot fix structural ambiguity in the user's document) and surfaces the same picker instead of burning repair attempts. Progress shows `awaitingChoice`, not a failure.
+- `CoCaptainViewModel.resolveClarification` re-stages the chosen candidate locally — no model round-trip — and the item becomes a normal `.pending` review.
+
+Intent-level ambiguity ("make it pop") is handled by the model with a `clarifying_question` contract element (see below), rendered as a tappable option card. Picking an option sends it as the user's next message. Validation and coding-loop failures also append a locally-built recovery question so every failure path has a tappable next step.
 
 Verification uses a non-persistent WebView, blocks external effects, captures runtime errors and `console.error`, and requires every declared behavioral check to return `true`. Failed or unsupported runs produce diagnostics without an Apply control. The rollout gate is enabled by default in Debug and TestFlight, disabled in production App Store builds, and can be overridden with `cocaptain.verifiedCodingLoopEnabled`.
 
@@ -82,6 +97,10 @@ The model may include one trailing XML block:
 ```xml
 <cocaptain_actions>
   <assistant_message>Visible fallback text.</assistant_message>
+  <clarifying_question prompt="One short question when the request is too vague to act on">
+    <option>First concrete outcome</option>
+    <option>Second concrete outcome</option>
+  </clarifying_question>
   <safe_actions>
     <action id="id" />
   </safe_actions>
@@ -114,6 +133,8 @@ Rules:
 - `nodeEdits` target Mini-App nodes by `nodeId`, `role="miniApp"`, and `section="srs"` or `section="code"`, plus `NodePatchOperation` arrays.
 - Node edits require a non-empty summary and at least one operation.
 - Exact operations require a non-empty target.
+- `clarifying_question` needs a non-empty `prompt` and 2–4 non-empty options; malformed questions degrade to prose. A question-only payload counts as valid agentic work, and a question always takes precedence over node edits in the same turn (the edits are dropped).
+- Prompt rules keep the mentor tone: never refuse, use plain non-technical language, and ask exactly one clarifying question with outcome-phrased options when unsure. "Title"/"headline" mean the visible page heading, not the browser tab title.
 - Verified code edits require 1–5 uniquely identified checks. Each offline script must return a Boolean, stay under 2,000 characters, and keep the combined scripts under 8,000 characters.
 
 Invalid structured payloads are not partially executed. The coordinator retries once with parse or validation feedback. If the retry is still invalid, the user sees a conflicted review item rather than a silent no-op or unsafe action.

@@ -2456,6 +2456,308 @@ struct CoCaptainAgentTests {
         #expect(verifier.receivedCodes.count == 1)
     }
 
+    @Test func parserExtractsClarifyingQuestion() {
+        let parser = CoCaptainAgentParser()
+        let response = """
+        Let me make sure I understand.
+        <cocaptain_actions>
+          <assistant_message>Happy to help!</assistant_message>
+          <clarifying_question prompt="What kind of change did you have in mind?">
+            <option>Make the colors brighter</option>
+            <option>Make the text bigger</option>
+            <option>Add a fun animation</option>
+          </clarifying_question>
+        </cocaptain_actions>
+        """
+
+        let parsed = parser.parse(response)
+        let question = parsed.payload?.clarifyingQuestion
+
+        #expect(question?.prompt == "What kind of change did you have in mind?")
+        #expect(question?.options == [
+            "Make the colors brighter",
+            "Make the text bigger",
+            "Add a fun animation"
+        ])
+    }
+
+    @Test func parserDropsMalformedClarifyingQuestion() {
+        let parser = CoCaptainAgentParser()
+        let response = """
+        <cocaptain_actions>
+          <assistant_message>Hmm.</assistant_message>
+          <clarifying_question prompt="Only one option?">
+            <option>Just this</option>
+          </clarifying_question>
+        </cocaptain_actions>
+        """
+
+        let parsed = parser.parse(response)
+
+        #expect(parsed.payload?.clarifyingQuestion == nil)
+        #expect(parsed.payload?.assistantMessage == "Hmm.")
+    }
+
+    @MainActor
+    @Test func validatorAcceptsQuestionOnlyPayloadAsAgenticWork() {
+        let validator = CoCaptainAgentValidator()
+        let payload = CoCaptainAgentPayload(
+            assistantMessage: "Quick question first.",
+            clarifyingQuestion: CoCaptainClarifyingQuestion(
+                prompt: "Which one did you mean?",
+                options: ["The heading", "The button"]
+            )
+        )
+
+        let result = validator.validate(
+            payload: payload,
+            dispatcher: nil,
+            requiresAgenticWork: true
+        )
+
+        #expect(result.isValid)
+    }
+
+    @MainActor
+    @Test func coordinatorReturnsClarifyingQuestionAndDropsAccompanyingEdits() async throws {
+        let response = """
+        <cocaptain_actions>
+          <assistant_message>Before I change anything, one question.</assistant_message>
+          <clarifying_question prompt="Which look do you want?">
+            <option>Bright and playful</option>
+            <option>Dark and sleek</option>
+          </clarifying_question>
+          <node_edits>
+            <node_edit role="miniApp" section="code" summary="Update heading">
+              <operation type="replace_exact">
+                <target>Hello World!</target>
+                <content><![CDATA[hi]]></content>
+              </operation>
+            </node_edit>
+          </node_edits>
+        </cocaptain_actions>
+        """
+        let llm = TestLLMClient(response: response)
+        let coordinator = CoCaptainAgentCoordinator(
+            llmClient: llm,
+            verifiedCodingLoopEnabled: { false }
+        )
+
+        let result = try await coordinator.run(
+            userMessage: "change the look of my app",
+            store: makeStore(),
+            dispatcher: nil
+        ) { _ in }
+
+        #expect(result.clarifyingQuestion?.prompt == "Which look do you want?")
+        #expect(result.clarifyingQuestion?.options.count == 2)
+        #expect(result.reviewBundle == nil)
+    }
+
+    @MainActor
+    @Test func ambiguousEditStagesNeedsClarificationItem() async throws {
+        let llm = TestLLMClient(
+            response: looseHeadlineEditResponse(replacement: "hi azzam", target: "Hello World!")
+        )
+        let coordinator = CoCaptainAgentCoordinator(
+            llmClient: llm,
+            verifiedCodingLoopEnabled: { false }
+        )
+        let store = makeAmbiguousStore()
+
+        let result = try await coordinator.run(
+            userMessage: "change Hello World! to hi azzam",
+            store: store,
+            dispatcher: nil
+        ) { _ in }
+
+        let item = try #require(result.reviewBundle?.items.first)
+        #expect(item.status == .needsClarification)
+        #expect(item.clarificationCandidates?.count == 2)
+        guard case .nodeEdit(_, _, _, let baseText) = item.source else {
+            Issue.record("Expected node edit review item")
+            return
+        }
+        #expect(!baseText.isEmpty)
+    }
+
+    @MainActor
+    @Test func verifiedCodingLoopBailsToClarificationOnAmbiguity() async throws {
+        let verifier = TestMiniAppVerifier(results: [])
+        let llm = TestLLMClient(
+            response: looseHeadlineEditResponse(replacement: "hi azzam", target: "Hello World!")
+        )
+        let coordinator = CoCaptainAgentCoordinator(
+            llmClient: llm,
+            verifier: verifier,
+            verifiedCodingLoopEnabled: { true }
+        )
+        var progress: [CoCaptainCodingRunState] = []
+
+        let result = try await coordinator.run(
+            userMessage: "change Hello World! to hi azzam",
+            store: makeAmbiguousStore(),
+            dispatcher: nil,
+            onCodingProgress: { progress.append($0) }
+        ) { _ in }
+
+        let item = try #require(result.reviewBundle?.items.first)
+        #expect(item.status == .needsClarification)
+        #expect(item.clarificationCandidates?.isEmpty == false)
+        // No repair round-trips and no verification runs for a structural ambiguity.
+        #expect(llm.receivedMessages.count == 1)
+        #expect(verifier.receivedCodes.isEmpty)
+        #expect(progress.contains(.awaitingChoice))
+    }
+
+    @MainActor
+    @Test func validationFailureOffersRecoveryQuestion() async throws {
+        // A persistently invalid payload (empty summary) exhausts retries and
+        // lands in the validation failure path, which must offer a next step.
+        let invalidResponse = """
+        <cocaptain_actions>
+          <assistant_message>Done!</assistant_message>
+          <node_edits>
+            <node_edit role="miniApp" section="code" summary="">
+              <operation type="replace_exact">
+                <target>Hello World!</target>
+                <content><![CDATA[hi]]></content>
+              </operation>
+            </node_edit>
+          </node_edits>
+        </cocaptain_actions>
+        """
+        let llm = TestLLMClient(response: invalidResponse)
+        let coordinator = CoCaptainAgentCoordinator(
+            llmClient: llm,
+            verifiedCodingLoopEnabled: { false }
+        )
+
+        let result = try await coordinator.run(
+            userMessage: "build a landing page",
+            store: makeStore(),
+            dispatcher: nil
+        ) { _ in }
+
+        #expect(result.clarifyingQuestion != nil)
+        #expect(result.clarifyingQuestion?.options.isEmpty == false)
+        #expect(result.reviewBundle == nil)
+    }
+
+    @MainActor
+    @Test func resolveClarificationRestagesChosenCandidateLocally() async throws {
+        let llm = TestLLMClient(
+            response: looseHeadlineEditResponse(replacement: "hi azzam", target: "Hello World!")
+        )
+        let coordinator = CoCaptainAgentCoordinator(
+            llmClient: llm,
+            verifiedCodingLoopEnabled: { false }
+        )
+        let store = makeAmbiguousStore()
+        let viewModel = CoCaptainViewModel(agentCoordinator: coordinator)
+        viewModel.configureProjectSession(store: store, dispatcher: nil)
+
+        let result = try await coordinator.run(
+            userMessage: "change Hello World! to hi azzam",
+            store: store,
+            dispatcher: nil
+        ) { _ in }
+
+        let bundle = try #require(result.reviewBundle)
+        let bundleItem = CoCaptainTimelineItem(content: .reviewBundle(bundle))
+        viewModel.items.append(bundleItem)
+
+        let pendingItem = try #require(bundle.items.first)
+        let candidate = try #require(pendingItem.clarificationCandidates?.first)
+        viewModel.resolveClarification(
+            bundleID: bundleItem.id,
+            itemID: pendingItem.id,
+            candidateID: candidate.id
+        )
+
+        guard case .reviewBundle(let updatedBundle) = viewModel.items.last?.content,
+              let updatedItem = updatedBundle.items.first else {
+            Issue.record("Expected an updated review bundle")
+            return
+        }
+        #expect(updatedItem.status == .pending)
+        #expect(updatedItem.clarificationCandidates == nil)
+        #expect(updatedItem.preview.contains("hi azzam"))
+        guard case .nodeEdit(_, _, let operations, _) = updatedItem.source else {
+            Issue.record("Expected node edit review item")
+            return
+        }
+        #expect(operations.first?.type == .replaceAll)
+    }
+
+    @MainActor
+    @Test func answeringClarifyingQuestionLocksCardAndSendsOption() throws {
+        let llm = TestLLMClient(response: "Nice choice!")
+        let coordinator = CoCaptainAgentCoordinator(
+            llmClient: llm,
+            verifiedCodingLoopEnabled: { false }
+        )
+        let viewModel = CoCaptainViewModel(agentCoordinator: coordinator)
+        viewModel.configureProjectSession(store: nil, dispatcher: nil)
+
+        let questionItem = CoCaptainClarifyingQuestionItem(
+            question: CoCaptainClarifyingQuestion(
+                prompt: "What should we improve?",
+                options: ["Make the text bigger", "Change the colors"]
+            )
+        )
+        let timelineItem = CoCaptainTimelineItem(content: .clarifyingQuestion(questionItem))
+        viewModel.items.append(timelineItem)
+
+        viewModel.answerClarifyingQuestion(itemID: timelineItem.id, option: "Change the colors")
+
+        guard let index = viewModel.items.firstIndex(where: { $0.id == timelineItem.id }),
+              case .clarifyingQuestion(let answered) = viewModel.items[index].content else {
+            Issue.record("Expected the clarifying question item to remain")
+            return
+        }
+        #expect(answered.answeredOption == "Change the colors")
+
+        let sentUserMessage = viewModel.items.contains { item in
+            guard case .message(let bubble) = item.content else { return false }
+            return bubble.isUser && bubble.text == "Change the colors"
+        }
+        #expect(sentUserMessage)
+
+        // A second tap must not re-send.
+        viewModel.answerClarifyingQuestion(itemID: timelineItem.id, option: "Make the text bigger")
+        guard case .clarifyingQuestion(let stillAnswered) = viewModel.items[index].content else {
+            Issue.record("Expected the clarifying question item to remain")
+            return
+        }
+        #expect(stillAnswered.answeredOption == "Change the colors")
+    }
+
+    @MainActor
+    private func makeAmbiguousStore() -> ProjectStore {
+        ProjectStore(
+            fileName: "ambiguous-test-\(UUID().uuidString).json",
+            projectName: "Test Project",
+            initialNodes: [
+                SpatialNode(
+                    type: .miniApp,
+                    position: CGPoint(x: 0, y: 0),
+                    title: "Mini-App",
+                    theme: .blue,
+                    miniApp: MiniAppState(
+                        srsText: "Build a landing page",
+                        codeText: """
+                        <html><body>
+                        <h1>Hello World!</h1>
+                        <p>Hello World!</p>
+                        </body></html>
+                        """
+                    )
+                )
+            ]
+        )
+    }
+
     private func looseHeadlineEditResponse(replacement: String, target: String) -> String {
         """
         <cocaptain_actions>

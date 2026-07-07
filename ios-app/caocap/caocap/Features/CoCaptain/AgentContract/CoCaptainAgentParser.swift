@@ -104,10 +104,36 @@ public struct CoCaptainAgentParser {
             assistantMessage: assistantMessage,
             safeActions: safeActions,
             pendingActions: pendingActions,
-            nodeEdits: nodeEdits
+            nodeEdits: nodeEdits,
+            clarifyingQuestion: extractClarifyingQuestion(from: xml)
         )
 
         return CoCaptainParsedResponse(preamble: preamble, payload: payload)
+    }
+
+    /// Extracts the first well-formed `clarifying_question` element. Malformed
+    /// questions (empty prompt or fewer than two options) degrade gracefully to
+    /// `nil` so the turn falls back to prose instead of failing validation.
+    private func extractClarifyingQuestion(from xml: String) -> CoCaptainClarifyingQuestion? {
+        guard let match = extractTagMatches(name: "clarifying_question", from: xml).first else {
+            return nil
+        }
+
+        let prompt = (match.attributes["prompt"] ?? extractTag(name: "prompt", from: match.content) ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let options = extractTags(name: "option", from: match.content)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        guard !prompt.isEmpty,
+              options.count >= CoCaptainClarifyingQuestion.minimumOptions else {
+            return nil
+        }
+
+        return CoCaptainClarifyingQuestion(
+            prompt: prompt,
+            options: Array(options.prefix(CoCaptainClarifyingQuestion.maximumOptions))
+        )
     }
 
     /// Returns the range of the last fully closed `cocaptain_actions` block.

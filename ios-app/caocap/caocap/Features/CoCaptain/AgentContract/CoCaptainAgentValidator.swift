@@ -78,11 +78,14 @@ public struct CoCaptainAgentValidator {
             }
         }
 
+        // A clarifying question is valid agentic work on its own: asking the
+        // user which change they meant is preferable to guessing or refusing.
         if requiresAgenticWork,
            payload.safeActions.isEmpty,
            payload.pendingActions.isEmpty,
-           payload.nodeEdits.isEmpty {
-            issues.append("Build/edit requests must include at least one safe action, pending action, or node edit.")
+           payload.nodeEdits.isEmpty,
+           payload.clarifyingQuestion == nil {
+            issues.append("Build/edit requests must include at least one safe action, pending action, node edit, or clarifying question.")
         }
 
         return CoCaptainAgentValidationResult(issues: issues)

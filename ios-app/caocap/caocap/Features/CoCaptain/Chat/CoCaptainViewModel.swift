@@ -69,11 +69,14 @@ public final class CoCaptainViewModel {
         return lastMessage.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    /// Statuses that still need a decision from the user.
+    private static let awaitingUserStatuses: Set<ReviewItemStatus> = [.pending, .needsClarification]
+
     /// Count of review items still awaiting user approval in the current timeline.
     public var pendingReviewCount: Int {
         items.reduce(into: 0) { count, item in
             guard case .reviewBundle(let bundle) = item.content else { return }
-            count += bundle.items.filter { $0.status == .pending }.count
+            count += bundle.items.filter { Self.awaitingUserStatuses.contains($0.status) }.count
         }
     }
 
@@ -81,7 +84,7 @@ public final class CoCaptainViewModel {
     public var firstPendingReviewBundleID: UUID? {
         items.first { item in
             guard case .reviewBundle(let bundle) = item.content else { return false }
-            return bundle.items.contains { $0.status == .pending }
+            return bundle.items.contains { Self.awaitingUserStatuses.contains($0.status) }
         }?.id
     }
 
@@ -234,28 +237,11 @@ public final class CoCaptainViewModel {
                     }
                 )
 
-                // #region agent log
-                let reviewStatuses = result.reviewBundle?.items.map {
-                    "\($0.targetLabel):\($0.status.rawValue)"
-                }.joined(separator: ";") ?? "none"
-                CoCaptainDebugLog.write(
-                    hypothesisId: "A,B,C,E",
-                    location: "CoCaptainViewModel.sendMessage",
-                    message: "coordinator_run_completed",
-                    data: [
-                        "purpose": String(describing: purpose),
-                        "hasReviewBundle": result.reviewBundle == nil ? "false" : "true",
-                        "reviewItemStatuses": reviewStatuses,
-                        "payloadMessage": result.payloadMessage ?? "",
-                        "preambleLength": String(result.preamble.count)
-                    ]
-                )
-                // #endregion
-
                 let hasUsableResponse =
                     !result.visibleText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
                     result.executionSummary != nil ||
-                    result.reviewBundle != nil
+                    result.reviewBundle != nil ||
+                    result.clarifyingQuestion != nil
 
                 if purpose.isConversationalTurn, !hasUsableResponse {
                     updateMessage(id: aiMessageID, text: onboardingRetryMessage(for: purpose))
@@ -291,6 +277,16 @@ public final class CoCaptainViewModel {
                 } else if purpose == .onboardingGuidedEdit {
                     presentOnboardingReviewFallback(turnID: turnID, replacingMessageID: aiMessageID)
                     return
+                }
+
+                if let question = result.clarifyingQuestion {
+                    items.append(
+                        CoCaptainTimelineItem(
+                            content: .clarifyingQuestion(
+                                CoCaptainClarifyingQuestionItem(question: question)
+                            )
+                        )
+                    )
                 }
                 requestScrollToBottom()
                 markAssistantResponseCompleted(
@@ -466,18 +462,6 @@ public final class CoCaptainViewModel {
             guard currentText == baseText else {
                 item.status = .conflicted
                 item.conflictDescription = LocalizationManager.shared.localizedString("This node was edited after the suggestion was generated. Ask Co-Captain to revise.")
-                // #region agent log
-                CoCaptainDebugLog.write(
-                    hypothesisId: "D",
-                    location: "CoCaptainViewModel.applyReviewItem",
-                    message: "base_text_stale",
-                    data: [
-                        "targetLabel": item.targetLabel,
-                        "baseLength": String(baseText.count),
-                        "currentLength": String(currentText.count)
-                    ]
-                )
-                // #endregion
                 break
             }
 
@@ -505,17 +489,6 @@ public final class CoCaptainViewModel {
             } catch {
                 item.status = .conflicted
                 item.conflictDescription = error.localizedDescription
-                // #region agent log
-                CoCaptainDebugLog.write(
-                    hypothesisId: "B,D",
-                    location: "CoCaptainViewModel.applyReviewItem",
-                    message: "apply_patch_failed",
-                    data: [
-                        "targetLabel": item.targetLabel,
-                        "error": error.localizedDescription
-                    ]
-                )
-                // #endregion
             }
         }
 
@@ -531,6 +504,91 @@ public final class CoCaptainViewModel {
         updateReviewItem(bundleID: bundleID, itemID: itemID, status: .rejected)
     }
 
+    /// Resolves a "which one did you mean?" review item by re-staging the edit
+    /// against the user's chosen candidate. Runs entirely locally — no model
+    /// call — and turns the item into a normal pending review on success.
+    public func resolveClarification(bundleID: UUID, itemID: UUID, candidateID: UUID) {
+        guard let bundleIndex = items.firstIndex(where: { $0.id == bundleID }),
+              case .reviewBundle(var bundle) = items[bundleIndex].content,
+              let itemIndex = bundle.items.firstIndex(where: { $0.id == itemID }) else {
+            return
+        }
+
+        let item = bundle.items[itemIndex]
+        guard item.status == .needsClarification,
+              case .nodeEdit(let role, let section, let operations, let baseText) = item.source,
+              let candidate = item.clarificationCandidates?.first(where: { $0.id == candidateID }),
+              let store else {
+            return
+        }
+
+        var updatedItem = item
+
+        do {
+            guard let node = patchEngine.resolveNode(nodeID: item.targetNodeID, for: role, in: store) else {
+                throw NodePatchError.missingNode(role)
+            }
+            let currentText: String
+            switch section {
+            case .srs:
+                currentText = node.miniApp?.srsText ?? ""
+            case .code:
+                currentText = node.miniApp?.codeText ?? ""
+            }
+            guard currentText == baseText else {
+                throw NodePatchError.conflict(
+                    "This node was edited after the suggestion was generated. Ask Co-Captain to revise."
+                )
+            }
+
+            let resolved = try patchEngine.previewResolving(
+                nodeID: node.id,
+                role: role,
+                section: section,
+                operations: operations,
+                in: store,
+                choosing: candidate
+            )
+            updatedItem = PendingReviewItem(
+                id: item.id,
+                targetNodeID: resolved.preview.nodeID,
+                targetLabel: item.targetLabel,
+                summary: item.summary,
+                preview: clarifiedPreviewSnippet(resolved.preview.resultText),
+                status: .pending,
+                source: .nodeEdit(
+                    role: role,
+                    section: section,
+                    operations: resolved.canonicalOperations,
+                    baseText: resolved.preview.originalText
+                )
+            )
+        } catch {
+            updatedItem.status = .conflicted
+            updatedItem.conflictDescription = error.localizedDescription
+            updatedItem.clarificationCandidates = nil
+        }
+
+        bundle.items[itemIndex] = updatedItem
+        items[bundleIndex].content = .reviewBundle(bundle)
+        persistNodeReviewBundleIfNeeded(bundleID: bundleID, bundle: bundle)
+    }
+
+    /// Records the tapped option on a clarifying-question card and sends it as
+    /// the user's next message so the conversation continues naturally.
+    public func answerClarifyingQuestion(itemID: UUID, option: String) {
+        guard !isThinking,
+              let index = items.firstIndex(where: { $0.id == itemID }),
+              case .clarifyingQuestion(var questionItem) = items[index].content,
+              questionItem.answeredOption == nil else {
+            return
+        }
+
+        questionItem.answeredOption = option
+        items[index].content = .clarifyingQuestion(questionItem)
+        sendMessage(option)
+    }
+
     public func applyAll(in bundleID: UUID) {
         guard let bundle = reviewBundle(for: bundleID) else { return }
         
@@ -544,9 +602,17 @@ public final class CoCaptainViewModel {
 
     public func rejectAll(in bundleID: UUID) {
         guard let bundle = reviewBundle(for: bundleID) else { return }
-        for itemID in bundle.items.filter({ $0.status == .pending }).map(\.id) {
+        let dismissable: Set<ReviewItemStatus> = [.pending, .needsClarification]
+        for itemID in bundle.items.filter({ dismissable.contains($0.status) }).map(\.id) {
             rejectReviewItem(bundleID: bundleID, itemID: itemID)
         }
+    }
+
+    /// Trims and caps re-staged previews to match coordinator preview sizing.
+    private func clarifiedPreviewSnippet(_ text: String) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count > 280 else { return trimmed }
+        return String(trimmed.prefix(280)) + "\n[TRUNCATED]"
     }
 
     /// Resets chat state when the active project changes so streamed responses

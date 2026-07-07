@@ -251,7 +251,8 @@ public struct CoCaptainCompositeAgentAdapter: CoCaptainAgentOutputAdapting {
             assistantMessage: fencedPayload?.assistantMessage ?? functionPayload?.assistantMessage ?? "",
             safeActions: functionPayload?.safeActions ?? [],
             pendingActions: functionPayload?.pendingActions ?? [],
-            nodeEdits: fencedPayload?.nodeEdits ?? []
+            nodeEdits: fencedPayload?.nodeEdits ?? [],
+            clarifyingQuestion: fencedPayload?.clarifyingQuestion
         )
     }
 }

@@ -220,6 +220,9 @@ public enum CoCaptainCodingRunState: Hashable {
     case testing(attempt: Int)
     case repairing(nextAttempt: Int)
     case readyForReview(attempts: Int)
+    /// The loop stopped because the edit target is ambiguous and the user must
+    /// pick which spot to change. Not a failure — a review card with choices follows.
+    case awaitingChoice
     case failed(String)
     case cancelled
 
@@ -235,8 +238,10 @@ public enum CoCaptainCodingRunState: Hashable {
             return LocalizationManager.shared.localizedString("Repairing")
         case .readyForReview:
             return LocalizationManager.shared.localizedString("Ready for review")
+        case .awaitingChoice:
+            return LocalizationManager.shared.localizedString("Quick question")
         case .failed:
-            return LocalizationManager.shared.localizedString("Verification failed")
+            return LocalizationManager.shared.localizedString("Needs another try")
         case .cancelled:
             return LocalizationManager.shared.localizedString("Cancelled")
         }
@@ -248,6 +253,8 @@ public enum CoCaptainCodingRunState: Hashable {
             return LocalizationManager.shared.localizedString("Preparing attempt %lld from the verification results.", arguments: [Int64(nextAttempt)])
         case .readyForReview(let attempts):
             return LocalizationManager.shared.localizedString("Verified after %lld attempt(s).", arguments: [Int64(attempts)])
+        case .awaitingChoice:
+            return LocalizationManager.shared.localizedString("I need you to pick which spot to change before I continue.")
         case .failed(let message):
             return message
         default:
@@ -257,7 +264,7 @@ public enum CoCaptainCodingRunState: Hashable {
 
     public var isTerminal: Bool {
         switch self {
-        case .readyForReview, .failed, .cancelled:
+        case .readyForReview, .awaitingChoice, .failed, .cancelled:
             return true
         default:
             return false
@@ -432,6 +439,24 @@ public struct CoCaptainNodeEditProposal: Codable, Hashable {
     }
 }
 
+/// One polite question the assistant asks when a request is too vague to act
+/// on. The options render as tappable chips; picking one becomes the user's
+/// next message, so no request is ever rejected outright.
+public struct CoCaptainClarifyingQuestion: Hashable, Codable {
+    public static let minimumOptions = 2
+    public static let maximumOptions = 4
+
+    /// The question text, phrased for non-technical users.
+    public let prompt: String
+    /// Two to four short, concrete answers the user can tap.
+    public let options: [String]
+
+    public init(prompt: String, options: [String]) {
+        self.prompt = prompt
+        self.options = options
+    }
+}
+
 /// The decoded, structured output from one CoCaptain model turn.
 ///
 /// The payload separates the model's prose from its executable intent.
@@ -447,17 +472,22 @@ public struct CoCaptainAgentPayload: Codable, Hashable {
     public let pendingActions: [CoCaptainAgentAction]
     /// Proposed edits to canvas nodes that must pass review before being applied.
     public let nodeEdits: [CoCaptainNodeEditProposal]
+    /// A structured question the model asks instead of guessing when the
+    /// request is ambiguous. Takes precedence over node edits in the same turn.
+    public let clarifyingQuestion: CoCaptainClarifyingQuestion?
 
     public init(
         assistantMessage: String,
         safeActions: [CoCaptainAgentAction] = [],
         pendingActions: [CoCaptainAgentAction] = [],
-        nodeEdits: [CoCaptainNodeEditProposal] = []
+        nodeEdits: [CoCaptainNodeEditProposal] = [],
+        clarifyingQuestion: CoCaptainClarifyingQuestion? = nil
     ) {
         self.assistantMessage = assistantMessage
         self.safeActions = safeActions
         self.pendingActions = pendingActions
         self.nodeEdits = nodeEdits
+        self.clarifyingQuestion = clarifyingQuestion
     }
 }
 
@@ -524,6 +554,9 @@ public enum ReviewItemStatus: String, Hashable, Codable {
     case conflicted
     /// The user explicitly dismissed the item without applying it.
     case rejected
+    /// The edit target matched several places; the user must pick one of the
+    /// item's `clarificationCandidates` before the edit can become pending.
+    case needsClarification
 
     /// A short localized label suitable for display in the review chip.
     public var localizedTitle: String {
@@ -533,9 +566,11 @@ public enum ReviewItemStatus: String, Hashable, Codable {
         case .applied:
             return LocalizationManager.shared.localizedString("Applied")
         case .conflicted:
-            return LocalizationManager.shared.localizedString("Conflicted")
+            return LocalizationManager.shared.localizedString("Needs another try")
         case .rejected:
             return LocalizationManager.shared.localizedString("Rejected")
+        case .needsClarification:
+            return LocalizationManager.shared.localizedString("Quick question")
         }
     }
 }
@@ -612,6 +647,9 @@ public struct PendingReviewItem: Identifiable, Hashable, Codable {
     /// Human-readable explanation of why this item entered the conflicted state.
     /// Nil when the item has not yet conflicted.
     public var conflictDescription: String?
+    /// Pickable target locations when `status == .needsClarification`.
+    /// The user's choice re-stages the edit locally without another model call.
+    public var clarificationCandidates: [PatchMatchCandidate]?
 
     public init(
         id: UUID = UUID(),
@@ -621,7 +659,8 @@ public struct PendingReviewItem: Identifiable, Hashable, Codable {
         preview: String,
         status: ReviewItemStatus = .pending,
         source: PendingReviewSource,
-        conflictDescription: String? = nil
+        conflictDescription: String? = nil,
+        clarificationCandidates: [PatchMatchCandidate]? = nil
     ) {
         self.id = id
         self.targetNodeID = targetNodeID
@@ -631,6 +670,7 @@ public struct PendingReviewItem: Identifiable, Hashable, Codable {
         self.status = status
         self.source = source
         self.conflictDescription = conflictDescription
+        self.clarificationCandidates = clarificationCandidates
     }
 }
 
@@ -714,6 +754,25 @@ public struct ChatBubbleItem: Identifiable, Hashable {
     }
 }
 
+/// A timeline card presenting a clarifying question with tappable answer
+/// options. Once answered, the chosen option is recorded so the card locks.
+public struct CoCaptainClarifyingQuestionItem: Identifiable, Hashable {
+    public let id: UUID
+    public let question: CoCaptainClarifyingQuestion
+    /// The option the user tapped, or `nil` while the question is open.
+    public var answeredOption: String?
+
+    public init(
+        id: UUID = UUID(),
+        question: CoCaptainClarifyingQuestion,
+        answeredOption: String? = nil
+    ) {
+        self.id = id
+        self.question = question
+        self.answeredOption = answeredOption
+    }
+}
+
 /// The discriminated content carried by a single row in the CoCaptain
 /// timeline, covering all visual card types the UI can render.
 public enum CoCaptainTimelineContent: Hashable {
@@ -727,6 +786,8 @@ public enum CoCaptainTimelineContent: Hashable {
     case reviewBundle(ReviewBundleItem)
     /// App-authored progress for a verified coding loop.
     case codingRun(CoCaptainCodingRunState)
+    /// A polite question with tappable answer options.
+    case clarifyingQuestion(CoCaptainClarifyingQuestionItem)
 }
 
 /// One identifiable row in the CoCaptain conversation timeline.

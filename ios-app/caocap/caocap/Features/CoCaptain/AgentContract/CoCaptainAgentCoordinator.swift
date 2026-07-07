@@ -48,6 +48,23 @@ public struct CoCaptainAgentRunResult: Hashable {
     /// A set of node edits or pending actions the user must review before they
     /// take effect, or `nil` when the model produced no reviewable changes.
     public let reviewBundle: ReviewBundleItem?
+    /// A question with tappable answer options to render after the messages,
+    /// or `nil` when the assistant did not need to ask anything.
+    public let clarifyingQuestion: CoCaptainClarifyingQuestion?
+
+    public init(
+        preamble: String,
+        payloadMessage: String?,
+        executionSummary: ExecutionStatusItem?,
+        reviewBundle: ReviewBundleItem?,
+        clarifyingQuestion: CoCaptainClarifyingQuestion? = nil
+    ) {
+        self.preamble = preamble
+        self.payloadMessage = payloadMessage
+        self.executionSummary = executionSummary
+        self.reviewBundle = reviewBundle
+        self.clarifyingQuestion = clarifyingQuestion
+    }
 
     /// The text the chat bubble should display.
     ///
@@ -325,21 +342,25 @@ public final class CoCaptainAgentCoordinator {
             return conversationalRunResult(from: directive)
         }
 
+        // A clarifying question takes precedence over any edits in the same
+        // turn: the model was unsure, so nothing should be staged until the
+        // user answers. Safe/pending actions are also held back.
+        if !connectionFallback, let question = payload?.clarifyingQuestion {
+            if let payload, !payload.nodeEdits.isEmpty {
+                logger.debug("CoCaptain dropped \(payload.nodeEdits.count) node edit(s) accompanying a clarifying question.")
+            }
+            return CoCaptainAgentRunResult(
+                preamble: directive.preamble,
+                payloadMessage: payload?.assistantMessage,
+                executionSummary: nil,
+                reviewBundle: nil,
+                clarifyingQuestion: question
+            )
+        }
+
         if !connectionFallback,
            let payload,
            let target = codingLoopTarget(payload: payload, store: store, purpose: purpose) {
-            // #region agent log
-            CoCaptainDebugLog.write(
-                hypothesisId: "C",
-                location: "CoCaptainAgentCoordinator.runOnce",
-                message: "verified_coding_loop_entered",
-                data: [
-                    "purpose": String(describing: purpose),
-                    "nodeEditCount": String(payload.nodeEdits.count),
-                    "targetNodeID": target.node.id.uuidString
-                ]
-            )
-            // #endregion
             do {
                 return try await runVerifiedCodingLoop(
                     originalRequest: userMessage,
@@ -367,19 +388,6 @@ public final class CoCaptainAgentCoordinator {
 
         let safeActions = connectionFallback ? [] : (payload?.safeActions ?? [])
         let executionSummary = executeSafeActions(safeActions, dispatcher: dispatcher, store: store)
-        // #region agent log
-        CoCaptainDebugLog.write(
-            hypothesisId: "A",
-            location: "CoCaptainAgentCoordinator.runOnce",
-            message: "build_review_bundle_path",
-            data: [
-                "purpose": String(describing: purpose),
-                "nodeEditCount": String(payload?.nodeEdits.count ?? 0),
-                "pendingActionCount": String(payload?.pendingActions.count ?? 0),
-                "hasStore": store == nil ? "false" : "true"
-            ]
-        )
-        // #endregion
         let reviewBundle = buildReviewBundle(
             pendingActions: payload?.pendingActions ?? [],
             nodeEdits: payload?.nodeEdits ?? [],
@@ -517,6 +525,30 @@ public final class CoCaptainAgentCoordinator {
                 )
                 currentCode = resolved.resultText
             } catch {
+                // Structural ambiguity in the user's own document cannot be
+                // repaired by another model attempt: stop immediately and let
+                // the user pick the intended location instead.
+                if attempt == 1,
+                   case NodePatchError.ambiguous(_, let candidates) = error {
+                    onCodingProgress(.awaitingChoice)
+                    logCodingCompletion(startedAt: startedAt, attempts: attempt, outcome: "needs_clarification")
+                    return CoCaptainAgentRunResult(
+                        preamble: initialDirective.preamble,
+                        payloadMessage: candidateMessage,
+                        executionSummary: nil,
+                        reviewBundle: ReviewBundleItem(
+                            title: LocalizationManager.shared.localizedString("Quick question"),
+                            items: [
+                                clarificationReviewItem(
+                                    for: candidateEdit,
+                                    candidates: candidates,
+                                    store: target.store
+                                )
+                            ]
+                        )
+                    )
+                }
+
                 lastFeedback = "- invalidCandidate: \(error.localizedDescription)"
                 if attempt == 3 { break }
                 attempt += 1
@@ -616,17 +648,6 @@ public final class CoCaptainAgentCoordinator {
         let message = lastFeedback.isEmpty
             ? "CoCaptain could not produce a verified change."
             : "No verified change is ready. \(lastFeedback)"
-        // #region agent log
-        CoCaptainDebugLog.write(
-            hypothesisId: "C",
-            location: "CoCaptainAgentCoordinator.runVerifiedCodingLoop",
-            message: "coding_loop_failed",
-            data: [
-                "attempts": String(attempt),
-                "lastFeedback": lastFeedback
-            ]
-        )
-        // #endregion
         onCodingProgress(.failed(message))
         logCodingCompletion(startedAt: startedAt, attempts: attempt, outcome: "failed")
         return codingLoopFailureResult(preamble: initialDirective.preamble, message: message)
@@ -715,7 +736,23 @@ public final class CoCaptainAgentCoordinator {
             preamble: preamble,
             payloadMessage: message,
             executionSummary: nil,
-            reviewBundle: nil
+            reviewBundle: nil,
+            clarifyingQuestion: Self.recoveryQuestion
+        )
+    }
+
+    /// A locally-built question offered after a failed turn so the user always
+    /// has a tappable next step instead of a dead-end error message.
+    private static var recoveryQuestion: CoCaptainClarifyingQuestion {
+        CoCaptainClarifyingQuestion(
+            prompt: LocalizationManager.shared.localizedString(
+                "Want to try one of these instead?"
+            ),
+            options: [
+                LocalizationManager.shared.localizedString("Try that again, please"),
+                LocalizationManager.shared.localizedString("Break it into smaller steps"),
+                LocalizationManager.shared.localizedString("Suggest what we could do next")
+            ]
         )
     }
 
@@ -837,7 +874,8 @@ public final class CoCaptainAgentCoordinator {
             preamble: preamble,
             payloadMessage: encouragement,
             executionSummary: nil,
-            reviewBundle: nil
+            reviewBundle: nil,
+            clarifyingQuestion: Self.recoveryQuestion
         )
     }
 
@@ -948,20 +986,11 @@ public final class CoCaptainAgentCoordinator {
                             )
                         )
                     )
-                } catch {
-                    // #region agent log
-                    CoCaptainDebugLog.write(
-                        hypothesisId: "B",
-                        location: "CoCaptainAgentCoordinator.buildReviewBundle",
-                        message: "preview_resolving_failed",
-                        data: [
-                            "summary": edit.summary,
-                            "operationTypes": edit.operations.map(\.type.rawValue).joined(separator: ","),
-                            "target": edit.operations.compactMap(\.target).joined(separator: "|"),
-                            "error": error.localizedDescription
-                        ]
+                } catch let NodePatchError.ambiguous(_, candidates) {
+                    items.append(
+                        clarificationReviewItem(for: edit, candidates: candidates, store: store)
                     )
-                    // #endregion
+                } catch {
                     items.append(
                         PendingReviewItem(
                             targetNodeID: edit.nodeID,
@@ -992,6 +1021,37 @@ public final class CoCaptainAgentCoordinator {
         return items.isEmpty ? nil : ReviewBundleItem(
             title: reviewBundleTitle(for: items),
             items: items
+        )
+    }
+
+    /// Builds a review item that asks the user to pick which matched location
+    /// an ambiguous edit should target. Captures the node's current section
+    /// text as `baseText` so the pick can re-stage deterministically.
+    private func clarificationReviewItem(
+        for edit: CoCaptainNodeEditProposal,
+        candidates: [PatchMatchCandidate],
+        store: ProjectStore
+    ) -> PendingReviewItem {
+        let node = patchEngine.resolveNode(nodeID: edit.nodeID, for: edit.role, in: store)
+        let baseText: String
+        switch edit.section {
+        case .srs:
+            baseText = node?.miniApp?.srsText ?? ""
+        case .code:
+            baseText = node?.miniApp?.codeText ?? ""
+        }
+        let sectionLabel = edit.section.rawValue.uppercased()
+
+        return PendingReviewItem(
+            targetNodeID: node?.id ?? edit.nodeID,
+            targetLabel: "\(node?.displayTitle ?? edit.role.localizedDisplayName) \(sectionLabel)",
+            summary: edit.summary,
+            preview: LocalizationManager.shared.localizedString(
+                "I found a few places that could match. Pick the one you meant and I'll make the change."
+            ),
+            status: .needsClarification,
+            source: .nodeEdit(role: edit.role, section: edit.section, operations: edit.operations, baseText: baseText),
+            clarificationCandidates: candidates
         )
     }
 

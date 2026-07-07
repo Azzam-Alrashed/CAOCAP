@@ -104,7 +104,20 @@ public struct CoCaptainTurnIntentResolver {
             "create a",
             "create an",
             "implement a",
-            "implement an"
+            "implement an",
+            // Vague-but-mutating beginner phrasing. Routing these as mutating
+            // work lets the model stage an edit or ask a clarifying question
+            // instead of drifting into general chat.
+            "don t like",
+            "dont like",
+            "looks bad",
+            "looks wrong",
+            "looks off",
+            "not working",
+            "doesn t work",
+            "doesnt work",
+            "make it look",
+            "i want it"
         ]
 
         return mutatingPhrases.contains { containsPhrase(normalized, $0) }

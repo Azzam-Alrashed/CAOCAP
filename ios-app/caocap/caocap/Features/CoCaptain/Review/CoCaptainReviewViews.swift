@@ -31,6 +31,13 @@ struct ReviewBundleView: View {
                             viewModel.flyToReviewTarget(nodeID)
                         }
                     },
+                    onPickCandidate: { candidateID in
+                        viewModel.resolveClarification(
+                            bundleID: bundleID,
+                            itemID: item.id,
+                            candidateID: candidateID
+                        )
+                    },
                     isOnboardingReviewAnchorActive: isOnboardingReviewAnchorActive
                 )
             }
@@ -64,7 +71,7 @@ struct ReviewBundleView: View {
 
     /// Returns `true` if at least one item in the bundle has not yet been resolved.
     private var hasPendingItems: Bool {
-        bundle.items.contains { $0.status == .pending }
+        bundle.items.contains { $0.status == .pending || $0.status == .needsClarification }
     }
 }
 
@@ -75,6 +82,7 @@ struct ReviewCardView: View {
     let onApply: () -> Void
     let onReject: () -> Void
     var onFlyTo: (() -> Void)? = nil
+    var onPickCandidate: ((UUID) -> Void)? = nil
     var isOnboardingReviewAnchorActive: Bool = false
 
     var body: some View {
@@ -112,21 +120,25 @@ struct ReviewCardView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             }
 
-            if let baseText = nodeEditBaseText {
+            if item.status == .needsClarification {
+                clarificationPicker
+            } else {
+                if let baseText = nodeEditBaseText {
+                    reviewTextBlock(
+                        title: LocalizationManager.shared.localizedString("Before"),
+                        text: baseText
+                    )
+                }
+
                 reviewTextBlock(
-                    title: LocalizationManager.shared.localizedString("Before"),
-                    text: baseText
+                    title: nodeEditBaseText == nil
+                        ? nil
+                        : LocalizationManager.shared.localizedString("After"),
+                    text: item.preview.isEmpty
+                        ? LocalizationManager.shared.localizedString("No preview available.")
+                        : item.preview
                 )
             }
-
-            reviewTextBlock(
-                title: nodeEditBaseText == nil
-                    ? nil
-                    : LocalizationManager.shared.localizedString("After"),
-                text: item.preview.isEmpty
-                    ? LocalizationManager.shared.localizedString("No preview available.")
-                    : item.preview
-            )
 
             HStack {
                 if item.targetNodeID != nil, let onFlyTo {
@@ -137,27 +149,71 @@ struct ReviewCardView: View {
                     .disabled(item.status != .pending)
                 }
 
-                Button(LocalizationManager.shared.localizedString("Apply")) {
-                    onApply()
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(item.status != .pending)
-                .background {
-                    if isOnboardingReviewAnchorActive, item.status == .pending {
-                        Color.clear.onboardingTooltipAnchor(.coCaptainReviewApply)
+                if item.status == .needsClarification {
+                    Button(LocalizationManager.shared.localizedString("Never mind")) {
+                        onReject()
                     }
-                }
+                    .buttonStyle(.bordered)
+                } else {
+                    Button(LocalizationManager.shared.localizedString("Apply")) {
+                        onApply()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(item.status != .pending)
+                    .background {
+                        if isOnboardingReviewAnchorActive, item.status == .pending {
+                            Color.clear.onboardingTooltipAnchor(.coCaptainReviewApply)
+                        }
+                    }
 
-                Button(LocalizationManager.shared.localizedString("Reject")) {
-                    onReject()
+                    Button(LocalizationManager.shared.localizedString("Reject")) {
+                        onReject()
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(item.status != .pending)
                 }
-                .buttonStyle(.bordered)
-                .disabled(item.status != .pending)
             }
         }
         .padding(12)
         .background(Color.white.opacity(0.04))
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    /// Tappable candidate choices shown when the edit target matched several
+    /// places. Picking one re-stages the edit locally as a normal pending item.
+    @ViewBuilder
+    private var clarificationPicker: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(LocalizationManager.shared.localizedString("Which one did you mean?"))
+                .font(.system(size: 13, weight: .semibold))
+
+            ForEach(item.clarificationCandidates ?? []) { candidate in
+                Button {
+                    onPickCandidate?(candidate.id)
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "arrow.turn.down.right")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Color.blue)
+                        Text(candidate.label)
+                            .font(.system(size: 13, weight: .medium))
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 9)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.blue.opacity(0.08))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(Color.blue.opacity(0.22), lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+                .buttonStyle(.plain)
+            }
+        }
     }
 
     private var nodeEditBaseText: String? {
@@ -190,6 +246,7 @@ struct ReviewCardView: View {
         case .applied: return .green
         case .conflicted: return .red
         case .rejected: return .secondary
+        case .needsClarification: return .blue
         }
     }
 }

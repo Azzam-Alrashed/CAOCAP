@@ -38,6 +38,10 @@ struct TimelineItemView: View {
                 )
             case .codingRun(let state):
                 CodingRunProgressView(state: state)
+            case .clarifyingQuestion(let questionItem):
+                ClarifyingQuestionCardView(item: questionItem) { option in
+                    viewModel.answerClarifyingQuestion(itemID: item.id, option: option)
+                }
             }
         }
     }
@@ -71,6 +75,8 @@ struct CodingRunProgressView: View {
             return "wrench.and.screwdriver.fill"
         case .readyForReview:
             return "checkmark.shield.fill"
+        case .awaitingChoice:
+            return "questionmark.bubble.fill"
         case .failed:
             return "xmark.octagon.fill"
         case .cancelled:
