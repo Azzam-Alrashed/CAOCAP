@@ -1,14 +1,13 @@
 import SwiftUI
 
 struct CoCaptainView: View {
-    var viewModel: CoCaptainViewModel
+    @Bindable var viewModel: CoCaptainViewModel
     @State private var text: String = ""
     @FocusState private var isFocused: Bool
     
     @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
 
     var body: some View {
-        @Bindable var viewModel = viewModel
         NavigationStack {
             VStack(spacing: 0) {
                 CoCaptainTimelineListView(
@@ -60,7 +59,7 @@ struct CoCaptainView: View {
                 }
             }
         }
-        .onboardingTooltipOverlay()
+        .coCaptainOnboardingTooltipOverlay()
         .onChange(of: text) { oldValue, newValue in
             hideChatOnboardingWhenTypingChanges(from: oldValue, to: newValue)
         }
@@ -101,7 +100,7 @@ struct CoCaptainView: View {
         switch onboarding?.currentStep {
         case .some(.submitCoCaptainPrompt):
             return .onboardingWelcome
-        case .some(.chatCoCaptain):
+        case .some(.chatCoCaptain), .some(.chatCoCaptainGameEdit):
             return .onboardingGuidedEdit
         default:
             return .standard
@@ -114,7 +113,7 @@ struct CoCaptainView: View {
 
     /// Hides the onboarding tooltip if the user begins typing a message in the text field.
     private func hideChatOnboardingWhenTypingChanges(from oldValue: String, to newValue: String) {
-        guard onboarding?.currentStep == .chatCoCaptain else { return }
+        guard onboarding?.currentStep == .chatCoCaptain || onboarding?.currentStep == .chatCoCaptainGameEdit else { return }
 
         let wasEmpty = oldValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         let isTyping = !newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -125,7 +124,7 @@ struct CoCaptainView: View {
 
     /// Hides the onboarding tooltip if there is already text present in the chat input composer when appearing.
     private func hideChatOnboardingIfTextIsPresent() {
-        guard onboarding?.currentStep == .chatCoCaptain,
+        guard onboarding?.currentStep == .chatCoCaptain || onboarding?.currentStep == .chatCoCaptainGameEdit,
               !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return
         }
@@ -135,7 +134,7 @@ struct CoCaptainView: View {
 
     /// Hides the chat instruction while the user's idea handoff is in progress.
     private func beginChatOnboardingResponseWaitIfNeeded() {
-        guard onboarding?.currentStep == .chatCoCaptain else { return }
+        guard onboarding?.currentStep == .chatCoCaptain || onboarding?.currentStep == .chatCoCaptainGameEdit else { return }
 
         onboarding?.hidePopoverForCurrentStep()
     }
@@ -144,7 +143,7 @@ struct CoCaptainView: View {
     private func advanceOnboardingAfterGuidedEdit(
         _ completion: CoCaptainTurnCompletion?
     ) {
-        guard onboarding?.currentStep == .chatCoCaptain,
+        guard onboarding?.currentStep == .chatCoCaptain || onboarding?.currentStep == .chatCoCaptainGameEdit,
               completion?.shouldAdvanceToOnboardingReview == true else {
             return
         }

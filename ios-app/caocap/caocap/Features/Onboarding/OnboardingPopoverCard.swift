@@ -100,6 +100,8 @@ struct UnifiedBubbleWithArrowShape: Shape {
 enum OnboardingTooltipAnchor: Hashable {
     /// Anchored to the Tutorial portal on the root canvas.
     case tutorialNode
+    /// Anchored to a demo game portal node (Pac-Man or XO) on the root canvas.
+    case demoGameNode
     /// Anchored to the floating command button (FAB) at the bottom of the canvas.
     case floatingCommandButton
     /// Anchored to the omnibox search text field.
@@ -112,6 +114,8 @@ enum OnboardingTooltipAnchor: Hashable {
     case coCaptainDoneButton
     /// Anchored to the Go Back row in the command palette navigation section.
     case commandPaletteGoBack
+    /// Anchored to the Help row in the command palette.
+    case commandPaletteHelp
     /// Anchored to the main canvas gesture area used for pan, pinch, and fit-all steps.
     case canvasGestureArea
     /// Anchored to the zoom percentage pill in the canvas HUD.
@@ -138,11 +142,13 @@ enum OnboardingTooltipAnchor: Hashable {
     case floatingCommandButtonRedo
     /// Anchored to the Apply button on a CoCaptain review card.
     case coCaptainReviewApply
+    /// Anchored to the Guides section in Help.
+    case helpGuidesSection
 
     /// Whether this anchor is registered inside the canvas view hierarchy.
     var isCanvasLocal: Bool {
         switch self {
-        case .tutorialNode, .practiceCanvasNode, .canvasGestureArea:
+        case .tutorialNode, .demoGameNode, .practiceCanvasNode, .canvasGestureArea:
             return true
         default:
             return false
@@ -164,6 +170,16 @@ enum OnboardingTooltipAnchor: Hashable {
     var isPreviewOmniboxLocal: Bool {
         switch self {
         case .omniboxMiniAppCodeRow, .omniboxBackToCanvasRow:
+            return true
+        default:
+            return false
+        }
+    }
+
+    /// Whether this anchor lives inside the CoCaptain sheet.
+    var isCoCaptainLocal: Bool {
+        switch self {
+        case .coCaptainInput, .coCaptainDoneButton, .coCaptainReviewApply:
             return true
         default:
             return false
@@ -269,22 +285,58 @@ extension View {
             }
         }
     }
+
+    /// Sheet-safe onboarding overlay for CoCaptain. Reads anchor preferences with
+    /// `onPreferenceChange` instead of nested `overlayPreferenceValue`, which duplicates
+    /// scroll content inside the CoCaptain sheet.
+    func coCaptainOnboardingTooltipOverlay() -> some View {
+        modifier(CoCaptainSheetTooltipOverlayModifier())
+    }
+}
+
+/// Collects onboarding anchor preferences without `overlayPreferenceValue` so the
+/// CoCaptain timeline is not laid out twice.
+private struct CoCaptainSheetTooltipOverlayModifier: ViewModifier {
+    @State private var layoutAnchors: [OnboardingTooltipAnchor: Anchor<CGRect>] = [:]
+    @State private var explicitFrames: [OnboardingTooltipAnchor: CGRect] = [:]
+
+    func body(content: Content) -> some View {
+        content
+            .onPreferenceChange(OnboardingTooltipAnchorPreferenceKey.self) { layoutAnchors = $0 }
+            .onPreferenceChange(OnboardingExplicitAnchorFramePreferenceKey.self) { explicitFrames = $0 }
+            .overlay {
+                OnboardingTooltipOverlay(
+                    anchors: layoutAnchors,
+                    explicitFrames: explicitFrames,
+                    isCommandPalettePresented: false,
+                    rendersAnchor: { $0.isCoCaptainLocal }
+                )
+            }
+    }
 }
 
 extension OnboardingCoordinator.Step {
     var tooltipAnchor: OnboardingTooltipAnchor {
         switch self {
-        case .openTutorial, .openPortal:
+        case .openTutorial:
             return .tutorialNode
+        case .openPortal:
+            return .demoGameNode
         case .tapFAB, .longPressFAB, .searchFlyToNode, .returnToRoot, .typeGoBackInOmnibox:
             return .floatingCommandButton
         case .tapGoBackAction:
             return .commandPaletteGoBack
+        case .openHelpCenter:
+            return .floatingCommandButton
+        case .browseHelpGuides:
+            return .helpGuidesSection
         case .typeCoCaptainPrompt:
             return .omniboxSearchField
         case .submitCoCaptainPrompt:
             return .omniboxPromptRow
         case .chatCoCaptain:
+            return .coCaptainInput
+        case .chatCoCaptainGameEdit:
             return .coCaptainInput
         case .reviewCoCaptainChange, .applyCoCaptainChange:
             return .coCaptainReviewApply
@@ -321,6 +373,9 @@ extension OnboardingCoordinator.Step {
         if self == .tapGoBackAction, isCommandPalettePresented {
             return .commandPaletteGoBack
         }
+        if self == .openHelpCenter, isCommandPalettePresented {
+            return .commandPaletteHelp
+        }
         if self == .openMiniAppCodeTool, isCommandPalettePresented {
             return .omniboxMiniAppCodeRow
         }
@@ -339,7 +394,7 @@ extension OnboardingCoordinator.Step {
             return .top
         case .openTutorial, .tapFAB, .typeCoCaptainPrompt, .submitCoCaptainPrompt, .chatCoCaptain,
              .longPressFAB, .returnToRoot, .typeGoBackInOmnibox, .tapGoBackAction, .panCanvas, .fitAllNodes, .searchFlyToNode, .openPortal,
-             .tapMiniAppNode, .interactMiniAppPreview, .openMiniAppCodeTool,
+             .tapMiniAppNode, .interactMiniAppPreview, .openMiniAppCodeTool, .openHelpCenter, .browseHelpGuides, .chatCoCaptainGameEdit,
              .saveMiniAppCodeEdit, .returnFromMiniAppPreview, .dragCanvasNode,
              .runOrganizeNodes, .undoCanvasEdit, .redoCanvasEdit:
             return .bottom

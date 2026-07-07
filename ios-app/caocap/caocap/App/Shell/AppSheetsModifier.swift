@@ -97,7 +97,8 @@ struct AppSheetsModifier: ViewModifier {
                     onOpenTutorial: { session.openTutorialFromHelp() },
                     onRestartTutorial: { session.restartTutorialFromHelp() },
                     onStartLesson: { session.startLessonFromHelp($0) },
-                    onOpenDemoCanvas: { session.openDemoCanvasFromHelp(fileName: $0) }
+                    onOpenDemoCanvas: { session.openDemoCanvasFromHelp(fileName: $0) },
+                    onHelpGuidesShown: { session.handleHelpGuidesShownForOnboarding() }
                 )
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)

@@ -42,10 +42,10 @@ public enum CoCaptainTurnPurpose: Hashable {
         case .onboardingGuidedEdit:
             return """
             Onboarding guided edit objective:
-            - The user is editing the seeded Hello World mini-app during onboarding.
-            - Propose exactly one small HTML change to the CODE section, such as updating the headline text or button color.
+            - The user is editing the active demo mini-app during onboarding (for example Pac-Man or XO).
+            - Propose exactly one small HTML/CSS change to the CODE section, such as color, speed label, or background styling.
             - Keep the change visible in the live preview and easy for a beginner to understand.
-            - Do not modify SRS, Firebase, or any node other than the active Hello World mini-app.
+            - Do not modify SRS, Firebase, or any node other than the currently active mini-app.
             - Match the language used by the user when summarizing the change.
             """
         }

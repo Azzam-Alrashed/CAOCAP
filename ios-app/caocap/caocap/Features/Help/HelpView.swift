@@ -4,12 +4,14 @@ import SwiftUI
 struct HelpView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
+    @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
 
     var completedLessonIDs: Set<OnboardingLessonID> = []
     var onOpenTutorial: () -> Void = {}
     var onRestartTutorial: () -> Void = {}
     var onStartLesson: (OnboardingLessonID) -> Void = { _ in }
     var onOpenDemoCanvas: (String) -> Void = { _ in }
+    var onHelpGuidesShown: () -> Void = {}
 
     var body: some View {
         NavigationStack {
@@ -50,6 +52,12 @@ struct HelpView: View {
                                 articleRow(article)
                             }
                             .buttonStyle(.plain)
+                        }
+                    }
+                    .onboardingTooltipAnchor(.helpGuidesSection)
+                    .onAppear {
+                        if onboarding?.currentStep == .browseHelpGuides {
+                            onHelpGuidesShown()
                         }
                     }
 

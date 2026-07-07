@@ -17,7 +17,8 @@ struct CommandPaletteView: View {
         return onboarding.showPopover && (
             onboarding.currentStep == .typeCoCaptainPrompt ||
             onboarding.currentStep == .submitCoCaptainPrompt ||
-            onboarding.currentStep == .tapGoBackAction
+            onboarding.currentStep == .tapGoBackAction ||
+            onboarding.currentStep == .openHelpCenter
         )
     }
     
@@ -40,6 +41,13 @@ struct CommandPaletteView: View {
         return onboarding.currentStep == .tapGoBackAction &&
             onboarding.showPopover &&
             viewModel.showsGoBackAction
+    }
+
+    private var isHelpRowOnboardingActive: Bool {
+        guard let onboarding else { return false }
+        return onboarding.currentStep == .openHelpCenter &&
+            onboarding.showPopover &&
+            viewModel.showsHelpAction
     }
 
     private var dictationLocaleOption: DictationLocaleOption {
@@ -175,6 +183,7 @@ struct CommandPaletteView: View {
                                             viewModel: viewModel,
                                             isCoCaptainRowOnboardingActive: isCoCaptainRowOnboardingActive,
                                             isGoBackRowOnboardingActive: isGoBackRowOnboardingActive,
+                                            isHelpRowOnboardingActive: isHelpRowOnboardingActive,
                                             isBreathing: isBreathing,
                                             promptRowAnchor: .omniboxPromptRow
                                         )
@@ -256,6 +265,7 @@ struct CommandPaletteView: View {
                                                 viewModel: viewModel,
                                                 isCoCaptainRowOnboardingActive: isCoCaptainRowOnboardingActive,
                                                 isGoBackRowOnboardingActive: isGoBackRowOnboardingActive,
+                                                isHelpRowOnboardingActive: isHelpRowOnboardingActive,
                                                 isBreathing: isBreathing,
                                                 promptRowAnchor: .omniboxPromptRow
                                             )
@@ -444,6 +454,15 @@ struct CommandPaletteView: View {
                 }
             }
         }
+        .onChange(of: viewModel.showsHelpAction) { _, showsHelpAction in
+            if showsHelpAction {
+                if onboarding?.currentStep == .openHelpCenter {
+                    viewModel.selectHelpActionIfAvailable()
+                }
+            } else if viewModel.isPresented && onboarding?.currentStep == .openHelpCenter {
+                onboarding?.moveToStep(.tapFAB)
+            }
+        }
         .onChange(of: onboarding?.currentStep) { _, step in
             viewModel.prefersPromptSubmission = step == .submitCoCaptainPrompt
             viewModel.prefersGoBackSelection = step == .tapGoBackAction
@@ -455,6 +474,8 @@ struct CommandPaletteView: View {
                 viewModel.query = ""
             } else if step == .tapGoBackAction {
                 viewModel.selectGoBackActionIfAvailable()
+            } else if step == .openHelpCenter {
+                viewModel.selectHelpActionIfAvailable()
             }
         }
         .onDisappear {
@@ -598,6 +619,7 @@ private struct OmniboxSearchResultsView: View {
     @Bindable var viewModel: CommandPaletteViewModel
     let isCoCaptainRowOnboardingActive: Bool
     let isGoBackRowOnboardingActive: Bool
+    let isHelpRowOnboardingActive: Bool
     let isBreathing: Bool
     let promptRowAnchor: OnboardingTooltipAnchor
 
@@ -673,6 +695,7 @@ private struct OmniboxSearchResultsView: View {
 
     private func actionRow(_ action: AppActionDefinition, at index: Int) -> some View {
         let isGoBackOnboardingRow = action.id == .goBack && isGoBackRowOnboardingActive
+        let isHelpOnboardingRow = action.id == .help && isHelpRowOnboardingActive
         return AppActionRow(
             item: action,
             isSelected: viewModel.selectionIndex(forActionAt: index) == viewModel.selectedIndex,
@@ -680,10 +703,12 @@ private struct OmniboxSearchResultsView: View {
             onPin: action.canPinToCanvas ? { viewModel.pinAction(action) } : nil
         )
         .modifier(AppActionOnboardingAnchor(actionID: action.id))
-        .onboardingGlow(isActive: isGoBackOnboardingRow, isBreathing: isBreathing)
+        .onboardingGlow(isActive: isGoBackOnboardingRow || isHelpOnboardingRow, isBreathing: isBreathing)
         .background {
             if isGoBackOnboardingRow {
                 Color.clear.onboardingTooltipAnchor(.commandPaletteGoBack)
+            } else if isHelpOnboardingRow {
+                Color.clear.onboardingTooltipAnchor(.commandPaletteHelp)
             }
         }
         .id(action.id.rawValue)

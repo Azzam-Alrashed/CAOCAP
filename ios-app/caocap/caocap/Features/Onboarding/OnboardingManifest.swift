@@ -82,6 +82,27 @@ enum OnboardingManifest {
                 messageKey: "onboarding.openPortal.message",
                 icon: "arrow.right.circle.fill"
             )
+        case .chatCoCaptainGameEdit:
+            return OnboardingStepContent(
+                step: step,
+                titleKey: "onboarding.chatCoCaptainGameEdit.title",
+                messageKey: "onboarding.chatCoCaptainGameEdit.message",
+                icon: "gamecontroller.fill"
+            )
+        case .openHelpCenter:
+            return OnboardingStepContent(
+                step: step,
+                titleKey: "onboarding.openHelpCenter.title",
+                messageKey: "onboarding.openHelpCenter.message",
+                icon: "questionmark.circle.fill"
+            )
+        case .browseHelpGuides:
+            return OnboardingStepContent(
+                step: step,
+                titleKey: "onboarding.browseHelpGuides.title",
+                messageKey: "onboarding.browseHelpGuides.message",
+                icon: "book.fill"
+            )
         case .tapMiniAppNode:
             return OnboardingStepContent(
                 step: step,

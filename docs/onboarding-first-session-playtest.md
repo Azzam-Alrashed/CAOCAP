@@ -1,63 +1,44 @@
 # First-session onboarding playtest (10 minutes)
 
-Use this script with a **curious non-developer** on a physical device or simulator. Do not coach unless they are stuck for more than 60 seconds.
+Use this script with a curious non-developer. Do not coach unless they are blocked for more than 60 seconds.
 
 ## Setup
 
-1. Settings → **Restart Onboarding** (or fresh install).
-2. Complete intro + personalization without skipping (note total time).
-3. Start the interactive tutorial on the root canvas.
+1. Settings → **Restart Onboarding**.
+2. Complete intro + personalization without skipping.
+3. Start interactive tutorial from root canvas.
 
-## Observe (tick when seen)
+## Main tutorial checks (3 lessons)
 
 | # | Moment | Pass? | Notes |
-|---|--------|-------|-------|
-| 1 | Opens Tutorial portal without confusion | | |
-| 2 | Pans, pinches, and double-taps to fit-all confidently | | |
-| 3 | Opens command palette from FAB | | |
-| 4 | Types “go back”, taps Go Back row, returns to root | | |
-| 5 | Searches/flys to Tutorial, re-enters subcanvas | | |
-| 6 | Opens Hello World, interacts with live preview | | |
-| 7 | Edits code, saves, sees visible change in preview | | |
-| 8 | Opens CoCaptain, sends guided prompt (or quick prompt) | | |
-| 9 | Sees review card; understands they must tap Apply | | |
-| 10 | Preview updates after Apply | | |
-| 11 | Completes organize/undo lesson | | |
-| 12 | Sees graduation confetti + “Your first app is on the canvas” | | |
+|---|---|---|---|
+| 1 | Completes classic Lesson 1 flow (Tutorial entry + FAB + CoCaptain welcome + dismiss + long-press) | | |
+| 2 | Uses `go back` in omnibox and returns to root | | |
+| 3 | Searches for Pac-Man or XO and flies to it | | |
+| 4 | Opens selected game portal | | |
+| 5 | Asks CoCaptain for one small game change | | |
+| 6 | Sees review card and taps Apply | | |
+| 7 | Opens Help from command palette | | |
+| 8 | Can point to Guides/docs/tutorial continuation in Help | | |
+| 9 | Main tutorial completes without requiring optional lessons | | |
+
+## Optional replay checks
+
+| # | Moment | Pass? | Notes |
+|---|---|---|---|
+| A | Mini-App Preview lesson can be launched from Help | | |
+| B | Move & Organize lesson can be launched from Help | | |
+| C | Completing main tutorial does not auto-complete optional lessons | | |
 
 ## Debrief questions
 
-1. In one sentence, what is the canvas?
-2. How do you get back to the previous canvas?
-3. What is the difference between editing code yourself and using CoCaptain?
-4. What would you try next without help?
-
-## Success criteria (north star)
-
-Participant can articulate:
-
-- Moving around the canvas (pan/zoom/fit, portals)
-- Using the omnibox to navigate
-- Making a manual edit and seeing it live
-- Reviewing and applying a CoCaptain suggestion themselves
-
-## Friction log
-
-| Step ID | Issue | Severity (1–3) |
-|---------|-------|----------------|
-| | | |
+1. How do you navigate between canvases?
+2. How do you ask CoCaptain for a small change and keep control?
+3. Where would you go for more tutorials next?
 
 ## Analytics spot-check (optional)
 
-Confirm Firebase DebugView shows:
-
-- `onboarding_lesson_started` / `completed` per lesson
-- `onboarding_step_completed` with `step_id`
-- `onboarding_cocaptain_review_shown` and `onboarding_cocaptain_review_applied` (or `failed_fallback` if offline)
-
-## Out of scope for session 1
-
-- Mini game build
-- Portfolio / export
-- Auth or subscription flows
-- Root demo canvases (Pac-Man, XO) unless participant explores voluntarily
+- `onboarding_lesson_started` / `completed` / `skipped`
+- `onboarding_step_completed`
+- `onboarding_cocaptain_review_shown`
+- `onboarding_cocaptain_review_applied` or `onboarding_cocaptain_review_fallback`

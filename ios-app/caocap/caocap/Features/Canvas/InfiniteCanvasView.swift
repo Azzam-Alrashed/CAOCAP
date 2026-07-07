@@ -260,6 +260,14 @@ struct InfiniteCanvasView: View {
             frames[.tutorialNode] = frameData.frame
         }
 
+        if onboarding?.currentStep == .openPortal {
+            if let frameData = nodeFrames[RootCanvasProvider.pacManNodeID] {
+                frames[.demoGameNode] = frameData.frame
+            } else if let frameData = nodeFrames[RootCanvasProvider.xoNodeID] {
+                frames[.demoGameNode] = frameData.frame
+            }
+        }
+
         if let step = onboarding?.currentStep,
            step == .tapMiniAppNode || step == .dragCanvasNode,
            let frameData = nodeFrames[TutorialCanvasProvider.miniAppNodeID] {

@@ -26,6 +26,15 @@ struct OnboardingLesson: Identifiable, Hashable {
 /// Static registry of interactive tutorial lessons.
 enum OnboardingLessonsManifest {
     static let maxStepsPerLesson = 9
+    static let mainLessonIDs: [OnboardingLessonID] = [
+        .canvasBasics,
+        .omniboxNavigation,
+        .miniAppPreview
+    ]
+    static let optionalLessonIDs: [OnboardingLessonID] = [
+        .coCaptainChat,
+        .moveAndOrganize
+    ]
 
     static let lessons: [OnboardingLesson] = [
         OnboardingLesson(
@@ -34,7 +43,15 @@ enum OnboardingLessonsManifest {
             subtitleKey: "onboarding.lesson.canvasBasics.subtitle",
             icon: "graduationcap.fill",
             accentHex: "00B894",
-            steps: [.openTutorial, .panCanvas, .pinchZoom, .fitAllNodes, .tapFAB]
+            steps: [
+                .openTutorial,
+                .tapFAB,
+                .typeCoCaptainPrompt,
+                .submitCoCaptainPrompt,
+                .chatCoCaptain,
+                .dismissCoCaptain,
+                .longPressFAB
+            ]
         ),
         OnboardingLesson(
             id: .omniboxNavigation,
@@ -47,21 +64,21 @@ enum OnboardingLessonsManifest {
                 .typeGoBackInOmnibox,
                 .tapGoBackAction,
                 .searchFlyToNode,
-                .openPortal
+                .openPortal,
+                .chatCoCaptainGameEdit,
+                .reviewCoCaptainChange,
+                .applyCoCaptainChange
             ]
         ),
         OnboardingLesson(
             id: .miniAppPreview,
             titleKey: "onboarding.lesson.miniAppPreview.title",
             subtitleKey: "onboarding.lesson.miniAppPreview.subtitle",
-            icon: "app.connected.to.app.below.fill",
+            icon: "book.fill",
             accentHex: "E84393",
             steps: [
-                .tapMiniAppNode,
-                .interactMiniAppPreview,
-                .openMiniAppCodeTool,
-                .saveMiniAppCodeEdit,
-                .returnFromMiniAppPreview
+                .openHelpCenter,
+                .browseHelpGuides
             ]
         ),
         OnboardingLesson(
@@ -71,13 +88,11 @@ enum OnboardingLessonsManifest {
             icon: "sparkles",
             accentHex: "6C5CE7",
             steps: [
-                .typeCoCaptainPrompt,
-                .submitCoCaptainPrompt,
-                .chatCoCaptain,
-                .reviewCoCaptainChange,
-                .applyCoCaptainChange,
-                .dismissCoCaptain,
-                .longPressFAB
+                .tapMiniAppNode,
+                .interactMiniAppPreview,
+                .openMiniAppCodeTool,
+                .saveMiniAppCodeEdit,
+                .returnFromMiniAppPreview
             ]
         ),
         OnboardingLesson(
@@ -87,6 +102,9 @@ enum OnboardingLessonsManifest {
             icon: "arrow.up.and.down.and.arrow.left.and.right",
             accentHex: "74B9FF",
             steps: [
+                .panCanvas,
+                .pinchZoom,
+                .fitAllNodes,
                 .dragCanvasNode,
                 .runOrganizeNodes,
                 .undoCanvasEdit,
@@ -124,7 +142,18 @@ enum OnboardingLessonsManifest {
     static func firstIncompleteLesson(
         completedLessonIDs: Set<OnboardingLessonID>
     ) -> OnboardingLessonID? {
-        lessons.first { !completedLessonIDs.contains($0.id) }?.id
+        mainLessonIDs.first { !completedLessonIDs.contains($0) }
+    }
+
+    static func nextMainLesson(after id: OnboardingLessonID) -> OnboardingLessonID? {
+        guard let index = mainLessonIDs.firstIndex(of: id) else { return nil }
+        let nextIndex = mainLessonIDs.index(after: index)
+        guard mainLessonIDs.indices.contains(nextIndex) else { return nil }
+        return mainLessonIDs[nextIndex]
+    }
+
+    static func areAllMainLessonsCompleted(completedLessonIDs: Set<OnboardingLessonID>) -> Bool {
+        mainLessonIDs.allSatisfy { completedLessonIDs.contains($0) }
     }
 
     static func nextStep(

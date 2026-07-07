@@ -3007,6 +3007,108 @@
         }
       }
     },
+    "onboarding.chatCoCaptainGameEdit.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اطلب تعديلاً صغيراً للعبة"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ask for a small game edit"
+          }
+        }
+      }
+    },
+    "onboarding.chatCoCaptainGameEdit.message": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اطلب من CoCaptain تغييراً بسيطاً في اللعبة، مثل اللون أو السرعة."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ask CoCaptain to rename the title from 'Hello World' to 'Hello CAOCAP' or your name."
+          }
+        }
+      }
+    },
+    "onboarding.openHelpCenter.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "افتح المساعدة"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Help"
+          }
+        }
+      }
+    },
+    "onboarding.openHelpCenter.message": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "من لوحة الأوامر، اختر Help لعرض جميع الدروس والوثائق."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From the command palette, choose Help to open tutorials and docs."
+          }
+        }
+      }
+    },
+    "onboarding.browseHelpGuides.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اعثر على الدروس التالية"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Find your next tutorials"
+          }
+        }
+      }
+    },
+    "onboarding.browseHelpGuides.message": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "في قسم Guides، ستجد مسارات تعلم إضافية. يمكنك إعادة أي درس في أي وقت."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Guides, you can find more learning paths and replay lessons anytime."
+          }
+        }
+      }
+    },
     "onboarding.reviewCoCaptainChange.title": {
       "extractionState": "manual",
       "localizations": {
@@ -3200,13 +3302,13 @@
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "٥ خطوات · ادخل البرنامج التعليمي، حرّك اللوحة، كبّر، وافتح لوحة الأوامر"
+            "value": "٧ خطوات · ادخل البرنامج التعليمي وافتح CoCaptain بالطريقة المعتادة"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "5 steps · Enter the tutorial, pan, zoom, and open the command palette"
+            "value": "7 steps · Enter the Tutorial and run the classic CoCaptain welcome flow"
           }
         }
       }
@@ -3234,13 +3336,13 @@
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "٧ خطوات · اطلب تعديلاً، راجعه، وطبّقه بنفسك"
+            "value": "٥ خطوات · افتح Hello World وعدّل الكود وشاهد النتيجة"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "7 steps · Ask for a change, review it, and apply yourself"
+            "value": "5 steps · Open Hello World, edit code, and see the result"
           }
         }
       }
@@ -3251,13 +3353,13 @@
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "محادثة CoCaptain"
+            "value": "معاينة التطبيق المصغّر"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "CoCaptain chat"
+            "value": "Mini-App Preview"
           }
         }
       }
@@ -3336,13 +3438,13 @@
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "انقر على بوابة Tutorial لفتح اللوحة الفرعية المرتبطة."
+            "value": "انقر على بوابة Pac-Man أو XO لفتح لوحة اللعبة."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tap the Tutorial portal to open its linked subcanvas."
+            "value": "Tap the Pac-Man or XO portal to open that game canvas."
           }
         }
       }
@@ -3574,13 +3676,13 @@
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "افتح لوحة الأوامر، ابحث عن Tutorial، ثم اختر العقدة للقفز إليها."
+            "value": "ابحث عن Pac-Man أو XO ثم اختر العقدة للقفز إليها."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Open the command palette, search for Tutorial, then select the node to fly to it."
+            "value": "Search for Pac-Man or XO, then select the node to fly to it."
           }
         }
       }
@@ -6030,13 +6132,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Omnibox Navigation"
+            "value": "Game discovery"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "التنقل عبر لوحة الأوامر"
+            "value": "استكشاف الألعاب"
           }
         }
       }
@@ -6047,13 +6149,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "5 steps · Go back, search nodes, and move between canvases"
+            "value": "8 steps · Go back, find a game, and apply one small CoCaptain edit"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "٥ خطوات · ارجع للخلف وابحث عن العقد وتنقّل بين اللوحات"
+            "value": "٨ خطوات · عُد للخلف، ابحث عن لعبة، وطبّق تغيير CoCaptain صغير"
           }
         }
       }
@@ -6064,13 +6166,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mini-App Preview"
+            "value": "Help & Docs"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "معاينة التطبيق المصغّر"
+            "value": "المساعدة والدروس"
           }
         }
       }
@@ -6081,13 +6183,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "5 steps · Run, edit code, and return to the canvas"
+            "value": "2 steps · Open Help and find more tutorials"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "٥ خطوات · شغّل التطبيق، عدّل الكود، وارجع إلى اللوحة"
+            "value": "خطوتان · افتح المساعدة واعثر على دروس إضافية"
           }
         }
       }
@@ -6115,13 +6217,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "4 steps · Drag, organize, undo, and redo"
+            "value": "7 steps · Pan, zoom, fit, drag, organize, undo, and redo"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "٤ خطوات · اسحب، رتّب، تراجع، وأعد"
+            "value": "٧ خطوات · حرّك وكبّر واحتوِ الكل ثم رتّب وتراجع وأعد"
           }
         }
       }

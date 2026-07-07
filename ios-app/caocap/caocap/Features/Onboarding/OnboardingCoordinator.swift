@@ -6,30 +6,43 @@ import Observation
 @MainActor
 @Observable
 public class OnboardingCoordinator {
-
     // MARK: - Step Definition
 
     public enum Step: Int, CaseIterable, Comparable {
         /// User must open the Tutorial portal on the root canvas.
         case openTutorial = 0
-        /// User must drag the canvas background to pan around the workspace.
-        case panCanvas
-        /// User must pinch the canvas to zoom in or out.
-        case pinchZoom
-        /// User must double-tap empty canvas space to fit all nodes in view.
-        case fitAllNodes
         /// User must tap the floating command button (FAB) to open the command palette.
         case tapFAB
+        /// User must type any text in the omnibox search field.
+        case typeCoCaptainPrompt
+        /// User must send the typed text to CoCaptain via the prompt row or Return key.
+        case submitCoCaptainPrompt
+        /// User must ask CoCaptain for a small guided change to the Hello World app.
+        case chatCoCaptain
+        /// User must dismiss the CoCaptain panel by tapping Done or dragging it down.
+        case dismissCoCaptain
+        /// User must long-press the FAB to reveal the quick-action radial menu.
+        case longPressFAB
         /// User must open the omnibox from a subcanvas to begin navigation practice.
         case returnToRoot
         /// User must type "go back" in the omnibox search field.
         case typeGoBackInOmnibox
         /// User must tap the Go Back action row or press return to navigate up.
         case tapGoBackAction
-        /// User must search for and fly to the Tutorial node via the command palette.
+        /// User must search for and fly to Pac-Man or XO via the command palette.
         case searchFlyToNode
-        /// User must tap the Tutorial portal node to open its linked subcanvas.
+        /// User must tap a demo-game portal node to open its linked subcanvas.
         case openPortal
+        /// User must ask CoCaptain for a small guided change on a demo game canvas.
+        case chatCoCaptainGameEdit
+        /// User must review the pending CoCaptain change card.
+        case reviewCoCaptainChange
+        /// User must tap Apply on the CoCaptain review card.
+        case applyCoCaptainChange
+        /// User must open Help from the command palette.
+        case openHelpCenter
+        /// User must browse Help guides to discover additional lessons.
+        case browseHelpGuides
         /// User must tap the seeded Hello World Mini-App on the Tutorial canvas.
         case tapMiniAppNode
         /// User must interact with the live Mini-App preview.
@@ -40,20 +53,12 @@ public class OnboardingCoordinator {
         case saveMiniAppCodeEdit
         /// User must return to the canvas from the Mini-App preview.
         case returnFromMiniAppPreview
-        /// User must type any text in the omnibox search field.
-        case typeCoCaptainPrompt
-        /// User must send the typed text to CoCaptain via the prompt row or Return key.
-        case submitCoCaptainPrompt
-        /// User must ask CoCaptain for a small guided change to the Hello World app.
-        case chatCoCaptain
-        /// User must review the pending CoCaptain change card.
-        case reviewCoCaptainChange
-        /// User must tap Apply on the CoCaptain review card.
-        case applyCoCaptainChange
-        /// User must dismiss the CoCaptain panel by tapping Done or dragging it down.
-        case dismissCoCaptain
-        /// User must long-press the FAB to reveal the quick-action radial menu.
-        case longPressFAB
+        /// User must drag the canvas background to pan around the workspace.
+        case panCanvas
+        /// User must pinch the canvas to zoom in or out.
+        case pinchZoom
+        /// User must double-tap empty canvas space to fit all nodes in view.
+        case fitAllNodes
         /// User must drag the practice node to a new position.
         case dragCanvasNode
         /// User must run Organize Nodes from the omnibox.
@@ -97,7 +102,8 @@ public class OnboardingCoordinator {
             switch self {
             case .returnToRoot, .typeGoBackInOmnibox, .tapGoBackAction, .panCanvas, .pinchZoom, .fitAllNodes,
                  .searchFlyToNode, .openPortal, .tapMiniAppNode, .interactMiniAppPreview, .openMiniAppCodeTool,
-                 .saveMiniAppCodeEdit, .returnFromMiniAppPreview, .dragCanvasNode, .runOrganizeNodes,
+                 .saveMiniAppCodeEdit, .returnFromMiniAppPreview, .openHelpCenter, .browseHelpGuides,
+                 .dragCanvasNode, .runOrganizeNodes,
                  .undoCanvasEdit, .redoCanvasEdit, .reviewCoCaptainChange, .applyCoCaptainChange:
                 return true
             default:
@@ -149,8 +155,8 @@ public class OnboardingCoordinator {
     // MARK: - Persistence
 
     /// Versioned key so a future onboarding redesign can show the new flow to existing users.
-    private static let completedKey = "onboarding_completed_v8"
-    private static let legacyCompletedKey = "onboarding_completed_v7"
+    private static let completedKey = "onboarding_completed_v9"
+    private static let legacyCompletedKey = "onboarding_completed_v8"
     private static let legacyV5CompletedKey = "onboarding_completed_v5"
     private static let lessonCompletedKeyPrefix = "onboarding_lesson_completed_"
     private static let legacyCanvasNavigationLessonKey = "onboarding_lesson_completed_powerShortcuts"
@@ -229,9 +235,10 @@ public class OnboardingCoordinator {
             try? await Task.sleep(for: .seconds(2.5))
             guard !Task.isCancelled else { return }
             guard currentStep == .reviewCoCaptainChange else { return }
+            let lessonID = activeLessonID?.rawValue ?? OnboardingLessonID.omniboxNavigation.rawValue
             analytics.logEvent(
                 OnboardingAnalytics.cocaptainReviewShown,
-                parameters: [OnboardingAnalytics.lessonID: OnboardingLessonID.coCaptainChat.rawValue]
+                parameters: [OnboardingAnalytics.lessonID: lessonID]
             )
             completeCurrentStep()
         }
@@ -269,13 +276,13 @@ public class OnboardingCoordinator {
         logLessonCompleted(lessonID)
 
         if advancesThroughLessons,
-           let nextLessonID = OnboardingLessonsManifest.nextLesson(after: lessonID),
+           let nextLessonID = OnboardingLessonsManifest.nextMainLesson(after: lessonID),
            !isLessonCompleted(nextLessonID) {
             startLesson(nextLessonID, advancesThroughLessons: true)
             return
         }
 
-        if completedLessonIDs.count == OnboardingLessonID.allCases.count {
+        if OnboardingLessonsManifest.areAllMainLessonsCompleted(completedLessonIDs: completedLessonIDs) {
             markComplete()
         } else {
             activeLessonID = nil
@@ -311,13 +318,13 @@ public class OnboardingCoordinator {
         markLessonComplete(lessonID)
 
         if advancesThroughLessons,
-           let nextLessonID = OnboardingLessonsManifest.nextLesson(after: lessonID),
+           let nextLessonID = OnboardingLessonsManifest.nextMainLesson(after: lessonID),
            !isLessonCompleted(nextLessonID) {
             startLesson(nextLessonID, advancesThroughLessons: true)
             return
         }
 
-        if completedLessonIDs.count == OnboardingLessonID.allCases.count {
+        if OnboardingLessonsManifest.areAllMainLessonsCompleted(completedLessonIDs: completedLessonIDs) {
             markComplete()
         } else {
             activeLessonID = nil
@@ -348,7 +355,7 @@ public class OnboardingCoordinator {
 
     private func markComplete() {
         popoverTask?.cancel()
-        for lessonID in OnboardingLessonID.allCases {
+        for lessonID in OnboardingLessonsManifest.mainLessonIDs {
             markLessonComplete(lessonID)
         }
         activeLessonID = nil

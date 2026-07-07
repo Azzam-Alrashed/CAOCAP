@@ -23,7 +23,6 @@ struct CoCaptainTimelineListView: View {
                                 .id(item.id)
                         }
                     }
-
                     if viewModel.isAwaitingFirstResponse {
                         HStack(alignment: .bottom, spacing: 8) {
                             CopilotAvatarView(size: 28)

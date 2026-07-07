@@ -31,7 +31,8 @@ struct CoCaptainInputComposer: View {
 
     private var isChatOnboardingActive: Bool {
         guard let onboarding else { return false }
-        return onboarding.currentStep == .chatCoCaptain && onboarding.showPopover
+        return (onboarding.currentStep == .chatCoCaptain || onboarding.currentStep == .chatCoCaptainGameEdit)
+            && onboarding.showPopover
     }
 
     /// Resolves the current user-selected or automatic dictation locale.

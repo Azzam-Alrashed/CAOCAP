@@ -51,7 +51,7 @@ struct ContentView: View {
             }
             .onboardingTooltipOverlay(
                 isCommandPalettePresented: session.commandPalette.isPresented,
-                rendersAnchor: { !$0.isCanvasLocal && !$0.isPreviewShellLocal }
+                rendersAnchor: { !$0.isCanvasLocal && !$0.isPreviewShellLocal && !$0.isCoCaptainLocal }
             )
             .background(Color.black.ignoresSafeArea())
             .overlay { launchOverlay }

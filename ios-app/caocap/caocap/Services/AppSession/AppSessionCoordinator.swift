@@ -50,6 +50,7 @@ final class AppSessionCoordinator {
 
     private var actionsConfigured = false
     @ObservationIgnored private var activeUndoManager: UndoManager?
+    
 
     init() {
         onboarding.onLessonWillStart = { [weak self] lessonID in
@@ -197,10 +198,10 @@ final class AppSessionCoordinator {
             syncViewportWithActiveStore()
         case .omniboxNavigation:
             prepareOmniboxNavigationWorkspace()
-        case .miniAppPreview, .moveAndOrganize:
+        case .miniAppPreview:
+            prepareHelpDiscoveryLessonWorkspace()
+        case .coCaptainChat, .moveAndOrganize:
             prepareTutorialLessonWorkspace()
-        case .coCaptainChat:
-            prepareCoCaptainLessonWorkspace()
         }
 
         onboarding.startLesson(lessonID, advancesThroughLessons: false)
@@ -213,10 +214,10 @@ final class AppSessionCoordinator {
             syncViewportWithActiveStore()
         case .omniboxNavigation:
             prepareOmniboxNavigationWorkspace()
-        case .miniAppPreview, .moveAndOrganize:
+        case .miniAppPreview:
+            prepareHelpDiscoveryLessonWorkspace()
+        case .coCaptainChat, .moveAndOrganize:
             prepareTutorialLessonWorkspace()
-        case .coCaptainChat:
-            prepareCoCaptainLessonWorkspace()
         }
     }
 
@@ -241,6 +242,15 @@ final class AppSessionCoordinator {
             dispatcher: actionDispatcher
         )
         presentCoCaptain()
+    }
+
+    private func prepareHelpDiscoveryLessonWorkspace() {
+        commandPalette.setPresented(false)
+        coCaptain.setPresented(false)
+        restoreTutorialPortalIfNeeded()
+        router.navigate(to: .root, addToStack: false, animated: false)
+        syncViewportWithActiveStore()
+        commandPalette.nodes = router.activeStore.nodes
     }
 
     private func celebrateTutorialGraduation() {
@@ -351,13 +361,19 @@ final class AppSessionCoordinator {
 
     func handleSubCanvasNavigation(fileName: String) {
         router.navigateToSubCanvas(fileName: fileName)
-        guard fileName == RootCanvasProvider.tutorialFileName else { return }
+        if fileName == RootCanvasProvider.tutorialFileName {
+            if onboarding.currentStep == .openTutorial {
+                onboarding.completeCurrentStep()
+            }
+            return
+        }
 
-        switch onboarding.currentStep {
-        case .openTutorial, .openPortal:
+        if onboarding.currentStep == .openPortal &&
+            (fileName == RootCanvasProvider.pacManFileName || fileName == RootCanvasProvider.xoFileName) {
             onboarding.completeCurrentStep()
-        default:
-            break
+            if onboarding.currentStep == .chatCoCaptainGameEdit {
+                presentCoCaptain()
+            }
         }
     }
 
@@ -373,7 +389,8 @@ final class AppSessionCoordinator {
         } else if onboarding.currentStep == .typeCoCaptainPrompt
                     || onboarding.currentStep == .submitCoCaptainPrompt
                     || onboarding.currentStep == .typeGoBackInOmnibox
-                    || onboarding.currentStep == .tapGoBackAction {
+                    || onboarding.currentStep == .tapGoBackAction
+                    || onboarding.currentStep == .openHelpCenter {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 if (self.onboarding.currentStep == .typeCoCaptainPrompt || self.onboarding.currentStep == .submitCoCaptainPrompt),
                    !self.coCaptain.isPresented {
@@ -382,6 +399,9 @@ final class AppSessionCoordinator {
                             || self.onboarding.currentStep == .tapGoBackAction),
                           !self.commandPalette.isPresented {
                     self.onboarding.moveToStep(.returnToRoot)
+                } else if self.onboarding.currentStep == .openHelpCenter,
+                          !self.showingHelp {
+                    self.onboarding.moveToStep(.tapFAB)
                 }
             }
         }
@@ -397,16 +417,24 @@ final class AppSessionCoordinator {
             if onboarding.currentStep == .dismissCoCaptain {
                 onboarding.completeCurrentStep()
             } else if onboarding.currentStep == .submitCoCaptainPrompt
-                        || onboarding.currentStep == .chatCoCaptain
+                        || onboarding.currentStep == .chatCoCaptain {
+                onboarding.moveToStep(.typeCoCaptainPrompt)
+            } else if onboarding.currentStep == .chatCoCaptainGameEdit
                         || onboarding.currentStep == .reviewCoCaptainChange
                         || onboarding.currentStep == .applyCoCaptainChange {
-                onboarding.moveToStep(.typeCoCaptainPrompt)
+                onboarding.moveToStep(.chatCoCaptainGameEdit)
             }
         }
     }
 
     func handleCoCaptainSuccessCountChange() {
         advanceInitialCoCaptainOnboardingIfReady()
+    }
+
+    func handleHelpGuidesShownForOnboarding() {
+        if onboarding.currentStep == .browseHelpGuides {
+            onboarding.completeCurrentStep()
+        }
     }
 
     func handleCoCaptainSheetAppeared() {
@@ -494,17 +522,19 @@ final class AppSessionCoordinator {
         coCaptain.onReviewItemApplied = { [weak self] _, _ in
             guard let self else { return }
             if self.onboarding.currentStep == .applyCoCaptainChange {
+                let lessonID = self.onboarding.activeLessonID?.rawValue ?? OnboardingLessonID.omniboxNavigation.rawValue
                 AnalyticsService.shared.logEvent(
                     OnboardingAnalytics.cocaptainReviewApplied,
-                    parameters: [OnboardingAnalytics.lessonID: OnboardingLessonID.coCaptainChat.rawValue]
+                    parameters: [OnboardingAnalytics.lessonID: lessonID]
                 )
                 self.onboarding.completeCurrentStep()
             }
         }
-        coCaptain.onOnboardingReviewFallback = {
+        coCaptain.onOnboardingReviewFallback = { [weak self] in
+            let lessonID = self?.onboarding.activeLessonID?.rawValue ?? OnboardingLessonID.omniboxNavigation.rawValue
             AnalyticsService.shared.logEvent(
                 OnboardingAnalytics.cocaptainReviewFallback,
-                parameters: [OnboardingAnalytics.lessonID: OnboardingLessonID.coCaptainChat.rawValue]
+                parameters: [OnboardingAnalytics.lessonID: lessonID]
             )
         }
         commandPalette.onSubmitPrompt = { [weak self] prompt in
@@ -667,6 +697,9 @@ final class AppSessionCoordinator {
         }
         actionDispatcher.register(.help) { [weak self] in
             self?.showingHelp = true
+            if self?.onboarding.currentStep == .openHelpCenter {
+                self?.onboarding.completeCurrentStep()
+            }
         }
         actionDispatcher.register(.openAppIcon) { [weak self] in
             self?.showingAppIconPicker = true
@@ -778,7 +811,7 @@ final class AppSessionCoordinator {
         }
 
         if onboarding.currentStep == .searchFlyToNode,
-           nodeId == RootCanvasProvider.tutorialNodeID {
+           (nodeId == RootCanvasProvider.pacManNodeID || nodeId == RootCanvasProvider.xoNodeID) {
             onboarding.completeCurrentStep()
         }
     }

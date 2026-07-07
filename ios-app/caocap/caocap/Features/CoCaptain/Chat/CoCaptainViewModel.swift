@@ -42,6 +42,7 @@ public final class CoCaptainViewModel {
     @ObservationIgnored
     private var activeCodingRunItemID: UUID?
 
+
     /// Called when the user asks to fly the canvas to a review target node.
     @ObservationIgnored
     public var onFlyToNode: ((UUID) -> Void)?

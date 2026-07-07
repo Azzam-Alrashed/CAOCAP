@@ -250,8 +250,17 @@ public class CommandPaletteViewModel {
         selectedIndex = selectionIndex(forActionAt: index)
     }
 
+    public func selectHelpActionIfAvailable() {
+        guard let index = filteredActions.firstIndex(where: { $0.id == .help }) else { return }
+        selectedIndex = selectionIndex(forActionAt: index)
+    }
+
     public var showsGoBackAction: Bool {
         filteredActions.contains { $0.id == .goBack }
+    }
+
+    public var showsHelpAction: Bool {
+        filteredActions.contains { $0.id == .help }
     }
 
     public func selectPromptRowIfAvailable() {

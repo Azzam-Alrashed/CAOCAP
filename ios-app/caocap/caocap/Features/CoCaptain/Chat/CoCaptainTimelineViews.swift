@@ -16,24 +16,26 @@ struct TimelineItemView: View {
     }
 
     var body: some View {
-        switch item.content {
-        case .message(let bubble):
-            ChatBubbleView(message: bubble)
-        case .execution(let status):
-            ExecutionSummaryView(status: status)
-        case .productCTA(let cta):
-            ProductCTAView(item: cta) {
-                viewModel.performProductCTA(cta)
+        Group {
+            switch item.content {
+            case .message(let bubble):
+                ChatBubbleView(message: bubble)
+            case .execution(let status):
+                ExecutionSummaryView(status: status)
+            case .productCTA(let cta):
+                ProductCTAView(item: cta) {
+                    viewModel.performProductCTA(cta)
+                }
+            case .reviewBundle(let bundle):
+                ReviewBundleView(
+                    bundle: bundle,
+                    viewModel: viewModel,
+                    bundleID: item.id,
+                    isOnboardingApplyAnchorActive: isOnboardingApplyAnchorActive
+                )
+            case .codingRun(let state):
+                CodingRunProgressView(state: state)
             }
-        case .reviewBundle(let bundle):
-            ReviewBundleView(
-                bundle: bundle,
-                viewModel: viewModel,
-                bundleID: item.id,
-                isOnboardingApplyAnchorActive: isOnboardingApplyAnchorActive
-            )
-        case .codingRun(let state):
-            CodingRunProgressView(state: state)
         }
     }
 }
