@@ -20,7 +20,23 @@ public struct ProjectContextBuilder {
     /// Config objects can be large JSON; truncation keeps the prompt within model limits.
     private static let maxFirebaseConfigChars = 4_000
 
-    public init() {}
+    /// Characters of code/SRS shown for a slimmed (non-selected) Mini-App when
+    /// the model can fetch full text on demand via `read_node_section`.
+    private static let slimSectionHeadChars = 400
+
+    /// When `true`, non-selected Mini-Apps get a short section head plus size
+    /// stats instead of a large budget, because the model can read full text
+    /// through the `read_node_section` tool. The local MLX backend has no
+    /// function calling, so it keeps the full budgets.
+    private let usesOnDemandCodeReads: Bool
+
+    public init(usesOnDemandCodeReads: Bool? = nil) {
+        self.usesOnDemandCodeReads = usesOnDemandCodeReads ?? Self.defaultUsesOnDemandCodeReads()
+    }
+
+    static func defaultUsesOnDemandCodeReads() -> Bool {
+        UserDefaults.standard.string(forKey: "cocaptain.modelName") != "gemma-4-local"
+    }
 
     /// Builds a full-project context string from every node on the canvas.
     ///
@@ -112,18 +128,28 @@ public struct ProjectContextBuilder {
             return "- \(node.title) [\(node.type.rawValue)]"
         }
 
-        let srsLimit = selected ? 3_000 : 1_000
-        let codeLimit = selected ? 6_000 : 1_600
+        // Slim, non-selected Mini-Apps show a short head plus size stats;
+        // the model reads full text on demand with `read_node_section`.
+        let slim = usesOnDemandCodeReads && !selected
+        let srsLimit = selected ? 3_000 : (slim ? Self.slimSectionHeadChars : 1_000)
+        let codeLimit = selected ? 6_000 : (slim ? Self.slimSectionHeadChars : 1_600)
+
+        let codeBlock = slim
+            ? Self.sectionSummary(miniApp.codeText, limit: codeLimit)
+            : Self.trimmed(miniApp.codeText, limit: codeLimit)
+        let srsBlock = slim
+            ? Self.sectionSummary(miniApp.srsText, limit: srsLimit)
+            : Self.trimmed(miniApp.srsText, limit: srsLimit)
 
         if detailLevel == .product {
             return """
             - \(node.title) [miniApp] id: \(node.id.uuidString)
               SRS Readiness: \(miniApp.srsReadinessState.contextLabel)
               SRS:
-            \(Self.indent(Self.trimmed(miniApp.srsText, limit: srsLimit), spaces: 4))
+            \(Self.indent(srsBlock, spaces: 4))
 
               Code:
-            \(Self.indent(Self.trimmed(miniApp.codeText, limit: codeLimit), spaces: 4))
+            \(Self.indent(codeBlock, spaces: 4))
             """
         }
 
@@ -131,20 +157,37 @@ public struct ProjectContextBuilder {
         let firebaseStatus = FirebasePreviewBootstrap.injectableFirebaseConfig(for: miniApp) == nil ? "not ready" : "ready"
         let firestorePath = miniApp.firebaseFirestorePath?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
 
+        // Full config payloads only accompany a fully-detailed (selected or
+        // full-budget) node; slim entries keep the small status lines only.
+        let firebaseConfigBlock = slim ? nil : """
+
+          Firebase Config:
+        \(Self.indent(firebaseConfig.isEmpty ? "(empty)" : Self.formatFirebaseConfigForPrompt(firebaseConfig), spaces: 4))
+        """
+
         return """
         - \(node.title) [miniApp] id: \(node.id.uuidString)
           SRS Readiness: \(miniApp.srsReadinessState.contextLabel)
           Firebase: \(firebaseStatus)
           Firestore Default Path: \(firestorePath.isEmpty ? "(none set)" : firestorePath)
           SRS:
-        \(Self.indent(Self.trimmed(miniApp.srsText, limit: srsLimit), spaces: 4))
+        \(Self.indent(srsBlock, spaces: 4))
 
           Code:
-        \(Self.indent(Self.trimmed(miniApp.codeText, limit: codeLimit), spaces: 4))
-
-          Firebase Config:
-        \(Self.indent(firebaseConfig.isEmpty ? "(empty)" : Self.formatFirebaseConfigForPrompt(firebaseConfig), spaces: 4))
+        \(Self.indent(codeBlock, spaces: 4))\(firebaseConfigBlock ?? "")
         """
+    }
+
+    /// A short head of a section plus its total size, used for slim entries.
+    /// The trailing note tells the model how to fetch the full text.
+    private static func sectionSummary(_ text: String, limit: Int) -> String {
+        let lineCount = text.isEmpty ? 0 : text.split(separator: "\n", omittingEmptySubsequences: false).count
+        let stats = "(\(lineCount) lines, \(text.count) characters total)"
+        guard text.count > limit else {
+            return text.isEmpty ? "(empty)" : "\(text)\n\(stats)"
+        }
+        return String(text.prefix(limit))
+            + "\n[TRUNCATED — call read_node_section for the full text]\n\(stats)"
     }
 
     /// Collects all nodes that are directly linked to `selectedNode` in either

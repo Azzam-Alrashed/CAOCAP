@@ -918,6 +918,74 @@
         }
       }
     },
+    "cocaptain.mentorNote.fallbackBody": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لقد طبقت للتو هذا التغيير: %@. افتح المعاينة لترى النتيجة في تطبيقك."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You just applied this change: %@. Open the preview to see the result in your app."
+          }
+        }
+      }
+    },
+    "cocaptain.mentorNote.fallbackBodyWithChecks": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لقد طبقت للتو هذا التغيير: %1$@. تحقق المساعد من نجاحه بفحص: %2$@."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You just applied this change: %1$@. CoCaptain confirmed it works by checking: %2$@."
+          }
+        }
+      }
+    },
+    "cocaptain.mentorNote.fallbackConcept": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ما الذي تغير للتو"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What just changed"
+          }
+        }
+      }
+    },
+    "cocaptain.mentorNote.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ما تعلمته للتو"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What you just learned"
+          }
+        }
+      }
+    },
     "cocaptain.validationFailure.encouragement": {
       "extractionState": "manual",
       "localizations": {

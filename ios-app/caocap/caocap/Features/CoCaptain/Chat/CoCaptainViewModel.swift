@@ -496,6 +496,12 @@ public final class CoCaptainViewModel {
         items[bundleIndex].content = .reviewBundle(bundle)
         persistNodeReviewBundleIfNeeded(bundleID: bundleID, bundle: bundle)
         if item.status == .applied {
+            // The learning moment is revealed only now, after the change is real.
+            if let note = item.learningNote {
+                items.append(
+                    CoCaptainTimelineItem(content: .mentorNote(CoCaptainMentorNoteItem(note: note)))
+                )
+            }
             onReviewItemApplied?(bundleID, itemID)
         }
     }
@@ -561,7 +567,8 @@ public final class CoCaptainViewModel {
                     section: section,
                     operations: resolved.canonicalOperations,
                     baseText: resolved.preview.originalText
-                )
+                ),
+                learningNote: item.learningNote
             )
         } catch {
             updatedItem.status = .conflicted

@@ -42,6 +42,8 @@ struct TimelineItemView: View {
                 ClarifyingQuestionCardView(item: questionItem) { option in
                     viewModel.answerClarifyingQuestion(itemID: item.id, option: option)
                 }
+            case .mentorNote(let noteItem):
+                MentorNoteCardView(item: noteItem)
             }
         }
     }
@@ -175,6 +177,49 @@ struct ExecutionSummaryView: View {
         .padding(.vertical, 10)
         .background(Color.green.opacity(0.08))
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+}
+
+/// A "What you just learned" card revealed after the user applies a node edit.
+/// Turns the apply moment into a small lesson about the user's own app.
+struct MentorNoteCardView: View {
+    let item: CoCaptainMentorNoteItem
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "lightbulb.fill")
+                .font(.system(size: 15, weight: .bold))
+                .foregroundStyle(Color.yellow)
+                .frame(width: 28, height: 28)
+                .background(Color.yellow.opacity(0.14))
+                .clipShape(Circle())
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(LocalizationManager.shared.localizedString("cocaptain.mentorNote.title"))
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+
+                Text(item.note.concept)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.primary)
+
+                Text(item.note.body)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(14)
+        .background(Color.accentColor.opacity(0.06))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.accentColor.opacity(0.2), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .transition(.asymmetric(insertion: .push(from: .bottom).combined(with: .opacity), removal: .opacity))
     }
 }
 

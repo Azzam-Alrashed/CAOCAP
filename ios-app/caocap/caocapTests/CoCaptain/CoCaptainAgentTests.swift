@@ -1605,6 +1605,406 @@ struct CoCaptainAgentTests {
         #expect(result.conflictDescription == nil)
     }
 
+    @Test func parserExtractsLearningNoteFromNodeEdit() throws {
+        let parser = CoCaptainAgentParser()
+        let response =
+            """
+            Done.
+
+            <cocaptain_actions>
+              <assistant_message>Updated the headline.</assistant_message>
+              <node_edits>
+                <node_edit role="miniApp" section="code" summary="Update headline">
+                  <operation type="replace_all">
+                    <content><![CDATA[<h1>New</h1>]]></content>
+                  </operation>
+                  <learning_note concept="Headings">The h1 tag is your page's headline. Changing its text changes what visitors see first.</learning_note>
+                </node_edit>
+              </node_edits>
+            </cocaptain_actions>
+            """
+
+        let parsed = parser.parse(response)
+        let note = parsed.payload?.nodeEdits.first?.learningNote
+
+        #expect(note?.concept == "Headings")
+        #expect(note?.body.contains("headline") == true)
+    }
+
+    @Test func parserDegradesMalformedLearningNoteWithoutInvalidatingEdit() throws {
+        let parser = CoCaptainAgentParser()
+        let response =
+            """
+            <cocaptain_actions>
+              <assistant_message>Updated.</assistant_message>
+              <node_edits>
+                <node_edit role="miniApp" section="code" summary="Update headline">
+                  <operation type="replace_all">
+                    <content><![CDATA[<h1>New</h1>]]></content>
+                  </operation>
+                  <learning_note>Missing concept attribute.</learning_note>
+                </node_edit>
+              </node_edits>
+            </cocaptain_actions>
+            """
+
+        let parsed = parser.parse(response)
+
+        #expect(parsed.payload?.nodeEdits.count == 1)
+        #expect(parsed.payload?.nodeEdits.first?.learningNote == nil)
+    }
+
+    @MainActor
+    @Test func coordinatorCarriesLearningNoteIntoReviewItem() async throws {
+        let llm = TestLLMClient(
+            response:
+                """
+                Updating now.
+
+                <cocaptain_actions>
+                  <assistant_message>Updated the headline.</assistant_message>
+                  <node_edits>
+                    <node_edit role="miniApp" section="code" summary="Update headline">
+                      <operation type="replace_all">
+                        <content><![CDATA[<h1>New</h1>]]></content>
+                      </operation>
+                      <learning_note concept="Headings">The h1 tag is your page's main headline.</learning_note>
+                    </node_edit>
+                  </node_edits>
+                </cocaptain_actions>
+                """
+        )
+        let coordinator = CoCaptainAgentCoordinator(
+            llmClient: llm,
+            verifiedCodingLoopEnabled: { false }
+        )
+
+        let result = try await coordinator.run(
+            userMessage: "update the headline",
+            store: makeStore(),
+            dispatcher: TestActionDispatcher()
+        ) { _ in }
+
+        let note = result.reviewBundle?.items.first?.learningNote
+        #expect(note?.concept == "Headings")
+        #expect(note?.body == "The h1 tag is your page's main headline.")
+    }
+
+    @MainActor
+    @Test func coordinatorBuildsFallbackLearningNoteWhenModelOmitsOne() async throws {
+        let llm = TestLLMClient(
+            response:
+                """
+                <cocaptain_actions>
+                  <assistant_message>Updated the headline.</assistant_message>
+                  <node_edits>
+                    <node_edit role="miniApp" section="code" summary="Update headline">
+                      <operation type="replace_all">
+                        <content><![CDATA[<h1>New</h1>]]></content>
+                      </operation>
+                      <verification_checks>
+                        <verification_check id="headline" description="Headline shows New">
+                          <script><![CDATA[return document.querySelector("h1")?.textContent === "New";]]></script>
+                        </verification_check>
+                      </verification_checks>
+                    </node_edit>
+                  </node_edits>
+                </cocaptain_actions>
+                """
+        )
+        let coordinator = CoCaptainAgentCoordinator(
+            llmClient: llm,
+            verifiedCodingLoopEnabled: { false }
+        )
+
+        let result = try await coordinator.run(
+            userMessage: "update the headline",
+            store: makeStore(),
+            dispatcher: TestActionDispatcher()
+        ) { _ in }
+
+        let note = result.reviewBundle?.items.first?.learningNote
+        #expect(note != nil)
+        #expect(note?.body.contains("Update headline") == true)
+        #expect(note?.body.contains("Headline shows New") == true)
+    }
+
+    @MainActor
+    @Test func applyReviewItemAppendsMentorNoteCardOnApply() {
+        let store = makeStore()
+        let vm = CoCaptainViewModel()
+        vm.store = store
+
+        let miniAppNode = store.nodes.first(where: { $0.title == "Mini-App" })!
+        let baseText = miniAppNode.miniApp?.codeText ?? ""
+        let bundleID = UUID()
+        let itemID = UUID()
+        let note = CoCaptainLearningNote(concept: "Headings", body: "The h1 tag is your headline.")
+
+        vm.items.append(CoCaptainTimelineItem(
+            id: bundleID,
+            content: .reviewBundle(ReviewBundleItem(
+                id: bundleID,
+                items: [PendingReviewItem(
+                    id: itemID,
+                    targetLabel: "Mini-App CODE",
+                    summary: "Update headline",
+                    preview: "<h1>New</h1>",
+                    source: .nodeEdit(
+                        role: .miniApp,
+                        section: .code,
+                        operations: [NodePatchOperation(type: .replaceAll, content: "<h1>New</h1>")],
+                        baseText: baseText
+                    ),
+                    learningNote: note
+                )]
+            ))
+        ))
+
+        vm.applyReviewItem(bundleID: bundleID, itemID: itemID)
+
+        let mentorNotes = vm.items.compactMap { item -> CoCaptainMentorNoteItem? in
+            guard case .mentorNote(let noteItem) = item.content else { return nil }
+            return noteItem
+        }
+        #expect(mentorNotes.count == 1)
+        #expect(mentorNotes.first?.note == note)
+
+        // The note must appear after the execution confirmation.
+        let executionIndex = vm.items.firstIndex { if case .execution = $0.content { return true } else { return false } }
+        let noteIndex = vm.items.firstIndex { if case .mentorNote = $0.content { return true } else { return false } }
+        #expect(executionIndex != nil && noteIndex != nil && executionIndex! < noteIndex!)
+    }
+
+    @MainActor
+    @Test func applyReviewItemDoesNotAppendMentorNoteOnConflict() {
+        let store = makeStore()
+        let vm = CoCaptainViewModel()
+        vm.store = store
+
+        let miniAppNode = store.nodes.first(where: { $0.title == "Mini-App" })!
+        let baseText = miniAppNode.miniApp?.codeText ?? ""
+        let bundleID = UUID()
+        let itemID = UUID()
+
+        vm.items.append(CoCaptainTimelineItem(
+            id: bundleID,
+            content: .reviewBundle(ReviewBundleItem(
+                id: bundleID,
+                items: [PendingReviewItem(
+                    id: itemID,
+                    targetLabel: "Mini-App CODE",
+                    summary: "Update headline",
+                    preview: "<h1>New</h1>",
+                    source: .nodeEdit(
+                        role: .miniApp,
+                        section: .code,
+                        operations: [NodePatchOperation(type: .replaceAll, content: "<h1>New</h1>")],
+                        baseText: baseText
+                    ),
+                    learningNote: CoCaptainLearningNote(concept: "Headings", body: "Body.")
+                )]
+            ))
+        ))
+
+        store.updateMiniAppCode(id: miniAppNode.id, text: "<h1>User change</h1>", persist: false)
+        vm.applyReviewItem(bundleID: bundleID, itemID: itemID)
+
+        let hasMentorNote = vm.items.contains { if case .mentorNote = $0.content { return true } else { return false } }
+        #expect(!hasMentorNote)
+    }
+
+    @Test func pendingReviewItemDecodesLegacyPayloadWithoutLearningNote() throws {
+        let legacy = PendingReviewItem(
+            targetLabel: "Mini-App CODE",
+            summary: "Update headline",
+            preview: "<h1>New</h1>",
+            source: .nodeEdit(role: .miniApp, section: .code, operations: [], baseText: "")
+        )
+        var object = try #require(
+            try JSONSerialization.jsonObject(with: JSONEncoder().encode(legacy)) as? [String: Any]
+        )
+        object.removeValue(forKey: "learningNote")
+        let strippedData = try JSONSerialization.data(withJSONObject: object)
+
+        let decoded = try JSONDecoder().decode(PendingReviewItem.self, from: strippedData)
+
+        #expect(decoded.learningNote == nil)
+        #expect(decoded.summary == "Update headline")
+    }
+
+    @Test func agentJSONValuePreservesNestedObjectsAndArrays() throws {
+        let json = """
+        {"summary": "Update", "operations": [{"type": "replace_all", "content": "<h1>New</h1>"}], "count": 2, "flag": true}
+        """
+        let decoded = try JSONDecoder().decode(
+            [String: AgentJSONValue].self,
+            from: Data(json.utf8)
+        )
+
+        #expect(decoded["summary"]?.stringValue == "Update")
+        #expect(decoded["count"]?.stringValue == "2")
+        #expect(decoded["flag"]?.stringValue == "true")
+        let operations = decoded["operations"]?.arrayValue
+        #expect(operations?.count == 1)
+        #expect(operations?.first?.objectValue?["type"]?.stringValue == "replace_all")
+        #expect(decoded["operations"]?.stringValue == nil)
+    }
+
+    @MainActor
+    @Test func coordinatorAnswersReadNodeSectionToolInline() async throws {
+        let store = makeStore()
+        let nodeID = store.nodes.first(where: { $0.title == "Mini-App" })!.id
+        let llm = ToolLoopLLMClient(
+            toolCall: CoCaptainAgentFunctionCall(
+                name: CoCaptainReadNodeSectionTool.name,
+                arguments: ["nodeId": .string(nodeID.uuidString), "section": "code"]
+            ),
+            finalResponse:
+                """
+                <cocaptain_actions>
+                  <assistant_message>Read the code and prepared an edit.</assistant_message>
+                  <node_edits>
+                    <node_edit nodeId="\(nodeID.uuidString)" role="miniApp" section="code" summary="Update headline">
+                      <operation type="replace_all">
+                        <content><![CDATA[<h1>New</h1>]]></content>
+                      </operation>
+                    </node_edit>
+                  </node_edits>
+                </cocaptain_actions>
+                """
+        )
+        let coordinator = CoCaptainAgentCoordinator(
+            llmClient: llm,
+            verifiedCodingLoopEnabled: { false }
+        )
+
+        let result = try await coordinator.run(
+            userMessage: "update the headline",
+            store: store,
+            dispatcher: TestActionDispatcher()
+        ) { _ in }
+
+        // The read tool was answered inline with the node's real code.
+        #expect(llm.capturedToolResults.count == 1)
+        #expect(llm.capturedToolResults.first?.contains("<h1>Hello World!</h1>") == true)
+        // The turn still produced a normal review bundle from the follow-up response.
+        #expect(result.reviewBundle?.items.first?.status == .pending)
+    }
+
+    @MainActor
+    @Test func readNodeSectionToolReturnsErrorTextForUnknownNode() async throws {
+        let store = makeStore()
+        let llm = ToolLoopLLMClient(
+            toolCall: CoCaptainAgentFunctionCall(
+                name: CoCaptainReadNodeSectionTool.name,
+                arguments: ["nodeId": .string(UUID().uuidString), "section": "code"]
+            ),
+            finalResponse: "That node does not exist."
+        )
+        let coordinator = CoCaptainAgentCoordinator(
+            llmClient: llm,
+            verifiedCodingLoopEnabled: { false }
+        )
+
+        _ = try? await coordinator.run(
+            userMessage: "what's in that node?",
+            store: store,
+            dispatcher: TestActionDispatcher()
+        ) { _ in }
+
+        #expect(llm.capturedToolResults.first?.hasPrefix("Error:") == true)
+    }
+
+    @MainActor
+    @Test func toolExecutorLeavesRequestAppActionToAdapterRouting() async throws {
+        let store = makeStore()
+        let llm = ToolLoopLLMClient(
+            toolCall: CoCaptainAgentFunctionCall(
+                name: CoCaptainFunctionCallAgentAdapter.requestAppActionName,
+                arguments: ["actionId": "go_root", "executionMode": "safe"]
+            ),
+            finalResponse: "Navigating."
+        )
+        let dispatcher = TestActionDispatcher()
+        let coordinator = CoCaptainAgentCoordinator(
+            llmClient: llm,
+            verifiedCodingLoopEnabled: { false }
+        )
+
+        let result = try await coordinator.run(
+            userMessage: "go home please",
+            store: store,
+            dispatcher: dispatcher
+        ) { _ in }
+
+        // Executor must decline (nil) so the call routes through the adapters.
+        #expect(llm.capturedToolResults.isEmpty)
+        #expect(dispatcher.executedActionIDs == [.goRoot])
+        #expect(result.executionSummary != nil)
+    }
+
+    @MainActor
+    @Test func slimContextSummarizesNonSelectedMiniAppCode() throws {
+        let longCode = "<html><body>" + String(repeating: "<p>line</p>\n", count: 200) + "</body></html>"
+        let store = ProjectStore(
+            fileName: "slim-context-\(UUID().uuidString).json",
+            projectName: "Slim",
+            initialNodes: [
+                SpatialNode(type: .miniApp, position: .zero, title: "Mini-App", miniApp: MiniAppState(srsText: "SRS", codeText: longCode))
+            ]
+        )
+
+        let context = ProjectContextBuilder(usesOnDemandCodeReads: true)
+            .buildPromptContext(from: store)
+
+        #expect(context.contains("call read_node_section for the full text"))
+        #expect(context.contains("characters total"))
+        #expect(!context.contains("</body></html>"))
+    }
+
+    @MainActor
+    @Test func fullBudgetContextKeptWhenOnDemandReadsUnavailable() throws {
+        let code = "<html><body>" + String(repeating: "<p>line</p>\n", count: 80) + "</body></html>"
+        let store = ProjectStore(
+            fileName: "full-context-\(UUID().uuidString).json",
+            projectName: "Full",
+            initialNodes: [
+                SpatialNode(type: .miniApp, position: .zero, title: "Mini-App", miniApp: MiniAppState(srsText: "SRS", codeText: code))
+            ]
+        )
+
+        let context = ProjectContextBuilder(usesOnDemandCodeReads: false)
+            .buildPromptContext(from: store)
+
+        #expect(!context.contains("call read_node_section for the full text"))
+        #expect(context.contains("</body></html>"))
+    }
+
+    @MainActor
+    @Test func nodeScopedSelectedNodeKeepsFullCodeBudget() throws {
+        let selectedID = UUID()
+        let linkedID = UUID()
+        let selectedCode = "<html><body>" + String(repeating: "<div>selected</div>\n", count: 100) + "<footer>selected-end</footer></body></html>"
+        let linkedCode = "<html><body>" + String(repeating: "<div>linked</div>\n", count: 100) + "<footer>linked-end</footer></body></html>"
+        let store = ProjectStore(
+            fileName: "selected-budget-\(UUID().uuidString).json",
+            projectName: "Budgets",
+            initialNodes: [
+                SpatialNode(id: selectedID, type: .miniApp, position: .zero, title: "Selected", connectedNodeIds: [linkedID], miniApp: MiniAppState(codeText: selectedCode)),
+                SpatialNode(id: linkedID, type: .miniApp, position: .zero, title: "Linked", miniApp: MiniAppState(codeText: linkedCode))
+            ]
+        )
+
+        let context = ProjectContextBuilder(usesOnDemandCodeReads: true)
+            .buildNodePromptContext(from: store, nodeID: selectedID)
+
+        // Selected node keeps its full budget; the linked neighbor is slimmed.
+        #expect(context.contains("selected-end"))
+        #expect(!context.contains("linked-end"))
+        #expect(context.contains("call read_node_section for the full text"))
+    }
+
     @MainActor
     @Test func flyToReviewTargetInvokesCallback() {
         let vm = CoCaptainViewModel()
@@ -2733,6 +3133,330 @@ struct CoCaptainAgentTests {
         #expect(stillAnswered.answeredOption == "Change the colors")
     }
 
+    // MARK: - Phase 3: node edits via function calling
+
+    @Test func nodeEditFunctionAdapterMapsProposeNodeEdit() throws {
+        let adapter = CoCaptainNodeEditFunctionAdapter()
+        let nodeID = UUID()
+
+        let directive = adapter.directive(
+            from: [
+                CoCaptainAgentFunctionCall(
+                    name: CoCaptainNodeEditTools.proposeNodeEditName,
+                    arguments: [
+                        "nodeId": .string(nodeID.uuidString),
+                        "section": "code",
+                        "summary": "Update the heading",
+                        "operations": [
+                            [
+                                "type": "replace_exact",
+                                "target": "Hello World!",
+                                "content": "Hello CAOCAP!"
+                            ]
+                        ],
+                        "verificationChecks": [
+                            [
+                                "id": "heading",
+                                "description": "Heading shows the new text",
+                                "script": "return document.querySelector(\"h1\")?.textContent === \"Hello CAOCAP!\";"
+                            ]
+                        ],
+                        "learningNote": [
+                            "concept": "Exact text replacement",
+                            "body": "Your heading changed because the edit found the old text and swapped it in place."
+                        ]
+                    ]
+                )
+            ],
+            visibleText: "I prepared an edit."
+        )
+
+        let edit = try #require(directive.payload?.nodeEdits.first)
+        #expect(edit.nodeID == nodeID)
+        #expect(edit.section == .code)
+        #expect(edit.summary == "Update the heading")
+        #expect(edit.operations.first?.type == .replaceExact)
+        #expect(edit.operations.first?.target == "Hello World!")
+        #expect(edit.operations.first?.content == "Hello CAOCAP!")
+        #expect(edit.verificationChecks.first?.id == "heading")
+        #expect(edit.learningNote?.concept == "Exact text replacement")
+        #expect(directive.diagnostics.isEmpty)
+        #expect(directive.source == .nodeEditFunctionCall)
+    }
+
+    @Test func nodeEditFunctionAdapterReportsMalformedArguments() throws {
+        let adapter = CoCaptainNodeEditFunctionAdapter()
+
+        let missingSummary = adapter.directive(from: [
+            CoCaptainAgentFunctionCall(
+                name: CoCaptainNodeEditTools.proposeNodeEditName,
+                arguments: [
+                    "operations": [["type": "append", "content": "<p>hi</p>"]]
+                ]
+            )
+        ])
+        let malformedOperation = adapter.directive(from: [
+            CoCaptainAgentFunctionCall(
+                name: CoCaptainNodeEditTools.proposeNodeEditName,
+                arguments: [
+                    "summary": "Broken op",
+                    "operations": [["type": "not_a_real_type", "content": "x"]]
+                ]
+            )
+        ])
+
+        #expect(missingSummary.payload == nil)
+        #expect(missingSummary.diagnostics.first?.contains("summary") == true)
+        #expect(malformedOperation.payload == nil)
+        #expect(malformedOperation.diagnostics.first?.contains("malformed operation") == true)
+    }
+
+    @Test func nodeEditFunctionAdapterDegradesMalformedLearningNote() throws {
+        let adapter = CoCaptainNodeEditFunctionAdapter()
+
+        let directive = adapter.directive(from: [
+            CoCaptainAgentFunctionCall(
+                name: CoCaptainNodeEditTools.proposeNodeEditName,
+                arguments: [
+                    "summary": "Update heading",
+                    "operations": [["type": "append", "content": "<p>hi</p>"]],
+                    "learningNote": ["concept": "   ", "body": ""]
+                ]
+            )
+        ])
+
+        let edit = try #require(directive.payload?.nodeEdits.first)
+        #expect(edit.learningNote == nil)
+        #expect(directive.diagnostics.isEmpty)
+    }
+
+    @Test func nodeEditFunctionAdapterMapsClarifyingQuestion() throws {
+        let adapter = CoCaptainNodeEditFunctionAdapter()
+
+        let directive = adapter.directive(from: [
+            CoCaptainAgentFunctionCall(
+                name: CoCaptainNodeEditTools.askClarifyingQuestionName,
+                arguments: [
+                    "prompt": "Which look do you want?",
+                    "options": ["Bright and playful", "Dark and sleek"]
+                ]
+            )
+        ])
+
+        #expect(directive.payload?.clarifyingQuestion?.prompt == "Which look do you want?")
+        #expect(directive.payload?.clarifyingQuestion?.options.count == 2)
+        #expect(directive.payload?.nodeEdits.isEmpty == true)
+
+        let tooFewOptions = adapter.directive(from: [
+            CoCaptainAgentFunctionCall(
+                name: CoCaptainNodeEditTools.askClarifyingQuestionName,
+                arguments: ["prompt": "Vague?", "options": ["Only one"]]
+            )
+        ])
+        #expect(tooFewOptions.payload == nil)
+        #expect(tooFewOptions.diagnostics.isEmpty == false)
+    }
+
+    @Test func compositeAdapterPrefersFunctionCallEditsOverXMLEdits() throws {
+        let adapter = CoCaptainCompositeAgentAdapter()
+        let response = """
+        I prepared an edit.
+
+        <cocaptain_actions>
+          <assistant_message>I prepared an edit.</assistant_message>
+          <node_edits>
+            <node_edit role="miniApp" section="code" summary="XML edit">
+              <operation type="replace_all">
+                <content><![CDATA[<h1>From XML</h1>]]></content>
+              </operation>
+            </node_edit>
+          </node_edits>
+        </cocaptain_actions>
+        """
+
+        let directive = adapter.directive(
+            from: response,
+            functionCalls: [
+                CoCaptainAgentFunctionCall(
+                    name: CoCaptainNodeEditTools.proposeNodeEditName,
+                    arguments: [
+                        "summary": "Tool edit",
+                        "operations": [["type": "replace_all", "content": "<h1>From tool</h1>"]]
+                    ]
+                )
+            ]
+        )
+
+        #expect(directive.payload?.nodeEdits.count == 1)
+        #expect(directive.payload?.nodeEdits.first?.summary == "Tool edit")
+        #expect(directive.source == .combined)
+    }
+
+    @Test func compositeAdapterReportsNodeEditFunctionCallSource() throws {
+        let adapter = CoCaptainCompositeAgentAdapter()
+
+        let directive = adapter.directive(
+            from: "I prepared an edit.",
+            functionCalls: [
+                CoCaptainAgentFunctionCall(
+                    name: CoCaptainNodeEditTools.proposeNodeEditName,
+                    arguments: [
+                        "summary": "Tool edit",
+                        "operations": [["type": "append", "content": "<p>hi</p>"]]
+                    ]
+                )
+            ]
+        )
+
+        #expect(directive.payload?.nodeEdits.first?.summary == "Tool edit")
+        #expect(directive.source == .nodeEditFunctionCall)
+    }
+
+    @MainActor
+    @Test func coordinatorStagesFunctionCalledNodeEditForReview() async throws {
+        let store = makeStore()
+        let nodeID = store.nodes[0].id
+        let llm = TestLLMClient(
+            response: "I prepared an edit for your review.",
+            functionCalls: [[
+                CoCaptainAgentFunctionCall(
+                    name: CoCaptainNodeEditTools.proposeNodeEditName,
+                    arguments: [
+                        "nodeId": .string(nodeID.uuidString),
+                        "section": "code",
+                        "summary": "Update the heading",
+                        "operations": [
+                            ["type": "replace_all", "content": "<h1>From tool</h1>"]
+                        ],
+                        "learningNote": [
+                            "concept": "Full rebuild",
+                            "body": "Replacing the whole document keeps the page consistent in one step."
+                        ]
+                    ]
+                )
+            ]]
+        )
+        let coordinator = CoCaptainAgentCoordinator(
+            llmClient: llm,
+            verifiedCodingLoopEnabled: { false }
+        )
+
+        let result = try await coordinator.run(
+            userMessage: "change the heading",
+            store: store,
+            dispatcher: nil
+        ) { _ in }
+
+        let item = try #require(result.reviewBundle?.items.first)
+        #expect(item.status == .pending)
+        #expect(item.targetNodeID == nodeID)
+        #expect(item.learningNote?.concept == "Full rebuild")
+        // Human-in-the-loop guard: staging must never touch the live node.
+        #expect(store.nodes[0].miniApp?.codeText.contains("From tool") == false)
+    }
+
+    @MainActor
+    @Test func functionCalledClarifyingQuestionBeatsFunctionCalledEdits() async throws {
+        let llm = TestLLMClient(
+            response: "One question first.",
+            functionCalls: [[
+                CoCaptainAgentFunctionCall(
+                    name: CoCaptainNodeEditTools.askClarifyingQuestionName,
+                    arguments: [
+                        "prompt": "Which look do you want?",
+                        "options": ["Bright and playful", "Dark and sleek"]
+                    ]
+                ),
+                CoCaptainAgentFunctionCall(
+                    name: CoCaptainNodeEditTools.proposeNodeEditName,
+                    arguments: [
+                        "summary": "Guessy restyle",
+                        "operations": [["type": "replace_all", "content": "<h1>Guess</h1>"]]
+                    ]
+                )
+            ]]
+        )
+        let coordinator = CoCaptainAgentCoordinator(
+            llmClient: llm,
+            verifiedCodingLoopEnabled: { false }
+        )
+
+        let result = try await coordinator.run(
+            userMessage: "change the look",
+            store: makeStore(),
+            dispatcher: nil
+        ) { _ in }
+
+        #expect(result.clarifyingQuestion?.prompt == "Which look do you want?")
+        #expect(result.reviewBundle == nil)
+    }
+
+    @MainActor
+    @Test func agenticRetryReferencesToolsWhenNodeEditToolsEnabled() async throws {
+        let llm = TestLLMClient(
+            responses: [
+                "I can describe the landing page in chat.",
+                "Here is the edit."
+            ],
+            functionCalls: [
+                [],
+                [
+                    CoCaptainAgentFunctionCall(
+                        name: CoCaptainNodeEditTools.proposeNodeEditName,
+                        arguments: [
+                            "summary": "Build the landing page",
+                            "operations": [["type": "replace_all", "content": "<h1>Landing</h1>"]]
+                        ]
+                    )
+                ]
+            ]
+        )
+        let coordinator = CoCaptainAgentCoordinator(
+            llmClient: llm,
+            verifiedCodingLoopEnabled: { false },
+            nodeEditToolsEnabled: { true }
+        )
+        let turnPlan = CoCaptainTurnPlan(purpose: .standard, intent: .mutatingWork)
+
+        let result = try await coordinator.run(
+            userMessage: "build a landing page",
+            store: makeStore(),
+            dispatcher: TestActionDispatcher(),
+            turnPlan: turnPlan
+        ) { _ in }
+
+        #expect(llm.receivedMessages.count == 2)
+        #expect(llm.receivedMessages[1].contains("propose_node_edit"))
+        #expect(llm.receivedMessages[1].contains("cocaptain_actions") == false)
+        #expect(result.reviewBundle?.items.first?.status == .pending)
+    }
+
+    @MainActor
+    @Test func buildPromptSwitchesContractWithNodeEditToolsFlag() {
+        func prompt(toolsEnabled: Bool) -> String {
+            LLMService.shared.buildPrompt(
+                userMessage: "build a landing page",
+                context: "Canvas context",
+                expectsStructuredResponse: true,
+                availableActions: [],
+                scope: .project,
+                purpose: .standard,
+                turnIntent: .mutatingWork,
+                nodeEditToolsEnabled: toolsEnabled
+            )
+        }
+
+        let toolsPrompt = prompt(toolsEnabled: true)
+        #expect(toolsPrompt.contains("propose_node_edit"))
+        #expect(toolsPrompt.contains("ask_clarifying_question"))
+        #expect(toolsPrompt.contains("cocaptain_actions") == false)
+
+        let xmlPrompt = prompt(toolsEnabled: false)
+        #expect(xmlPrompt.contains("XML schema for `cocaptain_actions`"))
+        #expect(xmlPrompt.contains("<learning_note"))
+        #expect(xmlPrompt.contains("propose_node_edit") == false)
+    }
+
     @MainActor
     private func makeAmbiguousStore() -> ProjectStore {
         ProjectStore(
@@ -2896,7 +3620,8 @@ private final class ThrowingLLMClient: CoCaptainLLMClient {
         availableActions: [AppActionDefinition],
         scope: CoCaptainAgentScope,
         purpose: CoCaptainTurnPurpose,
-        turnIntent: CoCaptainTurnIntent = .generalChat
+        turnIntent: CoCaptainTurnIntent = .generalChat,
+        toolExecutor: CoCaptainToolExecutor? = nil
     ) -> AsyncThrowingStream<CoCaptainLLMStreamEvent, Error> {
         AsyncThrowingStream { continuation in
             continuation.finish(throwing: error)
@@ -2942,7 +3667,8 @@ private final class TestLLMClient: CoCaptainLLMClient {
         availableActions: [AppActionDefinition],
         scope: CoCaptainAgentScope,
         purpose: CoCaptainTurnPurpose,
-        turnIntent: CoCaptainTurnIntent = .generalChat
+        turnIntent: CoCaptainTurnIntent = .generalChat,
+        toolExecutor: CoCaptainToolExecutor? = nil
     ) -> AsyncThrowingStream<CoCaptainLLMStreamEvent, Error> {
         receivedMessages.append(userMessage)
         receivedScopes.append(scope)
@@ -2958,6 +3684,50 @@ private final class TestLLMClient: CoCaptainLLMClient {
                 continuation.yield(.functionCalls(calls))
             }
             continuation.finish()
+        }
+    }
+}
+
+/// Simulates the LLMService tool loop: emits one tool call, answers it through
+/// the injected executor when possible, then streams the final response text.
+/// Calls the executor declines (returns `nil` for) are yielded as
+/// `.functionCalls` events, mirroring the real collect-and-route behavior.
+@MainActor
+private final class ToolLoopLLMClient: CoCaptainLLMClient {
+    private let toolCall: CoCaptainAgentFunctionCall
+    private let finalResponse: String
+    private(set) var capturedToolResults: [String] = []
+
+    init(toolCall: CoCaptainAgentFunctionCall, finalResponse: String) {
+        self.toolCall = toolCall
+        self.finalResponse = finalResponse
+    }
+
+    func resetChat(scope: CoCaptainAgentScope) {}
+
+    func streamAgentEvents(
+        for userMessage: String,
+        context: String?,
+        expectsStructuredResponse: Bool,
+        availableActions: [AppActionDefinition],
+        scope: CoCaptainAgentScope,
+        purpose: CoCaptainTurnPurpose,
+        turnIntent: CoCaptainTurnIntent = .generalChat,
+        toolExecutor: CoCaptainToolExecutor? = nil
+    ) -> AsyncThrowingStream<CoCaptainLLMStreamEvent, Error> {
+        let call = toolCall
+        let response = finalResponse
+        return AsyncThrowingStream { continuation in
+            let task = Task { @MainActor in
+                if let toolExecutor, let result = await toolExecutor(call) {
+                    self.capturedToolResults.append(result)
+                } else {
+                    continuation.yield(.functionCalls([call]))
+                }
+                continuation.yield(.text(response))
+                continuation.finish()
+            }
+            continuation.onTermination = { _ in task.cancel() }
         }
     }
 }
@@ -2979,7 +3749,8 @@ private final class FailingThenPlainLLMClient: CoCaptainLLMClient {
         availableActions: [AppActionDefinition],
         scope: CoCaptainAgentScope,
         purpose: CoCaptainTurnPurpose,
-        turnIntent: CoCaptainTurnIntent = .generalChat
+        turnIntent: CoCaptainTurnIntent = .generalChat,
+        toolExecutor: CoCaptainToolExecutor? = nil
     ) -> AsyncThrowingStream<CoCaptainLLMStreamEvent, Error> {
         if expectsStructuredResponse, context != nil {
             return AsyncThrowingStream { continuation in
@@ -3017,7 +3788,8 @@ private final class FailingThenStructuredLLMClient: CoCaptainLLMClient {
         availableActions: [AppActionDefinition],
         scope: CoCaptainAgentScope,
         purpose: CoCaptainTurnPurpose,
-        turnIntent: CoCaptainTurnIntent = .generalChat
+        turnIntent: CoCaptainTurnIntent = .generalChat,
+        toolExecutor: CoCaptainToolExecutor? = nil
     ) -> AsyncThrowingStream<CoCaptainLLMStreamEvent, Error> {
         if expectsStructuredResponse, context != nil {
             return AsyncThrowingStream { continuation in
@@ -3056,7 +3828,8 @@ private final class FailingThenSucceedingLLMClient: CoCaptainLLMClient {
         availableActions: [AppActionDefinition],
         scope: CoCaptainAgentScope,
         purpose: CoCaptainTurnPurpose,
-        turnIntent: CoCaptainTurnIntent = .generalChat
+        turnIntent: CoCaptainTurnIntent = .generalChat,
+        toolExecutor: CoCaptainToolExecutor? = nil
     ) -> AsyncThrowingStream<CoCaptainLLMStreamEvent, Error> {
         receivedPurposes.append(purpose)
 

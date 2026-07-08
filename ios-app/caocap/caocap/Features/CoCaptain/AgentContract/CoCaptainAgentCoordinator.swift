@@ -22,6 +22,22 @@ public protocol CoCaptainLLMClient: AnyObject {
     ///   - availableActions: The set of `AppActionDefinition`s the model may call
     ///     via `request_app_action`. Sent as tool declarations in each turn.
     ///   - scope: Whether this turn targets the whole project or a single node.
+    ///   - toolExecutor: Answers read-style tool calls inline during the turn,
+    ///     or `nil` when no in-turn tools are available.
+    func streamAgentEvents(
+        for userMessage: String,
+        context: String?,
+        expectsStructuredResponse: Bool,
+        availableActions: [AppActionDefinition],
+        scope: CoCaptainAgentScope,
+        purpose: CoCaptainTurnPurpose,
+        turnIntent: CoCaptainTurnIntent,
+        toolExecutor: CoCaptainToolExecutor?
+    ) -> AsyncThrowingStream<CoCaptainLLMStreamEvent, Error>
+}
+
+public extension CoCaptainLLMClient {
+    /// Convenience overload for callers without an in-turn tool executor.
     func streamAgentEvents(
         for userMessage: String,
         context: String?,
@@ -30,7 +46,18 @@ public protocol CoCaptainLLMClient: AnyObject {
         scope: CoCaptainAgentScope,
         purpose: CoCaptainTurnPurpose,
         turnIntent: CoCaptainTurnIntent
-    ) -> AsyncThrowingStream<CoCaptainLLMStreamEvent, Error>
+    ) -> AsyncThrowingStream<CoCaptainLLMStreamEvent, Error> {
+        streamAgentEvents(
+            for: userMessage,
+            context: context,
+            expectsStructuredResponse: expectsStructuredResponse,
+            availableActions: availableActions,
+            scope: scope,
+            purpose: purpose,
+            turnIntent: turnIntent,
+            toolExecutor: nil
+        )
+    }
 }
 
 extension LLMService: CoCaptainLLMClient {}
@@ -87,6 +114,7 @@ public final class CoCaptainAgentCoordinator {
     private let validator: CoCaptainAgentValidator
     private let verifier: any MiniAppVerifying
     private let verifiedCodingLoopEnabled: () -> Bool
+    private let nodeEditToolsEnabled: () -> Bool
 
     /// Creates a coordinator with optional dependency overrides for testing.
     ///
@@ -100,7 +128,8 @@ public final class CoCaptainAgentCoordinator {
         outputAdapter: (any CoCaptainAgentOutputAdapting)? = nil,
         validator: CoCaptainAgentValidator = CoCaptainAgentValidator(),
         verifier: (any MiniAppVerifying)? = nil,
-        verifiedCodingLoopEnabled: (() -> Bool)? = nil
+        verifiedCodingLoopEnabled: (() -> Bool)? = nil,
+        nodeEditToolsEnabled: (() -> Bool)? = nil
     ) {
         self.llmClient = llmClient ?? LLMService.shared
         self.contextBuilder = contextBuilder
@@ -113,6 +142,7 @@ public final class CoCaptainAgentCoordinator {
         self.validator = validator
         self.verifier = verifier ?? MiniAppVerificationService()
         self.verifiedCodingLoopEnabled = verifiedCodingLoopEnabled ?? { VerifiedCodingLoopFeature.isEnabled }
+        self.nodeEditToolsEnabled = nodeEditToolsEnabled ?? { NodeEditToolsFeature.isEnabled }
     }
 
     private let logger = Logger(subsystem: "com.caocap.CoCaptainAgentCoordinator", category: "Coordinator")
@@ -227,6 +257,7 @@ public final class CoCaptainAgentCoordinator {
             scope: scope,
             purpose: purpose,
             turnIntent: turnPlan.intent,
+            store: store,
             onVisibleText: onVisibleText
         )
         let policy = turnPlan.effectivePolicy
@@ -411,6 +442,7 @@ public final class CoCaptainAgentCoordinator {
         scope: CoCaptainAgentScope,
         purpose: CoCaptainTurnPurpose,
         turnIntent: CoCaptainTurnIntent,
+        store: ProjectStore? = nil,
         onVisibleText: @escaping (String) -> Void
     ) async throws -> CoCaptainAgentDirective {
         var responseText = ""
@@ -423,7 +455,8 @@ public final class CoCaptainAgentCoordinator {
             availableActions: availableActions,
             scope: scope,
             purpose: purpose,
-            turnIntent: turnIntent
+            turnIntent: turnIntent,
+            toolExecutor: makeToolExecutor(store: store)
         )
 
         for try await event in stream {
@@ -438,7 +471,66 @@ public final class CoCaptainAgentCoordinator {
                 }
             }
         }
-        return outputAdapter.directive(from: responseText, functionCalls: functionCalls)
+        let directive = outputAdapter.directive(from: responseText, functionCalls: functionCalls)
+        if directive.payload != nil {
+            // Rollout signal: track which wire format delivers structured output
+            // so the XML prompt block can be deleted once tool usage dominates.
+            logCodingEvent(
+                "cocaptain_agent_output_source",
+                parameters: ["source": directive.source.rawValue]
+            )
+        }
+        return directive
+    }
+
+    /// Builds the in-turn tool executor for read-style tools.
+    ///
+    /// Only `read_node_section` is answered inline; every other call returns
+    /// `nil` so it keeps its existing collect-and-route behavior. Read results
+    /// never touch the validator or the review pipeline.
+    private func makeToolExecutor(store: ProjectStore?) -> CoCaptainToolExecutor? {
+        guard let store else { return nil }
+        return { [weak self] functionCall in
+            guard let self, functionCall.name == CoCaptainReadNodeSectionTool.name else {
+                return nil
+            }
+            return self.readNodeSection(functionCall: functionCall, store: store)
+        }
+    }
+
+    /// Resolves one `read_node_section` call against the active store.
+    /// Errors are returned as text so the model can self-correct in-turn.
+    private func readNodeSection(
+        functionCall: CoCaptainAgentFunctionCall,
+        store: ProjectStore
+    ) -> String {
+        let nodeID = (functionCall.stringArgument("nodeId") ?? functionCall.stringArgument("node_id"))
+            .flatMap(UUID.init(uuidString:))
+        guard let nodeID else {
+            return "Error: `read_node_section` requires a valid `nodeId` UUID from the canvas context."
+        }
+        guard let sectionName = functionCall.stringArgument("section")?.lowercased(),
+              let section = CoCaptainNodeEditProposal.MiniAppSection(rawValue: sectionName) else {
+            return "Error: `section` must be \"code\" or \"srs\"."
+        }
+        guard let node = patchEngine.resolveNode(nodeID: nodeID, for: .miniApp, in: store),
+              let miniApp = node.miniApp else {
+            return "Error: no Mini-App node with id \(nodeID.uuidString) exists on the canvas."
+        }
+
+        let text: String
+        switch section {
+        case .code:
+            text = miniApp.codeText
+        case .srs:
+            text = miniApp.srsText
+        }
+
+        logger.debug("read_node_section answered for \(nodeID.uuidString, privacy: .public) section=\(sectionName, privacy: .public) chars=\(text.count, privacy: .public)")
+        guard text.count > CoCaptainReadNodeSectionTool.maximumResponseCharacters else {
+            return text
+        }
+        return String(text.prefix(CoCaptainReadNodeSectionTool.maximumResponseCharacters)) + "\n[TRUNCATED]"
     }
 
     private struct CodingLoopTarget {
@@ -593,13 +685,15 @@ public final class CoCaptainAgentCoordinator {
                     operations: [
                         NodePatchOperation(type: .replaceAll, content: currentCode)
                     ],
-                    verificationChecks: candidateChecks
+                    verificationChecks: candidateChecks,
+                    learningNote: candidateEdit.learningNote
                 )
                 let finalPayload = CoCaptainAgentPayload(
                     assistantMessage: mentorSummary(
                         candidateMessage,
                         checks: candidateChecks,
-                        attempts: attempt
+                        attempts: attempt,
+                        learningNote: candidateEdit.learningNote
                     ),
                     safeActions: initialPayload.safeActions,
                     pendingActions: initialPayload.pendingActions,
@@ -719,12 +813,15 @@ public final class CoCaptainAgentCoordinator {
     private func mentorSummary(
         _ modelMessage: String,
         checks: [CoCaptainVerificationCheck],
-        attempts: Int
+        attempts: Int,
+        learningNote: CoCaptainLearningNote? = nil
     ) -> String {
         let descriptions = checks.map(\.description).joined(separator: ", ")
         let prefix = modelMessage.trimmingCharacters(in: .whitespacesAndNewlines)
         let verification = "Verified in \(attempts) attempt(s): \(descriptions)."
-        let concept = "Concept: staged execution tests a proposed change before it touches your canvas."
+        // Prefer the model-authored lesson when present; the canned line is a fallback.
+        let concept = learningNote.map { "\($0.concept): \($0.body)" }
+            ?? "Concept: staged execution tests a proposed change before it touches your canvas."
         return [prefix, verification, concept].filter { !$0.isEmpty }.joined(separator: "\n\n")
     }
 
@@ -817,9 +914,33 @@ public final class CoCaptainAgentCoordinator {
 
     /// Builds a corrective system message that feeds validation issues back to
     /// the model along with the original request, giving it a second chance to
-    /// produce a conforming `cocaptain_actions` XML block.
+    /// produce a conforming structured payload. The wording references the
+    /// node-edit tools when they are enabled, the XML block otherwise.
     private func agenticRetryMessage(for userMessage: String, validationIssues: [String]) -> String {
         let issueList = validationIssues.map { "- \($0)" }.joined(separator: "\n")
+
+        if nodeEditToolsEnabled() {
+            return """
+            The previous response has not satisfied the machine-readable CoCaptain action contract.
+
+            Validation issues:
+            \(issueList)
+            
+            CRITICAL: 
+            1. Do NOT just provide code in markdown chat. 
+            2. You MUST call the `propose_node_edit` function for code/content changes, or `ask_clarifying_question` when the request is too vague to act on.
+            3. For app navigation/tool actions, call `request_app_action`.
+            4. Put code/content implementation in `propose_node_edit` operations.
+            5. Put mutating or non-autonomous app actions in `request_app_action` with `executionMode=pending`.
+            6. Use `executionMode=safe` only for available, non-mutating, autonomous app actions.
+            7. For full builds or games, use one `replace_all` operation on the Mini-App `section="code"` with a complete single-file HTML document.
+            8. For documentation, requirements, spec, or SRS requests, target the Mini-App `section="srs"` unless the user explicitly asks for code.
+            9. For an existing Mini-App code edit, include 1 to 5 `verificationChecks` entries with unique ids, descriptions, and JavaScript that returns true only when the requested behavior works.
+            
+            Original user request:
+            \(userMessage)
+            """
+        }
 
         return """
         The previous response has not satisfied the machine-readable CoCaptain action contract.
@@ -983,7 +1104,8 @@ public final class CoCaptainAgentCoordinator {
                                 section: edit.section,
                                 operations: resolved.canonicalOperations,
                                 baseText: preview.originalText
-                            )
+                            ),
+                            learningNote: edit.learningNote ?? Self.fallbackLearningNote(for: edit)
                         )
                     )
                 } catch let NodePatchError.ambiguous(_, candidates) {
@@ -1051,7 +1173,38 @@ public final class CoCaptainAgentCoordinator {
             ),
             status: .needsClarification,
             source: .nodeEdit(role: edit.role, section: edit.section, operations: edit.operations, baseText: baseText),
-            clarificationCandidates: candidates
+            clarificationCandidates: candidates,
+            learningNote: edit.learningNote ?? Self.fallbackLearningNote(for: edit)
+        )
+    }
+
+    /// Builds a locally-authored lesson from the edit summary and verification
+    /// check descriptions when the model omitted a `learning_note`, so the
+    /// post-apply learning moment never silently disappears.
+    static func fallbackLearningNote(for edit: CoCaptainNodeEditProposal) -> CoCaptainLearningNote? {
+        let summary = edit.summary.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !summary.isEmpty else { return nil }
+
+        let checkDescriptions = edit.verificationChecks
+            .map { $0.description.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        let body: String
+        if checkDescriptions.isEmpty {
+            body = LocalizationManager.shared.localizedString(
+                "cocaptain.mentorNote.fallbackBody",
+                arguments: [summary]
+            )
+        } else {
+            body = LocalizationManager.shared.localizedString(
+                "cocaptain.mentorNote.fallbackBodyWithChecks",
+                arguments: [summary, checkDescriptions.joined(separator: ", ")]
+            )
+        }
+
+        return CoCaptainLearningNote(
+            concept: LocalizationManager.shared.localizedString("cocaptain.mentorNote.fallbackConcept"),
+            body: body
         )
     }
 

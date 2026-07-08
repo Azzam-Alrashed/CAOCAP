@@ -22,10 +22,10 @@ Supporting services live outside this feature:
 
 1. The user sends a message through `CoCaptainViewModel`.
 2. Direct commands are resolved locally with `CommandIntentResolver` when possible.
-3. Otherwise, `CoCaptainAgentCoordinator` builds project context from the active `ProjectStore`.
+3. Otherwise, `CoCaptainAgentCoordinator` builds project context from the active `ProjectStore`. By default the context carries only a short head of each Mini-App's code/SRS; the model reads full sections on demand (see the read tool below). The full-budget context is kept when the local MLX backend (`gemma-4-local`) is selected, since it has no function calling.
 4. `CoCaptainTurnIntentResolver` classifies each standard turn as mutating work, advisory, or general chat.
 5. `CoCaptainTurnPlan` merges turn purpose with resolved intent to select the effective execution policy.
-6. `LLMService` streams text back into the current assistant bubble.
+6. `LLMService` streams text back into the current assistant bubble. When the model calls the read-only `read_node_section(nodeId, section)` tool, the coordinator answers it inline against the active `ProjectStore` and `LLMService` sends the result back on the same chat session (bounded to 4 tool-response rounds per turn).
 7. `CoCaptainAgentOutputAdapter` hides machine output while streaming and turns the final response into a directive.
 8. For agentic turns, `CoCaptainAgentValidator` checks action IDs, action safety, node edit shape, and required agentic work.
 9. Eligible existing Mini-App code edits enter the verified coding loop.
@@ -92,6 +92,19 @@ When adding a new turn purpose, declare its execution policy in the same enum sw
 
 ## Structured Payload Contract
 
+There are two wire formats for node edits and clarifying questions; both converge on the same `CoCaptainAgentPayload`, so the validator, verified coding loop, review builder, and conflict guard are format-independent.
+
+### Native node-edit tools (preferred, feature-gated)
+
+When `NodeEditToolsFeature` is enabled (default on in Debug/TestFlight, off in production App Store builds, overridable via `cocaptain.nodeEditToolsEnabled`), the model is instructed to use Gemini function calling:
+
+- `propose_node_edit(nodeId, section, summary, operations[], verificationChecks[], learningNote)` — one call per node edit, with nested operation/check objects mirroring the XML shapes below.
+- `ask_clarifying_question(prompt, options[])` — one short question with 2–4 outcome-phrased options.
+
+`CoCaptainNodeEditFunctionAdapter` maps these calls into the payload. With the flag on, the XML schema block is omitted from the prompt and the agentic retry message references the tools; the XML parser stays in place as a silent fallback for models that still emit it. If a turn contains both tool calls and an XML block, the function-call edits win and the XML edits are dropped. `CoCaptainAgentOutputSource` records which format delivered each directive for rollout telemetry.
+
+### XML block (fallback, and the only format for the local MLX backend)
+
 The model may include one trailing XML block:
 
 ```xml
@@ -119,6 +132,7 @@ The model may include one trailing XML block:
           ]]></script>
         </verification_check>
       </verification_checks>
+      <learning_note concept="Short concept name">2-3 plain sentences about what this change teaches, referencing the user's own app.</learning_note>
     </node_edit>
   </node_edits>
 </cocaptain_actions>
@@ -133,13 +147,14 @@ Rules:
 - `nodeEdits` target Mini-App nodes by `nodeId`, `role="miniApp"`, and `section="srs"` or `section="code"`, plus `NodePatchOperation` arrays.
 - Node edits require a non-empty summary and at least one operation.
 - Exact operations require a non-empty target.
-- `clarifying_question` needs a non-empty `prompt` and 2–4 non-empty options; malformed questions degrade to prose. A question-only payload counts as valid agentic work, and a question always takes precedence over node edits in the same turn (the edits are dropped).
+- `clarifying_question` needs a non-empty `prompt` and 2–4 non-empty options; malformed questions degrade to prose. A question-only payload counts as valid agentic work, and a question always takes precedence over node edits in the same turn (the edits are dropped). The same precedence applies to `ask_clarifying_question` vs `propose_node_edit` function calls.
+- `learning_note` (or the `learningNote` tool argument) is an optional short lesson attached to a node edit: a `concept` name plus 2–3 plain sentences. It is revealed as a "What you just learned" timeline card only after the user applies the edit — never on the review card. Malformed notes degrade to nil without invalidating the edit; when the model omits one, the coordinator builds a local fallback from the edit summary and verification-check descriptions.
 - Prompt rules keep the mentor tone: never refuse, use plain non-technical language, and ask exactly one clarifying question with outcome-phrased options when unsure. "Title"/"headline" mean the visible page heading, not the browser tab title.
 - Verified code edits require 1–5 uniquely identified checks. Each offline script must return a Boolean, stay under 2,000 characters, and keep the combined scripts under 8,000 characters.
 
 Invalid structured payloads are not partially executed. The coordinator retries once with parse or validation feedback. If the retry is still invalid, the user sees a conflicted review item rather than a silent no-op or unsafe action.
 
-Firebase function calling is the preferred path for app actions through the `request_app_action` tool. The XML block remains the compatibility format for node edits until structured-output node edit payloads replace it.
+Firebase function calling is the preferred path for app actions through the `request_app_action` tool, and — behind `NodeEditToolsFeature` — for node edits and clarifying questions through `propose_node_edit` / `ask_clarifying_question`. The XML block remains the compatibility format until tool usage dominates the output-source telemetry.
 
 If this payload changes, update parser/coordinator tests and the prompt contract in `LLMService`.
 
@@ -194,6 +209,9 @@ Useful test coverage for this feature:
 - coordinator safe action execution and review bundle generation.
 - validator rejection for unknown actions, unsafe safe actions, unavailable pending actions, and empty node edit operations.
 - function-call adapter mapping for safe actions, pending actions, malformed arguments, and mixed function-call + fenced node edits.
+- node-edit function adapter mapping for `propose_node_edit` / `ask_clarifying_question`, precedence of tool edits over XML edits, and flag-dependent prompt/retry content.
+- learning-note extraction, coordinator carry-through, fallback generation, and the apply-time mentor card.
+- `read_node_section` tool round-trips and context-budget slimming behavior.
 - node edit conflict handling when base text changes.
 - direct command handling for autonomous vs review-required actions.
 - retry behavior when agentic work is requested but no structured payload is returned.

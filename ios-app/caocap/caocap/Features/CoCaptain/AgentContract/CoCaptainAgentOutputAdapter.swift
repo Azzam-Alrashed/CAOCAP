@@ -7,6 +7,9 @@ public enum CoCaptainAgentOutputSource: String, Hashable {
     case xml = "xml"
     /// The model used Gemini function-calling to invoke `request_app_action`.
     case functionCall = "function_call"
+    /// The model delivered node edits or a clarifying question through the
+    /// `propose_node_edit` / `ask_clarifying_question` tools.
+    case nodeEditFunctionCall = "node_edit_function_call"
     /// Both mechanisms fired in the same turn and were merged.
     case combined = "combined"
 }
@@ -62,7 +65,7 @@ public protocol CoCaptainAgentOutputAdapting {
 public extension CoCaptainAgentOutputAdapting {
     /// Convenience overload for callers that have no function-call events,
     /// defaulting to an empty array so they don't need to pass it explicitly.
-    public func directive(from response: String) -> CoCaptainAgentDirective {
+    func directive(from response: String) -> CoCaptainAgentDirective {
         directive(from: response, functionCalls: [])
     }
 }
@@ -174,20 +177,170 @@ public struct CoCaptainFunctionCallAgentAdapter {
     /// Returns a trimmed, non-empty argument value, or `nil` if the key is
     /// absent or the value is blank after trimming whitespace.
     private func nonEmptyArgument(_ key: String, in functionCall: CoCaptainAgentFunctionCall) -> String? {
-        guard let value = functionCall.arguments[key]?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !value.isEmpty else {
-            return nil
-        }
-        return value
+        functionCall.stringArgument(key)
     }
 
     private func supplementalArguments(from functionCall: CoCaptainAgentFunctionCall) -> [String: String]? {
         let reservedKeys = Set(["actionId", "action_id", "executionMode"])
-        let args = functionCall.arguments.filter { key, value in
-            !reservedKeys.contains(key) &&
-                !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        var args: [String: String] = [:]
+        for (key, value) in functionCall.arguments where !reservedKeys.contains(key) {
+            guard let scalar = value.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !scalar.isEmpty else {
+                continue
+            }
+            args[key] = scalar
         }
         return args.isEmpty ? nil : args
+    }
+}
+
+/// Adapter that converts `propose_node_edit` and `ask_clarifying_question`
+/// function calls into the existing `CoCaptainAgentPayload` shapes.
+///
+/// The mapping is deliberately thin: the validator, verified coding loop,
+/// review builder, and baseText conflict guard all consume the same
+/// `CoCaptainNodeEditProposal` / `CoCaptainClarifyingQuestion` values they
+/// receive from the XML parser, so downstream safety stays untouched.
+public struct CoCaptainNodeEditFunctionAdapter {
+    /// The tool names this adapter understands. The composite adapter uses
+    /// this set to partition calls between adapters.
+    public static let handledFunctionNames: Set<String> = [
+        CoCaptainNodeEditTools.proposeNodeEditName,
+        CoCaptainNodeEditTools.askClarifyingQuestionName
+    ]
+
+    public init() {}
+
+    /// Converts node-edit tool calls into a directive. Malformed arguments
+    /// become diagnostics so the agentic retry can feed them back to the model.
+    public func directive(
+        from functionCalls: [CoCaptainAgentFunctionCall],
+        visibleText: String = ""
+    ) -> CoCaptainAgentDirective {
+        var nodeEdits: [CoCaptainNodeEditProposal] = []
+        var clarifyingQuestion: CoCaptainClarifyingQuestion?
+        var diagnostics: [String] = []
+
+        for functionCall in functionCalls {
+            switch functionCall.name {
+            case CoCaptainNodeEditTools.proposeNodeEditName:
+                switch nodeEdit(from: functionCall) {
+                case .success(let edit):
+                    nodeEdits.append(edit)
+                case .failure(let issue):
+                    diagnostics.append(issue)
+                }
+            case CoCaptainNodeEditTools.askClarifyingQuestionName:
+                if let question = question(from: functionCall) {
+                    // Keep the first well-formed question; the contract allows one.
+                    clarifyingQuestion = clarifyingQuestion ?? question
+                } else {
+                    diagnostics.append(
+                        "Function call `\(functionCall.name)` needs a non-empty `prompt` and \(CoCaptainClarifyingQuestion.minimumOptions)-\(CoCaptainClarifyingQuestion.maximumOptions) non-empty `options`."
+                    )
+                }
+            default:
+                diagnostics.append("Unknown function call `\(functionCall.name)`.")
+            }
+        }
+
+        let payload = nodeEdits.isEmpty && clarifyingQuestion == nil
+            ? nil
+            : CoCaptainAgentPayload(
+                assistantMessage: visibleText,
+                nodeEdits: nodeEdits,
+                clarifyingQuestion: clarifyingQuestion
+            )
+
+        return CoCaptainAgentDirective(
+            preamble: visibleText,
+            visibleText: visibleText,
+            payload: payload,
+            diagnostics: diagnostics,
+            source: .nodeEditFunctionCall
+        )
+    }
+
+    private enum NodeEditMappingResult {
+        case success(CoCaptainNodeEditProposal)
+        case failure(String)
+    }
+
+    private func nodeEdit(from functionCall: CoCaptainAgentFunctionCall) -> NodeEditMappingResult {
+        guard let summary = functionCall.stringArgument("summary") else {
+            return .failure("`propose_node_edit` requires a non-empty `summary`.")
+        }
+        guard let operationValues = functionCall.arguments["operations"]?.arrayValue,
+              !operationValues.isEmpty else {
+            return .failure("`propose_node_edit` requires a non-empty `operations` array.")
+        }
+
+        var operations: [NodePatchOperation] = []
+        for value in operationValues {
+            guard let object = value.objectValue,
+                  let typeRaw = object["type"]?.stringValue,
+                  let type = NodePatchOperationType(rawValue: typeRaw),
+                  let content = object["content"]?.stringValue else {
+                return .failure("`propose_node_edit` has a malformed operation; each needs a valid `type` and `content`.")
+            }
+            operations.append(
+                NodePatchOperation(type: type, target: object["target"]?.stringValue, content: content)
+            )
+        }
+
+        var verificationChecks: [CoCaptainVerificationCheck] = []
+        if let checkValues = functionCall.arguments["verificationChecks"]?.arrayValue {
+            for value in checkValues {
+                guard let object = value.objectValue,
+                      let id = object["id"]?.stringValue,
+                      let description = object["description"]?.stringValue,
+                      let script = object["script"]?.stringValue else {
+                    return .failure("`propose_node_edit` has a malformed verification check; each needs `id`, `description`, and `script`.")
+                }
+                verificationChecks.append(
+                    CoCaptainVerificationCheck(id: id, description: description, script: script)
+                )
+            }
+        }
+
+        let learningNote: CoCaptainLearningNote? = functionCall.arguments["learningNote"]?.objectValue.flatMap { object in
+            guard let concept = object["concept"]?.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  let body = object["body"]?.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !concept.isEmpty, !body.isEmpty else {
+                // Malformed notes degrade to nil; they never invalidate the edit.
+                return nil
+            }
+            return CoCaptainLearningNote(concept: concept, body: body)
+        }
+
+        let sectionName = functionCall.stringArgument("section")?.lowercased()
+        let section = sectionName.flatMap(CoCaptainNodeEditProposal.MiniAppSection.init(rawValue:)) ?? .code
+        let nodeID = (functionCall.stringArgument("nodeId") ?? functionCall.stringArgument("node_id"))
+            .flatMap(UUID.init(uuidString:))
+
+        return .success(
+            CoCaptainNodeEditProposal(
+                nodeID: nodeID,
+                role: .miniApp,
+                section: section,
+                summary: summary,
+                operations: operations,
+                verificationChecks: verificationChecks,
+                learningNote: learningNote
+            )
+        )
+    }
+
+    private func question(from functionCall: CoCaptainAgentFunctionCall) -> CoCaptainClarifyingQuestion? {
+        guard let prompt = functionCall.stringArgument("prompt") else { return nil }
+        let options = (functionCall.arguments["options"]?.arrayValue ?? [])
+            .compactMap { $0.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        guard options.count >= CoCaptainClarifyingQuestion.minimumOptions else { return nil }
+        return CoCaptainClarifyingQuestion(
+            prompt: prompt,
+            options: Array(options.prefix(CoCaptainClarifyingQuestion.maximumOptions))
+        )
     }
 }
 
@@ -200,13 +353,16 @@ public struct CoCaptainFunctionCallAgentAdapter {
 public struct CoCaptainCompositeAgentAdapter: CoCaptainAgentOutputAdapting {
     private let xmlAdapter: CoCaptainXMLAgentAdapter
     private let functionCallAdapter: CoCaptainFunctionCallAgentAdapter
+    private let nodeEditAdapter: CoCaptainNodeEditFunctionAdapter
 
     public init(
         xmlAdapter: CoCaptainXMLAgentAdapter = CoCaptainXMLAgentAdapter(),
-        functionCallAdapter: CoCaptainFunctionCallAgentAdapter = CoCaptainFunctionCallAgentAdapter()
+        functionCallAdapter: CoCaptainFunctionCallAgentAdapter = CoCaptainFunctionCallAgentAdapter(),
+        nodeEditAdapter: CoCaptainNodeEditFunctionAdapter = CoCaptainNodeEditFunctionAdapter()
     ) {
         self.xmlAdapter = xmlAdapter
         self.functionCallAdapter = functionCallAdapter
+        self.nodeEditAdapter = nodeEditAdapter
     }
 
     public func visibleText(from response: String) -> String {
@@ -219,40 +375,86 @@ public struct CoCaptainCompositeAgentAdapter: CoCaptainAgentOutputAdapting {
         // avoid building a redundant combined payload.
         guard !functionCalls.isEmpty else { return fencedDirective }
 
-        let functionDirective = functionCallAdapter.directive(
-            from: functionCalls,
-            visibleText: fencedDirective.visibleText
-        )
+        // Partition calls between the node-edit adapter and the app-action
+        // adapter so neither flags the other's tools as unknown.
+        let nodeEditCalls = functionCalls.filter {
+            CoCaptainNodeEditFunctionAdapter.handledFunctionNames.contains($0.name)
+        }
+        let actionCalls = functionCalls.filter {
+            !CoCaptainNodeEditFunctionAdapter.handledFunctionNames.contains($0.name)
+        }
 
-        let payload = combine(functionDirective.payload, fencedDirective.payload)
+        let functionDirective = actionCalls.isEmpty
+            ? nil
+            : functionCallAdapter.directive(from: actionCalls, visibleText: fencedDirective.visibleText)
+        let nodeEditDirective = nodeEditCalls.isEmpty
+            ? nil
+            : nodeEditAdapter.directive(from: nodeEditCalls, visibleText: fencedDirective.visibleText)
+
+        let payload = combine(
+            functionDirective?.payload,
+            nodeEditDirective?.payload,
+            fencedDirective.payload
+        )
         return CoCaptainAgentDirective(
             preamble: fencedDirective.preamble,
             visibleText: fencedDirective.visibleText,
             payload: payload,
-            diagnostics: functionDirective.diagnostics + fencedDirective.diagnostics,
-            // Source is .combined only when the XML adapter also yielded a payload;
-            // otherwise the function-call adapter is the sole source.
-            source: fencedDirective.payload == nil ? .functionCall : .combined
+            diagnostics: (functionDirective?.diagnostics ?? [])
+                + (nodeEditDirective?.diagnostics ?? [])
+                + fencedDirective.diagnostics,
+            source: mergedSource(
+                hasActionPayload: functionDirective?.payload != nil,
+                hasNodeEditPayload: nodeEditDirective?.payload != nil,
+                hasFencedPayload: fencedDirective.payload != nil
+            )
         )
     }
 
-    /// Merges two optional payloads, taking safe/pending actions from the
-    /// function-call side and node edits from the XML side.
+    /// Merges the three optional payload sources.
     ///
-    /// `assistantMessage` comes from the XML payload (richer prose) if present;
-    /// falls back to the function-call visible text.
+    /// - Safe/pending actions come from the `request_app_action` side.
+    /// - Node edits and clarifying question prefer the function-call tools;
+    ///   when the model emitted both tools and XML in the same turn, the
+    ///   function-call edits win and the XML edits are dropped.
+    /// - `assistantMessage` comes from the XML payload (richer prose) if
+    ///   present; falls back to the function-call visible text.
     private func combine(
         _ functionPayload: CoCaptainAgentPayload?,
+        _ nodeEditPayload: CoCaptainAgentPayload?,
         _ fencedPayload: CoCaptainAgentPayload?
     ) -> CoCaptainAgentPayload? {
-        guard functionPayload != nil || fencedPayload != nil else { return nil }
+        guard functionPayload != nil || nodeEditPayload != nil || fencedPayload != nil else {
+            return nil
+        }
+
+        let nodeEdits = (nodeEditPayload?.nodeEdits.isEmpty == false)
+            ? nodeEditPayload?.nodeEdits ?? []
+            : fencedPayload?.nodeEdits ?? []
 
         return CoCaptainAgentPayload(
-            assistantMessage: fencedPayload?.assistantMessage ?? functionPayload?.assistantMessage ?? "",
+            assistantMessage: fencedPayload?.assistantMessage
+                ?? nodeEditPayload?.assistantMessage
+                ?? functionPayload?.assistantMessage
+                ?? "",
             safeActions: functionPayload?.safeActions ?? [],
             pendingActions: functionPayload?.pendingActions ?? [],
-            nodeEdits: fencedPayload?.nodeEdits ?? [],
-            clarifyingQuestion: fencedPayload?.clarifyingQuestion
+            nodeEdits: nodeEdits,
+            clarifyingQuestion: nodeEditPayload?.clarifyingQuestion ?? fencedPayload?.clarifyingQuestion
         )
+    }
+
+    private func mergedSource(
+        hasActionPayload: Bool,
+        hasNodeEditPayload: Bool,
+        hasFencedPayload: Bool
+    ) -> CoCaptainAgentOutputSource {
+        let contributions = [hasActionPayload, hasNodeEditPayload, hasFencedPayload]
+            .filter { $0 }
+            .count
+        if contributions > 1 { return .combined }
+        if hasNodeEditPayload { return .nodeEditFunctionCall }
+        if hasActionPayload { return .functionCall }
+        return .xml
     }
 }

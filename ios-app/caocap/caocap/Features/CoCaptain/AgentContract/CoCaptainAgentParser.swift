@@ -96,7 +96,8 @@ public struct CoCaptainAgentParser {
                 section: section,
                 summary: summary,
                 operations: operations,
-                verificationChecks: verificationChecks
+                verificationChecks: verificationChecks,
+                learningNote: extractLearningNote(from: content)
             )
         }
 
@@ -109,6 +110,22 @@ public struct CoCaptainAgentParser {
         )
 
         return CoCaptainParsedResponse(preamble: preamble, payload: payload)
+    }
+
+    /// Extracts an optional `learning_note` element from a `node_edit` body.
+    /// Malformed notes (missing concept or empty body) degrade to `nil` and
+    /// never invalidate the surrounding edit.
+    private func extractLearningNote(from nodeEditContent: String) -> CoCaptainLearningNote? {
+        guard let match = extractTagMatches(name: "learning_note", from: nodeEditContent).first else {
+            return nil
+        }
+
+        let concept = (match.attributes["concept"] ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let body = match.content.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !concept.isEmpty, !body.isEmpty else { return nil }
+
+        return CoCaptainLearningNote(concept: concept, body: body)
     }
 
     /// Extracts the first well-formed `clarifying_question` element. Malformed

@@ -371,6 +371,23 @@ public struct CoCaptainAgentAction: Codable, Hashable {
     }
 }
 
+/// A short model-authored lesson attached to a node edit proposal.
+///
+/// Written while the model proposes the edit, but only revealed to the user
+/// after they apply it — reinforcing what the change taught them about their
+/// own app. Both fields are plain prose aimed at beginners.
+public struct CoCaptainLearningNote: Codable, Hashable {
+    /// A 2-5 word name for the concept the edit demonstrates.
+    public let concept: String
+    /// 2-3 plain sentences explaining the concept using the user's own app.
+    public let body: String
+
+    public init(concept: String, body: String) {
+        self.concept = concept
+        self.body = body
+    }
+}
+
 /// A model-proposed edit to one section of a canvas node.
 ///
 /// The proposal is held in a `ReviewBundleItem` until the user approves it,
@@ -398,6 +415,8 @@ public struct CoCaptainNodeEditProposal: Codable, Hashable {
     public let operations: [NodePatchOperation]
     /// Behavioral checks required before a code edit can enter review.
     public let verificationChecks: [CoCaptainVerificationCheck]
+    /// An optional model-authored lesson revealed after the edit is applied.
+    public let learningNote: CoCaptainLearningNote?
 
     public init(
         nodeID: UUID? = nil,
@@ -405,7 +424,8 @@ public struct CoCaptainNodeEditProposal: Codable, Hashable {
         section: MiniAppSection = .code,
         summary: String,
         operations: [NodePatchOperation],
-        verificationChecks: [CoCaptainVerificationCheck] = []
+        verificationChecks: [CoCaptainVerificationCheck] = [],
+        learningNote: CoCaptainLearningNote? = nil
     ) {
         self.nodeID = nodeID
         self.role = role
@@ -413,6 +433,7 @@ public struct CoCaptainNodeEditProposal: Codable, Hashable {
         self.summary = summary
         self.operations = operations
         self.verificationChecks = verificationChecks
+        self.learningNote = learningNote
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -422,6 +443,7 @@ public struct CoCaptainNodeEditProposal: Codable, Hashable {
         case summary
         case operations
         case verificationChecks
+        case learningNote
     }
 
     public init(from decoder: Decoder) throws {
@@ -436,6 +458,10 @@ public struct CoCaptainNodeEditProposal: Codable, Hashable {
             [CoCaptainVerificationCheck].self,
             forKey: .verificationChecks
         ) ?? []
+        self.learningNote = try container.decodeIfPresent(
+            CoCaptainLearningNote.self,
+            forKey: .learningNote
+        )
     }
 }
 
@@ -491,6 +517,124 @@ public struct CoCaptainAgentPayload: Codable, Hashable {
     }
 }
 
+/// A wire-format-independent JSON value for function-call arguments.
+///
+/// Mirrors the shape of `FirebaseAILogic.JSONValue` without importing the SDK
+/// into the agent contract, and — unlike the old `[String: String]` argument
+/// map — preserves nested objects and arrays so structured tools like
+/// `propose_node_edit` can carry operations and verification checks.
+public indirect enum AgentJSONValue: Codable, Hashable, Sendable {
+    case null
+    case bool(Bool)
+    case number(Double)
+    case string(String)
+    case array([AgentJSONValue])
+    case object([String: AgentJSONValue])
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if container.decodeNil() {
+            self = .null
+        } else if let value = try? container.decode(Bool.self) {
+            self = .bool(value)
+        } else if let value = try? container.decode(Double.self) {
+            self = .number(value)
+        } else if let value = try? container.decode(String.self) {
+            self = .string(value)
+        } else if let value = try? container.decode([AgentJSONValue].self) {
+            self = .array(value)
+        } else if let value = try? container.decode([String: AgentJSONValue].self) {
+            self = .object(value)
+        } else {
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Unsupported JSON value."
+            )
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .null:
+            try container.encodeNil()
+        case .bool(let value):
+            try container.encode(value)
+        case .number(let value):
+            try container.encode(value)
+        case .string(let value):
+            try container.encode(value)
+        case .array(let value):
+            try container.encode(value)
+        case .object(let value):
+            try container.encode(value)
+        }
+    }
+
+    /// A scalar string rendering: strings pass through, numbers and booleans
+    /// are stringified, compound values and null return `nil`.
+    public var stringValue: String? {
+        switch self {
+        case .string(let value):
+            return value
+        case .number(let value):
+            return value == value.rounded() && abs(value) < 1e15
+                ? String(Int(value))
+                : String(value)
+        case .bool(let value):
+            return value ? "true" : "false"
+        case .null, .object, .array:
+            return nil
+        }
+    }
+
+    public var arrayValue: [AgentJSONValue]? {
+        guard case .array(let value) = self else { return nil }
+        return value
+    }
+
+    public var objectValue: [String: AgentJSONValue]? {
+        guard case .object(let value) = self else { return nil }
+        return value
+    }
+}
+
+extension AgentJSONValue: ExpressibleByStringLiteral, ExpressibleByBooleanLiteral,
+    ExpressibleByIntegerLiteral, ExpressibleByFloatLiteral, ExpressibleByNilLiteral,
+    ExpressibleByArrayLiteral, ExpressibleByDictionaryLiteral {
+    public init(stringLiteral value: String) { self = .string(value) }
+    public init(booleanLiteral value: Bool) { self = .bool(value) }
+    public init(integerLiteral value: Int) { self = .number(Double(value)) }
+    public init(floatLiteral value: Double) { self = .number(value) }
+    public init(nilLiteral: ()) { self = .null }
+    public init(arrayLiteral elements: AgentJSONValue...) { self = .array(elements) }
+    public init(dictionaryLiteral elements: (String, AgentJSONValue)...) {
+        self = .object(Dictionary(uniqueKeysWithValues: elements))
+    }
+}
+
+/// Constants for the read-only `read_node_section` tool, answered inline by
+/// the coordinator against the active `ProjectStore` during a streaming turn.
+public enum CoCaptainReadNodeSectionTool {
+    public static let name = "read_node_section"
+    /// Cap on the section text returned to the model per call (~30 KB).
+    public static let maximumResponseCharacters = 30_000
+}
+
+/// Constants for the feature-gated structured node-edit tools that replace
+/// the XML `node_edit` / `clarifying_question` contract elements.
+public enum CoCaptainNodeEditTools {
+    public static let proposeNodeEditName = "propose_node_edit"
+    public static let askClarifyingQuestionName = "ask_clarifying_question"
+}
+
+/// Answers a model tool call inline during a streaming turn.
+///
+/// Returns the tool's textual result when the call is a read-style tool the
+/// app can execute immediately, or `nil` when the call should instead be
+/// collected and routed through the output adapters (e.g. `request_app_action`).
+public typealias CoCaptainToolExecutor = @MainActor (CoCaptainAgentFunctionCall) async -> String?
+
 /// A Gemini function-call payload delivered via the streaming API.
 ///
 /// When the model invokes a declared tool (e.g. `request_app_action`), the
@@ -499,16 +643,27 @@ public struct CoCaptainAgentPayload: Codable, Hashable {
 public struct CoCaptainAgentFunctionCall: Hashable {
     /// The registered tool name as declared in the function declarations schema.
     public let name: String
-    /// The arguments the model supplied for this invocation.
-    public let arguments: [String: String]
+    /// The arguments the model supplied for this invocation, preserving
+    /// nested objects and arrays.
+    public let arguments: [String: AgentJSONValue]
     /// An opaque ID assigned by the model; used to deduplicate duplicate
     /// function-call events that can arrive during streaming.
     public let id: String?
 
-    public init(name: String, arguments: [String: String], id: String? = nil) {
+    public init(name: String, arguments: [String: AgentJSONValue], id: String? = nil) {
         self.name = name
         self.arguments = arguments
         self.id = id
+    }
+
+    /// Returns a trimmed, non-empty scalar argument value for `key`.
+    public func stringArgument(_ key: String) -> String? {
+        guard let value = arguments[key]?.stringValue?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+            !value.isEmpty else {
+            return nil
+        }
+        return value
     }
 }
 
@@ -650,6 +805,9 @@ public struct PendingReviewItem: Identifiable, Hashable, Codable {
     /// Pickable target locations when `status == .needsClarification`.
     /// The user's choice re-stages the edit locally without another model call.
     public var clarificationCandidates: [PatchMatchCandidate]?
+    /// A model-authored lesson revealed in the timeline after the user applies
+    /// this item. Optional so previously persisted items decode unchanged.
+    public var learningNote: CoCaptainLearningNote?
 
     public init(
         id: UUID = UUID(),
@@ -660,7 +818,8 @@ public struct PendingReviewItem: Identifiable, Hashable, Codable {
         status: ReviewItemStatus = .pending,
         source: PendingReviewSource,
         conflictDescription: String? = nil,
-        clarificationCandidates: [PatchMatchCandidate]? = nil
+        clarificationCandidates: [PatchMatchCandidate]? = nil,
+        learningNote: CoCaptainLearningNote? = nil
     ) {
         self.id = id
         self.targetNodeID = targetNodeID
@@ -671,6 +830,7 @@ public struct PendingReviewItem: Identifiable, Hashable, Codable {
         self.source = source
         self.conflictDescription = conflictDescription
         self.clarificationCandidates = clarificationCandidates
+        self.learningNote = learningNote
     }
 }
 
@@ -773,6 +933,20 @@ public struct CoCaptainClarifyingQuestionItem: Identifiable, Hashable {
     }
 }
 
+/// A timeline card revealing the lesson behind an applied edit.
+///
+/// Appears after the execution confirmation once the user taps Apply, so the
+/// learning moment lands right when the change becomes real on the canvas.
+public struct CoCaptainMentorNoteItem: Identifiable, Hashable {
+    public let id: UUID
+    public let note: CoCaptainLearningNote
+
+    public init(id: UUID = UUID(), note: CoCaptainLearningNote) {
+        self.id = id
+        self.note = note
+    }
+}
+
 /// The discriminated content carried by a single row in the CoCaptain
 /// timeline, covering all visual card types the UI can render.
 public enum CoCaptainTimelineContent: Hashable {
@@ -788,6 +962,8 @@ public enum CoCaptainTimelineContent: Hashable {
     case codingRun(CoCaptainCodingRunState)
     /// A polite question with tappable answer options.
     case clarifyingQuestion(CoCaptainClarifyingQuestionItem)
+    /// A "What you just learned" card revealed after an edit is applied.
+    case mentorNote(CoCaptainMentorNoteItem)
 }
 
 /// One identifiable row in the CoCaptain conversation timeline.
