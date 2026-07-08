@@ -3,6 +3,7 @@ import UniformTypeIdentifiers
 
 /// Attaches session lifecycle handlers: workspace sync, onboarding, undo bridge, and geometry.
 struct AppSessionLifecycle: ViewModifier {
+    @Environment(\.scenePhase) private var scenePhase
     @Bindable var session: AppSessionCoordinator
     let geometry: GeometryProxy
     let undoManager: UndoManager?
@@ -18,6 +19,12 @@ struct AppSessionLifecycle: ViewModifier {
             }
             .task {
                 await session.appUpdateService.checkForUpdate()
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                guard newPhase == .active else { return }
+                Task {
+                    await SubscriptionManager.shared.refreshEntitlements()
+                }
             }
             .onChange(of: session.commandPalette.isPresented) { _, isPresented in
                 session.handleCommandPalettePresentationChange(isPresented: isPresented)

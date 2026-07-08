@@ -409,6 +409,9 @@ final class AppSessionCoordinator {
 
     func handleCoCaptainPresentationChange(isPresented: Bool) {
         if isPresented {
+            Task {
+                await SubscriptionManager.shared.refreshEntitlements()
+            }
             if onboarding.currentStep == .submitCoCaptainPrompt {
                 onboarding.hidePopoverForCurrentStep()
             }

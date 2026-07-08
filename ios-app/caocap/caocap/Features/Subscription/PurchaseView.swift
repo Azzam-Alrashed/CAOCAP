@@ -90,6 +90,7 @@ struct PurchaseView: View {
         }
         .task {
             await manager.fetchProducts()
+            await manager.refreshEntitlements()
         }
         .alert("Subscription Update", isPresented: Binding(get: { purchaseError != nil }, set: { if !$0 { purchaseError = nil } })) {
             Button("OK", role: .cancel) { }

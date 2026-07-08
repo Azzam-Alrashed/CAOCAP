@@ -11,11 +11,11 @@ The Subscription feature presents CAOCAP Pro plans, loads StoreKit products, han
 
 The feature's core contract is simple: grant Pro only from verified StoreKit transactions.
 
-`LLMService` reads `SubscriptionManager.isSubscribed` before Firebase AI Logic calls. Unsubscribed users are subject to the local estimated-token cap in `TokenUsageLimiter`; Pro users bypass that cap.
+`LLMService` awaits `SubscriptionManager.refreshEntitlements()` before running `TokenUsageLimiter.preflight`. Unsubscribed users are subject to the local estimated-token cap in `TokenUsageLimiter`; Pro users bypass that cap once StoreKit entitlements resolve.
 
 ## Purchase Flow
 
-1. `PurchaseView` appears and calls `SubscriptionManager.fetchProducts()`.
+1. `PurchaseView` appears and calls `SubscriptionManager.fetchProducts()` and `refreshEntitlements()`.
 2. The user selects a monthly or yearly product.
 3. `purchaseAction()` either opens Apple subscription management for subscribed users or starts a StoreKit purchase.
 4. `SubscriptionManager.purchase(_:)` verifies the transaction.
@@ -29,6 +29,8 @@ The feature's core contract is simple: grant Pro only from verified StoreKit tra
 
 - `Transaction.currentEntitlements` during explicit refresh/restore;
 - `Transaction.updates` for renewals, refunds, revocations, and purchases completed outside the current view.
+
+`refreshEntitlements()` is the shared entry point for entitlement refresh. It coalesces concurrent callers, sets `entitlementsResolved` after the first StoreKit response, and is invoked on app launch, foreground, paywall appear, and CoCaptain open. `LLMService` awaits it before enforcing the free-tier token cap so Pro users are not misclassified during cold start.
 
 Revoked transactions must remove entitlement access. Unverified transactions must not grant Pro.
 
@@ -71,6 +73,8 @@ Revoked transactions must remove entitlement access. Unverified transactions mus
 Useful test coverage for this feature:
 
 - `isSubscribed` reflects active purchased product IDs.
+- `entitlementsResolved` becomes true after the first entitlement refresh.
+- concurrent `refreshEntitlements()` calls coalesce into one StoreKit refresh.
 - verified purchase updates entitlements and finishes the transaction.
 - unverified transactions throw `StoreError.failedVerification`.
 - revoked current entitlements are ignored.

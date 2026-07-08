@@ -14,6 +14,9 @@ public class SubscriptionManager {
     public private(set) var products: [Product] = []
     public private(set) var purchasedProductIDs = Set<String>()
     public private(set) var isLoading = false
+    /// `false` until the first StoreKit entitlement refresh completes.
+    public private(set) var entitlementsResolved = false
+    public private(set) var isRefreshingEntitlements = false
     
     public var isSubscribed: Bool {
         !purchasedProductIDs.isEmpty
@@ -32,10 +35,23 @@ public class SubscriptionManager {
     }
     
     private let updatesCanceller = TaskCanceller()
-    
+    private var refreshEntitlementsTask: Task<Void, Never>?
+
+    /// Test hook that bypasses StoreKit when set.
+    internal var testing_updateHandler: (() async -> Void)?
+    internal private(set) var testing_updateInvocationCount = 0
+
     init() {
+        startBackgroundTasks()
+    }
+
+    internal init(testing_updateHandler: @escaping () async -> Void) {
+        self.testing_updateHandler = testing_updateHandler
+    }
+
+    private func startBackgroundTasks() {
         Task { [weak self] in
-            await self?.updatePurchasedProducts()
+            await self?.refreshEntitlements()
         }
 
         // Keep entitlement state fresh for renewals, refunds, upgrades, and
@@ -69,7 +85,7 @@ public class SubscriptionManager {
         switch result {
         case .success(let verification):
             let transaction = try checkVerified(verification)
-            await updatePurchasedProducts()
+            await refreshEntitlements()
             await transaction.finish()
             return transaction
         case .userCancelled, .pending:
@@ -79,9 +95,37 @@ public class SubscriptionManager {
         }
     }
     
+    /// Refreshes entitlements from StoreKit, coalescing concurrent callers.
+    public func refreshEntitlements() async {
+        if let refreshEntitlementsTask {
+            await refreshEntitlementsTask.value
+            return
+        }
+
+        let task = Task { @MainActor [weak self] in
+            guard let self else { return }
+            self.isRefreshingEntitlements = true
+            defer {
+                self.isRefreshingEntitlements = false
+                self.entitlementsResolved = true
+            }
+            await self.updatePurchasedProducts()
+        }
+        refreshEntitlementsTask = task
+        await task.value
+        refreshEntitlementsTask = nil
+    }
+
     /// Rebuilds the current entitlement set from StoreKit's verified active
     /// transactions, ignoring revoked purchases.
     public func updatePurchasedProducts() async {
+        testing_updateInvocationCount += 1
+
+        if let testing_updateHandler {
+            await testing_updateHandler()
+            return
+        }
+
         var newPurchasedProductIDs = Set<String>()
         
         for await result in Transaction.currentEntitlements {
@@ -98,7 +142,7 @@ public class SubscriptionManager {
     /// Triggers App Store account sync, then refreshes local entitlement state.
     public func restorePurchases() async throws {
         try await AppStore.sync()
-        await updatePurchasedProducts()
+        await refreshEntitlements()
     }
     
     /// Handles transaction updates delivered after initial purchase, including
@@ -111,6 +155,7 @@ public class SubscriptionManager {
         } else {
             purchasedProductIDs.remove(transaction.productID)
         }
+        entitlementsResolved = true
         
         await transaction.finish()
     }

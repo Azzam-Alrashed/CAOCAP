@@ -101,7 +101,7 @@ public final class LLMService {
     ///
     /// The method:
     /// 1. Builds the full prompt (context + instructions + user message).
-    /// 2. Runs a preflight token-budget check before touching the network.
+    /// 2. Refreshes StoreKit entitlements, then runs a preflight token-budget check.
     /// 3. Routes to the local MLX model when `gemma-4-local` is selected,
     ///    otherwise delegates to the Firebase AI Logic Gemini session.
     /// 4. Yields `.text` chunks as they arrive and `.functionCalls` when the
@@ -134,15 +134,6 @@ public final class LLMService {
             turnIntent: turnIntent
         )
 
-        if case .failure(let error) = tokenUsageLimiter.preflight(
-            prompt: prompt,
-            isSubscribed: subscriptionManager.isSubscribed
-        ) {
-            return AsyncThrowingStream { continuation in
-                continuation.finish(throwing: error)
-            }
-        }
-
         let currentPreferred = preferredModelName
         let isLocal = currentPreferred == "gemma-4-local"
 
@@ -150,6 +141,10 @@ public final class LLMService {
             return AsyncThrowingStream { continuation in
                 let task = Task {
                     do {
+                        if await self.finishStreamIfPreflightFails(prompt: prompt, continuation: continuation) {
+                            return
+                        }
+
                         var responseText = ""
                         logger.debug("Starting local MLX stream.")
                         
@@ -196,6 +191,10 @@ public final class LLMService {
         return AsyncThrowingStream { continuation in
             let task = Task {
                 do {
+                    if await self.finishStreamIfPreflightFails(prompt: prompt, continuation: continuation) {
+                        return
+                    }
+
                     var responseText = ""
                     var toolResponseText = ""
                     var toolResponseRounds = 0
@@ -288,6 +287,23 @@ public final class LLMService {
             // Support cooperative cancellation from the caller side
             continuation.onTermination = { _ in task.cancel() }
         }
+    }
+
+    /// Refreshes StoreKit entitlements, then enforces the free-tier cap.
+    /// Returns `true` when the stream should stop with a thrown limit error.
+    private func finishStreamIfPreflightFails(
+        prompt: String,
+        continuation: AsyncThrowingStream<CoCaptainLLMStreamEvent, Error>.Continuation
+    ) async -> Bool {
+        await subscriptionManager.refreshEntitlements()
+        if case .failure(let error) = tokenUsageLimiter.preflight(
+            prompt: prompt,
+            isSubscribed: subscriptionManager.isSubscribed
+        ) {
+            continuation.finish(throwing: error)
+            return true
+        }
+        return false
     }
 
     /// The base system instruction loaded into the Gemini context window.
