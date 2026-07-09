@@ -11,7 +11,7 @@ public enum TutorialCanvasProvider {
             projectName: "Tutorial",
             nodes: [practiceMiniAppNode],
             viewportOffset: .zero,
-            viewportScale: 0.85
+            viewportScale: 0.5
         )
     }
 

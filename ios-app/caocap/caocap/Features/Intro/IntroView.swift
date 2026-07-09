@@ -3,7 +3,7 @@ import SwiftUI
 /// Full-screen intro tour that wraps an `IntroCoordinator`.
 /// Steps are displayed in a paged `TabView` and the user can navigate forwards,
 /// backwards, or skip entirely. A continuous "breathing" scale animation runs on
-/// the icon and backdrop provided reduce-motion is not active.
+/// the backdrop when reduce-motion is not active.
 struct IntroView: View {
     @Bindable var coordinator: IntroCoordinator
     let onFinish: () -> Void
@@ -14,7 +14,10 @@ struct IntroView: View {
 
     var body: some View {
         ZStack {
-            IntroBackdrop(step: currentStep, isBreathing: isBreathing && !reduceMotion)
+            IntroBackdrop(
+                backgroundImageName: currentStep.backgroundImageName,
+                isBreathing: isBreathing && !reduceMotion
+            )
 
             VStack(spacing: 0) {
                 topBar
@@ -50,14 +53,6 @@ struct IntroView: View {
         ]
     }
 
-    private var currentAccent: Color {
-        Color(hex: currentStep.accentHex)
-    }
-
-    private var secondaryAccent: Color {
-        Color(hex: currentStep.secondaryAccentHex)
-    }
-
     /// Illustration pages position chrome and copy around each background artwork.
     private var topBar: some View {
         HStack(alignment: .top) {
@@ -72,7 +67,7 @@ struct IntroView: View {
                 OnboardingLanguageButton(usesLightChrome: true)
 
                 Button {
-                    finishIntro(skipping: true)
+                    finishIntro()
                 } label: {
                     Text("Skip")
                         .font(.system(size: 14, weight: .medium))
@@ -113,7 +108,7 @@ struct IntroView: View {
                 Button {
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
                         if coordinator.isLastPage {
-                            finishIntro(skipping: false)
+                            finishIntro()
                         } else {
                             coordinator.next()
                         }
@@ -172,29 +167,21 @@ struct IntroView: View {
         AnyShapeStyle(.ultraThinMaterial)
     }
 
-    private var ctaShadowColor: Color {
-        OnboardingGlassChrome.shadow
-    }
-
-    private func finishIntro(skipping: Bool) {
-        if skipping {
-            coordinator.skip()
-        } else {
-            coordinator.complete()
-        }
+    private func finishIntro() {
+        coordinator.complete()
         onFinish()
     }
 }
 
 /// Full-bleed illustration background for each intro step.
 private struct IntroBackdrop: View {
-    let step: IntroStepContent
+    let backgroundImageName: String?
     let isBreathing: Bool
 
     var body: some View {
         Group {
-            if let imageName = step.backgroundImageName {
-                illustrationBackground(imageName: imageName)
+            if let backgroundImageName {
+                illustrationBackground(imageName: backgroundImageName)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -216,15 +203,11 @@ private struct IntroBackdrop: View {
 }
 
 /// Page content for a single intro step.
+/// Copy is placed in each illustration's open sky band; the middle stays clear for artwork.
 private struct IntroPageView: View {
     let step: IntroStepContent
 
     var body: some View {
-        illustrationLayout
-    }
-
-    /// Copy is placed in each illustration's open sky band; the middle stays clear for artwork.
-    private var illustrationLayout: some View {
         GeometryReader { geometry in
             let placement = step.resolvedTextPlacement
             let textWidth = placement.maxWidthFraction.map { geometry.size.width * $0 } ?? placement.maxWidth

@@ -67,7 +67,6 @@ struct IntroIllustrationTextPlacement: Equatable {
 }
 
 /// Data model for a single page in the first-launch intro tour.
-/// Colors are expressed as hex strings so `IntroManifest` stays plain data with no SwiftUI dependency.
 struct IntroStepContent: Equatable, Identifiable {
     /// Stable index that doubles as the `TabView` tag; must match position in `IntroManifest.steps`.
     let id: Int
@@ -79,28 +78,10 @@ struct IntroStepContent: Equatable, Identifiable {
     let backgroundImageName: String?
     /// Copy placement tuned to each background illustration's open areas.
     let textPlacement: IntroIllustrationTextPlacement?
-    /// Primary brand accent hex for this step (progress dots, chrome tint).
-    let accentHex: String
-    /// Secondary accent hex paired with the primary for chrome and fallbacks.
-    let secondaryAccentHex: String
-    /// Tertiary accent hex used for the backdrop radial gradient.
-    let tertiaryAccentHex: String
-    /// Soft CTA gradient start; defaults to `accentHex` when nil.
-    let ctaGradientStartHex: String?
-    /// Soft CTA gradient end; defaults to `secondaryAccentHex` when nil.
-    let ctaGradientEndHex: String?
     /// Localization key for the CTA button label (`Localizable.xcstrings`).
     let ctaLabelKey: String
 
     var resolvedTextPlacement: IntroIllustrationTextPlacement {
         textPlacement ?? .intro1
-    }
-
-    var resolvedCTAGradientStartHex: String {
-        ctaGradientStartHex ?? accentHex
-    }
-
-    var resolvedCTAGradientEndHex: String {
-        ctaGradientEndHex ?? secondaryAccentHex
     }
 }

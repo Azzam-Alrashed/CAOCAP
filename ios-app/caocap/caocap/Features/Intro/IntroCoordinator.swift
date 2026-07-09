@@ -53,11 +53,6 @@ final class IntroCoordinator {
         currentIndex = max(currentIndex - 1, 0)
     }
 
-    /// Skips the remaining steps and marks the intro as complete.
-    func skip() {
-        complete()
-    }
-
     /// Persists the completion flag and resets the index so a future `reset()` + re-present
     /// always starts from the beginning.
     func complete() {
