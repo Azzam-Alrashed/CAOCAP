@@ -2,9 +2,21 @@
 
 First-run onboarding in CAOCAP is a three-phase funnel:
 
-1. **Intro** (`Features/Intro/`) — motivational full-bleed story screens (`intro_completed_v1`).
-2. **Personalization** (`PersonalizationOnboarding*.swift`) — CDL co-pilot picker + one-question-per-screen survey.
-3. **Interactive tutorial** (`OnboardingCoordinator`) — short **main tutorial** (3 required lessons) plus optional advanced lessons for replay.
+1. **Intro** (`Intro/`) — motivational full-bleed story screens (`intro_completed_v1`).
+2. **Personalization** (`Personalization/`) — CDL co-pilot picker + one-question-per-screen survey.
+3. **Interactive tutorial** (`Tutorial/`) — short **main tutorial** (3 required lessons) plus optional advanced lessons for replay.
+
+## Folder layout
+
+```
+Features/Onboarding/
+├── Intro/            # Full-bleed product tour after launch
+├── Shared/           # Chrome shared by Intro + Personalization (top bar, back, CTA, glass, language)
+├── Personalization/  # Co-pilot picker + survey scene, coordinator, and manifests
+└── Tutorial/         # Interactive canvas walkthrough coordinator, manifests, and tooltips
+```
+
+`Shared/` is used by both `Intro/` and `Personalization/` for the shared top bar, back button, and primary CTA.
 
 ## Main tutorial (required first-run)
 
