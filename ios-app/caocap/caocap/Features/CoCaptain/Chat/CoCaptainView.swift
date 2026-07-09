@@ -4,8 +4,21 @@ struct CoCaptainView: View {
     @Bindable var viewModel: CoCaptainViewModel
     @State private var text: String = ""
     @FocusState private var isFocused: Bool
+    @AppStorage(CoCaptainChatMode.storageKey) private var chatModeRawValue = CoCaptainChatMode.agent.rawValue
     
     @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
+
+    private var chatModeBinding: Binding<CoCaptainChatMode> {
+        Binding(
+            get: {
+                CoCaptainChatMode(rawValue: chatModeRawValue) ?? .agent
+            },
+            set: { newValue in
+                chatModeRawValue = newValue.rawValue
+                viewModel.chatMode = newValue
+            }
+        )
+    }
 
     var body: some View {
         NavigationStack {
@@ -18,6 +31,7 @@ struct CoCaptainView: View {
 
                 CoCaptainInputComposer(
                     text: $text,
+                    chatMode: chatModeBinding,
                     isFocused: $isFocused,
                     store: viewModel.store,
                     isThinking: viewModel.isThinking,
@@ -72,8 +86,17 @@ struct CoCaptainView: View {
             }
         }
         .onAppear {
+            syncChatModeFromStorage()
             hideChatOnboardingIfTextIsPresent()
         }
+        .onChange(of: chatModeRawValue) { _, _ in
+            syncChatModeFromStorage()
+        }
+    }
+
+    /// Keeps the view model aligned with the persisted composer mode.
+    private func syncChatModeFromStorage() {
+        viewModel.chatMode = CoCaptainChatMode(rawValue: chatModeRawValue) ?? .agent
     }
 
     private func sendCurrentMessage() {

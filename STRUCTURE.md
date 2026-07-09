@@ -264,8 +264,6 @@ Decoupled backend engines and API clients specific to the CoCaptain agentic flow
 | `LLMService.swift` | Interface for the Firebase AI Logic SDK. Manages streaming sessions with the Gemini backend. Also coordinates local on-device MLX model download and inference. |
 | `TokenUsageLimiter.swift` | Local estimated-token quota tracker for free CoCaptain and AI node usage; Pro entitlements bypass the free monthly cap. |
 | `CommandIntentResolver.swift` | Maps plain-language command palette and CoCaptain prompts to available app actions. |
-| `CoCaptainTurnIntentResolver.swift` | Classifies each CoCaptain user message as mutating work, advisory, or general chat before coordinator execution. |
-| `CoCaptainTurnIntent.swift` | Turn intent enum with prompt instructions and connection-fallback notice rules. |
 | `ProjectContextBuilder.swift` | Logic to "harvest" the spatial graph and serialize it into a grounded prompt context for the LLM. |
 | `NodePatchEngine.swift` | Previews and applies Mini-App SRS/code patches with flexible exact-target matching (semantic aliases like "title" → `<h1>`, 3-way unique/ambiguous/none resolution, near-match suggestions, pickable `PatchMatchCandidate`s) and canonical `replace_all` staging. |
 | `NodeEditToolsFeature.swift` | Rollout gate for native `propose_node_edit` / `ask_clarifying_question` function calling (Debug/TestFlight default on; App Store default off; UserDefaults override). |
@@ -387,11 +385,11 @@ The agentic AI companion. A native sheet interface for real-time collaboration.
 
 | Folder/File | Responsibility |
 |---|---|
-| `Chat/` | CoCaptain sheet UI, chat timeline, bubbles, prompt composer, clarifying-question option cards, and view-model state (including local clarification resolution). |
-| `AgentContract/` | Model-output adapter, XML parser (including the `clarifying_question` element), validator, coordinator, and shared agent/review/timeline models. |
+| `Chat/` | CoCaptain sheet UI, chat timeline, bubbles, prompt composer with Agent/Ask mode chip (`cocaptain.chatMode`), clarifying-question option cards, and view-model state (including local clarification resolution). |
+| `AgentContract/` | Model-output adapter, XML parser (including the `clarifying_question` element), validator, coordinator, and shared agent/review/timeline models including `CoCaptainChatMode` and turn execution policy. Mode is user-selected (not keyword-classified). |
 | `Review/` | Review bundle and pending edit/action cards for human approval, including the "Which one did you mean?" candidate picker for ambiguous edit targets. |
 | `Analysis/` | Structural parser warnings and recommendations from the analyzer. |
-| `NodeAgent/` | Embedded node chat interface for running quick agent context requests. |
+| `NodeAgent/` | Embedded node chat interface that shares the same persisted Agent/Ask mode as project-scoped CoCaptain. |
 
 ---
 

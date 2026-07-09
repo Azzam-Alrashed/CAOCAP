@@ -77,7 +77,7 @@ public final class LLMService {
             availableActions: [],
             scope: .project,
             purpose: .standard,
-            turnIntent: .generalChat
+            chatMode: .agent
         )
 
         return AsyncThrowingStream { continuation in
@@ -121,7 +121,7 @@ public final class LLMService {
         availableActions: [AppActionDefinition],
         scope: CoCaptainAgentScope = .project,
         purpose: CoCaptainTurnPurpose = .standard,
-        turnIntent: CoCaptainTurnIntent = .generalChat,
+        chatMode: CoCaptainChatMode = .agent,
         toolExecutor: CoCaptainToolExecutor? = nil
     ) -> AsyncThrowingStream<CoCaptainLLMStreamEvent, Error> {
         let prompt = buildPrompt(
@@ -131,7 +131,7 @@ public final class LLMService {
             availableActions: availableActions,
             scope: scope,
             purpose: purpose,
-            turnIntent: turnIntent
+            chatMode: chatMode
         )
 
         let currentPreferred = preferredModelName
@@ -475,7 +475,7 @@ public final class LLMService {
         availableActions: [AppActionDefinition],
         scope: CoCaptainAgentScope,
         purpose: CoCaptainTurnPurpose,
-        turnIntent: CoCaptainTurnIntent,
+        chatMode: CoCaptainChatMode = .agent,
         nodeEditToolsEnabled: Bool? = nil
     ) -> String {
         var parts: [String] = []
@@ -523,7 +523,9 @@ public final class LLMService {
                 """
                 : ""
 
-            let firebasePersistenceInstructions = turnIntent == .mutatingWork
+            // Agent mode always gets implementation-level Firebase guidance when
+            // structured tools are on. Ask mode never reaches this block.
+            let firebasePersistenceInstructions = chatMode == .agent || purpose == .onboardingGuidedEdit
                 ? """
                 - For Firebase/Firestore persistence, edit the Mini-App **code section** (inline JavaScript): use `window.__caocapFirestore` (and optional `window.__caocapFirestoreDefaultPath`) as described in canvas context; use compat-style `collection`/`doc`/`set`/`add`/`update` calls after null-checks.
                 """
@@ -533,11 +535,11 @@ public final class LLMService {
             // the XML schema block is omitted entirely; the XML parser stays
             // in place as a silent fallback for models that still emit it.
             let mutatingCommandRule = nodeEditToolsEnabled
-                ? "- For any explicit command to build, make, create, add, change, update, fix, remove, style, implement, document, write to the canvas, or improve existing canvas content, you MUST call `propose_node_edit` with concrete operations."
-                : "- For any explicit command to build, make, create, add, change, update, fix, remove, style, implement, document, write to the canvas, or improve existing canvas content, you MUST append an XML block named `cocaptain_actions` with concrete `node_edits`."
+                ? "- When the user wants a canvas change (build, rename, restyle, fix, add, remove, or similar), call `propose_node_edit` with concrete operations. Do not wait for specific verbs — act on the requested outcome."
+                : "- When the user wants a canvas change (build, rename, restyle, fix, add, remove, or similar), append an XML block named `cocaptain_actions` with concrete `node_edits`. Do not wait for specific verbs — act on the requested outcome."
             let adviceOnlyRule = nodeEditToolsEnabled
-                ? "- If you are only answering a question, providing advice, or discussing ideas (e.g., 'What game should we make?'), do NOT call `propose_node_edit`."
-                : "- If you are only answering a question, providing advice, or discussing ideas (e.g., 'What game should we make?'), do NOT include a `cocaptain_actions` block."
+                ? "- If you are only answering a question, providing advice, or discussing ideas (e.g., 'What game should we make?'), do NOT call `propose_node_edit`. Pure chat without an edit is allowed."
+                : "- If you are only answering a question, providing advice, or discussing ideas (e.g., 'What game should we make?'), do NOT include a `cocaptain_actions` block. Pure chat without an edit is allowed."
             let noEditsForQuestionsRule = nodeEditToolsEnabled
                 ? "- If the user is only asking a question, asking for advice, or asking for an opinion, do not request app actions and do not propose node edits."
                 : "- If the user is only asking a question, asking for advice, or asking for an opinion, do not request app actions and do not append `cocaptain_actions`."
@@ -636,8 +638,10 @@ public final class LLMService {
             parts.append(purposeInstructions)
         }
 
-        if let intentInstructions = turnIntent.promptInstructions {
-            parts.append(intentInstructions)
+        // Onboarding purposes already encode conversational posture; only append
+        // Ask instructions for standard turns so they do not fight onboarding copy.
+        if purpose == .standard, let modeInstructions = chatMode.promptInstructions {
+            parts.append(modeInstructions)
         }
 
         parts.append("User request:\n\(userMessage)")

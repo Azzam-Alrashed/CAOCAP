@@ -32,8 +32,6 @@ public final class CoCaptainViewModel {
     @ObservationIgnored
     private let commandIntentResolver = CommandIntentResolver()
     @ObservationIgnored
-    private let turnIntentResolver = CoCaptainTurnIntentResolver()
-    @ObservationIgnored
     private let patchEngine = NodePatchEngine()
     @ObservationIgnored
     private var lastStoreFileName: String?
@@ -45,6 +43,8 @@ public final class CoCaptainViewModel {
     public var onFlyToNode: ((UUID) -> Void)?
 
     public var isThinking: Bool = false
+    /// Selected CoCaptain chat mode. Defaults to Agent; composer persists via `CoCaptainChatMode.storageKey`.
+    public var chatMode: CoCaptainChatMode = .agent
     /// The cumulative number of completed assistant turns/responses. This increments whenever a model
     /// streaming task, execution result, or local command finishes. Used to synchronize onboarding prompts.
     public private(set) var completedAssistantResponseCount: Int = 0
@@ -214,7 +214,7 @@ public final class CoCaptainViewModel {
             do {
                 let turnPlan = CoCaptainTurnPlan(
                     purpose: purpose,
-                    intent: turnIntentResolver.resolve(text)
+                    mode: chatMode
                 )
                 let result = try await agentCoordinator.run(
                     userMessage: text,
@@ -342,6 +342,9 @@ public final class CoCaptainViewModel {
 
     /// Handles simple app commands locally so navigation does not need a model
     /// round trip. Mutating commands still become review items.
+    ///
+    /// In Ask mode, mutating command shortcuts are disabled so those messages
+    /// go to the model as chat instead of executing or staging canvas changes.
     private func handleDirectCommand(
         _ text: String,
         turnID: UUID,
@@ -351,6 +354,10 @@ public final class CoCaptainViewModel {
         guard let actionDispatcher,
               let actionID = commandIntentResolver.resolve(text, availableActions: actionDispatcher.availableActions),
               let definition = actionDispatcher.definition(for: actionID) else {
+            return false
+        }
+
+        if chatMode == .ask, definition.isMutating {
             return false
         }
 

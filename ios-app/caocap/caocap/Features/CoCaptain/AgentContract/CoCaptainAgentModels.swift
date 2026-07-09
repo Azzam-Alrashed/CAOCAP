@@ -53,10 +53,13 @@ public enum CoCaptainTurnPurpose: Hashable {
         }
     }
 
-    /// Selects how the coordinator executes this turn: full agentic pipeline or prose-only chat.
+    /// Default execution posture for this purpose before chat-mode is applied.
+    /// Onboarding purposes override the mode picker; standard defaults to Agent.
     var executionPolicy: CoCaptainTurnExecutionPolicy {
         switch self {
-        case .standard, .onboardingGuidedEdit:
+        case .standard:
+            return .agent
+        case .onboardingGuidedEdit:
             return .agentic
         case .onboardingWelcome, .onboardingBuildHandoff:
             return .conversational
@@ -68,18 +71,97 @@ public enum CoCaptainTurnPurpose: Hashable {
     }
 }
 
-/// Merges onboarding purpose with per-turn user intent to select execution behavior.
-public struct CoCaptainTurnPlan: Equatable {
-    public let purpose: CoCaptainTurnPurpose
-    public let intent: CoCaptainTurnIntent
+/// User-selected CoCaptain chat mode (Cursor-style Agent / Ask).
+///
+/// Agent is the default. Ask is prose-only: no tools, no staging, product-level
+/// context. The composer picker persists the choice under `storageKey`.
+public enum CoCaptainChatMode: String, Hashable, CaseIterable, Identifiable {
+    case agent
+    case ask
 
-    public init(purpose: CoCaptainTurnPurpose, intent: CoCaptainTurnIntent) {
-        self.purpose = purpose
-        self.intent = intent
+    public var id: String { rawValue }
+
+    /// App Storage key for persisting the last chosen mode.
+    public static let storageKey = "cocaptain.chatMode"
+
+    /// Localized short label for the composer mode control.
+    var displayName: String {
+        switch self {
+        case .agent:
+            return LocalizationManager.shared.localizedString("Agent")
+        case .ask:
+            return LocalizationManager.shared.localizedString("Ask")
+        }
     }
 
-    /// Onboarding purposes always stay conversational. Standard turns map intent
-    /// to agentic or advisory execution.
+    /// Placeholder copy that reflects the active mode in the composer field.
+    var composerPlaceholder: String {
+        switch self {
+        case .agent:
+            return LocalizationManager.shared.localizedString("cocaptain.composer.placeholder.agent")
+        case .ask:
+            return LocalizationManager.shared.localizedString("cocaptain.composer.placeholder.ask")
+        }
+    }
+
+    /// SF Symbol for the compact mode chip.
+    var systemImageName: String {
+        switch self {
+        case .agent:
+            return "sparkles"
+        case .ask:
+            return "bubble.left"
+        }
+    }
+
+    var executionPolicy: CoCaptainTurnExecutionPolicy {
+        switch self {
+        case .agent:
+            return .agent
+        case .ask:
+            return .ask
+        }
+    }
+
+    /// Richer canvas context for Agent; lighter product-oriented context for Ask.
+    var contextDetailLevel: ProjectContextBuilder.DetailLevel {
+        switch self {
+        case .agent:
+            return .implementation
+        case .ask:
+            return .product
+        }
+    }
+
+    /// Extra prompt posture for the selected mode. Ask forbids tools and edits.
+    var promptInstructions: String? {
+        switch self {
+        case .agent:
+            return nil
+        case .ask:
+            return """
+            Ask mode objective:
+            - Answer with helpful, beginner-friendly prose only.
+            - Do not request app actions, propose node edits, invoke tools, or emit a `cocaptain_actions` block.
+            - Do not mention nodes, SRS, patches, XML, Firebase wiring, or other implementation details unless the user explicitly asks.
+            - Focus on product ideas, explanations, and next-step advice grounded in the supplied canvas context.
+            - Match the language used by the user.
+            """
+        }
+    }
+}
+
+/// Merges onboarding purpose with chat mode to select execution behavior.
+public struct CoCaptainTurnPlan: Equatable {
+    public let purpose: CoCaptainTurnPurpose
+    public let mode: CoCaptainChatMode
+
+    public init(purpose: CoCaptainTurnPurpose, mode: CoCaptainChatMode = .agent) {
+        self.purpose = purpose
+        self.mode = mode
+    }
+
+    /// Onboarding purposes override the mode picker. Standard turns follow mode.
     var effectivePolicy: CoCaptainTurnExecutionPolicy {
         switch purpose {
         case .onboardingWelcome, .onboardingBuildHandoff:
@@ -87,13 +169,26 @@ public struct CoCaptainTurnPlan: Equatable {
         case .onboardingGuidedEdit:
             return .agentic
         case .standard:
-            switch intent {
-            case .mutatingWork:
-                return .agentic
-            case .advisory, .generalChat:
-                return .advisory
-            }
+            return mode.executionPolicy
         }
+    }
+
+    /// Canvas context richness for this turn.
+    var contextDetailLevel: ProjectContextBuilder.DetailLevel {
+        switch purpose {
+        case .onboardingGuidedEdit:
+            return .implementation
+        case .onboardingWelcome, .onboardingBuildHandoff:
+            return .product
+        case .standard:
+            return mode.contextDetailLevel
+        }
+    }
+
+    /// Connection-fallback footers apply when the turn expected canvas work capability.
+    var requiresDegradedConnectionNotice: Bool {
+        let policy = effectivePolicy
+        return policy.expectsStructuredResponse && policy.executesActions
     }
 }
 
@@ -104,8 +199,12 @@ public struct CoCaptainTurnPlan: Equatable {
 struct CoCaptainTurnExecutionPolicy: Equatable {
     enum Kind: Equatable {
         case conversational
+        /// Standard Agent mode: tools available, pure chat allowed, retry on invalid structure.
+        case agent
+        /// Ask mode: prose only (no tools / staging).
+        case ask
+        /// Onboarding guided-edit: tools available and executable work required.
         case agentic
-        case advisory
     }
 
     let kind: Kind
@@ -114,20 +213,32 @@ struct CoCaptainTurnExecutionPolicy: Equatable {
     let executesActions: Bool
     let allowsAgenticRetry: Bool
 
+    /// Standard Agent mode: structured tools on, chat without an edit OK,
+    /// retry only when structured output is invalid (not when the model chats).
+    static let agent = CoCaptainTurnExecutionPolicy(
+        kind: .agent,
+        expectsStructuredResponse: true,
+        enforcesExecutableWork: false,
+        executesActions: true,
+        allowsAgenticRetry: true
+    )
+
+    /// Ask mode: prose-only, no staging or agentic retry.
+    static let ask = CoCaptainTurnExecutionPolicy(
+        kind: .ask,
+        expectsStructuredResponse: false,
+        enforcesExecutableWork: false,
+        executesActions: false,
+        allowsAgenticRetry: false
+    )
+
+    /// Onboarding guided edit: must produce reviewable work.
     static let agentic = CoCaptainTurnExecutionPolicy(
         kind: .agentic,
         expectsStructuredResponse: true,
         enforcesExecutableWork: true,
         executesActions: true,
         allowsAgenticRetry: true
-    )
-
-    static let advisory = CoCaptainTurnExecutionPolicy(
-        kind: .advisory,
-        expectsStructuredResponse: true,
-        enforcesExecutableWork: false,
-        executesActions: true,
-        allowsAgenticRetry: false
     )
 
     static let conversational = CoCaptainTurnExecutionPolicy(

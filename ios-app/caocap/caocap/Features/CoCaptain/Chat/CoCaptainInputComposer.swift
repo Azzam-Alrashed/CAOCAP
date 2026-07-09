@@ -2,6 +2,7 @@ import SwiftUI
 
 struct CoCaptainInputComposer: View {
     @Binding var text: String
+    @Binding var chatMode: CoCaptainChatMode
     @FocusState.Binding var isFocused: Bool
     let store: ProjectStore?
     let isThinking: Bool
@@ -181,8 +182,12 @@ struct CoCaptainInputComposer: View {
     }
 
     private var promptField: some View {
-        HStack(spacing: 0) {
-            TextField("Ask Co-Captain...", text: $text, axis: .vertical)
+        HStack(alignment: .top, spacing: 0) {
+            chatModePicker
+                .padding(.leading, 10)
+                .padding(.top, 8)
+
+            TextField(chatMode.composerPlaceholder, text: $text, axis: .vertical)
                 .lineLimit(1...5)
                 .focused($isFocused)
                 .submitLabel(.send)
@@ -202,7 +207,8 @@ struct CoCaptainInputComposer: View {
                     }
                     return .ignored
                 }
-                .padding(.horizontal, 16)
+                .padding(.leading, 8)
+                .padding(.trailing, 16)
                 .padding(.vertical, 12)
         }
         .background(
@@ -219,6 +225,50 @@ struct CoCaptainInputComposer: View {
         .onboardingTooltipAnchor(.coCaptainInput)
         .animation(.easeInOut(duration: 0.2), value: isFocused)
         .animation(.easeInOut(duration: 0.2), value: isChatOnboardingActive)
+        .animation(.easeInOut(duration: 0.2), value: chatMode)
+    }
+
+    /// Compact Agent/Ask control nested in the field so chrome stays one row.
+    private var chatModePicker: some View {
+        Menu {
+            ForEach(CoCaptainChatMode.allCases) { mode in
+                Button {
+                    chatMode = mode
+                } label: {
+                    if mode == chatMode {
+                        Label(mode.displayName, systemImage: "checkmark")
+                    } else {
+                        Label(mode.displayName, systemImage: mode.systemImageName)
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: chatMode.systemImageName)
+                    .font(.system(size: 11, weight: .semibold))
+                Text(chatMode.displayName)
+                    .font(.system(size: 12, weight: .semibold))
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 8, weight: .semibold))
+            }
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Color.primary.opacity(0.08))
+            )
+        }
+        .accessibilityLabel(
+            LocalizationManager.shared.localizedString("cocaptain.composer.modeAccessibility")
+        )
+        .accessibilityValue(chatMode.displayName)
+        .disabled(isThinking)
+        .simultaneousGesture(
+            TapGesture().onEnded {
+                isFocused = false
+            }
+        )
     }
 
     private var sendButton: some View {

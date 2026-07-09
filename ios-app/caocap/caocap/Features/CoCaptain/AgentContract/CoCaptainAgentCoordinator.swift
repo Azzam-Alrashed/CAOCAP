@@ -22,6 +22,7 @@ public protocol CoCaptainLLMClient: AnyObject {
     ///   - availableActions: The set of `AppActionDefinition`s the model may call
     ///     via `request_app_action`. Sent as tool declarations in each turn.
     ///   - scope: Whether this turn targets the whole project or a single node.
+    ///   - chatMode: Agent vs Ask posture for prompt/context (Ask is prose-only).
     ///   - toolExecutor: Answers read-style tool calls inline during the turn,
     ///     or `nil` when no in-turn tools are available.
     func streamAgentEvents(
@@ -31,7 +32,7 @@ public protocol CoCaptainLLMClient: AnyObject {
         availableActions: [AppActionDefinition],
         scope: CoCaptainAgentScope,
         purpose: CoCaptainTurnPurpose,
-        turnIntent: CoCaptainTurnIntent,
+        chatMode: CoCaptainChatMode,
         toolExecutor: CoCaptainToolExecutor?
     ) -> AsyncThrowingStream<CoCaptainLLMStreamEvent, Error>
 }
@@ -45,7 +46,7 @@ public extension CoCaptainLLMClient {
         availableActions: [AppActionDefinition],
         scope: CoCaptainAgentScope,
         purpose: CoCaptainTurnPurpose,
-        turnIntent: CoCaptainTurnIntent
+        chatMode: CoCaptainChatMode = .agent
     ) -> AsyncThrowingStream<CoCaptainLLMStreamEvent, Error> {
         streamAgentEvents(
             for: userMessage,
@@ -54,7 +55,7 @@ public extension CoCaptainLLMClient {
             availableActions: availableActions,
             scope: scope,
             purpose: purpose,
-            turnIntent: turnIntent,
+            chatMode: chatMode,
             toolExecutor: nil
         )
     }
@@ -160,12 +161,8 @@ public final class CoCaptainAgentCoordinator {
         turnPlan: CoCaptainTurnPlan? = nil,
         onVisibleText: @escaping (String) -> Void
     ) async throws -> CoCaptainAgentRunResult {
-        let resolvedTurnPlan = turnPlan ?? CoCaptainTurnPlan(
-            purpose: purpose,
-            intent: CoCaptainTurnIntentResolver().resolve(userMessage)
-        )
-        let contextDetailLevel: ProjectContextBuilder.DetailLevel =
-            resolvedTurnPlan.intent == .mutatingWork ? .implementation : .product
+        let resolvedTurnPlan = turnPlan ?? CoCaptainTurnPlan(purpose: purpose, mode: .agent)
+        let contextDetailLevel = resolvedTurnPlan.contextDetailLevel
         let context = store.map { store in
             switch scope {
             case .project:
@@ -244,7 +241,7 @@ public final class CoCaptainAgentCoordinator {
             availableActions: dispatcher?.availableActions ?? [],
             scope: scope,
             purpose: purpose,
-            turnIntent: turnPlan.intent,
+            chatMode: turnPlan.mode,
             store: store,
             onVisibleText: onVisibleText
         )
@@ -255,6 +252,7 @@ public final class CoCaptainAgentCoordinator {
 
         if policy.expectsStructuredResponse {
             if !directive.diagnostics.isEmpty {
+                // Invalid structured output: retry with feedback when policy allows.
                 if agenticRetriesRemaining > 0 {
                     return try await runOnce(
                         userMessage: agenticRetryMessage(
@@ -279,8 +277,8 @@ public final class CoCaptainAgentCoordinator {
                 )
             }
 
-            // Build/edit requests should produce executable work. If the model only
-            // chatted back, retry once with a stronger contract before falling back.
+            // Guided-edit (and similar) turns must produce executable work. Agent
+            // mode does not: pure chat without an edit is a valid terminal outcome.
             if payload == nil, agenticRetriesRemaining > 0, requiresAgenticWork {
                 return try await runOnce(
                     userMessage: agenticRetryMessage(
@@ -391,22 +389,24 @@ public final class CoCaptainAgentCoordinator {
         availableActions: [AppActionDefinition],
         scope: CoCaptainAgentScope,
         purpose: CoCaptainTurnPurpose,
-        turnIntent: CoCaptainTurnIntent,
+        chatMode: CoCaptainChatMode,
         store: ProjectStore? = nil,
         onVisibleText: @escaping (String) -> Void
     ) async throws -> CoCaptainAgentDirective {
         var responseText = ""
         var functionCalls: [CoCaptainAgentFunctionCall] = []
         var seenFunctionCallIDs = Set<String>()
+        // Ask / conversational turns omit tools and action catalogs so the
+        // model cannot be steered into structured edit or app-action work.
         let stream = llmClient.streamAgentEvents(
             for: userMessage,
             context: context,
             expectsStructuredResponse: expectsStructuredResponse,
-            availableActions: availableActions,
+            availableActions: expectsStructuredResponse ? availableActions : [],
             scope: scope,
             purpose: purpose,
-            turnIntent: turnIntent,
-            toolExecutor: makeToolExecutor(store: store)
+            chatMode: chatMode,
+            toolExecutor: expectsStructuredResponse ? makeToolExecutor(store: store) : nil
         )
 
         for try await event in stream {
@@ -521,7 +521,7 @@ public final class CoCaptainAgentCoordinator {
         _ result: CoCaptainAgentRunResult,
         turnPlan: CoCaptainTurnPlan
     ) -> CoCaptainAgentRunResult {
-        guard turnPlan.intent.requiresDegradedConnectionNotice,
+        guard turnPlan.requiresDegradedConnectionNotice,
               result.reviewBundle == nil,
               result.executionSummary == nil else {
             return result
