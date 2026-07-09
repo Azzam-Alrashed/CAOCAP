@@ -38,13 +38,9 @@ final class IntroCoordinator {
         currentIndex >= IntroManifest.lastIndex
     }
 
-    /// Advances to the next step, or completes the intro if already on the last page.
+    /// Advances to the next step when not already on the final page.
     func next() {
-        guard !isLastPage else {
-            complete()
-            return
-        }
-
+        guard !isLastPage else { return }
         currentIndex = min(currentIndex + 1, IntroManifest.lastIndex)
     }
 

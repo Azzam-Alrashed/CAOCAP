@@ -1,9 +1,8 @@
 import SwiftUI
 
-/// Primary CTA button styling shared across personalization steps.
-struct PersonalizationPrimaryButton: View {
+/// Primary CTA button styling shared by intro and personalization steps.
+struct OnboardingPrimaryButton: View {
     let titleKey: String
-    let isEnabled: Bool
     var isLastStep: Bool = false
     let action: () -> Void
 
@@ -19,7 +18,6 @@ struct PersonalizationPrimaryButton: View {
                     .font(.system(size: 17, weight: .bold))
             }
             .foregroundStyle(Color(uiColor: .label))
-            .opacity(isEnabled ? 1 : 0.55)
             .frame(maxWidth: .infinity)
             .frame(height: 52)
             .background {
@@ -38,6 +36,5 @@ struct PersonalizationPrimaryButton: View {
             )
         }
         .buttonStyle(.plain)
-        .disabled(!isEnabled)
     }
 }

@@ -10,13 +10,12 @@ struct PersonalizationOnboardingCoordinatorTests {
         return defaults
     }
 
-    @Test func copilotStepAllowsContinueByDefault() {
+    @Test func copilotStepDefaultsToCocaptain() {
         let coordinator = PersonalizationOnboardingCoordinator(
             profileStore: UserProfileStore(defaults: makeDefaults(suiteName: "PersonalizationOnboardingCoordinatorTests.continue")),
             analytics: NoOpAnalyticsService()
         )
 
-        #expect(coordinator.canContinue)
         #expect(coordinator.selectedCopilot == .cocaptain)
     }
 
@@ -29,7 +28,6 @@ struct PersonalizationOnboardingCoordinatorTests {
         coordinator.next()
 
         #expect(coordinator.currentIndex == 1)
-        #expect(coordinator.canContinue)
     }
 
     @Test func surveyStepAllowsContinueWithoutSelectionAndMarksUnanswered() {
@@ -39,7 +37,6 @@ struct PersonalizationOnboardingCoordinatorTests {
         )
 
         coordinator.currentIndex = 1
-        #expect(coordinator.canContinue)
 
         coordinator.next()
 
@@ -58,7 +55,6 @@ struct PersonalizationOnboardingCoordinatorTests {
 
         coordinator.currentIndex = 1
         coordinator.select(answerID: "complete_beginner", for: "coding_level")
-        #expect(coordinator.canContinue)
         #expect(coordinator.isAnswered(questionID: "coding_level"))
     }
 

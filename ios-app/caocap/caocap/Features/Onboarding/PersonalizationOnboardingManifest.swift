@@ -123,10 +123,6 @@ enum PersonalizationOnboardingManifest {
         steps[min(max(index, 0), lastIndex)]
     }
 
-    static func question(at index: Int) -> PersonalizationSurveyQuestion {
-        questions[min(max(index, 0), questions.count - 1)]
-    }
-
     static func stepLabel(for index: Int, language: String? = nil) -> String {
         LocalizationManager.shared.localizedString(
             "personalization.stepLabel",

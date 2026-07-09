@@ -21,20 +21,17 @@ struct PersonalizationSceneView: View {
                 bottomChromeHeight: totalBottomChrome
             )
             let heroMode: PersonalizationHeroLayer.Mode = coordinator.isCopilotPickerStep ? .picker : .companion
-            let showsHeroLayer = coordinator.isCopilotPickerStep || coordinator.showsCompanionCopilotHero
 
             ZStack {
                 PersonalizationSpaceBackdrop()
                 PersonalizationMoonStage()
 
-                if showsHeroLayer {
-                    PersonalizationHeroLayer(
-                        coordinator: coordinator,
-                        mode: heroMode,
-                        standLineY: standLineY,
-                        screenWidth: geometry.size.width
-                    )
-                }
+                PersonalizationHeroLayer(
+                    coordinator: coordinator,
+                    mode: heroMode,
+                    standLineY: standLineY,
+                    screenWidth: geometry.size.width
+                )
 
                 if coordinator.isCopilotPickerStep
                     && !coordinator.showCompletionMoment
@@ -65,9 +62,9 @@ struct PersonalizationSceneView: View {
 
     private var questionFlow: some View {
         VStack(spacing: 0) {
-            PersonalizationChrome.TopBar {
+            PersonalizationChrome.TopBar(onSkip: {
                 coordinator.requestSkip()
-            }
+            })
 
             PersonalizationChrome.ProgressBar(
                 stepLabel: coordinator.stepLabel,
@@ -99,8 +96,7 @@ struct PersonalizationSceneView: View {
         case .surveyQuestion(let question):
             PersonalizationSurveyStepContent(
                 question: question,
-                coordinator: coordinator,
-                showsCompanionHero: coordinator.showsCompanionCopilotHero
+                coordinator: coordinator
             )
         }
     }
@@ -116,7 +112,6 @@ struct PersonalizationSceneView: View {
             PersonalizationChrome.BottomBar(
                 isFirstPage: coordinator.isFirstPage,
                 isLastStep: coordinator.isLastStep,
-                canContinue: coordinator.canContinue,
                 reduceMotion: reduceMotion,
                 onBack: { coordinator.back() },
                 onBackToIntro: onBackToIntro,
