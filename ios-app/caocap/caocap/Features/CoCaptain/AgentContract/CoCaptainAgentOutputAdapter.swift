@@ -197,10 +197,10 @@ public struct CoCaptainFunctionCallAgentAdapter {
 /// Adapter that converts `propose_node_edit` and `ask_clarifying_question`
 /// function calls into the existing `CoCaptainAgentPayload` shapes.
 ///
-/// The mapping is deliberately thin: the validator, verified coding loop,
-/// review builder, and baseText conflict guard all consume the same
-/// `CoCaptainNodeEditProposal` / `CoCaptainClarifyingQuestion` values they
-/// receive from the XML parser, so downstream safety stays untouched.
+/// The mapping is deliberately thin: the validator, review builder, and
+/// baseText conflict guard all consume the same `CoCaptainNodeEditProposal` /
+/// `CoCaptainClarifyingQuestion` values they receive from the XML parser, so
+/// downstream safety stays untouched.
 public struct CoCaptainNodeEditFunctionAdapter {
     /// The tool names this adapter understands. The composite adapter uses
     /// this set to partition calls between adapters.
@@ -288,21 +288,6 @@ public struct CoCaptainNodeEditFunctionAdapter {
             )
         }
 
-        var verificationChecks: [CoCaptainVerificationCheck] = []
-        if let checkValues = functionCall.arguments["verificationChecks"]?.arrayValue {
-            for value in checkValues {
-                guard let object = value.objectValue,
-                      let id = object["id"]?.stringValue,
-                      let description = object["description"]?.stringValue,
-                      let script = object["script"]?.stringValue else {
-                    return .failure("`propose_node_edit` has a malformed verification check; each needs `id`, `description`, and `script`.")
-                }
-                verificationChecks.append(
-                    CoCaptainVerificationCheck(id: id, description: description, script: script)
-                )
-            }
-        }
-
         let learningNote: CoCaptainLearningNote? = functionCall.arguments["learningNote"]?.objectValue.flatMap { object in
             guard let concept = object["concept"]?.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines),
                   let body = object["body"]?.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -325,7 +310,6 @@ public struct CoCaptainNodeEditFunctionAdapter {
                 section: section,
                 summary: summary,
                 operations: operations,
-                verificationChecks: verificationChecks,
                 learningNote: learningNote
             )
         )

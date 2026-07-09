@@ -16,7 +16,6 @@ Supporting services live outside this feature:
 - `LLMService` streams from Firebase AI Logic.
 - `AppActionDispatcher` performs high-level app actions.
 - `NodePatchEngine` previews and applies node edits using flexible target matching for all exact operations.
-- `MiniAppVerificationService` executes staged code in an isolated offline WebView.
 
 ## Agent Flow
 
@@ -28,20 +27,11 @@ Supporting services live outside this feature:
 6. `LLMService` streams text back into the current assistant bubble. When the model calls the read-only `read_node_section(nodeId, section)` tool, the coordinator answers it inline against the active `ProjectStore` and `LLMService` sends the result back on the same chat session (bounded to 4 tool-response rounds per turn).
 7. `CoCaptainAgentOutputAdapter` hides machine output while streaming and turns the final response into a directive.
 8. For agentic turns, `CoCaptainAgentValidator` checks action IDs, action safety, node edit shape, and required agentic work.
-9. Eligible existing Mini-App code edits enter the verified coding loop.
-10. CoCaptain stages the candidate, runs behavioral checks, and may repair it twice without mutating `ProjectStore`.
-11. Safe actions remain buffered until verification succeeds.
-12. The final verified code and pending actions become `ReviewBundleItem` entries.
-13. Applying a review item revalidates the original base node text before writing changes to `ProjectStore`.
+9. Safe actions execute immediately when autonomous; pending actions and node edits become `ReviewBundleItem` entries for human approval.
+10. Applying a review item revalidates the original base node text before writing changes to `ProjectStore`. Undo and checkpoints remain available after Apply.
 
 The core contract is human-in-the-loop code editing. Do not auto-apply node edits without explicit user approval.
 Free-usage and subscription prompts are product CTA timeline items, not review bundles.
-
-### Verified Coding Loop
-
-The loop is limited to one existing, non-empty, offline Mini-App code edit. It uses at most three candidates and converts the passing result into one `replace_all` review proposal against the original base text. Blank Mini-Apps, SRS edits, multi-node edits, and network-dependent Mini-Apps continue through their existing paths.
-
-The loop runs for standard mutating turns and `.onboardingGuidedEdit`. Candidate patches use forgiving target resolution before verification or repair.
 
 ### Flexible Patch Matching
 
@@ -64,12 +54,9 @@ Each tier returns a 3-way `Resolution` (`unique` / `ambiguous` / `none`) instead
 Ambiguity never dead-ends:
 
 - `buildReviewBundle` converts `NodePatchError.ambiguous` into a `.needsClarification` review item whose card asks "Which one did you mean?" with one tappable button per candidate.
-- The verified coding loop bails out on first-attempt ambiguity (an LLM repair cannot fix structural ambiguity in the user's document) and surfaces the same picker instead of burning repair attempts. Progress shows `awaitingChoice`, not a failure.
 - `CoCaptainViewModel.resolveClarification` re-stages the chosen candidate locally — no model round-trip — and the item becomes a normal `.pending` review.
 
-Intent-level ambiguity ("make it pop") is handled by the model with a `clarifying_question` contract element (see below), rendered as a tappable option card. Picking an option sends it as the user's next message. Validation and coding-loop failures also append a locally-built recovery question so every failure path has a tappable next step.
-
-Verification uses a non-persistent WebView, blocks external effects, captures runtime errors and `console.error`, and requires every declared behavioral check to return `true`. Failed or unsupported runs produce diagnostics without an Apply control. The rollout gate is enabled by default in Debug and TestFlight, disabled in production App Store builds, and can be overridden with `cocaptain.verifiedCodingLoopEnabled`.
+Intent-level ambiguity ("make it pop") is handled by the model with a `clarifying_question` contract element (see below), rendered as a tappable option card. Picking an option sends it as the user's next message. Validation failures also append a locally-built recovery question so every failure path has a tappable next step.
 
 ## Turn Execution Modes
 
@@ -92,13 +79,13 @@ When adding a new turn purpose, declare its execution policy in the same enum sw
 
 ## Structured Payload Contract
 
-There are two wire formats for node edits and clarifying questions; both converge on the same `CoCaptainAgentPayload`, so the validator, verified coding loop, review builder, and conflict guard are format-independent.
+There are two wire formats for node edits and clarifying questions; both converge on the same `CoCaptainAgentPayload`, so the validator, review builder, and conflict guard are format-independent.
 
 ### Native node-edit tools (preferred, feature-gated)
 
 When `NodeEditToolsFeature` is enabled (default on in Debug/TestFlight, off in production App Store builds, overridable via `cocaptain.nodeEditToolsEnabled`), the model is instructed to use Gemini function calling:
 
-- `propose_node_edit(nodeId, section, summary, operations[], verificationChecks[], learningNote)` — one call per node edit, with nested operation/check objects mirroring the XML shapes below.
+- `propose_node_edit(nodeId, section, summary, operations[], learningNote)` — one call per node edit, with nested operation objects mirroring the XML shapes below.
 - `ask_clarifying_question(prompt, options[])` — one short question with 2–4 outcome-phrased options.
 
 `CoCaptainNodeEditFunctionAdapter` maps these calls into the payload. With the flag on, the XML schema block is omitted from the prompt and the agentic retry message references the tools; the XML parser stays in place as a silent fallback for models that still emit it. If a turn contains both tool calls and an XML block, the function-call edits win and the XML edits are dropped. `CoCaptainAgentOutputSource` records which format delivered each directive for rollout telemetry.
@@ -125,13 +112,6 @@ The model may include one trailing XML block:
       <operation type="replace_all">
         <content><![CDATA[<h1>New text</h1>]]></content>
       </operation>
-      <verification_checks>
-        <verification_check id="headline" description="Headline shows the new text">
-          <script><![CDATA[
-            return document.querySelector("h1")?.textContent === "New text";
-          ]]></script>
-        </verification_check>
-      </verification_checks>
       <learning_note concept="Short concept name">2-3 plain sentences about what this change teaches, referencing the user's own app.</learning_note>
     </node_edit>
   </node_edits>
@@ -148,11 +128,10 @@ Rules:
 - Node edits require a non-empty summary and at least one operation.
 - Exact operations require a non-empty target.
 - `clarifying_question` needs a non-empty `prompt` and 2–4 non-empty options; malformed questions degrade to prose. A question-only payload counts as valid agentic work, and a question always takes precedence over node edits in the same turn (the edits are dropped). The same precedence applies to `ask_clarifying_question` vs `propose_node_edit` function calls.
-- `learning_note` (or the `learningNote` tool argument) is an optional short lesson attached to a node edit: a `concept` name plus 2–3 plain sentences. It is revealed as a "What you just learned" timeline card only after the user applies the edit — never on the review card. Malformed notes degrade to nil without invalidating the edit; when the model omits one, the coordinator builds a local fallback from the edit summary and verification-check descriptions.
+- `learning_note` (or the `learningNote` tool argument) is an optional short lesson attached to a node edit: a `concept` name plus 2–3 plain sentences. It is revealed as a "What you just learned" timeline card only after the user applies the edit — never on the review card. Malformed notes degrade to nil without invalidating the edit; when the model omits one, the coordinator builds a local fallback from the edit summary.
 - Prompt rules keep the mentor tone: never refuse, use plain non-technical language, and ask exactly one clarifying question with outcome-phrased options when unsure. "Title"/"headline" mean the visible page heading, not the browser tab title.
-- Verified code edits require 1–5 uniquely identified checks. Each offline script must return a Boolean, stay under 2,000 characters, and keep the combined scripts under 8,000 characters.
 
-Invalid structured payloads are not partially executed. The coordinator retries once with parse or validation feedback. If the retry is still invalid, the user sees a conflicted review item rather than a silent no-op or unsafe action.
+Invalid structured payloads are not partially executed. The coordinator retries once with parse or validation feedback. If the retry is still invalid, the user sees a recovery question rather than a silent no-op or unsafe action.
 
 Firebase function calling is the preferred path for app actions through the `request_app_action` tool, and — behind `NodeEditToolsFeature` — for node edits and clarifying questions through `propose_node_edit` / `ask_clarifying_question`. The XML block remains the compatibility format until tool usage dominates the output-source telemetry.
 

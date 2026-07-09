@@ -39,9 +39,6 @@ public final class CoCaptainViewModel {
     private var lastStoreFileName: String?
     @ObservationIgnored
     private var streamingTask: Task<Void, Never>?
-    @ObservationIgnored
-    private var activeCodingRunItemID: UUID?
-
 
     /// Called when the user asks to fly the canvas to a review target node.
     @ObservationIgnored
@@ -109,7 +106,6 @@ public final class CoCaptainViewModel {
     }
 
     public func clearHistory() {
-        cancelActiveCodingRun()
         items = [CoCaptainViewModel.greetingItem()]
         agentCoordinator.resetChat(scope: scope)
         if case .node(let nodeID) = scope {
@@ -130,7 +126,6 @@ public final class CoCaptainViewModel {
     public func configureNodeSession(store: ProjectStore, nodeID: UUID, dispatcher: (any AppActionPerforming)? = nil) {
         let newScope: CoCaptainAgentScope = .node(nodeID)
         if scope != newScope {
-            cancelActiveCodingRun()
             streamingTask?.cancel()
             streamingTask = nil
             isThinking = false
@@ -147,7 +142,6 @@ public final class CoCaptainViewModel {
 
     public func setPresented(_ presented: Bool) {
         if !presented {
-            cancelActiveCodingRun()
             streamingTask?.cancel()
             streamingTask = nil
             isThinking = false
@@ -229,9 +223,6 @@ public final class CoCaptainViewModel {
                     scope: scope,
                     purpose: purpose,
                     turnPlan: turnPlan,
-                    onCodingProgress: { [weak self] state in
-                        self?.updateCodingRun(state)
-                    },
                     onVisibleText: { _ in
                         // Stop streaming characters to the UI for a cleaner 'split message' feel.
                     }
@@ -332,7 +323,6 @@ public final class CoCaptainViewModel {
     }
 
     public func stopStreaming() {
-        cancelActiveCodingRun()
         streamingTask?.cancel()
         streamingTask = nil
         isThinking = false
@@ -630,7 +620,6 @@ public final class CoCaptainViewModel {
         defer { lastStoreFileName = currentFileName }
 
         if scope == .project, lastStoreFileName != nil {
-            cancelActiveCodingRun()
             streamingTask?.cancel()
             streamingTask = nil
             isThinking = false
@@ -646,36 +635,6 @@ public final class CoCaptainViewModel {
             return nil
         }
         return bundle
-    }
-
-    private func updateCodingRun(_ state: CoCaptainCodingRunState) {
-        if let id = activeCodingRunItemID,
-           let index = items.firstIndex(where: { $0.id == id }) {
-            items[index].content = .codingRun(state)
-        } else {
-            let id = UUID()
-            activeCodingRunItemID = id
-            items.append(
-                CoCaptainTimelineItem(
-                    id: id,
-                    content: .codingRun(state)
-                )
-            )
-        }
-
-        if state.isTerminal {
-            activeCodingRunItemID = nil
-        }
-    }
-
-    private func cancelActiveCodingRun() {
-        guard let id = activeCodingRunItemID,
-              let index = items.firstIndex(where: { $0.id == id }) else {
-            activeCodingRunItemID = nil
-            return
-        }
-        items[index].content = .codingRun(.cancelled)
-        activeCodingRunItemID = nil
     }
 
     private func updateReviewItem(bundleID: UUID, itemID: UUID, status: ReviewItemStatus) {

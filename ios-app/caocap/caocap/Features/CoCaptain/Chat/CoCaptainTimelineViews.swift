@@ -36,8 +36,6 @@ struct TimelineItemView: View {
                     isOnboardingReviewAnchorActive: isOnboardingReviewAnchorActive,
                     isOnboardingApplyAnchorActive: isOnboardingApplyAnchorActive
                 )
-            case .codingRun(let state):
-                CodingRunProgressView(state: state)
             case .clarifyingQuestion(let questionItem):
                 ClarifyingQuestionCardView(item: questionItem) { option in
                     viewModel.answerClarifyingQuestion(itemID: item.id, option: option)
@@ -46,77 +44,6 @@ struct TimelineItemView: View {
                 MentorNoteCardView(item: noteItem)
             }
         }
-    }
-}
-
-struct CodingRunProgressView: View {
-    let state: CoCaptainCodingRunState
-
-    private var tint: Color {
-        switch state {
-        case .readyForReview:
-            return .green
-        case .failed:
-            return .red
-        case .cancelled:
-            return .secondary
-        default:
-            return .blue
-        }
-    }
-
-    private var icon: String {
-        switch state {
-        case .planning:
-            return "list.bullet.clipboard"
-        case .building:
-            return "hammer.fill"
-        case .testing:
-            return "checkmark.circle.dotted"
-        case .repairing:
-            return "wrench.and.screwdriver.fill"
-        case .readyForReview:
-            return "checkmark.shield.fill"
-        case .awaitingChoice:
-            return "questionmark.bubble.fill"
-        case .failed:
-            return "xmark.octagon.fill"
-        case .cancelled:
-            return "stop.circle.fill"
-        }
-    }
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: icon)
-                .foregroundStyle(tint)
-                .frame(width: 22)
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(state.title)
-                    .font(.system(size: 13, weight: .semibold))
-                if let detail = state.detail {
-                    Text(detail)
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            Spacer(minLength: 0)
-
-            if !state.isTerminal {
-                ProgressView()
-                    .controlSize(.small)
-            }
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 11)
-        .background(tint.opacity(0.08))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(tint.opacity(0.18), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
 

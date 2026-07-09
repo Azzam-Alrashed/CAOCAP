@@ -433,16 +433,6 @@ public final class LLMService {
                 ),
                 description: "Ordered patch operations. Prefer one replace_all with the complete updated document for small files."
             ),
-            "verificationChecks": .array(
-                items: .object(
-                    properties: [
-                        "id": .string(description: "Unique check id."),
-                        "description": .string(description: "The behavior being checked."),
-                        "script": .string(description: "Offline JavaScript that returns true only when the behavior works.")
-                    ]
-                ),
-                description: "1-5 behavioral checks; required when editing existing non-empty Mini-App code."
-            ),
             "learningNote": .object(
                 properties: [
                     "concept": .string(description: "A 2-5 word name for the concept this edit demonstrates."),
@@ -451,7 +441,7 @@ public final class LLMService {
                 description: "A short lesson revealed to the user after they apply the edit."
             )
         ],
-        optionalParameters: ["nodeId", "verificationChecks", "learningNote"]
+        optionalParameters: ["nodeId", "learningNote"]
     )
 
     /// Structured clarifying-question tool (feature-gated). Takes precedence
@@ -590,13 +580,6 @@ public final class LLMService {
                         <target>exact text (only for exact operations)</target>
                         <content><![CDATA[new content]]></content>
                       </operation>
-                      <verification_checks>
-                        <verification_check id="unique-id" description="behavior being checked">
-                          <script><![CDATA[
-                            return document.querySelector("selector") !== null;
-                          ]]></script>
-                        </verification_check>
-                      </verification_checks>
                       <learning_note concept="short concept name">2-3 plain sentences about what this change teaches, using the user's own app.</learning_note>
                     </node_edit>
                   </node_edits>
@@ -643,10 +626,7 @@ public final class LLMService {
                 - Every node edit needs a non-empty summary and at least one operation.
                 - Exact operations require a non-empty `target`; append/prepend/replace_all do not.
                 - Targets are resolved flexibly: generic words like "title", "headline", or "heading" automatically resolve to the page's main `h1` heading, so pass the user's own words as the target instead of guessing between `<title>` and `<h1>`.
-                - For existing mini-app code sections at or below 200 lines or 8 KB, prefer `replace_all` with the full updated document plus verification checks instead of `replace_exact` for small text tweaks.
-                - When editing an existing non-empty Mini-App code section, include 1 to 5 behavioral verification checks.
-                - Each verification script must be offline, deterministic, and return the Boolean value `true` only when its described behavior works.
-                - Verification scripts may inspect the DOM and simulate local interactions, but must not use Firebase, network requests, remote resources, timers longer than 2 seconds, or external services.
+                - For small text tweaks on existing Mini-App code, prefer `replace_exact` (or a focused `replace_all` when rewriting a short document).
                 \(learningNoteRule)\(xmlSchemaBlock)
                 """
             )

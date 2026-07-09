@@ -935,23 +935,6 @@
         }
       }
     },
-    "cocaptain.mentorNote.fallbackBodyWithChecks": {
-      "extractionState": "manual",
-      "localizations": {
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "لقد طبقت للتو هذا التغيير: %1$@. تحقق المساعد من نجاحه بفحص: %2$@."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "You just applied this change: %1$@. CoCaptain confirmed it works by checking: %2$@."
-          }
-        }
-      }
-    },
     "cocaptain.mentorNote.fallbackConcept": {
       "extractionState": "manual",
       "localizations": {

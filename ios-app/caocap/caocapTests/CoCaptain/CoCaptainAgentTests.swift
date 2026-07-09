@@ -1674,10 +1674,7 @@ struct CoCaptainAgentTests {
                 </cocaptain_actions>
                 """
         )
-        let coordinator = CoCaptainAgentCoordinator(
-            llmClient: llm,
-            verifiedCodingLoopEnabled: { false }
-        )
+        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
 
         let result = try await coordinator.run(
             userMessage: "update the headline",
@@ -1702,20 +1699,12 @@ struct CoCaptainAgentTests {
                       <operation type="replace_all">
                         <content><![CDATA[<h1>New</h1>]]></content>
                       </operation>
-                      <verification_checks>
-                        <verification_check id="headline" description="Headline shows New">
-                          <script><![CDATA[return document.querySelector("h1")?.textContent === "New";]]></script>
-                        </verification_check>
-                      </verification_checks>
                     </node_edit>
                   </node_edits>
                 </cocaptain_actions>
                 """
         )
-        let coordinator = CoCaptainAgentCoordinator(
-            llmClient: llm,
-            verifiedCodingLoopEnabled: { false }
-        )
+        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
 
         let result = try await coordinator.run(
             userMessage: "update the headline",
@@ -1726,7 +1715,7 @@ struct CoCaptainAgentTests {
         let note = result.reviewBundle?.items.first?.learningNote
         #expect(note != nil)
         #expect(note?.body.contains("Update headline") == true)
-        #expect(note?.body.contains("Headline shows New") == true)
+        #expect(note?.body.contains("Headline shows New") == false)
     }
 
     @MainActor
@@ -1874,10 +1863,7 @@ struct CoCaptainAgentTests {
                 </cocaptain_actions>
                 """
         )
-        let coordinator = CoCaptainAgentCoordinator(
-            llmClient: llm,
-            verifiedCodingLoopEnabled: { false }
-        )
+        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
 
         let result = try await coordinator.run(
             userMessage: "update the headline",
@@ -1902,10 +1888,7 @@ struct CoCaptainAgentTests {
             ),
             finalResponse: "That node does not exist."
         )
-        let coordinator = CoCaptainAgentCoordinator(
-            llmClient: llm,
-            verifiedCodingLoopEnabled: { false }
-        )
+        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
 
         _ = try? await coordinator.run(
             userMessage: "what's in that node?",
@@ -1927,10 +1910,7 @@ struct CoCaptainAgentTests {
             finalResponse: "Navigating."
         )
         let dispatcher = TestActionDispatcher()
-        let coordinator = CoCaptainAgentCoordinator(
-            llmClient: llm,
-            verifiedCodingLoopEnabled: { false }
-        )
+        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
 
         let result = try await coordinator.run(
             userMessage: "go home please",
@@ -2373,121 +2353,6 @@ struct CoCaptainAgentTests {
         #expect(llm.receivedPurposes.allSatisfy { $0 == .onboardingWelcome })
     }
 
-    @Test func parserExtractsVerificationChecksFromCodeEdit() throws {
-        let response = """
-        <cocaptain_actions>
-          <assistant_message>Updated and tested.</assistant_message>
-          <node_edits>
-            <node_edit role="miniApp" section="code" summary="Update heading">
-              <operation type="replace_exact">
-                <target>Hello World!</target>
-                <content><![CDATA[Verified]]></content>
-              </operation>
-              <verification_checks>
-                <verification_check id="heading" description="Heading shows the new text">
-                  <script><![CDATA[return document.querySelector("h1")?.textContent === "Verified";]]></script>
-                </verification_check>
-              </verification_checks>
-            </node_edit>
-          </node_edits>
-        </cocaptain_actions>
-        """
-
-        let edit = try #require(CoCaptainAgentParser().parse(response).payload?.nodeEdits.first)
-        let check = try #require(edit.verificationChecks.first)
-
-        #expect(check.id == "heading")
-        #expect(check.description == "Heading shows the new text")
-        #expect(check.script.contains("querySelector"))
-    }
-
-    @MainActor
-    @Test func validatorRejectsInvalidVerificationChecks() {
-        let duplicate = CoCaptainVerificationCheck(id: "same", description: "First", script: "return true;")
-        let payload = CoCaptainAgentPayload(
-            assistantMessage: "Ready",
-            nodeEdits: [
-                CoCaptainNodeEditProposal(
-                    summary: "Update",
-                    operations: [NodePatchOperation(type: .replaceAll, content: "<h1>x</h1>")],
-                    verificationChecks: [
-                        duplicate,
-                        CoCaptainVerificationCheck(id: "same", description: "", script: "")
-                    ]
-                )
-            ]
-        )
-
-        let result = CoCaptainAgentValidator().validate(
-            payload: payload,
-            dispatcher: nil,
-            requiresAgenticWork: true,
-            requiresVerificationChecks: true
-        )
-
-        #expect(!result.isValid)
-        #expect(result.issues.contains { $0.contains("duplicated") })
-        #expect(result.issues.contains { $0.contains("requires a description") })
-        #expect(result.issues.contains { $0.contains("requires a script") })
-    }
-
-    @MainActor
-    @Test func verifiedCodingLoopOffersOnlyPassingCandidate() async throws {
-        let verifier = TestMiniAppVerifier(results: [TestMiniAppVerifier.passing])
-        let llm = TestLLMClient(response: verifiedEditResponse(replacement: "Verified"))
-        let coordinator = CoCaptainAgentCoordinator(
-            llmClient: llm,
-            verifier: verifier,
-            verifiedCodingLoopEnabled: { true }
-        )
-        var progress: [CoCaptainCodingRunState] = []
-
-        let result = try await coordinator.run(
-            userMessage: "change the heading",
-            store: makeStore(),
-            dispatcher: nil,
-            onCodingProgress: { progress.append($0) }
-        ) { _ in }
-
-        let item = try #require(result.reviewBundle?.items.first)
-        guard case .nodeEdit(_, _, let operations, let baseText) = item.source else {
-            Issue.record("Expected a verified node edit")
-            return
-        }
-        #expect(item.status == .pending)
-        #expect(operations == [NodePatchOperation(type: .replaceAll, content: "<html><body><h1>Verified</h1></body></html>")])
-        #expect(baseText.contains("Hello World!"))
-        #expect(progress.contains(.readyForReview(attempts: 1)))
-    }
-
-    @MainActor
-    @Test func verifiedCodingLoopRepairsFailedCandidate() async throws {
-        let verifier = TestMiniAppVerifier(
-            results: [TestMiniAppVerifier.failing, TestMiniAppVerifier.passing]
-        )
-        let llm = TestLLMClient(
-            responses: [
-                verifiedEditResponse(replacement: "Broken"),
-                verifiedEditResponse(replacement: "Repaired", operation: "replace_all")
-            ]
-        )
-        let coordinator = CoCaptainAgentCoordinator(
-            llmClient: llm,
-            verifier: verifier,
-            verifiedCodingLoopEnabled: { true }
-        )
-
-        let result = try await coordinator.run(
-            userMessage: "change the heading",
-            store: makeStore(),
-            dispatcher: nil
-        ) { _ in }
-
-        #expect(llm.receivedMessages.count == 2)
-        #expect(result.reviewBundle?.items.first?.preview.contains("Repaired") == true)
-        #expect(verifier.receivedCodes.count == 2)
-    }
-
     @Test func parserExtractsActionAttributesFromXML() throws {
         let parser = CoCaptainAgentParser()
         let response =
@@ -2732,87 +2597,11 @@ struct CoCaptainAgentTests {
     }
 
     @MainActor
-    @Test func verifiedCodingLoopRunsForGreenfieldReplaceAllWithChecks() async throws {
-        let store = ProjectStore(
-            fileName: "greenfield-\(UUID().uuidString).json",
-            projectName: "Greenfield",
-            initialNodes: [
-                SpatialNode(
-                    type: .miniApp,
-                    position: .zero,
-                    title: "Mini-App",
-                    miniApp: MiniAppState(srsText: "Build a page", codeText: "")
-                )
-            ]
-        )
-        let verifier = TestMiniAppVerifier(results: [TestMiniAppVerifier.passing])
-        let llm = TestLLMClient(
-            response: verifiedEditResponse(replacement: "Built", operation: "replace_all")
-        )
-        let coordinator = CoCaptainAgentCoordinator(
-            llmClient: llm,
-            verifier: verifier,
-            verifiedCodingLoopEnabled: { true }
-        )
-
-        let result = try await coordinator.run(
-            userMessage: "build the mini app",
-            store: store,
-            dispatcher: nil
-        ) { _ in }
-
-        #expect(result.reviewBundle?.items.first?.status == .pending)
-        #expect(result.reviewBundle?.items.first?.preview.contains("Built") == true)
-        #expect(verifier.receivedCodes.count == 1)
-    }
-
-    @MainActor
-    @Test func verifiedCodingLoopReturnsNoReviewAfterThreeFailures() async throws {
-        let verifier = TestMiniAppVerifier(
-            results: [
-                TestMiniAppVerifier.failing,
-                TestMiniAppVerifier.failing,
-                TestMiniAppVerifier.failing
-            ]
-        )
-        let llm = TestLLMClient(
-            responses: [
-                verifiedEditResponse(replacement: "Attempt 1"),
-                verifiedEditResponse(replacement: "Attempt 2", operation: "replace_all"),
-                verifiedEditResponse(replacement: "Attempt 3", operation: "replace_all")
-            ]
-        )
-        let coordinator = CoCaptainAgentCoordinator(
-            llmClient: llm,
-            verifier: verifier,
-            verifiedCodingLoopEnabled: { true }
-        )
-        var progress: [CoCaptainCodingRunState] = []
-
-        let result = try await coordinator.run(
-            userMessage: "change the heading",
-            store: makeStore(),
-            dispatcher: nil,
-            onCodingProgress: { progress.append($0) }
-        ) { _ in }
-
-        #expect(result.reviewBundle == nil)
-        #expect(llm.receivedMessages.count == 3)
-        #expect(progress.contains { state in
-            if case .failed = state { return true }
-            return false
-        })
-    }
-
-    @MainActor
-    @Test func forgivingStagingAcceptsLooseReplaceExactWithoutCodingLoop() async throws {
+    @Test func forgivingStagingAcceptsLooseReplaceExact() async throws {
         let llm = TestLLMClient(
             response: looseHeadlineEditResponse(replacement: "hello azzam", target: "hello world")
         )
-        let coordinator = CoCaptainAgentCoordinator(
-            llmClient: llm,
-            verifiedCodingLoopEnabled: { false }
-        )
+        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
 
         let result = try await coordinator.run(
             userMessage: "change hello world to hello azzam",
@@ -2832,28 +2621,35 @@ struct CoCaptainAgentTests {
     }
 
     @MainActor
-    @Test func verifiedCodingLoopRunsForOnboardingGuidedEdit() async throws {
-        let verifier = TestMiniAppVerifier(results: [TestMiniAppVerifier.passing])
+    @Test func codeEditWithoutChecksStagesReview() async throws {
         let llm = TestLLMClient(
-            response: looseHeadlineEditResponse(replacement: "hello azzam", target: "hello world")
+            response:
+                """
+                <cocaptain_actions>
+                  <assistant_message>Renamed the heading.</assistant_message>
+                  <node_edits>
+                    <node_edit role="miniApp" section="code" summary="Rename heading">
+                      <operation type="replace_exact">
+                        <target>Hello World!</target>
+                        <content><![CDATA[hi azzam]]></content>
+                      </operation>
+                    </node_edit>
+                  </node_edits>
+                </cocaptain_actions>
+                """
         )
-        let coordinator = CoCaptainAgentCoordinator(
-            llmClient: llm,
-            verifier: verifier,
-            verifiedCodingLoopEnabled: { true }
-        )
+        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
 
         let result = try await coordinator.run(
-            userMessage: "change hello world to hello azzam",
+            userMessage: "Rename the title from hello world to hi azzam",
             store: makeStore(),
-            dispatcher: nil,
-            purpose: .onboardingGuidedEdit
+            dispatcher: nil
         ) { _ in }
 
         let item = try #require(result.reviewBundle?.items.first)
         #expect(item.status == .pending)
-        #expect(item.preview.contains("hello azzam"))
-        #expect(verifier.receivedCodes.count == 1)
+        #expect(item.preview.contains("hi azzam"))
+        #expect(result.clarifyingQuestion == nil)
     }
 
     @Test func parserExtractsClarifyingQuestion() {
@@ -2938,10 +2734,7 @@ struct CoCaptainAgentTests {
         </cocaptain_actions>
         """
         let llm = TestLLMClient(response: response)
-        let coordinator = CoCaptainAgentCoordinator(
-            llmClient: llm,
-            verifiedCodingLoopEnabled: { false }
-        )
+        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
 
         let result = try await coordinator.run(
             userMessage: "change the look of my app",
@@ -2959,10 +2752,7 @@ struct CoCaptainAgentTests {
         let llm = TestLLMClient(
             response: looseHeadlineEditResponse(replacement: "hi azzam", target: "Hello World!")
         )
-        let coordinator = CoCaptainAgentCoordinator(
-            llmClient: llm,
-            verifiedCodingLoopEnabled: { false }
-        )
+        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
         let store = makeAmbiguousStore()
 
         let result = try await coordinator.run(
@@ -2979,35 +2769,6 @@ struct CoCaptainAgentTests {
             return
         }
         #expect(!baseText.isEmpty)
-    }
-
-    @MainActor
-    @Test func verifiedCodingLoopBailsToClarificationOnAmbiguity() async throws {
-        let verifier = TestMiniAppVerifier(results: [])
-        let llm = TestLLMClient(
-            response: looseHeadlineEditResponse(replacement: "hi azzam", target: "Hello World!")
-        )
-        let coordinator = CoCaptainAgentCoordinator(
-            llmClient: llm,
-            verifier: verifier,
-            verifiedCodingLoopEnabled: { true }
-        )
-        var progress: [CoCaptainCodingRunState] = []
-
-        let result = try await coordinator.run(
-            userMessage: "change Hello World! to hi azzam",
-            store: makeAmbiguousStore(),
-            dispatcher: nil,
-            onCodingProgress: { progress.append($0) }
-        ) { _ in }
-
-        let item = try #require(result.reviewBundle?.items.first)
-        #expect(item.status == .needsClarification)
-        #expect(item.clarificationCandidates?.isEmpty == false)
-        // No repair round-trips and no verification runs for a structural ambiguity.
-        #expect(llm.receivedMessages.count == 1)
-        #expect(verifier.receivedCodes.isEmpty)
-        #expect(progress.contains(.awaitingChoice))
     }
 
     @MainActor
@@ -3028,10 +2789,7 @@ struct CoCaptainAgentTests {
         </cocaptain_actions>
         """
         let llm = TestLLMClient(response: invalidResponse)
-        let coordinator = CoCaptainAgentCoordinator(
-            llmClient: llm,
-            verifiedCodingLoopEnabled: { false }
-        )
+        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
 
         let result = try await coordinator.run(
             userMessage: "build a landing page",
@@ -3049,10 +2807,7 @@ struct CoCaptainAgentTests {
         let llm = TestLLMClient(
             response: looseHeadlineEditResponse(replacement: "hi azzam", target: "Hello World!")
         )
-        let coordinator = CoCaptainAgentCoordinator(
-            llmClient: llm,
-            verifiedCodingLoopEnabled: { false }
-        )
+        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
         let store = makeAmbiguousStore()
         let viewModel = CoCaptainViewModel(agentCoordinator: coordinator)
         viewModel.configureProjectSession(store: store, dispatcher: nil)
@@ -3093,10 +2848,7 @@ struct CoCaptainAgentTests {
     @MainActor
     @Test func answeringClarifyingQuestionLocksCardAndSendsOption() throws {
         let llm = TestLLMClient(response: "Nice choice!")
-        let coordinator = CoCaptainAgentCoordinator(
-            llmClient: llm,
-            verifiedCodingLoopEnabled: { false }
-        )
+        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
         let viewModel = CoCaptainViewModel(agentCoordinator: coordinator)
         viewModel.configureProjectSession(store: nil, dispatcher: nil)
 
@@ -3154,13 +2906,6 @@ struct CoCaptainAgentTests {
                                 "content": "Hello CAOCAP!"
                             ]
                         ],
-                        "verificationChecks": [
-                            [
-                                "id": "heading",
-                                "description": "Heading shows the new text",
-                                "script": "return document.querySelector(\"h1\")?.textContent === \"Hello CAOCAP!\";"
-                            ]
-                        ],
                         "learningNote": [
                             "concept": "Exact text replacement",
                             "body": "Your heading changed because the edit found the old text and swapped it in place."
@@ -3178,7 +2923,6 @@ struct CoCaptainAgentTests {
         #expect(edit.operations.first?.type == .replaceExact)
         #expect(edit.operations.first?.target == "Hello World!")
         #expect(edit.operations.first?.content == "Hello CAOCAP!")
-        #expect(edit.verificationChecks.first?.id == "heading")
         #expect(edit.learningNote?.concept == "Exact text replacement")
         #expect(directive.diagnostics.isEmpty)
         #expect(directive.source == .nodeEditFunctionCall)
@@ -3336,10 +3080,7 @@ struct CoCaptainAgentTests {
                 )
             ]]
         )
-        let coordinator = CoCaptainAgentCoordinator(
-            llmClient: llm,
-            verifiedCodingLoopEnabled: { false }
-        )
+        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
 
         let result = try await coordinator.run(
             userMessage: "change the heading",
@@ -3376,10 +3117,7 @@ struct CoCaptainAgentTests {
                 )
             ]]
         )
-        let coordinator = CoCaptainAgentCoordinator(
-            llmClient: llm,
-            verifiedCodingLoopEnabled: { false }
-        )
+        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
 
         let result = try await coordinator.run(
             userMessage: "change the look",
@@ -3413,7 +3151,6 @@ struct CoCaptainAgentTests {
         )
         let coordinator = CoCaptainAgentCoordinator(
             llmClient: llm,
-            verifiedCodingLoopEnabled: { false },
             nodeEditToolsEnabled: { true }
         )
         let turnPlan = CoCaptainTurnPlan(purpose: .standard, intent: .mutatingWork)
@@ -3492,39 +3229,6 @@ struct CoCaptainAgentTests {
                 <target>\(target)</target>
                 <content><![CDATA[\(replacement)]]></content>
               </operation>
-              <verification_checks>
-                <verification_check id="heading" description="Heading shows \(replacement)">
-                  <script><![CDATA[return document.querySelector("h1")?.textContent === "\(replacement)";]]></script>
-                </verification_check>
-              </verification_checks>
-            </node_edit>
-          </node_edits>
-        </cocaptain_actions>
-        """
-    }
-
-    private func verifiedEditResponse(
-        replacement: String,
-        operation: String = "replace_exact"
-    ) -> String {
-        let target = operation == "replace_exact" ? "<target>Hello World!</target>" : ""
-        let content = operation == "replace_all"
-            ? "<html><body><h1>\(replacement)</h1></body></html>"
-            : replacement
-        return """
-        <cocaptain_actions>
-          <assistant_message>Changed the heading.</assistant_message>
-          <node_edits>
-            <node_edit role="miniApp" section="code" summary="Update heading">
-              <operation type="\(operation)">
-                \(target)
-                <content><![CDATA[\(content)]]></content>
-              </operation>
-              <verification_checks>
-                <verification_check id="heading" description="Heading shows \(replacement)">
-                  <script><![CDATA[return document.querySelector("h1")?.textContent === "\(replacement)";]]></script>
-                </verification_check>
-              </verification_checks>
             </node_edit>
           </node_edits>
         </cocaptain_actions>
@@ -3555,51 +3259,6 @@ struct CoCaptainAgentTests {
         [
             SpatialNode(type: .miniApp, position: .zero, title: "Mini-App", miniApp: MiniAppState(codeText: code))
         ]
-    }
-}
-
-@MainActor
-private final class TestMiniAppVerifier: MiniAppVerifying {
-    static let passing = CoCaptainVerificationResult(
-        checkResults: [
-            CoCaptainVerificationCheckResult(
-                check: CoCaptainVerificationCheck(id: "test", description: "Pass", script: "return true;"),
-                passed: true
-            )
-        ]
-    )
-    static let failing = CoCaptainVerificationResult(
-        diagnostics: [
-            CoCaptainVerificationDiagnostic(kind: .runtimeError, message: "Test failure")
-        ],
-        checkResults: [
-            CoCaptainVerificationCheckResult(
-                check: CoCaptainVerificationCheck(id: "test", description: "Fail", script: "return false;"),
-                passed: false,
-                detail: "Assertion returned false."
-            )
-        ]
-    )
-
-    private var results: [CoCaptainVerificationResult]
-    private(set) var receivedCodes: [String] = []
-
-    init(results: [CoCaptainVerificationResult]) {
-        self.results = results
-    }
-
-    func unsupportedReason(for node: SpatialNode) -> String? {
-        nil
-    }
-
-    func verify(
-        code: String,
-        checks: [CoCaptainVerificationCheck],
-        node: SpatialNode
-    ) async -> CoCaptainVerificationResult {
-        receivedCodes.append(code)
-        guard !results.isEmpty else { return Self.failing }
-        return results.removeFirst()
     }
 }
 
