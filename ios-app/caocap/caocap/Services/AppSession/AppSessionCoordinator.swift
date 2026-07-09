@@ -191,23 +191,16 @@ final class AppSessionCoordinator {
     func startLessonFromHelp(_ lessonID: OnboardingLessonID) {
         showingHelp = false
         restoreTutorialPortalIfNeeded()
-
-        switch lessonID {
-        case .canvasBasics:
-            router.navigate(to: .root, addToStack: false, animated: false)
-            syncViewportWithActiveStore()
-        case .omniboxNavigation:
-            prepareOmniboxNavigationWorkspace()
-        case .miniAppPreview:
-            prepareHelpDiscoveryLessonWorkspace()
-        case .coCaptainChat, .moveAndOrganize:
-            prepareTutorialLessonWorkspace()
-        }
-
+        prepareWorkspace(for: lessonID)
         onboarding.startLesson(lessonID, advancesThroughLessons: false)
     }
 
     func prepareWorkspace(for lessonID: OnboardingLessonID) {
+        if OnboardingLessonsManifest.optionalLessonIDs.contains(lessonID) {
+            prepareTutorialLessonWorkspace()
+            return
+        }
+
         switch lessonID {
         case .canvasBasics:
             router.navigate(to: .root, addToStack: false, animated: false)
@@ -217,6 +210,7 @@ final class AppSessionCoordinator {
         case .miniAppPreview:
             prepareHelpDiscoveryLessonWorkspace()
         case .coCaptainChat, .moveAndOrganize:
+            // Exhaustiveness fallback; optional lessons are handled above.
             prepareTutorialLessonWorkspace()
         }
     }

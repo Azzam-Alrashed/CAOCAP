@@ -22,11 +22,11 @@ Features/Onboarding/
 
 | Lesson | Steps | Outcome |
 |---|---|---|
-| **Canvas basics** | 7 | Keep the classic first lesson flow (Tutorial entry + FAB + CoCaptain welcome + dismiss + long-press) |
-| **Game discovery** | 8 | Learn `go back`, find Pac-Man/XO, open a game canvas, request one small CoCaptain edit, review/apply |
+| **Canvas basics** | 7 | Tutorial entry + FAB + CoCaptain welcome + apply + go back |
+| **Omnibox navigation** | 4 | Fly to Pac-Man/XO, open a game portal, request a CoCaptain edit, review |
 | **Help & Docs** | 2 | Open Help and discover where to continue tutorials/docs |
 
-First-run completion is now based on these three lessons only.
+First-run completion is based on these three main lessons only (`OnboardingLessonsManifest.mainLessonIDs`).
 
 ## Optional lessons (replay)
 
@@ -40,7 +40,7 @@ Skipping still marks only the active lesson complete.
 ## Coordination notes
 
 - `OnboardingLessonsManifest.mainLessonIDs` controls first-run completion.
-- `OnboardingLessonsManifest.optionalLessonIDs` stays replay-only.
+- `OnboardingLessonsManifest.optionalLessonIDs` is the replay-only catalogue and drives Help lesson workspace prep in `AppSessionCoordinator`.
 - `AppSessionCoordinator` prepares workspace context per lesson and handles onboarding completion events from command palette, CoCaptain review/apply, and Help guides.
 - `onTutorialCompleted` still drives confetti/graduation moment.
 

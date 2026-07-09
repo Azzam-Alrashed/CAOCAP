@@ -8,7 +8,7 @@ import Observation
 public class OnboardingCoordinator {
     // MARK: - Step Definition
 
-    public enum Step: Int, CaseIterable, Comparable {
+    public enum Step: Int, CaseIterable {
         /// User must open the Tutorial portal on the root canvas.
         case openTutorial = 0
         /// User must tap the floating command button (FAB) to open the command palette.
@@ -68,10 +68,6 @@ public class OnboardingCoordinator {
         /// User must redo the last undone edit.
         case redoCanvasEdit
 
-        public static func < (lhs: Step, rhs: Step) -> Bool {
-            lhs.rawValue < rhs.rawValue
-        }
-
         var titleKey: String {
             OnboardingManifest.content(for: self).titleKey
         }
@@ -87,15 +83,6 @@ public class OnboardingCoordinator {
         func stepLabel(in lessonID: OnboardingLessonID?) -> String {
             guard let lessonID else { return "" }
             return OnboardingLessonsManifest.stepLabel(for: self, in: lessonID)
-        }
-
-        var isCanvasNavigationGestureStep: Bool {
-            switch self {
-            case .panCanvas, .pinchZoom, .fitAllNodes:
-                return true
-            default:
-                return false
-            }
         }
 
         var blocksCoCaptainPrompt: Bool {
