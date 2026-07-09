@@ -72,6 +72,9 @@ ios-app/caocap/caocap/Resources/Config/Secrets.plist
 # macOS
 .DS_Store
 
+# Cursor
+.cursor/
+
 # Node / Next.js
 node_modules/
 .next/
