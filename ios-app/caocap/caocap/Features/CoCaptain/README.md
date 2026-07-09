@@ -4,7 +4,7 @@ CoCaptain is the agentic assistant for CAOCAP. It reads the current spatial proj
 
 ## Ownership
 
-- `Chat/` owns the CoCaptain sheet, timeline, bubbles, input composer (including the Agent/Ask/Plan mode chip and `cocaptain.chatMode` persistence), streaming task lifetime, direct command handling, and review item application.
+- `Chat/` owns the CoCaptain sheet, timeline, bubbles, input composer (two-row capsule with Agent/Ask/Plan mode, optional `@` pin, and `cocaptain.chatMode` persistence), streaming task lifetime, direct command handling, and review item application.
 - `AgentContract/` owns the machine-readable agent contract: coordinator, parser, output adapters, validator, and shared agent/review/timeline models.
 - `Review/` owns review bundle and pending edit/action card rendering for human approval.
 - `Analysis/` owns structural parser warnings and project recommendations from the analyzer.
