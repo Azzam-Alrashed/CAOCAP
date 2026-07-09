@@ -45,6 +45,9 @@ public final class CoCaptainViewModel {
     public var isThinking: Bool = false
     /// Selected CoCaptain chat mode. Defaults to Agent; composer persists via `CoCaptainChatMode.storageKey`.
     public var chatMode: CoCaptainChatMode = .agent
+    /// Project-scope @ pin: focuses prompt context on one node without entering node chat.
+    /// Cleared when switching projects or entering a node-scoped session.
+    public var pinnedContextNodeID: UUID?
     /// The cumulative number of completed assistant turns/responses. This increments whenever a model
     /// streaming task, execution result, or local command finishes. Used to synchronize onboarding prompts.
     public private(set) var completedAssistantResponseCount: Int = 0
@@ -119,6 +122,7 @@ public final class CoCaptainViewModel {
     public func configureProjectSession(store: ProjectStore?, dispatcher: (any AppActionPerforming)?) {
         self.scope = .project
         self.focusedNodeID = nil
+        self.pinnedContextNodeID = nil
         self.store = store
         self.actionDispatcher = dispatcher
     }
@@ -134,10 +138,42 @@ public final class CoCaptainViewModel {
 
         self.scope = newScope
         self.focusedNodeID = nodeID
+        self.pinnedContextNodeID = nil
         self.store = store
         self.actionDispatcher = dispatcher
         loadPersistedNodeMessages(nodeID: nodeID)
         runAnalysis()
+    }
+
+    /// Pins project-scope prompt context to a canvas node. No-op in node-scoped sessions.
+    public func pinContext(to nodeID: UUID?) {
+        guard scope == .project else { return }
+        if let nodeID {
+            guard store?.nodes.contains(where: { $0.id == nodeID }) == true else {
+                pinnedContextNodeID = nil
+                return
+            }
+        }
+        pinnedContextNodeID = nodeID
+    }
+
+    public func clearPinnedContext() {
+        pinnedContextNodeID = nil
+    }
+
+    /// Nodes available for the @ pin menu (Mini-Apps first, then others).
+    public var pinnableContextNodes: [SpatialNode] {
+        guard scope == .project, let nodes = store?.nodes else { return [] }
+        return nodes.sorted { lhs, rhs in
+            if lhs.type == .miniApp && rhs.type != .miniApp { return true }
+            if lhs.type != .miniApp && rhs.type == .miniApp { return false }
+            return lhs.displayTitle.localizedCaseInsensitiveCompare(rhs.displayTitle) == .orderedAscending
+        }
+    }
+
+    public var pinnedContextNode: SpatialNode? {
+        guard let pinnedContextNodeID else { return nil }
+        return store?.nodes.first(where: { $0.id == pinnedContextNodeID })
     }
 
     public func setPresented(_ presented: Bool) {
@@ -216,6 +252,16 @@ public final class CoCaptainViewModel {
                     purpose: purpose,
                     mode: chatMode
                 )
+                // Drop a stale pin if the node was deleted since it was chosen.
+                if let pin = pinnedContextNodeID,
+                   store?.nodes.contains(where: { $0.id == pin }) != true {
+                    pinnedContextNodeID = nil
+                }
+                let contextFocus: UUID? = {
+                    if case .project = scope { return pinnedContextNodeID }
+                    return nil
+                }()
+
                 let result = try await agentCoordinator.run(
                     userMessage: text,
                     store: store,
@@ -223,8 +269,12 @@ public final class CoCaptainViewModel {
                     scope: scope,
                     purpose: purpose,
                     turnPlan: turnPlan,
-                    onVisibleText: { _ in
-                        // Stop streaming characters to the UI for a cleaner 'split message' feel.
+                    contextFocusNodeID: contextFocus,
+                    onVisibleText: { [weak self] visible in
+                        guard let self else { return }
+                        // Adapter strips machine payloads (XML fences); only prose reaches the bubble.
+                        self.updateMessage(id: aiMessageID, text: visible)
+                        self.requestScrollToBottom()
                     }
                 )
 
@@ -244,16 +294,18 @@ public final class CoCaptainViewModel {
                     return
                 }
 
-                // Remove the empty thinking placeholder.
-                removeEmptyMessage(id: aiMessageID)
-
-                // 1. Add Preamble bubble (the conversational part).
-                if !result.preamble.isEmpty {
-                    appendAssistantMessage(result.preamble)
+                // Finalize the streamed bubble as the preamble (or remove if still empty).
+                let finalizedProse = result.preamble.isEmpty ? result.visibleText : result.preamble
+                if finalizedProse.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    removeEmptyMessage(id: aiMessageID)
+                } else {
+                    finalizeAssistantMessage(id: aiMessageID, text: finalizedProse)
                 }
 
-                // 2. Add Payload Message bubble (the intent summary).
-                if let payloadMsg = result.payloadMessage, !payloadMsg.isEmpty, payloadMsg != result.preamble {
+                // Optional second bubble for payload assistant_message when it differs from preamble.
+                if let payloadMsg = result.payloadMessage,
+                   !payloadMsg.isEmpty,
+                   payloadMsg != finalizedProse {
                     appendAssistantMessage(payloadMsg)
                 }
 
@@ -327,6 +379,7 @@ public final class CoCaptainViewModel {
         streamingTask = nil
         isThinking = false
 
+        // Drop only an empty thinking placeholder; keep any prose already streamed.
         if let lastMessage, !lastMessage.isUser {
             removeEmptyMessage(id: lastMessage.id)
         }
@@ -343,8 +396,8 @@ public final class CoCaptainViewModel {
     /// Handles simple app commands locally so navigation does not need a model
     /// round trip. Mutating commands still become review items.
     ///
-    /// In Ask mode, mutating command shortcuts are disabled so those messages
-    /// go to the model as chat instead of executing or staging canvas changes.
+    /// In Ask/Plan modes, mutating command shortcuts are disabled so those
+    /// messages go to the model as chat instead of executing or staging canvas changes.
     private func handleDirectCommand(
         _ text: String,
         turnID: UUID,
@@ -357,7 +410,7 @@ public final class CoCaptainViewModel {
             return false
         }
 
-        if chatMode == .ask, definition.isMutating {
+        if chatMode.isProseOnly, definition.isMutating {
             return false
         }
 
@@ -552,12 +605,17 @@ public final class CoCaptainViewModel {
                 in: store,
                 choosing: candidate
             )
+            let snippets = CoCaptainReviewDiffSnippetter.makeSnippets(
+                before: resolved.preview.originalText,
+                after: resolved.preview.resultText
+            )
             updatedItem = PendingReviewItem(
                 id: item.id,
                 targetNodeID: resolved.preview.nodeID,
                 targetLabel: item.targetLabel,
                 summary: item.summary,
-                preview: clarifiedPreviewSnippet(resolved.preview.resultText),
+                preview: snippets.after,
+                beforePreview: snippets.before,
                 status: .pending,
                 source: .nodeEdit(
                     role: role,
@@ -612,13 +670,6 @@ public final class CoCaptainViewModel {
         }
     }
 
-    /// Trims and caps re-staged previews to match coordinator preview sizing.
-    private func clarifiedPreviewSnippet(_ text: String) -> String {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.count > 280 else { return trimmed }
-        return String(trimmed.prefix(280)) + "\n[TRUNCATED]"
-    }
-
     /// Resets chat state when the active project changes so streamed responses
     /// and review bundles cannot leak across project contexts.
     private func handleStoreChange() {
@@ -630,6 +681,7 @@ public final class CoCaptainViewModel {
             streamingTask?.cancel()
             streamingTask = nil
             isThinking = false
+            pinnedContextNodeID = nil
             clearHistory()
         }
         
@@ -662,6 +714,17 @@ public final class CoCaptainViewModel {
             bubble.text = text
             items[index].content = .message(bubble)
         }
+    }
+
+    /// Writes the final assistant prose into the streamed bubble and persists it
+    /// for node-scoped sessions (streaming updates stay ephemeral until finalize).
+    private func finalizeAssistantMessage(id: UUID, text: String) {
+        updateMessage(id: id, text: text)
+        guard let index = items.firstIndex(where: { $0.id == id }),
+              case .message(let bubble) = items[index].content else {
+            return
+        }
+        persistNodeMessageIfNeeded(bubble)
     }
 
     private func removeEmptyMessage(id: UUID) {

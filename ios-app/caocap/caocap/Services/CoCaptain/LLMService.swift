@@ -524,7 +524,7 @@ public final class LLMService {
                 : ""
 
             // Agent mode always gets implementation-level Firebase guidance when
-            // structured tools are on. Ask mode never reaches this block.
+            // structured tools are on. Ask/Plan modes never reach this block.
             let firebasePersistenceInstructions = chatMode == .agent || purpose == .onboardingGuidedEdit
                 ? """
                 - For Firebase/Firestore persistence, edit the Mini-App **code section** (inline JavaScript): use `window.__caocapFirestore` (and optional `window.__caocapFirestoreDefaultPath`) as described in canvas context; use compat-style `collection`/`doc`/`set`/`add`/`update` calls after null-checks.

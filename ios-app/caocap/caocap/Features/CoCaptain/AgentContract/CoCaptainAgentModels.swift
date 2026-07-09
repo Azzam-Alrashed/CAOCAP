@@ -71,13 +71,15 @@ public enum CoCaptainTurnPurpose: Hashable {
     }
 }
 
-/// User-selected CoCaptain chat mode (Cursor-style Agent / Ask).
+/// User-selected CoCaptain chat mode (Cursor-style Agent / Ask / Plan).
 ///
-/// Agent is the default. Ask is prose-only: no tools, no staging, product-level
-/// context. The composer picker persists the choice under `storageKey`.
+/// Agent is the default. Ask and Plan are prose-only: no tools, no staging,
+/// product-level context. Plan steers toward numbered step outlines.
+/// The composer picker persists the choice under `storageKey`.
 public enum CoCaptainChatMode: String, Hashable, CaseIterable, Identifiable {
     case agent
     case ask
+    case plan
 
     public var id: String { rawValue }
 
@@ -91,6 +93,8 @@ public enum CoCaptainChatMode: String, Hashable, CaseIterable, Identifiable {
             return LocalizationManager.shared.localizedString("Agent")
         case .ask:
             return LocalizationManager.shared.localizedString("Ask")
+        case .plan:
+            return LocalizationManager.shared.localizedString("Plan")
         }
     }
 
@@ -101,6 +105,8 @@ public enum CoCaptainChatMode: String, Hashable, CaseIterable, Identifiable {
             return LocalizationManager.shared.localizedString("cocaptain.composer.placeholder.agent")
         case .ask:
             return LocalizationManager.shared.localizedString("cocaptain.composer.placeholder.ask")
+        case .plan:
+            return LocalizationManager.shared.localizedString("cocaptain.composer.placeholder.plan")
         }
     }
 
@@ -111,6 +117,18 @@ public enum CoCaptainChatMode: String, Hashable, CaseIterable, Identifiable {
             return "sparkles"
         case .ask:
             return "bubble.left"
+        case .plan:
+            return "list.bullet.rectangle"
+        }
+    }
+
+    /// True when the mode must not mutate the canvas via shortcuts or staging.
+    var isProseOnly: Bool {
+        switch self {
+        case .agent:
+            return false
+        case .ask, .plan:
+            return true
         }
     }
 
@@ -120,20 +138,22 @@ public enum CoCaptainChatMode: String, Hashable, CaseIterable, Identifiable {
             return .agent
         case .ask:
             return .ask
+        case .plan:
+            return .plan
         }
     }
 
-    /// Richer canvas context for Agent; lighter product-oriented context for Ask.
+    /// Richer canvas context for Agent; lighter product-oriented context for Ask/Plan.
     var contextDetailLevel: ProjectContextBuilder.DetailLevel {
         switch self {
         case .agent:
             return .implementation
-        case .ask:
+        case .ask, .plan:
             return .product
         }
     }
 
-    /// Extra prompt posture for the selected mode. Ask forbids tools and edits.
+    /// Extra prompt posture for the selected mode. Ask/Plan forbid tools and edits.
     var promptInstructions: String? {
         switch self {
         case .agent:
@@ -145,6 +165,16 @@ public enum CoCaptainChatMode: String, Hashable, CaseIterable, Identifiable {
             - Do not request app actions, propose node edits, invoke tools, or emit a `cocaptain_actions` block.
             - Do not mention nodes, SRS, patches, XML, Firebase wiring, or other implementation details unless the user explicitly asks.
             - Focus on product ideas, explanations, and next-step advice grounded in the supplied canvas context.
+            - Match the language used by the user.
+            """
+        case .plan:
+            return """
+            Plan mode objective:
+            - Outline a clear, beginner-friendly plan for what to build or change next.
+            - Prefer a short numbered list of concrete steps (usually 3 to 7).
+            - Explain the approach and order of work; do not implement changes yet.
+            - Do not request app actions, propose node edits, invoke tools, or emit a `cocaptain_actions` block.
+            - Do not mention nodes, SRS, patches, XML, Firebase wiring, or other implementation details unless the user explicitly asks.
             - Match the language used by the user.
             """
         }
@@ -203,6 +233,8 @@ struct CoCaptainTurnExecutionPolicy: Equatable {
         case agent
         /// Ask mode: prose only (no tools / staging).
         case ask
+        /// Plan mode: outline-only prose (no tools / staging).
+        case plan
         /// Onboarding guided-edit: tools available and executable work required.
         case agentic
     }
@@ -226,6 +258,15 @@ struct CoCaptainTurnExecutionPolicy: Equatable {
     /// Ask mode: prose-only, no staging or agentic retry.
     static let ask = CoCaptainTurnExecutionPolicy(
         kind: .ask,
+        expectsStructuredResponse: false,
+        enforcesExecutableWork: false,
+        executesActions: false,
+        allowsAgenticRetry: false
+    )
+
+    /// Plan mode: same execution shape as Ask, different prompt posture.
+    static let plan = CoCaptainTurnExecutionPolicy(
+        kind: .plan,
         expectsStructuredResponse: false,
         enforcesExecutableWork: false,
         executesActions: false,
@@ -757,8 +798,9 @@ public struct PendingReviewItem: Identifiable, Hashable, Codable {
     /// The model-authored description of what this change does.
     public let summary: String
     /// A short text snippet previewing the resulting content after the edit.
-    /// Truncated to 280 characters for performance.
     public let preview: String
+    /// Focused before-window for node edits (nil for app actions / legacy items).
+    public let beforePreview: String?
     /// Current lifecycle state of this item.
     public var status: ReviewItemStatus
     /// How this item was produced and how it should be applied or rejected.
@@ -779,6 +821,7 @@ public struct PendingReviewItem: Identifiable, Hashable, Codable {
         targetLabel: String,
         summary: String,
         preview: String,
+        beforePreview: String? = nil,
         status: ReviewItemStatus = .pending,
         source: PendingReviewSource,
         conflictDescription: String? = nil,
@@ -790,6 +833,7 @@ public struct PendingReviewItem: Identifiable, Hashable, Codable {
         self.targetLabel = targetLabel
         self.summary = summary
         self.preview = preview
+        self.beforePreview = beforePreview
         self.status = status
         self.source = source
         self.conflictDescription = conflictDescription

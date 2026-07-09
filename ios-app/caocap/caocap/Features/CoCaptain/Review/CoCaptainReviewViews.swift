@@ -123,20 +123,22 @@ struct ReviewCardView: View {
             if item.status == .needsClarification {
                 clarificationPicker
             } else {
-                if let baseText = nodeEditBaseText {
+                if let beforeText = focusedBeforeText {
                     reviewTextBlock(
                         title: LocalizationManager.shared.localizedString("Before"),
-                        text: baseText
+                        text: beforeText,
+                        accent: .red
                     )
                 }
 
                 reviewTextBlock(
-                    title: nodeEditBaseText == nil
+                    title: focusedBeforeText == nil
                         ? nil
                         : LocalizationManager.shared.localizedString("After"),
                     text: item.preview.isEmpty
                         ? LocalizationManager.shared.localizedString("No preview available.")
-                        : item.preview
+                        : item.preview,
+                    accent: focusedBeforeText == nil ? nil : .green
                 )
             }
 
@@ -216,25 +218,39 @@ struct ReviewCardView: View {
         }
     }
 
-    private var nodeEditBaseText: String? {
+    /// Prefer the focused before-window; fall back to a truncated baseText for legacy items.
+    private var focusedBeforeText: String? {
+        if let beforePreview = item.beforePreview?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+           !beforePreview.isEmpty {
+            return beforePreview
+        }
         guard case .nodeEdit(_, _, _, let baseText) = item.source else { return nil }
         let trimmed = baseText.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : baseText
+        guard !trimmed.isEmpty else { return nil }
+        return CoCaptainReviewDiffSnippetter.makeSnippets(
+            before: baseText,
+            after: item.preview
+        ).before
     }
 
     @ViewBuilder
-    private func reviewTextBlock(title: String?, text: String) -> some View {
+    private func reviewTextBlock(title: String?, text: String, accent: Color? = nil) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             if let title {
                 Text(title)
                     .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(accent ?? .secondary)
             }
             Text(text)
                 .font(.system(size: 12, weight: .regular, design: .monospaced))
                 .padding(10)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.black.opacity(0.06))
+                .background((accent ?? Color.primary).opacity(accent == nil ? 0.06 : 0.08))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke((accent ?? .clear).opacity(0.25), lineWidth: accent == nil ? 0 : 1)
+                )
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
     }

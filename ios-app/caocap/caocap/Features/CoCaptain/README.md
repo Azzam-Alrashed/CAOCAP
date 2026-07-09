@@ -4,7 +4,7 @@ CoCaptain is the agentic assistant for CAOCAP. It reads the current spatial proj
 
 ## Ownership
 
-- `Chat/` owns the CoCaptain sheet, timeline, bubbles, input composer (including the Agent/Ask mode chip and `cocaptain.chatMode` persistence), streaming task lifetime, direct command handling, and review item application.
+- `Chat/` owns the CoCaptain sheet, timeline, bubbles, input composer (including the Agent/Ask/Plan mode chip and `cocaptain.chatMode` persistence), streaming task lifetime, direct command handling, and review item application.
 - `AgentContract/` owns the machine-readable agent contract: coordinator, parser, output adapters, validator, and shared agent/review/timeline models.
 - `Review/` owns review bundle and pending edit/action card rendering for human approval.
 - `Analysis/` owns structural parser warnings and project recommendations from the analyzer.
@@ -19,12 +19,12 @@ Supporting services live outside this feature:
 
 ## Agent Flow
 
-1. The user picks Agent or Ask in the composer (persisted as `cocaptain.chatMode`, default Agent) and sends a message through `CoCaptainViewModel`.
-2. Direct commands are resolved locally with `CommandIntentResolver` when possible. In Ask mode, mutating shortcuts are skipped so those messages go to the model as chat.
-3. Otherwise, `CoCaptainAgentCoordinator` builds project context from the active `ProjectStore` using the turn plan’s detail level (implementation for Agent, product for Ask). By default Agent context carries only a short head of each Mini-App's code/SRS; the model reads full sections on demand (see the read tool below). The full-budget context is kept when the local MLX backend (`gemma-4-local`) is selected, since it has no function calling.
+1. The user picks Agent, Ask, or Plan in the composer (persisted as `cocaptain.chatMode`, default Agent) and sends a message through `CoCaptainViewModel`.
+2. Direct commands are resolved locally with `CommandIntentResolver` when possible. In Ask/Plan modes, mutating shortcuts are skipped so those messages go to the model as chat.
+3. Otherwise, `CoCaptainAgentCoordinator` builds project context from the active `ProjectStore` using the turn plan’s detail level (implementation for Agent, product for Ask/Plan). In project scope, an optional `@` pin focuses the prompt on one node via `buildNodePromptContext` without switching to a node-scoped session. By default Agent context carries only a short head of each Mini-App's code/SRS; the model reads full sections on demand (see the read tool below). The full-budget context is kept when the local MLX backend (`gemma-4-local`) is selected, since it has no function calling.
 4. `CoCaptainTurnPlan` merges turn purpose with the selected `CoCaptainChatMode` to choose the effective execution policy. There is no keyword intent classifier.
 5. `LLMService` streams text back into the current assistant bubble. When the model calls the read-only `read_node_section(nodeId, section)` tool, the coordinator answers it inline against the active `ProjectStore` and `LLMService` sends the result back on the same chat session (bounded to 4 tool-response rounds per turn).
-6. `CoCaptainAgentOutputAdapter` hides machine output while streaming and turns the final response into a directive.
+6. `CoCaptainAgentOutputAdapter` hides machine output while streaming and turns the final response into a directive. The ViewModel updates the assistant bubble from `onVisibleText` so prose streams live; XML/tool payloads stay hidden.
 7. For structured turns, `CoCaptainAgentValidator` checks action IDs, action safety, and node edit shape. Executable work is enforced only when the policy requires it (onboarding guided edit), not for standard Agent chat.
 8. Safe actions execute immediately when autonomous; pending actions and node edits become `ReviewBundleItem` entries for human approval.
 9. Applying a review item revalidates the original base node text before writing changes to `ProjectStore`. Undo and checkpoints remain available after Apply.
@@ -59,18 +59,19 @@ Intent-level ambiguity ("make it pop") is handled by the model with a `clarifyin
 
 ## Turn Execution Modes
 
-`CoCaptainTurnPlan` merges `CoCaptainTurnPurpose` with `CoCaptainChatMode` into a `CoCaptainTurnExecutionPolicy` in `CoCaptainAgentModels.swift`. The coordinator reads `turnPlan.effectivePolicy` instead of hardcoding onboarding exceptions. Onboarding purposes override the chat mode; standard turns follow the composer’s Agent/Ask selection (`chatMode`, default Agent, persisted under `cocaptain.chatMode`). Project-scoped and node-scoped CoCaptain share that same stored mode.
+`CoCaptainTurnPlan` merges `CoCaptainTurnPurpose` with `CoCaptainChatMode` into a `CoCaptainTurnExecutionPolicy` in `CoCaptainAgentModels.swift`. The coordinator reads `turnPlan.effectivePolicy` instead of hardcoding onboarding exceptions. Onboarding purposes override the chat mode; standard turns follow the composer’s Agent/Ask/Plan selection (`chatMode`, default Agent, persisted under `cocaptain.chatMode`). Project-scoped and node-scoped CoCaptain share that same stored mode.
 
 | Policy | When | Structured tools | Enforce edit | Agentic retry | Execute / stage | Context |
 |------|------|------------------|--------------|---------------|-----------------|---------|
 | Agent | Standard turn + `.agent` mode | Yes | No — pure chat OK | Yes — invalid structured output only | Yes when the model emits work | Implementation |
 | Ask | Standard turn + `.ask` mode | No | No | No | No — prose only | Product |
+| Plan | Standard turn + `.plan` mode | No | No | No | No — outline prose only | Product |
 | Conversational | `.onboardingWelcome`, `.onboardingBuildHandoff` | No | No | No | No — prose only | Product |
 | Agentic (onboarding) | `.onboardingGuidedEdit` | Yes | Yes | Yes — missing or invalid work | Yes — stages a guided code edit for review | Implementation |
 
 Do not reintroduce keyword intent classification. Agent mode must stage reviewable edits from structured fixtures even when the user message lacks verbs like “make” or “build,” and must finish pure prose turns without “must include an edit” failures.
 
-Ask and conversational turns still receive canvas context and mode/purpose prompt instructions, but the agent contract block is omitted from the LLM prompt and action catalogs / in-turn tool executors are not passed. If the model disobeys and emits `cocaptain_actions`, the coordinator ignores the payload and surfaces visible prose only. Connection-fallback “edits unavailable” notices apply only when the turn expected canvas work (`requiresDegradedConnectionNotice`), not Ask.
+Ask, Plan, and conversational turns still receive canvas context and mode/purpose prompt instructions, but the agent contract block is omitted from the LLM prompt and action catalogs / in-turn tool executors are not passed. Plan prompts steer toward numbered step outlines without implementing changes. If the model disobeys and emits `cocaptain_actions`, the coordinator ignores the payload and surfaces visible prose only. Connection-fallback “edits unavailable” notices apply only when the turn expected canvas work (`requiresDegradedConnectionNotice`), not Ask/Plan.
 
 `CoCaptainTurnCompletion.shouldAdvanceToOnboardingReview` is `true` when a guided-edit turn succeeds and presents a review bundle. If the model or network fails, `OnboardingCoCaptainReviewFixture` injects a local review bundle so onboarding never hard-blocks.
 
@@ -174,11 +175,13 @@ Review cards with a target node include **View on Canvas**, which flies the work
 - Confirm assistant Markdown renders cleanly and message text can be selected or copied.
 - Open the input plus menu and confirm quick prompts send once.
 - Switch Agent ↔ Ask from the composer chip; confirm the placeholder updates and the choice survives relaunch (default Agent).
+- Pin a Mini-App with `@` in project CoCaptain; confirm the next turn’s context focuses that node; clear the pin and confirm full-canvas context returns.
 - In Agent mode, ask to rename a Mini-App headline and confirm a review bundle can stage Apply.
 - Switch to Ask and send the same rename prompt; confirm prose-only reply with no review staging.
-- Open node-scoped CoCaptain and confirm it uses the same Agent/Ask selection.
+- Open node-scoped CoCaptain and confirm it uses the same Agent/Ask/Plan selection.
 - Send a direct navigation command and confirm safe actions execute or review appears as expected.
 - Ask for a code change and confirm review items are created rather than auto-applied.
+- Confirm review cards show focused Before/After windows around the change (not the entire Mini-App file).
 - Apply a Mini-App code edit and confirm the target Mini-App section updates plus the preview recompiles.
 - Modify a node after a review bundle is created, then apply the stale review item and confirm it conflicts.
 - Switch projects while streaming and confirm the task cancels and history resets.

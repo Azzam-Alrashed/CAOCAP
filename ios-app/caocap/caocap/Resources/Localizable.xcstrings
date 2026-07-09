@@ -942,6 +942,60 @@
         }
       }
     },
+    "cocaptain.composer.contextPinAccessibility": {
+      "comment": "Accessibility label for the CoCaptain @ context pin control.",
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تثبيت سياق العقدة"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pin node context"
+          }
+        }
+      }
+    },
+    "cocaptain.composer.clearContextPin": {
+      "comment": "Accessibility label to clear the CoCaptain @ context pin.",
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إزالة تثبيت السياق"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear context pin"
+          }
+        }
+      }
+    },
+    "cocaptain.composer.noNodesToPin": {
+      "comment": "Empty state when the canvas has no nodes to pin for CoCaptain context.",
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا توجد عقد للتثبيت"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No nodes to pin"
+          }
+        }
+      }
+    },
     "cocaptain.composer.placeholder.agent": {
       "comment": "Composer placeholder when CoCaptain is in Agent mode.",
       "extractionState": "manual",
@@ -974,6 +1028,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ask Co-Captain..."
+          }
+        }
+      }
+    },
+    "cocaptain.composer.placeholder.plan": {
+      "comment": "Composer placeholder when CoCaptain is in Plan mode.",
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "خطّط مع المساعد..."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plan with Co-Captain..."
+          }
+        }
+      }
+    },
+    "Plan": {
+      "comment": "CoCaptain Plan mode label in the composer picker.",
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "خطة"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plan"
           }
         }
       }

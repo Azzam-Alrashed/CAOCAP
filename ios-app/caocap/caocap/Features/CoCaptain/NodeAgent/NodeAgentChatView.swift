@@ -38,8 +38,11 @@ struct NodeAgentChatView: View {
             CoCaptainInputComposer(
                 text: $text,
                 chatMode: chatModeBinding,
+                pinnedContextNodeID: $viewModel.pinnedContextNodeID,
                 isFocused: $isFocused,
                 store: store,
+                allowsContextPinning: false,
+                pinnableNodes: [],
                 isThinking: viewModel.isThinking,
                 analysisItems: [],
                 pendingReviewCount: viewModel.pendingReviewCount,
@@ -75,7 +78,7 @@ struct NodeAgentChatView: View {
         }
     }
 
-    /// Shares the same persisted Agent/Ask selection as project-scoped CoCaptain.
+    /// Shares the same persisted Agent/Ask/Plan selection as project-scoped CoCaptain.
     private func syncChatModeFromStorage() {
         viewModel.chatMode = CoCaptainChatMode(rawValue: chatModeRawValue) ?? .agent
     }

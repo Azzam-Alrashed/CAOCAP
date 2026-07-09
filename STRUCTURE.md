@@ -385,11 +385,11 @@ The agentic AI companion. A native sheet interface for real-time collaboration.
 
 | Folder/File | Responsibility |
 |---|---|
-| `Chat/` | CoCaptain sheet UI, chat timeline, bubbles, prompt composer with Agent/Ask mode chip (`cocaptain.chatMode`), clarifying-question option cards, and view-model state (including local clarification resolution). |
+| `Chat/` | CoCaptain sheet UI, chat timeline, bubbles, prompt composer with Agent/Ask/Plan mode chip (`cocaptain.chatMode`), clarifying-question option cards, and view-model state (including local clarification resolution). |
 | `AgentContract/` | Model-output adapter, XML parser (including the `clarifying_question` element), validator, coordinator, and shared agent/review/timeline models including `CoCaptainChatMode` and turn execution policy. Mode is user-selected (not keyword-classified). |
 | `Review/` | Review bundle and pending edit/action cards for human approval, including the "Which one did you mean?" candidate picker for ambiguous edit targets. |
 | `Analysis/` | Structural parser warnings and recommendations from the analyzer. |
-| `NodeAgent/` | Embedded node chat interface that shares the same persisted Agent/Ask mode as project-scoped CoCaptain. |
+| `NodeAgent/` | Embedded node chat interface that shares the same persisted Agent/Ask/Plan mode as project-scoped CoCaptain. |
 
 ---
 

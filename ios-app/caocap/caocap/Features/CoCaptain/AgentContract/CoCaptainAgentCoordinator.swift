@@ -22,7 +22,7 @@ public protocol CoCaptainLLMClient: AnyObject {
     ///   - availableActions: The set of `AppActionDefinition`s the model may call
     ///     via `request_app_action`. Sent as tool declarations in each turn.
     ///   - scope: Whether this turn targets the whole project or a single node.
-    ///   - chatMode: Agent vs Ask posture for prompt/context (Ask is prose-only).
+    ///   - chatMode: Agent / Ask / Plan posture for prompt/context (Ask/Plan are prose-only).
     ///   - toolExecutor: Answers read-style tool calls inline during the turn,
     ///     or `nil` when no in-turn tools are available.
     func streamAgentEvents(
@@ -159,6 +159,7 @@ public final class CoCaptainAgentCoordinator {
         scope: CoCaptainAgentScope = .project,
         purpose: CoCaptainTurnPurpose = .standard,
         turnPlan: CoCaptainTurnPlan? = nil,
+        contextFocusNodeID: UUID? = nil,
         onVisibleText: @escaping (String) -> Void
     ) async throws -> CoCaptainAgentRunResult {
         let resolvedTurnPlan = turnPlan ?? CoCaptainTurnPlan(purpose: purpose, mode: .agent)
@@ -166,6 +167,14 @@ public final class CoCaptainAgentCoordinator {
         let context = store.map { store in
             switch scope {
             case .project:
+                // Optional @ pin focuses project chat on one node without switching session scope.
+                if let focusID = contextFocusNodeID {
+                    return contextBuilder.buildNodePromptContext(
+                        from: store,
+                        nodeID: focusID,
+                        detailLevel: contextDetailLevel
+                    )
+                }
                 return contextBuilder.buildPromptContext(from: store, detailLevel: contextDetailLevel)
             case .node(let nodeID):
                 return contextBuilder.buildNodePromptContext(
@@ -718,12 +727,17 @@ public final class CoCaptainAgentCoordinator {
                     let preview = resolved.preview
                     let targetNode = store.nodes.first(where: { $0.id == preview.nodeID })
                     let sectionLabel = edit.section.rawValue.uppercased()
+                    let snippets = CoCaptainReviewDiffSnippetter.makeSnippets(
+                        before: preview.originalText,
+                        after: preview.resultText
+                    )
                     items.append(
                         PendingReviewItem(
                             targetNodeID: preview.nodeID,
                             targetLabel: "\(targetNode?.displayTitle ?? edit.role.localizedDisplayName) \(sectionLabel)",
                             summary: edit.summary,
-                            preview: previewSnippet(for: preview.resultText),
+                            preview: snippets.after,
+                            beforePreview: snippets.before,
                             source: .nodeEdit(
                                 role: edit.role,
                                 section: edit.section,
@@ -839,12 +853,4 @@ public final class CoCaptainAgentCoordinator {
         )
     }
 
-    /// Trims whitespace and caps the preview at 280 characters to keep the
-    /// review card compact. The `[TRUNCATED]` suffix signals that additional
-    /// content exists in the full node text.
-    private func previewSnippet(for text: String) -> String {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.count > 280 else { return trimmed }
-        return String(trimmed.prefix(280)) + "\n[TRUNCATED]"
-    }
 }

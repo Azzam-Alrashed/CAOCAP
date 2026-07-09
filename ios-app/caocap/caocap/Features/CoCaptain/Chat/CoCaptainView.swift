@@ -32,8 +32,11 @@ struct CoCaptainView: View {
                 CoCaptainInputComposer(
                     text: $text,
                     chatMode: chatModeBinding,
+                    pinnedContextNodeID: $viewModel.pinnedContextNodeID,
                     isFocused: $isFocused,
                     store: viewModel.store,
+                    allowsContextPinning: true,
+                    pinnableNodes: viewModel.pinnableContextNodes,
                     isThinking: viewModel.isThinking,
                     analysisItems: viewModel.analysisItems,
                     pendingReviewCount: viewModel.pendingReviewCount,

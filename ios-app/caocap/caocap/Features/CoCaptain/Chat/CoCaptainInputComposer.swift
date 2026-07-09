@@ -3,8 +3,12 @@ import SwiftUI
 struct CoCaptainInputComposer: View {
     @Binding var text: String
     @Binding var chatMode: CoCaptainChatMode
+    @Binding var pinnedContextNodeID: UUID?
     @FocusState.Binding var isFocused: Bool
     let store: ProjectStore?
+    /// When false (node-scoped chat), the @ pin control is hidden.
+    let allowsContextPinning: Bool
+    let pinnableNodes: [SpatialNode]
     let isThinking: Bool
     let analysisItems: [ProjectSuggestion]
     let pendingReviewCount: Int
@@ -181,11 +185,23 @@ struct CoCaptainInputComposer: View {
         .padding(.bottom, 6)
     }
 
+    private var pinnedNode: SpatialNode? {
+        guard let pinnedContextNodeID else { return nil }
+        return pinnableNodes.first(where: { $0.id == pinnedContextNodeID })
+            ?? store?.nodes.first(where: { $0.id == pinnedContextNodeID })
+    }
+
     private var promptField: some View {
         HStack(alignment: .top, spacing: 0) {
             chatModePicker
                 .padding(.leading, 10)
                 .padding(.top, 8)
+
+            if allowsContextPinning {
+                contextPinControl
+                    .padding(.leading, 6)
+                    .padding(.top, 8)
+            }
 
             TextField(chatMode.composerPlaceholder, text: $text, axis: .vertical)
                 .lineLimit(1...5)
@@ -228,7 +244,7 @@ struct CoCaptainInputComposer: View {
         .animation(.easeInOut(duration: 0.2), value: chatMode)
     }
 
-    /// Compact Agent/Ask control nested in the field so chrome stays one row.
+    /// Compact Agent/Ask/Plan control nested in the field so chrome stays one row.
     private var chatModePicker: some View {
         Menu {
             ForEach(CoCaptainChatMode.allCases) { mode in
@@ -269,6 +285,76 @@ struct CoCaptainInputComposer: View {
                 isFocused = false
             }
         )
+    }
+
+    /// Compact @ pin for project-scope turns — focuses prompt context on one node.
+    @ViewBuilder
+    private var contextPinControl: some View {
+        if let pinned = pinnedNode {
+            HStack(spacing: 4) {
+                Image(systemName: "at")
+                    .font(.system(size: 11, weight: .semibold))
+                Text(pinned.displayTitle)
+                    .font(.system(size: 12, weight: .semibold))
+                    .lineLimit(1)
+                Button {
+                    pinnedContextNodeID = nil
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 9, weight: .bold))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(
+                    LocalizationManager.shared.localizedString("cocaptain.composer.clearContextPin")
+                )
+            }
+            .foregroundStyle(.blue)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Color.blue.opacity(0.12))
+            )
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(
+                LocalizationManager.shared.localizedString("cocaptain.composer.contextPinAccessibility")
+            )
+            .accessibilityValue(pinned.displayTitle)
+            .disabled(isThinking)
+        } else {
+            Menu {
+                if pinnableNodes.isEmpty {
+                    Text(LocalizationManager.shared.localizedString("cocaptain.composer.noNodesToPin"))
+                } else {
+                    ForEach(pinnableNodes) { node in
+                        Button {
+                            pinnedContextNodeID = node.id
+                        } label: {
+                            Label(node.displayTitle, systemImage: node.icon ?? node.type.defaultIcon)
+                        }
+                    }
+                }
+            } label: {
+                Image(systemName: "at")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(Color.primary.opacity(0.08))
+                    )
+            }
+            .accessibilityLabel(
+                LocalizationManager.shared.localizedString("cocaptain.composer.contextPinAccessibility")
+            )
+            .disabled(isThinking || pinnableNodes.isEmpty)
+            .simultaneousGesture(
+                TapGesture().onEnded {
+                    isFocused = false
+                }
+            )
+        }
     }
 
     private var sendButton: some View {
