@@ -134,12 +134,6 @@ enum OnboardingTooltipAnchor: Hashable {
     case omniboxBackToCanvasRow
     /// Anchored to the Organize Nodes action row in the omnibox.
     case omniboxOrganizeRow
-    /// Anchored to the Toggle Grid action row in the omnibox.
-    case omniboxToggleGridRow
-    /// Anchored to the undo bubble on the expanded FAB radial menu.
-    case floatingCommandButtonUndo
-    /// Anchored to the redo bubble on the expanded FAB radial menu.
-    case floatingCommandButtonRedo
     /// Anchored to the Apply button on a CoCaptain review card.
     case coCaptainReviewApply
     /// Anchored to the Guides section in Help.
@@ -228,21 +222,6 @@ extension View {
     func onboardingTooltipAnchor(_ anchor: OnboardingTooltipAnchor) -> some View {
         anchorPreference(key: OnboardingTooltipAnchorPreferenceKey.self, value: .bounds) {
             [anchor: $0]
-        }
-    }
-
-    /// Registers the canonical Tutorial node without teaching Canvas views about
-    /// the tooltip preference-key implementation.
-    func tutorialOnboardingAnchor(isEnabled: Bool) -> some View {
-        anchorPreference(key: OnboardingTooltipAnchorPreferenceKey.self, value: .bounds) {
-            isEnabled ? [.tutorialNode: $0] : [:]
-        }
-    }
-
-    /// Registers the Tutorial practice Mini-App node for onboarding tooltips.
-    func practiceNodeOnboardingAnchor(isEnabled: Bool) -> some View {
-        anchorPreference(key: OnboardingTooltipAnchorPreferenceKey.self, value: .bounds) {
-            isEnabled ? [.practiceCanvasNode: $0] : [:]
         }
     }
 

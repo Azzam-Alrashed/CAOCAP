@@ -44,7 +44,7 @@ public enum CoCaptainTurnPurpose: Hashable {
             Onboarding guided edit objective:
             - The user is editing the active demo mini-app during onboarding (for example the Tutorial Hello World mini-app, Pac-Man, or XO).
             - Prefer exactly one small visible CODE change, such as renaming the headline/title or adjusting headline styling.
-            - For small existing mini-apps, use `replace_all` with the full updated single-file HTML document plus 1 headline verification check.
+            - For small existing mini-apps, use `replace_all` with the full updated single-file HTML document.
             - When renaming the Tutorial headline, update the `<h1>` text from `Hello World!` to the requested title.
             - Keep the change visible in the live preview and easy for a beginner to understand.
             - Do not modify SRS, Firebase, or any node other than the currently active mini-app.
@@ -53,10 +53,13 @@ public enum CoCaptainTurnPurpose: Hashable {
         }
     }
 
-    /// Selects how the coordinator executes this turn: full agentic pipeline or prose-only chat.
+    /// Default execution posture for this purpose before chat-mode is applied.
+    /// Onboarding purposes override the mode picker; standard defaults to Agent.
     var executionPolicy: CoCaptainTurnExecutionPolicy {
         switch self {
-        case .standard, .onboardingGuidedEdit:
+        case .standard:
+            return .agent
+        case .onboardingGuidedEdit:
             return .agentic
         case .onboardingWelcome, .onboardingBuildHandoff:
             return .conversational
@@ -68,18 +71,127 @@ public enum CoCaptainTurnPurpose: Hashable {
     }
 }
 
-/// Merges onboarding purpose with per-turn user intent to select execution behavior.
-public struct CoCaptainTurnPlan: Equatable {
-    public let purpose: CoCaptainTurnPurpose
-    public let intent: CoCaptainTurnIntent
+/// User-selected CoCaptain chat mode (Cursor-style Agent / Ask / Plan).
+///
+/// Agent is the default. Ask and Plan are prose-only: no tools, no staging,
+/// product-level context. Plan steers toward numbered step outlines.
+/// The composer picker persists the choice under `storageKey`.
+public enum CoCaptainChatMode: String, Hashable, CaseIterable, Identifiable {
+    case agent
+    case ask
+    case plan
 
-    public init(purpose: CoCaptainTurnPurpose, intent: CoCaptainTurnIntent) {
-        self.purpose = purpose
-        self.intent = intent
+    public var id: String { rawValue }
+
+    /// App Storage key for persisting the last chosen mode.
+    public static let storageKey = "cocaptain.chatMode"
+
+    /// Localized short label for the composer mode control.
+    var displayName: String {
+        switch self {
+        case .agent:
+            return LocalizationManager.shared.localizedString("Agent")
+        case .ask:
+            return LocalizationManager.shared.localizedString("Ask")
+        case .plan:
+            return LocalizationManager.shared.localizedString("Plan")
+        }
     }
 
-    /// Onboarding purposes always stay conversational. Standard turns map intent
-    /// to agentic or advisory execution.
+    /// Placeholder copy that reflects the active mode in the composer field.
+    var composerPlaceholder: String {
+        switch self {
+        case .agent:
+            return LocalizationManager.shared.localizedString("cocaptain.composer.placeholder.agent")
+        case .ask:
+            return LocalizationManager.shared.localizedString("cocaptain.composer.placeholder.ask")
+        case .plan:
+            return LocalizationManager.shared.localizedString("cocaptain.composer.placeholder.plan")
+        }
+    }
+
+    /// SF Symbol for the compact mode chip.
+    var systemImageName: String {
+        switch self {
+        case .agent:
+            return "sparkles"
+        case .ask:
+            return "bubble.left"
+        case .plan:
+            return "list.bullet.rectangle"
+        }
+    }
+
+    /// True when the mode must not mutate the canvas via shortcuts or staging.
+    var isProseOnly: Bool {
+        switch self {
+        case .agent:
+            return false
+        case .ask, .plan:
+            return true
+        }
+    }
+
+    var executionPolicy: CoCaptainTurnExecutionPolicy {
+        switch self {
+        case .agent:
+            return .agent
+        case .ask:
+            return .ask
+        case .plan:
+            return .plan
+        }
+    }
+
+    /// Richer canvas context for Agent; lighter product-oriented context for Ask/Plan.
+    var contextDetailLevel: ProjectContextBuilder.DetailLevel {
+        switch self {
+        case .agent:
+            return .implementation
+        case .ask, .plan:
+            return .product
+        }
+    }
+
+    /// Extra prompt posture for the selected mode. Ask/Plan forbid tools and edits.
+    var promptInstructions: String? {
+        switch self {
+        case .agent:
+            return nil
+        case .ask:
+            return """
+            Ask mode objective:
+            - Answer with helpful, beginner-friendly prose only.
+            - Do not request app actions, propose node edits, invoke tools, or emit a `cocaptain_actions` block.
+            - Do not mention nodes, SRS, patches, XML, Firebase wiring, or other implementation details unless the user explicitly asks.
+            - Focus on product ideas, explanations, and next-step advice grounded in the supplied canvas context.
+            - Match the language used by the user.
+            """
+        case .plan:
+            return """
+            Plan mode objective:
+            - Outline a clear, beginner-friendly plan for what to build or change next.
+            - Prefer a short numbered list of concrete steps (usually 3 to 7).
+            - Explain the approach and order of work; do not implement changes yet.
+            - Do not request app actions, propose node edits, invoke tools, or emit a `cocaptain_actions` block.
+            - Do not mention nodes, SRS, patches, XML, Firebase wiring, or other implementation details unless the user explicitly asks.
+            - Match the language used by the user.
+            """
+        }
+    }
+}
+
+/// Merges onboarding purpose with chat mode to select execution behavior.
+public struct CoCaptainTurnPlan: Equatable {
+    public let purpose: CoCaptainTurnPurpose
+    public let mode: CoCaptainChatMode
+
+    public init(purpose: CoCaptainTurnPurpose, mode: CoCaptainChatMode = .agent) {
+        self.purpose = purpose
+        self.mode = mode
+    }
+
+    /// Onboarding purposes override the mode picker. Standard turns follow mode.
     var effectivePolicy: CoCaptainTurnExecutionPolicy {
         switch purpose {
         case .onboardingWelcome, .onboardingBuildHandoff:
@@ -87,13 +199,26 @@ public struct CoCaptainTurnPlan: Equatable {
         case .onboardingGuidedEdit:
             return .agentic
         case .standard:
-            switch intent {
-            case .mutatingWork:
-                return .agentic
-            case .advisory, .generalChat:
-                return .advisory
-            }
+            return mode.executionPolicy
         }
+    }
+
+    /// Canvas context richness for this turn.
+    var contextDetailLevel: ProjectContextBuilder.DetailLevel {
+        switch purpose {
+        case .onboardingGuidedEdit:
+            return .implementation
+        case .onboardingWelcome, .onboardingBuildHandoff:
+            return .product
+        case .standard:
+            return mode.contextDetailLevel
+        }
+    }
+
+    /// Connection-fallback footers apply when the turn expected canvas work capability.
+    var requiresDegradedConnectionNotice: Bool {
+        let policy = effectivePolicy
+        return policy.expectsStructuredResponse && policy.executesActions
     }
 }
 
@@ -104,8 +229,14 @@ public struct CoCaptainTurnPlan: Equatable {
 struct CoCaptainTurnExecutionPolicy: Equatable {
     enum Kind: Equatable {
         case conversational
+        /// Standard Agent mode: tools available, pure chat allowed, retry on invalid structure.
+        case agent
+        /// Ask mode: prose only (no tools / staging).
+        case ask
+        /// Plan mode: outline-only prose (no tools / staging).
+        case plan
+        /// Onboarding guided-edit: tools available and executable work required.
         case agentic
-        case advisory
     }
 
     let kind: Kind
@@ -114,20 +245,41 @@ struct CoCaptainTurnExecutionPolicy: Equatable {
     let executesActions: Bool
     let allowsAgenticRetry: Bool
 
+    /// Standard Agent mode: structured tools on, chat without an edit OK,
+    /// retry only when structured output is invalid (not when the model chats).
+    static let agent = CoCaptainTurnExecutionPolicy(
+        kind: .agent,
+        expectsStructuredResponse: true,
+        enforcesExecutableWork: false,
+        executesActions: true,
+        allowsAgenticRetry: true
+    )
+
+    /// Ask mode: prose-only, no staging or agentic retry.
+    static let ask = CoCaptainTurnExecutionPolicy(
+        kind: .ask,
+        expectsStructuredResponse: false,
+        enforcesExecutableWork: false,
+        executesActions: false,
+        allowsAgenticRetry: false
+    )
+
+    /// Plan mode: same execution shape as Ask, different prompt posture.
+    static let plan = CoCaptainTurnExecutionPolicy(
+        kind: .plan,
+        expectsStructuredResponse: false,
+        enforcesExecutableWork: false,
+        executesActions: false,
+        allowsAgenticRetry: false
+    )
+
+    /// Onboarding guided edit: must produce reviewable work.
     static let agentic = CoCaptainTurnExecutionPolicy(
         kind: .agentic,
         expectsStructuredResponse: true,
         enforcesExecutableWork: true,
         executesActions: true,
         allowsAgenticRetry: true
-    )
-
-    static let advisory = CoCaptainTurnExecutionPolicy(
-        kind: .advisory,
-        expectsStructuredResponse: true,
-        enforcesExecutableWork: false,
-        executesActions: true,
-        allowsAgenticRetry: false
     )
 
     static let conversational = CoCaptainTurnExecutionPolicy(
@@ -210,144 +362,6 @@ public enum AgentExecutionState: Equatable {
     case error(String)
 }
 
-/// User-visible progress for a private verified coding run.
-///
-/// These stages are authored by the app and intentionally expose no model
-/// reasoning or hidden repair prompts.
-public enum CoCaptainCodingRunState: Hashable {
-    case planning
-    case building(attempt: Int)
-    case testing(attempt: Int)
-    case repairing(nextAttempt: Int)
-    case readyForReview(attempts: Int)
-    /// The loop stopped because the edit target is ambiguous and the user must
-    /// pick which spot to change. Not a failure — a review card with choices follows.
-    case awaitingChoice
-    case failed(String)
-    case cancelled
-
-    public var title: String {
-        switch self {
-        case .planning:
-            return LocalizationManager.shared.localizedString("Planning")
-        case .building(let attempt):
-            return LocalizationManager.shared.localizedString("Building attempt %lld", arguments: [Int64(attempt)])
-        case .testing(let attempt):
-            return LocalizationManager.shared.localizedString("Testing attempt %lld", arguments: [Int64(attempt)])
-        case .repairing:
-            return LocalizationManager.shared.localizedString("Repairing")
-        case .readyForReview:
-            return LocalizationManager.shared.localizedString("Ready for review")
-        case .awaitingChoice:
-            return LocalizationManager.shared.localizedString("Quick question")
-        case .failed:
-            return LocalizationManager.shared.localizedString("Needs another try")
-        case .cancelled:
-            return LocalizationManager.shared.localizedString("Cancelled")
-        }
-    }
-
-    public var detail: String? {
-        switch self {
-        case .repairing(let nextAttempt):
-            return LocalizationManager.shared.localizedString("Preparing attempt %lld from the verification results.", arguments: [Int64(nextAttempt)])
-        case .readyForReview(let attempts):
-            return LocalizationManager.shared.localizedString("Verified after %lld attempt(s).", arguments: [Int64(attempts)])
-        case .awaitingChoice:
-            return LocalizationManager.shared.localizedString("I need you to pick which spot to change before I continue.")
-        case .failed(let message):
-            return message
-        default:
-            return nil
-        }
-    }
-
-    public var isTerminal: Bool {
-        switch self {
-        case .readyForReview, .awaitingChoice, .failed, .cancelled:
-            return true
-        default:
-            return false
-        }
-    }
-}
-
-/// One model-authored behavioral assertion executed against staged Mini-App code.
-public struct CoCaptainVerificationCheck: Codable, Hashable, Identifiable {
-    public static let maximumCount = 5
-    public static let maximumScriptCharacters = 2_000
-    public static let maximumTotalScriptCharacters = 8_000
-
-    public let id: String
-    public let description: String
-    public let script: String
-
-    public init(id: String, description: String, script: String) {
-        self.id = id
-        self.description = description
-        self.script = script
-    }
-}
-
-public enum CoCaptainVerificationDiagnosticKind: String, Hashable {
-    case runtimeError
-    case consoleError
-    case blockedExternalAccess
-    case loadFailure
-    case timeout
-    case invalidCandidate
-    case unsupported
-}
-
-public struct CoCaptainVerificationDiagnostic: Hashable {
-    public let kind: CoCaptainVerificationDiagnosticKind
-    public let message: String
-
-    public init(kind: CoCaptainVerificationDiagnosticKind, message: String) {
-        self.kind = kind
-        self.message = message
-    }
-}
-
-public struct CoCaptainVerificationCheckResult: Hashable {
-    public let check: CoCaptainVerificationCheck
-    public let passed: Bool
-    public let detail: String?
-
-    public init(check: CoCaptainVerificationCheck, passed: Bool, detail: String? = nil) {
-        self.check = check
-        self.passed = passed
-        self.detail = detail
-    }
-}
-
-public struct CoCaptainVerificationResult: Hashable {
-    public let diagnostics: [CoCaptainVerificationDiagnostic]
-    public let checkResults: [CoCaptainVerificationCheckResult]
-
-    public init(
-        diagnostics: [CoCaptainVerificationDiagnostic] = [],
-        checkResults: [CoCaptainVerificationCheckResult] = []
-    ) {
-        self.diagnostics = diagnostics
-        self.checkResults = checkResults
-    }
-
-    public var passed: Bool {
-        diagnostics.isEmpty &&
-        !checkResults.isEmpty &&
-        checkResults.allSatisfy { $0.passed }
-    }
-
-    public var compactFeedback: String {
-        let diagnosticLines = diagnostics.map { "- \($0.kind.rawValue): \($0.message)" }
-        let checkLines = checkResults
-            .filter { !$0.passed }
-            .map { "- check \($0.check.id): \($0.detail ?? $0.check.description)" }
-        return (diagnosticLines + checkLines).joined(separator: "\n")
-    }
-}
-
 /// A single app-level action emitted by the model, referencing a registered
 /// `AppActionID` by its raw string and optional key-value arguments.
 ///
@@ -413,8 +427,6 @@ public struct CoCaptainNodeEditProposal: Codable, Hashable {
     public let summary: String
     /// The ordered sequence of patch operations to apply when accepted.
     public let operations: [NodePatchOperation]
-    /// Behavioral checks required before a code edit can enter review.
-    public let verificationChecks: [CoCaptainVerificationCheck]
     /// An optional model-authored lesson revealed after the edit is applied.
     public let learningNote: CoCaptainLearningNote?
 
@@ -424,7 +436,6 @@ public struct CoCaptainNodeEditProposal: Codable, Hashable {
         section: MiniAppSection = .code,
         summary: String,
         operations: [NodePatchOperation],
-        verificationChecks: [CoCaptainVerificationCheck] = [],
         learningNote: CoCaptainLearningNote? = nil
     ) {
         self.nodeID = nodeID
@@ -432,7 +443,6 @@ public struct CoCaptainNodeEditProposal: Codable, Hashable {
         self.section = section
         self.summary = summary
         self.operations = operations
-        self.verificationChecks = verificationChecks
         self.learningNote = learningNote
     }
 
@@ -442,7 +452,6 @@ public struct CoCaptainNodeEditProposal: Codable, Hashable {
         case section
         case summary
         case operations
-        case verificationChecks
         case learningNote
     }
 
@@ -454,10 +463,6 @@ public struct CoCaptainNodeEditProposal: Codable, Hashable {
         self.section = try container.decodeIfPresent(MiniAppSection.self, forKey: .section) ?? .code
         self.summary = try container.decodeIfPresent(String.self, forKey: .summary) ?? ""
         self.operations = try container.decode([NodePatchOperation].self, forKey: .operations)
-        self.verificationChecks = try container.decodeIfPresent(
-            [CoCaptainVerificationCheck].self,
-            forKey: .verificationChecks
-        ) ?? []
         self.learningNote = try container.decodeIfPresent(
             CoCaptainLearningNote.self,
             forKey: .learningNote
@@ -522,7 +527,7 @@ public struct CoCaptainAgentPayload: Codable, Hashable {
 /// Mirrors the shape of `FirebaseAILogic.JSONValue` without importing the SDK
 /// into the agent contract, and — unlike the old `[String: String]` argument
 /// map — preserves nested objects and arrays so structured tools like
-/// `propose_node_edit` can carry operations and verification checks.
+/// `propose_node_edit` can carry operations.
 public indirect enum AgentJSONValue: Codable, Hashable, Sendable {
     case null
     case bool(Bool)
@@ -793,8 +798,9 @@ public struct PendingReviewItem: Identifiable, Hashable, Codable {
     /// The model-authored description of what this change does.
     public let summary: String
     /// A short text snippet previewing the resulting content after the edit.
-    /// Truncated to 280 characters for performance.
     public let preview: String
+    /// Focused before-window for node edits (nil for app actions / legacy items).
+    public let beforePreview: String?
     /// Current lifecycle state of this item.
     public var status: ReviewItemStatus
     /// How this item was produced and how it should be applied or rejected.
@@ -815,6 +821,7 @@ public struct PendingReviewItem: Identifiable, Hashable, Codable {
         targetLabel: String,
         summary: String,
         preview: String,
+        beforePreview: String? = nil,
         status: ReviewItemStatus = .pending,
         source: PendingReviewSource,
         conflictDescription: String? = nil,
@@ -826,6 +833,7 @@ public struct PendingReviewItem: Identifiable, Hashable, Codable {
         self.targetLabel = targetLabel
         self.summary = summary
         self.preview = preview
+        self.beforePreview = beforePreview
         self.status = status
         self.source = source
         self.conflictDescription = conflictDescription
@@ -958,8 +966,6 @@ public enum CoCaptainTimelineContent: Hashable {
     case productCTA(CoCaptainProductCTAItem)
     /// A set of proposed changes awaiting user review.
     case reviewBundle(ReviewBundleItem)
-    /// App-authored progress for a verified coding loop.
-    case codingRun(CoCaptainCodingRunState)
     /// A polite question with tappable answer options.
     case clarifyingQuestion(CoCaptainClarifyingQuestionItem)
     /// A "What you just learned" card revealed after an edit is applied.

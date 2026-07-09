@@ -878,8 +878,6 @@ private struct AppActionOnboardingAnchor: ViewModifier {
         switch actionID {
         case .organizeNodes:
             content.onboardingTooltipAnchor(.omniboxOrganizeRow)
-        case .toggleGrid:
-            content.onboardingTooltipAnchor(.omniboxToggleGridRow)
         default:
             content
         }

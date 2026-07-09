@@ -74,29 +74,12 @@ public struct CoCaptainAgentParser {
                 return NodePatchOperation(type: type, target: target, content: body)
             }
 
-            let verificationChecks = extractTags(name: "verification_checks", from: content).flatMap {
-                extractTagMatches(name: "verification_check", from: $0)
-            }.compactMap { checkItem -> CoCaptainVerificationCheck? in
-                guard let id = checkItem.attributes["id"],
-                      let description = checkItem.attributes["description"],
-                      let scriptContainer = extractTag(name: "script", from: checkItem.content) else {
-                    return nil
-                }
-                let script = extractCDATA(from: scriptContainer) ?? scriptContainer
-                return CoCaptainVerificationCheck(
-                    id: id,
-                    description: description,
-                    script: script
-                )
-            }
-            
             return CoCaptainNodeEditProposal(
                 nodeID: nodeID,
                 role: role,
                 section: section,
                 summary: summary,
                 operations: operations,
-                verificationChecks: verificationChecks,
                 learningNote: extractLearningNote(from: content)
             )
         }

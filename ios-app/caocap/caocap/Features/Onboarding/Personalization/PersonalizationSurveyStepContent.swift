@@ -43,7 +43,6 @@ struct PersonalizationAnswerCard: View {
 struct PersonalizationSurveyStepContent: View {
     let question: PersonalizationSurveyQuestion
     @Bindable var coordinator: PersonalizationOnboardingCoordinator
-    let showsCompanionHero: Bool
 
     var body: some View {
         ScrollView {
@@ -80,7 +79,7 @@ struct PersonalizationSurveyStepContent: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.top, 12)
-            .padding(.bottom, showsCompanionHero ? PersonalizationTheme.companionHeroScrollClearance : 8)
+            .padding(.bottom, PersonalizationTheme.companionHeroScrollClearance)
         }
         .scrollIndicators(.hidden)
     }

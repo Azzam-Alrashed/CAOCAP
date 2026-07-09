@@ -15,7 +15,6 @@ enum PersonalizationTheme {
     static let textMuted = Color.white.opacity(0.58)
 
     static let cardFill = Color.white.opacity(0.07)
-    static let cardFillSelected = Color.white.opacity(0.12)
     static let cardStroke = Color.white.opacity(0.28)
     static let cardShadow = Color.black.opacity(0.30)
 

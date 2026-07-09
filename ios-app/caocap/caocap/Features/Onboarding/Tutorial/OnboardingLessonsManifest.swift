@@ -113,10 +113,6 @@ enum OnboardingLessonsManifest {
         )
     ]
 
-    static var allSteps: [OnboardingCoordinator.Step] {
-        lessons.flatMap(\.steps)
-    }
-
     static func lesson(for id: OnboardingLessonID) -> OnboardingLesson {
         guard let lesson = lessons.first(where: { $0.id == id }) else {
             preconditionFailure("Missing onboarding lesson for \(id)")
@@ -126,17 +122,6 @@ enum OnboardingLessonsManifest {
 
     static func lesson(containing step: OnboardingCoordinator.Step) -> OnboardingLesson? {
         lessons.first { $0.steps.contains(step) }
-    }
-
-    static func firstLessonID() -> OnboardingLessonID? {
-        lessons.first?.id
-    }
-
-    static func nextLesson(after id: OnboardingLessonID) -> OnboardingLessonID? {
-        guard let index = lessons.firstIndex(where: { $0.id == id }) else { return nil }
-        let nextIndex = lessons.index(after: index)
-        guard lessons.indices.contains(nextIndex) else { return nil }
-        return lessons[nextIndex].id
     }
 
     static func firstIncompleteLesson(

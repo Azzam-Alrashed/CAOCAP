@@ -57,10 +57,13 @@ caocap/
 │   │   ├── Chat/
 │   │   ├── NodeAgent/
 │   │   └── Review/
-│   ├── Intro/
 │   ├── Launch/
 │   ├── Omnibox/
 │   ├── Onboarding/
+│   │   ├── Intro/
+│   │   ├── Shared/
+│   │   ├── Personalization/
+│   │   └── Tutorial/
 │   ├── Overlays/
 │   ├── Settings/
 │   ├── SnapshotBrowser/
@@ -261,12 +264,9 @@ Decoupled backend engines and API clients specific to the CoCaptain agentic flow
 | `LLMService.swift` | Interface for the Firebase AI Logic SDK. Manages streaming sessions with the Gemini backend. Also coordinates local on-device MLX model download and inference. |
 | `TokenUsageLimiter.swift` | Local estimated-token quota tracker for free CoCaptain and AI node usage; Pro entitlements bypass the free monthly cap. |
 | `CommandIntentResolver.swift` | Maps plain-language command palette and CoCaptain prompts to available app actions. |
-| `CoCaptainTurnIntentResolver.swift` | Classifies each CoCaptain user message as mutating work, advisory, or general chat before coordinator execution. |
-| `CoCaptainTurnIntent.swift` | Turn intent enum with prompt instructions and connection-fallback notice rules. |
 | `ProjectContextBuilder.swift` | Logic to "harvest" the spatial graph and serialize it into a grounded prompt context for the LLM. |
 | `NodePatchEngine.swift` | Previews and applies Mini-App SRS/code patches with flexible exact-target matching (semantic aliases like "title" → `<h1>`, 3-way unique/ambiguous/none resolution, near-match suggestions, pickable `PatchMatchCandidate`s) and canonical `replace_all` staging. |
-| `MiniAppVerificationService.swift` | Runs staged Mini-App code in an ephemeral offline WebView, captures runtime diagnostics, and evaluates model-authored behavior checks. |
-| `VerifiedCodingLoopFeature.swift` | TestFlight/Debug rollout gate for the verified generate-test-repair loop. |
+| `NodeEditToolsFeature.swift` | Rollout gate for native `propose_node_edit` / `ask_clarifying_question` function calling (Debug/TestFlight default on; App Store default off; UserDefaults override). |
 
 `ProjectStore` and `ProjectPersistenceService` also maintain checkpoint metadata and saved project snapshots. The infrastructure is used to protect work before significant AI or mutation flows; a full user-facing snapshot browser remains roadmap work.
 
@@ -385,11 +385,11 @@ The agentic AI companion. A native sheet interface for real-time collaboration.
 
 | Folder/File | Responsibility |
 |---|---|
-| `Chat/` | CoCaptain sheet UI, chat timeline, bubbles, prompt composer, clarifying-question option cards, and view-model state (including local clarification resolution). |
-| `AgentContract/` | Model-output adapter, XML parser (including the `clarifying_question` element), validator, coordinator, and shared agent/review/timeline models. |
+| `Chat/` | CoCaptain sheet UI, chat timeline, bubbles, two-row prompt composer with Agent/Ask/Plan mode + optional `@` pin (`cocaptain.chatMode`), clarifying-question option cards, and view-model state (including local clarification resolution). |
+| `AgentContract/` | Model-output adapter, XML parser (including the `clarifying_question` element), validator, coordinator, and shared agent/review/timeline models including `CoCaptainChatMode` and turn execution policy. Mode is user-selected (not keyword-classified). |
 | `Review/` | Review bundle and pending edit/action cards for human approval, including the "Which one did you mean?" candidate picker for ambiguous edit targets. |
 | `Analysis/` | Structural parser warnings and recommendations from the analyzer. |
-| `NodeAgent/` | Embedded node chat interface for running quick agent context requests. |
+| `NodeAgent/` | Embedded node chat interface that shares the same persisted Agent/Ask/Plan mode as project-scoped CoCaptain. |
 
 ---
 
@@ -406,42 +406,65 @@ Launch transition and global launch-time prompts shown by the root app shell.
 #### `Onboarding/`
 First-run onboarding for the canvas, Omnibox, and CoCaptain flow. The full funnel is: **Intro → Personalization (co-pilot picker + survey) → Interactive tutorial**.
 
-| File | Responsibility |
+Layout under `Features/Onboarding/`:
+
+| Folder | Responsibility |
 |---|---|
-| `OnboardingCoordinator.swift` | Observable state machine for the active tutorial step, lesson, popover visibility, delayed presentation, per-lesson completion, and completion/skipping persistence. |
-| `OnboardingLessonsManifest.swift` | Groups interactive tutorial steps into ≤6-step lessons with unique accent colors (five lessons: Canvas Basics, CoCaptain Chat, Canvas Navigation, Mini-App Preview, Move & Organize); drives Help lesson catalogue. |
-| `OnboardingManifest.swift` | Manifest-backed copy, icon, and ordering for every interactive tutorial step. |
-| `OnboardingNavigationGestureThresholds.swift` | Pan/pinch threshold math for navigation-lesson gesture completion. |
-| `OnboardingPopoverCard.swift` | Central onboarding tooltip presentation. Views publish named `OnboardingTooltipAnchor` frames, and a single `onboardingTooltipOverlay()` renders the active step card. |
-| `PersonalizationOnboardingCoordinator.swift` | State machine for co-pilot picker, survey steps, skip nudge, completion moment, v2 re-present logic, and persistence/analytics handoff. |
-| `PersonalizationOnboardingManifest.swift` | Static step catalogue: copilot picker + survey questions with stable IDs. |
-| `PersonalizationOnboardingView.swift` | Thin shell: localization, skip dialog, delegates layout to the scene compositor. |
-| `PersonalizationSceneView.swift` | Single-scene compositor: backdrop, moon, heroes, TabView content, and measured bottom chrome. |
-| `PersonalizationSpaceBackdrop.swift` | Starry sky, animated galaxy, and shooting stars (no moon). |
-| `PersonalizationMoonStage.swift` | Full-bleed moon horizon pinned to the screen bottom. |
-| `PersonalizationHeroLayer.swift` | Co-pilot heroes aligned to the moon stand line (picker + companion modes). |
-| `MoonStageLayout.swift` | Asset-derived moon geometry and hero stand-line math. |
-| `PersonalizationTheme.swift` | Shared dark-space palette and layout tokens. |
-| `PersonalizationChrome.swift` | Top bar, progress, footnote, bottom navigation, and completion moment. |
-| `PersonalizationCopilotStepContent.swift` | Co-pilot step header and floating selected persona text (no card). |
-| `PersonalizationSurveyStepContent.swift` | Survey question scroll content and answer tiles. |
-| `PersonalizationPrimaryButton.swift` | Gradient continue CTA shared across personalization steps. |
+| `Intro/` | Motivational full-bleed story screens shown after launch (`intro_completed_v1`). |
+| `Shared/` | Chrome shared by Intro and Personalization: top bar, back button, primary CTA, glass tokens, language toggle. |
+| `Personalization/` | Co-pilot picker + survey scene, coordinator, manifests, and space/moon/hero visuals. |
+| `Tutorial/` | Interactive canvas walkthrough coordinator, lesson/step manifests, tooltip overlay, and graduation banner. |
 
-Onboarding tooltips must not be presented by feature-local `.popover` modifiers. Feature views should only publish anchors with `onboardingTooltipAnchor(_:)`; the central overlay decides which single tooltip is visible.
-
-See `Features/Onboarding/README.md` for the three-phase funnel and handoff rules.
-
----
-
-#### `Intro/`
-First-run full-screen intro screens shown after the launch animation and before the interactive canvas walkthrough.
+##### `Intro/`
 
 | File | Responsibility |
 |---|---|
 | `IntroCoordinator.swift` | Observable state and `UserDefaults` persistence for intro completion, skip, and page navigation. |
 | `IntroManifest.swift` | Ordered draft copy and metadata for the five intro screens. |
-| `IntroStepContent.swift` | Value model for one intro page's copy, gradient palette, icon, and CTA label. |
+| `IntroStepContent.swift` | Value model for one intro page's copy, illustration placement, and CTA label. |
 | `IntroView.swift` | Full-screen paged SwiftUI intro with progress dots, back/skip controls, and CTA handoff into the personalization survey. |
+
+##### `Shared/`
+
+| File | Responsibility |
+|---|---|
+| `OnboardingFlowChrome.swift` | Shared top bar and circular back button used by Intro and Personalization. |
+| `OnboardingPrimaryButton.swift` | Glass continue CTA shared by Intro and Personalization. |
+| `OnboardingGlassChrome.swift` | Frosted-glass stroke/shadow tokens for onboarding chrome. |
+| `OnboardingLanguageButton.swift` | EN/AR language toggle used on first-run screens. |
+
+##### `Personalization/`
+
+| File | Responsibility |
+|---|---|
+| `PersonalizationOnboardingCoordinator.swift` | State machine for co-pilot picker, survey steps, skip nudge, completion moment, v2 re-present logic, and persistence/analytics handoff. |
+| `PersonalizationOnboardingManifest.swift` | Static step catalogue: copilot picker + survey questions with stable IDs. |
+| `PersonalizationOnboardingView.swift` | Thin shell: localization, skip dialog, delegates layout to the scene compositor. |
+| `PersonalizationSceneView.swift` | Single-scene compositor: backdrop, moon, heroes, content, and measured bottom chrome. |
+| `PersonalizationSpaceBackdrop.swift` | Starry sky, animated galaxy, and shooting stars (no moon). |
+| `PersonalizationMoonStage.swift` | Full-bleed moon horizon pinned to the screen bottom. |
+| `PersonalizationHeroLayer.swift` | Co-pilot heroes aligned to the moon stand line (picker + companion modes). |
+| `MoonStageLayout.swift` | Asset-derived moon geometry and hero stand-line math. |
+| `PersonalizationTheme.swift` | Dark-space palette and layout tokens for personalization. |
+| `PersonalizationChrome.swift` | Progress, footnote, bottom navigation, and completion moment (delegates top/back to Shared). |
+| `PersonalizationCopilotStepContent.swift` | Co-pilot step header and floating selected persona text (no card). |
+| `PersonalizationSurveyStepContent.swift` | Survey question scroll content and answer tiles. |
+
+##### `Tutorial/`
+
+| File | Responsibility |
+|---|---|
+| `OnboardingCoordinator.swift` | Observable state machine for the active tutorial step, lesson, popover visibility, delayed presentation, per-lesson completion, and completion/skipping persistence. |
+| `OnboardingLessonsManifest.swift` | Groups interactive tutorial steps into lessons; drives Help lesson catalogue and first-run vs optional lesson IDs. |
+| `OnboardingManifest.swift` | Manifest-backed copy, icon, and ordering for every interactive tutorial step. |
+| `OnboardingNavigationGestureThresholds.swift` | Pan/pinch threshold math for navigation-lesson gesture completion. |
+| `OnboardingPopoverCard.swift` | Central onboarding tooltip presentation. Views publish named `OnboardingTooltipAnchor` frames, and a single `onboardingTooltipOverlay()` renders the active step card. |
+| `OnboardingCoCaptainReviewFixture.swift` | Fixture helpers for CoCaptain review steps in the tutorial. |
+| `TutorialGraduationBanner.swift` | Banner shown when the main tutorial graduates. |
+
+Onboarding tooltips must not be presented by feature-local `.popover` modifiers. Feature views should only publish anchors with `onboardingTooltipAnchor(_:)`; the central overlay decides which single tooltip is visible.
+
+See `Features/Onboarding/README.md` for the three-phase funnel and handoff rules.
 
 ---
 

@@ -11,6 +11,19 @@ struct NodeAgentChatView: View {
     @State private var viewModel = CoCaptainViewModel()
     @State private var text = ""
     @FocusState private var isFocused: Bool
+    @AppStorage(CoCaptainChatMode.storageKey) private var chatModeRawValue = CoCaptainChatMode.agent.rawValue
+
+    private var chatModeBinding: Binding<CoCaptainChatMode> {
+        Binding(
+            get: {
+                CoCaptainChatMode(rawValue: chatModeRawValue) ?? .agent
+            },
+            set: { newValue in
+                chatModeRawValue = newValue.rawValue
+                viewModel.chatMode = newValue
+            }
+        )
+    }
 
     var body: some View {
         @Bindable var viewModel = viewModel
@@ -24,8 +37,12 @@ struct NodeAgentChatView: View {
 
             CoCaptainInputComposer(
                 text: $text,
+                chatMode: chatModeBinding,
+                pinnedContextNodeID: $viewModel.pinnedContextNodeID,
                 isFocused: $isFocused,
                 store: store,
+                allowsContextPinning: false,
+                pinnableNodes: [],
                 isThinking: viewModel.isThinking,
                 analysisItems: [],
                 pendingReviewCount: viewModel.pendingReviewCount,
@@ -48,6 +65,7 @@ struct NodeAgentChatView: View {
             }
         }
         .onAppear {
+            syncChatModeFromStorage()
             viewModel.configureNodeSession(
                 store: store,
                 nodeID: nodeID,
@@ -55,6 +73,14 @@ struct NodeAgentChatView: View {
             )
             viewModel.onFlyToNode = onFlyToNode
         }
+        .onChange(of: chatModeRawValue) { _, _ in
+            syncChatModeFromStorage()
+        }
+    }
+
+    /// Shares the same persisted Agent/Ask/Plan selection as project-scoped CoCaptain.
+    private func syncChatModeFromStorage() {
+        viewModel.chatMode = CoCaptainChatMode(rawValue: chatModeRawValue) ?? .agent
     }
 
     /// Extracts the display name from the node's agent profile.

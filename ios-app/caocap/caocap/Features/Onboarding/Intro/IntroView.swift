@@ -20,7 +20,7 @@ struct IntroView: View {
             )
 
             VStack(spacing: 0) {
-                topBar
+                OnboardingFlowTopBar(palette: .introIllustration, onSkip: finishIntro)
 
                 TabView(selection: $coordinator.currentIndex) {
                     ForEach(IntroManifest.steps) { step in
@@ -53,32 +53,6 @@ struct IntroView: View {
         ]
     }
 
-    /// Illustration pages position chrome and copy around each background artwork.
-    private var topBar: some View {
-        HStack(alignment: .top) {
-            Text("CAOCAP")
-                .font(.system(size: 15, weight: .semibold, design: .rounded))
-                .tracking(2)
-                .foregroundStyle(.white.opacity(0.9))
-
-            Spacer(minLength: 0)
-
-            HStack(spacing: 12) {
-                OnboardingLanguageButton(usesLightChrome: true)
-
-                Button {
-                    finishIntro()
-                } label: {
-                    Text("Skip")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.78))
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .frame(height: 56, alignment: .top)
-    }
-
     private var bottomBar: some View {
         VStack(spacing: 22) {
             IntroProgressDots(
@@ -87,25 +61,19 @@ struct IntroView: View {
             )
 
             HStack(spacing: 12) {
-                Button {
+                OnboardingFlowBackButton(
+                    foregroundOpacity: coordinator.isFirstPage ? 0.28 : 0.88,
+                    isEnabled: !coordinator.isFirstPage
+                ) {
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
                         coordinator.back()
                     }
-                } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(backButtonForeground)
-                        .frame(width: 48, height: 52)
-                        .background(backButtonBackground, in: Circle())
-                        .overlay {
-                            Circle()
-                                .stroke(backButtonStroke, lineWidth: 1)
-                        }
                 }
-                .buttonStyle(.plain)
-                .disabled(coordinator.isFirstPage)
 
-                Button {
+                OnboardingPrimaryButton(
+                    titleKey: currentStep.ctaLabelKey,
+                    isLastStep: coordinator.isLastPage
+                ) {
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
                         if coordinator.isLastPage {
                             finishIntro()
@@ -113,58 +81,10 @@ struct IntroView: View {
                             coordinator.next()
                         }
                     }
-                } label: {
-                    HStack(spacing: 10) {
-                        Text(LocalizedStringKey(stringLiteral: currentStep.ctaLabelKey))
-                            .font(.system(size: 16, weight: .bold))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.82)
-
-                        Image(systemName: coordinator.isLastPage ? "arrow.right.circle.fill" : "arrow.right")
-                            .font(.system(size: 17, weight: .bold))
-                    }
-                    .foregroundStyle(ctaForeground)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 52)
-                    .background {
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(ctaFillStyle)
-                    }
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .stroke(OnboardingGlassChrome.stroke, lineWidth: 1)
-                    }
-                    .shadow(
-                        color: OnboardingGlassChrome.shadow,
-                        radius: 12,
-                        x: 0,
-                        y: 6
-                    )
                 }
-                .buttonStyle(.plain)
             }
         }
         .padding(.bottom, 6)
-    }
-
-    private var backButtonForeground: Color {
-        Color(hex: "1E3A5F").opacity(coordinator.isFirstPage ? 0.28 : 0.88)
-    }
-
-    private var backButtonBackground: some ShapeStyle {
-        AnyShapeStyle(Color.white.opacity(0.82))
-    }
-
-    private var backButtonStroke: Color {
-        OnboardingGlassChrome.inactiveStroke
-    }
-
-    private var ctaForeground: Color {
-        Color(uiColor: .label)
-    }
-
-    private var ctaFillStyle: AnyShapeStyle {
-        AnyShapeStyle(.ultraThinMaterial)
     }
 
     private func finishIntro() {

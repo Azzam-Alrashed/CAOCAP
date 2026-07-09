@@ -218,30 +218,10 @@ enum OnboardingManifest {
         }
     }
 
-    static var firstStep: OnboardingCoordinator.Step? {
-        OnboardingLessonsManifest.allSteps.first
-    }
-
     static func content(for step: OnboardingCoordinator.Step) -> OnboardingStepContent {
         guard let content = steps.first(where: { $0.step == step }) else {
             preconditionFailure("Missing onboarding manifest content for \(step)")
         }
         return content
-    }
-
-    static func nextStep(after step: OnboardingCoordinator.Step) -> OnboardingCoordinator.Step? {
-        guard let index = OnboardingLessonsManifest.allSteps.firstIndex(of: step) else { return nil }
-        let nextIndex = OnboardingLessonsManifest.allSteps.index(after: index)
-        guard OnboardingLessonsManifest.allSteps.indices.contains(nextIndex) else { return nil }
-        return OnboardingLessonsManifest.allSteps[nextIndex]
-    }
-
-    static func stepLabel(
-        for step: OnboardingCoordinator.Step,
-        lessonID: OnboardingLessonID?,
-        language: String? = nil
-    ) -> String {
-        guard let lessonID else { return "" }
-        return OnboardingLessonsManifest.stepLabel(for: step, in: lessonID, language: language)
     }
 }

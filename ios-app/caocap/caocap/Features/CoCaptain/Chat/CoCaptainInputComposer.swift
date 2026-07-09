@@ -2,8 +2,13 @@ import SwiftUI
 
 struct CoCaptainInputComposer: View {
     @Binding var text: String
+    @Binding var chatMode: CoCaptainChatMode
+    @Binding var pinnedContextNodeID: UUID?
     @FocusState.Binding var isFocused: Bool
     let store: ProjectStore?
+    /// When false (node-scoped chat), the @ pin control is hidden.
+    let allowsContextPinning: Bool
+    let pinnableNodes: [SpatialNode]
     let isThinking: Bool
     let analysisItems: [ProjectSuggestion]
     let pendingReviewCount: Int
@@ -27,6 +32,15 @@ struct CoCaptainInputComposer: View {
 
     private var canSend: Bool {
         isInputValid && !isThinking
+    }
+
+    /// Grows with wrapped/newline content; scrolls once the user exceeds this.
+    private static let composerLineLimit = 1...6
+
+    private var composerNewlineCount: Int {
+        text.reduce(0) { partial, character in
+            character.isNewline ? partial + 1 : partial
+        }
     }
 
     private var isChatOnboardingActive: Bool {
@@ -84,13 +98,9 @@ struct CoCaptainInputComposer: View {
                 .transition(.move(edge: .top).combined(with: .opacity))
             }
 
-            HStack(alignment: .bottom, spacing: 8) {
-                quickPromptMenu
-                promptField
-                sendButton
-            }
-            .padding(.horizontal, 12)
-            .padding(.bottom, 10)
+            composerCapsule
+                .padding(.horizontal, 12)
+                .padding(.bottom, 10)
 
             if let errorMessage = dictation.errorMessage {
                 Text(errorMessage)
@@ -111,6 +121,66 @@ struct CoCaptainInputComposer: View {
         .onDisappear {
             dictation.stop()
         }
+    }
+
+    /// Two-row capsule: tools on top, text + send below — one continuous composer surface.
+    private var composerCapsule: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            composerToolbar
+            composerInputRow
+        }
+        .padding(.horizontal, 10)
+        .padding(.top, 10)
+        .padding(.bottom, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(Color.primary.opacity(0.06))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(
+                    isChatOnboardingActive || isFocused
+                        ? Color.blue.opacity(isChatOnboardingActive ? 0.55 : 0.3)
+                        : Color.primary.opacity(0.06),
+                    lineWidth: isChatOnboardingActive || isFocused ? 1.5 : 1
+                )
+        )
+        .onboardingTooltipAnchor(.coCaptainInput)
+        .animation(.easeInOut(duration: 0.2), value: isFocused)
+        .animation(.easeInOut(duration: 0.2), value: isChatOnboardingActive)
+        .animation(.easeInOut(duration: 0.2), value: chatMode)
+        .animation(.easeInOut(duration: 0.2), value: pinnedContextNodeID)
+    }
+
+    private var composerToolbar: some View {
+        HStack(spacing: 8) {
+            chatModePicker
+
+            if allowsContextPinning {
+                contextPinControl
+            }
+
+            Spacer(minLength: 4)
+
+            quickPromptMenu
+        }
+    }
+
+    private var composerInputRow: some View {
+        HStack(alignment: .bottom, spacing: 8) {
+            TextField(chatMode.composerPlaceholder, text: $text, axis: .vertical)
+                .lineLimit(Self.composerLineLimit)
+                // Expand with wrapped/newline content up to `composerLineLimit`, then scroll.
+                .fixedSize(horizontal: false, vertical: true)
+                .focused($isFocused)
+                // Return inserts a newline so the capsule can grow; send via the button.
+                .submitLabel(.return)
+                .padding(.leading, 4)
+                .padding(.vertical, 6)
+
+            sendButton
+        }
+        .animation(.easeInOut(duration: 0.15), value: composerNewlineCount)
     }
 
     private var quickPromptMenu: some View {
@@ -167,58 +237,140 @@ struct CoCaptainInputComposer: View {
             }
             .disabled(isThinking)
         } label: {
-            Image(systemName: "plus.circle.fill")
-                .font(.system(size: 26))
-                .foregroundColor(.blue)
-                .shadow(color: .blue.opacity(0.2), radius: 4)
+            Image(systemName: "plus")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: 30, height: 30)
+                .background(
+                    Circle()
+                        .fill(Color.primary.opacity(0.08))
+                )
         }
+        .accessibilityLabel("Quick prompts")
         .simultaneousGesture(
             TapGesture().onEnded {
                 isFocused = false
             }
         )
-        .padding(.bottom, 6)
     }
 
-    private var promptField: some View {
-        HStack(spacing: 0) {
-            TextField("Ask Co-Captain...", text: $text, axis: .vertical)
-                .lineLimit(1...5)
-                .focused($isFocused)
-                .submitLabel(.send)
-                .onSubmit {
-                    onSend()
+    private var pinnedNode: SpatialNode? {
+        guard let pinnedContextNodeID else { return nil }
+        return pinnableNodes.first(where: { $0.id == pinnedContextNodeID })
+            ?? store?.nodes.first(where: { $0.id == pinnedContextNodeID })
+    }
+
+    /// Compact Agent/Ask/Plan control on the composer toolbar.
+    private var chatModePicker: some View {
+        Menu {
+            ForEach(CoCaptainChatMode.allCases) { mode in
+                Button {
+                    chatMode = mode
+                } label: {
+                    if mode == chatMode {
+                        Label(mode.displayName, systemImage: "checkmark")
+                    } else {
+                        Label(mode.displayName, systemImage: mode.systemImageName)
+                    }
                 }
-                .onKeyPress { press in
-                    if press.key == .return {
-                        if press.modifiers.contains(.shift) {
-                            return .ignored
-                        } else {
-                            if canSend {
-                                onSend()
-                                return .handled
-                            }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: chatMode.systemImageName)
+                    .font(.system(size: 11, weight: .semibold))
+                Text(chatMode.displayName)
+                    .font(.system(size: 12, weight: .semibold))
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 8, weight: .semibold))
+            }
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(Color.primary.opacity(0.08))
+            )
+        }
+        .accessibilityLabel(
+            LocalizationManager.shared.localizedString("cocaptain.composer.modeAccessibility")
+        )
+        .accessibilityValue(chatMode.displayName)
+        .disabled(isThinking)
+        .simultaneousGesture(
+            TapGesture().onEnded {
+                isFocused = false
+            }
+        )
+    }
+
+    /// Compact @ pin for project-scope turns — focuses prompt context on one node.
+    @ViewBuilder
+    private var contextPinControl: some View {
+        if let pinned = pinnedNode {
+            HStack(spacing: 4) {
+                Image(systemName: "at")
+                    .font(.system(size: 11, weight: .semibold))
+                Text(pinned.displayTitle)
+                    .font(.system(size: 12, weight: .semibold))
+                    .lineLimit(1)
+                Button {
+                    pinnedContextNodeID = nil
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 9, weight: .bold))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(
+                    LocalizationManager.shared.localizedString("cocaptain.composer.clearContextPin")
+                )
+            }
+            .foregroundStyle(.blue)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(Color.blue.opacity(0.12))
+            )
+            .layoutPriority(-1)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(
+                LocalizationManager.shared.localizedString("cocaptain.composer.contextPinAccessibility")
+            )
+            .accessibilityValue(pinned.displayTitle)
+            .disabled(isThinking)
+        } else {
+            Menu {
+                if pinnableNodes.isEmpty {
+                    Text(LocalizationManager.shared.localizedString("cocaptain.composer.noNodesToPin"))
+                } else {
+                    ForEach(pinnableNodes) { node in
+                        Button {
+                            pinnedContextNodeID = node.id
+                        } label: {
+                            Label(node.displayTitle, systemImage: node.icon ?? node.type.defaultIcon)
                         }
                     }
-                    return .ignored
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
+            } label: {
+                Image(systemName: "at")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 30, height: 30)
+                    .background(
+                        Circle()
+                            .fill(Color.primary.opacity(0.08))
+                    )
+            }
+            .accessibilityLabel(
+                LocalizationManager.shared.localizedString("cocaptain.composer.contextPinAccessibility")
+            )
+            .disabled(isThinking || pinnableNodes.isEmpty)
+            .simultaneousGesture(
+                TapGesture().onEnded {
+                    isFocused = false
+                }
+            )
         }
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color.primary.opacity(0.06))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(
-                    isChatOnboardingActive || isFocused ? Color.blue.opacity(isChatOnboardingActive ? 0.55 : 0.3) : Color.clear,
-                    lineWidth: 1.5
-                )
-        )
-        .onboardingTooltipAnchor(.coCaptainInput)
-        .animation(.easeInOut(duration: 0.2), value: isFocused)
-        .animation(.easeInOut(duration: 0.2), value: isChatOnboardingActive)
     }
 
     private var sendButton: some View {
@@ -237,31 +389,29 @@ struct CoCaptainInputComposer: View {
             }
         }) {
             ZStack {
+                Circle()
+                    .fill(sendButtonBackground)
+                    .frame(width: 32, height: 32)
+
                 if isThinking {
-                    Image(systemName: "stop.circle.fill")
-                        .font(.system(size: 38))
-                        .frame(width: 38, height: 38)
+                    Image(systemName: "stop.fill")
+                        .font(.system(size: 11, weight: .bold))
                         .transition(.scale.combined(with: .opacity))
                 } else if dictation.isRecording {
-                    Image(systemName: "mic.circle.fill")
-                        .font(.system(size: 38))
-                        .frame(width: 38, height: 38)
+                    Image(systemName: "mic.fill")
+                        .font(.system(size: 14, weight: .semibold))
                         .transition(.scale.combined(with: .opacity))
                 } else if isInputValid {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(.system(size: 38))
+                    Image(systemName: "arrow.up")
+                        .font(.system(size: 14, weight: .bold))
                         .transition(.scale.combined(with: .opacity))
                 } else {
                     Image(systemName: "mic.fill")
-                        .font(.system(size: 22))
+                        .font(.system(size: 14, weight: .semibold))
                         .transition(.scale.combined(with: .opacity))
-                        .frame(width: 38, height: 38)
-                        .background(Color.blue.opacity(0.1))
-                        .clipShape(Circle())
                 }
             }
-            .foregroundColor(dictation.isRecording ? .red : .blue)
-            .shadow(color: .blue.opacity(0.3), radius: 6, y: 3)
+            .foregroundStyle(sendButtonForeground)
         }
         .accessibilityLabel(sendButtonAccessibilityLabel)
         .contextMenu {
@@ -272,7 +422,26 @@ struct CoCaptainInputComposer: View {
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isInputValid)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isThinking)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: dictation.isRecording)
-        .padding(.bottom, 5)
+    }
+
+    private var sendButtonBackground: Color {
+        if dictation.isRecording {
+            return .red.opacity(0.15)
+        }
+        if isThinking || isInputValid {
+            return .blue
+        }
+        return Color.primary.opacity(0.08)
+    }
+
+    private var sendButtonForeground: Color {
+        if dictation.isRecording {
+            return .red
+        }
+        if isThinking || isInputValid {
+            return .white
+        }
+        return .secondary
     }
 
     @ViewBuilder

@@ -129,7 +129,7 @@ public class LocalizationManager {
         return String(
             localized: String.LocalizationValue(stringLiteral: key),
             table: "Localizable",
-            bundle: .main,
+            bundle: bundle(for: resolvedLanguage),
             locale: locale(for: resolvedLanguage)
         )
     }

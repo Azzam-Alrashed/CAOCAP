@@ -77,7 +77,7 @@ public final class LLMService {
             availableActions: [],
             scope: .project,
             purpose: .standard,
-            turnIntent: .generalChat
+            chatMode: .agent
         )
 
         return AsyncThrowingStream { continuation in
@@ -121,7 +121,7 @@ public final class LLMService {
         availableActions: [AppActionDefinition],
         scope: CoCaptainAgentScope = .project,
         purpose: CoCaptainTurnPurpose = .standard,
-        turnIntent: CoCaptainTurnIntent = .generalChat,
+        chatMode: CoCaptainChatMode = .agent,
         toolExecutor: CoCaptainToolExecutor? = nil
     ) -> AsyncThrowingStream<CoCaptainLLMStreamEvent, Error> {
         let prompt = buildPrompt(
@@ -131,7 +131,7 @@ public final class LLMService {
             availableActions: availableActions,
             scope: scope,
             purpose: purpose,
-            turnIntent: turnIntent
+            chatMode: chatMode
         )
 
         let currentPreferred = preferredModelName
@@ -433,16 +433,6 @@ public final class LLMService {
                 ),
                 description: "Ordered patch operations. Prefer one replace_all with the complete updated document for small files."
             ),
-            "verificationChecks": .array(
-                items: .object(
-                    properties: [
-                        "id": .string(description: "Unique check id."),
-                        "description": .string(description: "The behavior being checked."),
-                        "script": .string(description: "Offline JavaScript that returns true only when the behavior works.")
-                    ]
-                ),
-                description: "1-5 behavioral checks; required when editing existing non-empty Mini-App code."
-            ),
             "learningNote": .object(
                 properties: [
                     "concept": .string(description: "A 2-5 word name for the concept this edit demonstrates."),
@@ -451,7 +441,7 @@ public final class LLMService {
                 description: "A short lesson revealed to the user after they apply the edit."
             )
         ],
-        optionalParameters: ["nodeId", "verificationChecks", "learningNote"]
+        optionalParameters: ["nodeId", "learningNote"]
     )
 
     /// Structured clarifying-question tool (feature-gated). Takes precedence
@@ -485,7 +475,7 @@ public final class LLMService {
         availableActions: [AppActionDefinition],
         scope: CoCaptainAgentScope,
         purpose: CoCaptainTurnPurpose,
-        turnIntent: CoCaptainTurnIntent,
+        chatMode: CoCaptainChatMode = .agent,
         nodeEditToolsEnabled: Bool? = nil
     ) -> String {
         var parts: [String] = []
@@ -533,7 +523,9 @@ public final class LLMService {
                 """
                 : ""
 
-            let firebasePersistenceInstructions = turnIntent == .mutatingWork
+            // Agent mode always gets implementation-level Firebase guidance when
+            // structured tools are on. Ask/Plan modes never reach this block.
+            let firebasePersistenceInstructions = chatMode == .agent || purpose == .onboardingGuidedEdit
                 ? """
                 - For Firebase/Firestore persistence, edit the Mini-App **code section** (inline JavaScript): use `window.__caocapFirestore` (and optional `window.__caocapFirestoreDefaultPath`) as described in canvas context; use compat-style `collection`/`doc`/`set`/`add`/`update` calls after null-checks.
                 """
@@ -543,11 +535,11 @@ public final class LLMService {
             // the XML schema block is omitted entirely; the XML parser stays
             // in place as a silent fallback for models that still emit it.
             let mutatingCommandRule = nodeEditToolsEnabled
-                ? "- For any explicit command to build, make, create, add, change, update, fix, remove, style, implement, document, write to the canvas, or improve existing canvas content, you MUST call `propose_node_edit` with concrete operations."
-                : "- For any explicit command to build, make, create, add, change, update, fix, remove, style, implement, document, write to the canvas, or improve existing canvas content, you MUST append an XML block named `cocaptain_actions` with concrete `node_edits`."
+                ? "- When the user wants a canvas change (build, rename, restyle, fix, add, remove, or similar), call `propose_node_edit` with concrete operations. Do not wait for specific verbs — act on the requested outcome."
+                : "- When the user wants a canvas change (build, rename, restyle, fix, add, remove, or similar), append an XML block named `cocaptain_actions` with concrete `node_edits`. Do not wait for specific verbs — act on the requested outcome."
             let adviceOnlyRule = nodeEditToolsEnabled
-                ? "- If you are only answering a question, providing advice, or discussing ideas (e.g., 'What game should we make?'), do NOT call `propose_node_edit`."
-                : "- If you are only answering a question, providing advice, or discussing ideas (e.g., 'What game should we make?'), do NOT include a `cocaptain_actions` block."
+                ? "- If you are only answering a question, providing advice, or discussing ideas (e.g., 'What game should we make?'), do NOT call `propose_node_edit`. Pure chat without an edit is allowed."
+                : "- If you are only answering a question, providing advice, or discussing ideas (e.g., 'What game should we make?'), do NOT include a `cocaptain_actions` block. Pure chat without an edit is allowed."
             let noEditsForQuestionsRule = nodeEditToolsEnabled
                 ? "- If the user is only asking a question, asking for advice, or asking for an opinion, do not request app actions and do not propose node edits."
                 : "- If the user is only asking a question, asking for advice, or asking for an opinion, do not request app actions and do not append `cocaptain_actions`."
@@ -590,13 +582,6 @@ public final class LLMService {
                         <target>exact text (only for exact operations)</target>
                         <content><![CDATA[new content]]></content>
                       </operation>
-                      <verification_checks>
-                        <verification_check id="unique-id" description="behavior being checked">
-                          <script><![CDATA[
-                            return document.querySelector("selector") !== null;
-                          ]]></script>
-                        </verification_check>
-                      </verification_checks>
                       <learning_note concept="short concept name">2-3 plain sentences about what this change teaches, using the user's own app.</learning_note>
                     </node_edit>
                   </node_edits>
@@ -643,10 +628,7 @@ public final class LLMService {
                 - Every node edit needs a non-empty summary and at least one operation.
                 - Exact operations require a non-empty `target`; append/prepend/replace_all do not.
                 - Targets are resolved flexibly: generic words like "title", "headline", or "heading" automatically resolve to the page's main `h1` heading, so pass the user's own words as the target instead of guessing between `<title>` and `<h1>`.
-                - For existing mini-app code sections at or below 200 lines or 8 KB, prefer `replace_all` with the full updated document plus verification checks instead of `replace_exact` for small text tweaks.
-                - When editing an existing non-empty Mini-App code section, include 1 to 5 behavioral verification checks.
-                - Each verification script must be offline, deterministic, and return the Boolean value `true` only when its described behavior works.
-                - Verification scripts may inspect the DOM and simulate local interactions, but must not use Firebase, network requests, remote resources, timers longer than 2 seconds, or external services.
+                - For small text tweaks on existing Mini-App code, prefer `replace_exact` (or a focused `replace_all` when rewriting a short document).
                 \(learningNoteRule)\(xmlSchemaBlock)
                 """
             )
@@ -656,8 +638,10 @@ public final class LLMService {
             parts.append(purposeInstructions)
         }
 
-        if let intentInstructions = turnIntent.promptInstructions {
-            parts.append(intentInstructions)
+        // Onboarding purposes already encode conversational posture; only append
+        // Ask instructions for standard turns so they do not fight onboarding copy.
+        if purpose == .standard, let modeInstructions = chatMode.promptInstructions {
+            parts.append(modeInstructions)
         }
 
         parts.append("User request:\n\(userMessage)")
