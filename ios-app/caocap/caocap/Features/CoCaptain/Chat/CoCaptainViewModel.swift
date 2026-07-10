@@ -45,9 +45,6 @@ public final class CoCaptainViewModel {
     public var isThinking: Bool = false
     /// Selected CoCaptain chat mode. Defaults to Agent; composer persists via `CoCaptainChatMode.storageKey`.
     public var chatMode: CoCaptainChatMode = .agent
-    /// Project-scope @ pin: focuses prompt context on one node without entering node chat.
-    /// Cleared when switching projects or entering a node-scoped session.
-    public var pinnedContextNodeID: UUID?
     /// The cumulative number of completed assistant turns/responses. This increments whenever a model
     /// streaming task, execution result, or local command finishes. Used to synchronize onboarding prompts.
     public private(set) var completedAssistantResponseCount: Int = 0
@@ -122,7 +119,6 @@ public final class CoCaptainViewModel {
     public func configureProjectSession(store: ProjectStore?, dispatcher: (any AppActionPerforming)?) {
         self.scope = .project
         self.focusedNodeID = nil
-        self.pinnedContextNodeID = nil
         self.store = store
         self.actionDispatcher = dispatcher
     }
@@ -138,30 +134,13 @@ public final class CoCaptainViewModel {
 
         self.scope = newScope
         self.focusedNodeID = nodeID
-        self.pinnedContextNodeID = nil
         self.store = store
         self.actionDispatcher = dispatcher
         loadPersistedNodeMessages(nodeID: nodeID)
         runAnalysis()
     }
 
-    /// Pins project-scope prompt context to a canvas node. No-op in node-scoped sessions.
-    public func pinContext(to nodeID: UUID?) {
-        guard scope == .project else { return }
-        if let nodeID {
-            guard store?.nodes.contains(where: { $0.id == nodeID }) == true else {
-                pinnedContextNodeID = nil
-                return
-            }
-        }
-        pinnedContextNodeID = nodeID
-    }
-
-    public func clearPinnedContext() {
-        pinnedContextNodeID = nil
-    }
-
-    /// Nodes available for the @ pin menu (Mini-Apps first, then others).
+    /// Nodes available for inline @ mention suggestions (Mini-Apps first, then others).
     public var pinnableContextNodes: [SpatialNode] {
         guard scope == .project, let nodes = store?.nodes else { return [] }
         return nodes.sorted { lhs, rhs in
@@ -169,11 +148,6 @@ public final class CoCaptainViewModel {
             if lhs.type != .miniApp && rhs.type == .miniApp { return false }
             return lhs.displayTitle.localizedCaseInsensitiveCompare(rhs.displayTitle) == .orderedAscending
         }
-    }
-
-    public var pinnedContextNode: SpatialNode? {
-        guard let pinnedContextNodeID else { return nil }
-        return store?.nodes.first(where: { $0.id == pinnedContextNodeID })
     }
 
     public func setPresented(_ presented: Bool) {
@@ -217,12 +191,19 @@ public final class CoCaptainViewModel {
 
     public func sendMessage(
         _ text: String,
+        mentions: [CoCaptainNodeMention] = [],
+        attachments: [CoCaptainAttachment] = [],
         purpose: CoCaptainTurnPurpose = .standard
     ) {
         guard !isThinking else { return }
 
         let turnID = UUID()
-        let userItem = ChatBubbleItem(text: text, isUser: true)
+        let userItem = ChatBubbleItem(
+            text: text,
+            isUser: true,
+            mentions: mentions,
+            attachments: attachments
+        )
         items.append(CoCaptainTimelineItem(content: .message(userItem)))
         persistNodeMessageIfNeeded(userItem)
         requestScrollToBottom()
@@ -252,15 +233,11 @@ public final class CoCaptainViewModel {
                     purpose: purpose,
                     mode: chatMode
                 )
-                // Drop a stale pin if the node was deleted since it was chosen.
-                if let pin = pinnedContextNodeID,
-                   store?.nodes.contains(where: { $0.id == pin }) != true {
-                    pinnedContextNodeID = nil
-                }
-                let contextFocus: UUID? = {
-                    if case .project = scope { return pinnedContextNodeID }
-                    return nil
-                }()
+                let contextFocus = scope == .project
+                    ? mentions.map(\.nodeID).filter { nodeID in
+                        store?.nodes.contains(where: { $0.id == nodeID }) == true
+                    }
+                    : []
 
                 let result = try await agentCoordinator.run(
                     userMessage: text,
@@ -269,7 +246,8 @@ public final class CoCaptainViewModel {
                     scope: scope,
                     purpose: purpose,
                     turnPlan: turnPlan,
-                    contextFocusNodeID: contextFocus,
+                    contextFocusNodeIDs: Array(Set(contextFocus)),
+                    attachments: attachments,
                     onVisibleText: { [weak self] visible in
                         guard let self else { return }
                         // Adapter strips machine payloads (XML fences); only prose reaches the bubble.
@@ -681,7 +659,6 @@ public final class CoCaptainViewModel {
             streamingTask?.cancel()
             streamingTask = nil
             isThinking = false
-            pinnedContextNodeID = nil
             clearHistory()
         }
         
@@ -897,7 +874,13 @@ public final class CoCaptainViewModel {
         guard case .node(let nodeID) = scope else { return }
         store?.appendNodeAgentMessage(
             id: nodeID,
-            message: NodeAgentMessage(id: bubble.id, text: bubble.text, isUser: bubble.isUser)
+            message: NodeAgentMessage(
+                id: bubble.id,
+                text: bubble.text,
+                isUser: bubble.isUser,
+                mentions: bubble.mentions,
+                attachments: bubble.attachments
+            )
         )
     }
 
@@ -913,7 +896,15 @@ public final class CoCaptainViewModel {
                 message.createdAt,
                 CoCaptainTimelineItem(
                     id: message.id,
-                    content: .message(ChatBubbleItem(id: message.id, text: message.text, isUser: message.isUser))
+                    content: .message(
+                        ChatBubbleItem(
+                            id: message.id,
+                            text: message.text,
+                            isUser: message.isUser,
+                            mentions: message.mentions,
+                            attachments: message.attachments
+                        )
+                    )
                 )
             )
         }

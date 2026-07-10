@@ -10,6 +10,8 @@ struct NodeAgentChatView: View {
 
     @State private var viewModel = CoCaptainViewModel()
     @State private var text = ""
+    @State private var mentions: [CoCaptainNodeMention] = []
+    @State private var attachments: [CoCaptainAttachment] = []
     @FocusState private var isFocused: Bool
     @AppStorage(CoCaptainChatMode.storageKey) private var chatModeRawValue = CoCaptainChatMode.agent.rawValue
 
@@ -38,7 +40,8 @@ struct NodeAgentChatView: View {
             CoCaptainInputComposer(
                 text: $text,
                 chatMode: chatModeBinding,
-                pinnedContextNodeID: $viewModel.pinnedContextNodeID,
+                mentions: $mentions,
+                attachments: $attachments,
                 isFocused: $isFocused,
                 store: store,
                 allowsContextPinning: false,
@@ -92,10 +95,12 @@ struct NodeAgentChatView: View {
     /// Submits the user's typed input to the local node agent.
     private func sendCurrentMessage() {
         let prompt = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !prompt.isEmpty, !viewModel.isThinking else { return }
+        guard (!prompt.isEmpty || !attachments.isEmpty), !viewModel.isThinking else { return }
+        let submittedPrompt = prompt.isEmpty ? "Review the attached files." : prompt
 
-        viewModel.sendMessage(prompt)
+        viewModel.sendMessage(submittedPrompt, attachments: attachments)
         text = ""
+        attachments = []
         isFocused = false
     }
 
@@ -104,6 +109,7 @@ struct NodeAgentChatView: View {
         guard !viewModel.isThinking else { return }
 
         text = ""
+        attachments = []
         isFocused = false
         viewModel.sendMessage(prompt)
     }

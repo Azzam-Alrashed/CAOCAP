@@ -261,7 +261,7 @@ Decoupled backend engines and API clients specific to the CoCaptain agentic flow
 
 | File | Responsibility |
 |---|---|
-| `LLMService.swift` | Interface for the Firebase AI Logic SDK. Manages streaming sessions with the Gemini backend. Also coordinates local on-device MLX model download and inference. |
+| `LLMService.swift` | Interface for the Firebase AI Logic SDK. Manages streaming and multimodal attachment turns with the Gemini backend. Also coordinates local on-device MLX model download and inference. |
 | `TokenUsageLimiter.swift` | Local estimated-token quota tracker for free CoCaptain and AI node usage; Pro entitlements bypass the free monthly cap. |
 | `CommandIntentResolver.swift` | Maps plain-language command palette and CoCaptain prompts to available app actions. |
 | `ProjectContextBuilder.swift` | Logic to "harvest" the spatial graph and serialize it into a grounded prompt context for the LLM. |
@@ -385,7 +385,7 @@ The agentic AI companion. A native sheet interface for real-time collaboration.
 
 | Folder/File | Responsibility |
 |---|---|
-| `Chat/` | CoCaptain sheet UI, chat timeline, bubbles, two-row prompt composer with Agent/Ask/Plan mode + optional `@` pin (`cocaptain.chatMode`), clarifying-question option cards, and view-model state (including local clarification resolution). |
+| `Chat/` | CoCaptain sheet UI, chat timeline, bubbles, two-row prompt composer with Agent/Ask/Plan mode, inline multi-node `@` mentions, image/file attachments, clarifying-question option cards, and view-model state (including local clarification resolution). |
 | `AgentContract/` | Model-output adapter, XML parser (including the `clarifying_question` element), validator, coordinator, and shared agent/review/timeline models including `CoCaptainChatMode` and turn execution policy. Mode is user-selected (not keyword-classified). |
 | `Review/` | Review bundle and pending edit/action cards for human approval, including the "Which one did you mean?" candidate picker for ambiguous edit targets. |
 | `Analysis/` | Structural parser warnings and recommendations from the analyzer. |

@@ -124,6 +124,30 @@ public final class LLMService {
         chatMode: CoCaptainChatMode = .agent,
         toolExecutor: CoCaptainToolExecutor? = nil
     ) -> AsyncThrowingStream<CoCaptainLLMStreamEvent, Error> {
+        streamAgentEvents(
+            for: userMessage,
+            attachments: [],
+            context: context,
+            expectsStructuredResponse: expectsStructuredResponse,
+            availableActions: availableActions,
+            scope: scope,
+            purpose: purpose,
+            chatMode: chatMode,
+            toolExecutor: toolExecutor
+        )
+    }
+
+    public func streamAgentEvents(
+        for userMessage: String,
+        attachments: [CoCaptainAttachment],
+        context: String?,
+        expectsStructuredResponse: Bool,
+        availableActions: [AppActionDefinition],
+        scope: CoCaptainAgentScope = .project,
+        purpose: CoCaptainTurnPurpose = .standard,
+        chatMode: CoCaptainChatMode = .agent,
+        toolExecutor: CoCaptainToolExecutor? = nil
+    ) -> AsyncThrowingStream<CoCaptainLLMStreamEvent, Error> {
         let prompt = buildPrompt(
             userMessage: userMessage,
             context: context,
@@ -138,6 +162,17 @@ public final class LLMService {
         let isLocal = currentPreferred == "gemma-4-local"
 
         if isLocal {
+            if !attachments.isEmpty {
+                return AsyncThrowingStream { continuation in
+                    continuation.finish(
+                        throwing: NSError(
+                            domain: "LLMService",
+                            code: -2,
+                            userInfo: [NSLocalizedDescriptionKey: "Attachments require a Gemini model. Choose a cloud model and try again; your draft is still available."]
+                        )
+                    )
+                }
+            }
             return AsyncThrowingStream { continuation in
                 let task = Task {
                     do {
@@ -210,8 +245,14 @@ public final class LLMService {
                         let stream: AsyncThrowingStream<GenerateContentResponse, Error>
                         if let message = nextToolResponseMessage {
                             stream = try session.sendMessageStream(message)
-                        } else {
+                        } else if attachments.isEmpty {
                             stream = try session.sendMessageStream(prompt)
+                        } else {
+                            var parts: [any Part] = [TextPart(prompt)]
+                            parts.append(contentsOf: attachments.map {
+                                InlineDataPart(data: $0.data, mimeType: $0.mimeType)
+                            })
+                            stream = try session.sendMessageStream([ModelContent(parts: parts)])
                         }
                         nextToolResponseMessage = nil
 

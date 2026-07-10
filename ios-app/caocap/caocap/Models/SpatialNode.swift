@@ -142,6 +142,33 @@ public struct MiniAppState: Codable, Equatable, Hashable {
 }
 
 /// A single message in a node-scoped CoCaptain conversation.
+public struct CoCaptainNodeMention: Codable, Hashable, Identifiable {
+    public let nodeID: UUID
+    public let displayTitle: String
+    public var id: UUID { nodeID }
+
+    public init(nodeID: UUID, displayTitle: String) {
+        self.nodeID = nodeID
+        self.displayTitle = displayTitle
+    }
+}
+
+public struct CoCaptainAttachment: Codable, Hashable, Identifiable {
+    public let id: UUID
+    public let fileName: String
+    public let mimeType: String
+    public let data: Data
+
+    public init(id: UUID = UUID(), fileName: String, mimeType: String, data: Data) {
+        self.id = id
+        self.fileName = fileName
+        self.mimeType = mimeType
+        self.data = data
+    }
+
+    public var isImage: Bool { mimeType.hasPrefix("image/") }
+}
+
 public struct NodeAgentMessage: Identifiable, Codable, Equatable, Hashable {
     public let id: UUID
     /// The message body text (may contain Markdown).
@@ -149,12 +176,35 @@ public struct NodeAgentMessage: Identifiable, Codable, Equatable, Hashable {
     /// `true` when authored by the user; `false` for assistant responses.
     public var isUser: Bool
     public var createdAt: Date
+    public var mentions: [CoCaptainNodeMention]
+    public var attachments: [CoCaptainAttachment]
 
-    public init(id: UUID = UUID(), text: String, isUser: Bool, createdAt: Date = Date()) {
+    public init(
+        id: UUID = UUID(),
+        text: String,
+        isUser: Bool,
+        createdAt: Date = Date(),
+        mentions: [CoCaptainNodeMention] = [],
+        attachments: [CoCaptainAttachment] = []
+    ) {
         self.id = id
         self.text = text
         self.isUser = isUser
         self.createdAt = createdAt
+        self.mentions = mentions
+        self.attachments = attachments
+    }
+
+    private enum CodingKeys: String, CodingKey { case id, text, isUser, createdAt, mentions, attachments }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        text = try container.decode(String.self, forKey: .text)
+        isUser = try container.decode(Bool.self, forKey: .isUser)
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        mentions = try container.decodeIfPresent([CoCaptainNodeMention].self, forKey: .mentions) ?? []
+        attachments = try container.decodeIfPresent([CoCaptainAttachment].self, forKey: .attachments) ?? []
     }
 }
 

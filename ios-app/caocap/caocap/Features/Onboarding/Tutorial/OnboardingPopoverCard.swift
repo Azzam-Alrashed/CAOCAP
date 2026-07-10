@@ -371,16 +371,11 @@ extension OnboardingCoordinator.Step {
         switch self {
         case .dismissCoCaptain, .pinchZoom, .reviewCoCaptainChange:
             return .top
-        case .applyCoCaptainChange:
-            // Apply All sits at the bottom of a potentially tall review bundle.
-            // Keep the Step 6 tooltip above the action so safe-area clamping cannot
-            // push the card back over the button it asks the user to tap.
-            return .bottom
         case .openTutorial, .tapFAB, .typeCoCaptainPrompt, .submitCoCaptainPrompt, .chatCoCaptain,
              .longPressFAB, .returnToRoot, .typeGoBackInOmnibox, .tapGoBackAction, .panCanvas, .fitAllNodes, .searchFlyToNode, .openPortal,
              .tapMiniAppNode, .interactMiniAppPreview, .openMiniAppCodeTool, .openHelpCenter, .browseHelpGuides, .chatCoCaptainGameEdit,
              .saveMiniAppCodeEdit, .returnFromMiniAppPreview, .dragCanvasNode,
-             .runOrganizeNodes, .undoCanvasEdit, .redoCanvasEdit:
+             .runOrganizeNodes, .undoCanvasEdit, .redoCanvasEdit, .applyCoCaptainChange:
             return .bottom
         }
     }

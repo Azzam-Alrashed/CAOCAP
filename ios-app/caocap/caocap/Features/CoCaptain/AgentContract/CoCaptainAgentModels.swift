@@ -888,11 +888,21 @@ public struct ChatBubbleItem: Identifiable, Hashable {
     public var text: String
     /// `true` when this bubble originates from the user, `false` for the assistant.
     public let isUser: Bool
+    public let mentions: [CoCaptainNodeMention]
+    public let attachments: [CoCaptainAttachment]
 
-    public init(id: UUID = UUID(), text: String, isUser: Bool) {
+    public init(
+        id: UUID = UUID(),
+        text: String,
+        isUser: Bool,
+        mentions: [CoCaptainNodeMention] = [],
+        attachments: [CoCaptainAttachment] = []
+    ) {
         self.id = id
         self.text = text
         self.isUser = isUser
+        self.mentions = mentions
+        self.attachments = attachments
     }
 
     /// The message rendered as an `AttributedString` with full markdown support.

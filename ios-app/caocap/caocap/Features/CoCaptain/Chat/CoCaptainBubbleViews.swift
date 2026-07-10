@@ -44,11 +44,16 @@ struct ChatBubbleView: View {
             }
 
             VStack(alignment: message.isUser ? .trailing : .leading, spacing: 4) {
-                ChatBubbleText(message: message)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(messageBackground)
-                    .foregroundColor(message.isUser ? .white : .primary)
+                if !message.attachments.isEmpty {
+                    attachmentGrid
+                }
+                if !message.text.isEmpty {
+                    ChatBubbleText(message: message)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(messageBackground)
+                        .foregroundColor(message.isUser ? .white : .primary)
+                }
             }
 
             if message.isUser {
@@ -67,6 +72,27 @@ struct ChatBubbleView: View {
             }
         }
         .transition(.asymmetric(insertion: .push(from: .bottom).combined(with: .opacity), removal: .opacity))
+    }
+
+    private var attachmentGrid: some View {
+        VStack(alignment: message.isUser ? .trailing : .leading, spacing: 6) {
+            ForEach(message.attachments) { attachment in
+                if attachment.isImage, let image = UIImage(data: attachment.data) {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: 220, maxHeight: 180)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .accessibilityLabel(attachment.fileName)
+                } else {
+                    Label(attachment.fileName, systemImage: "doc.fill")
+                        .font(.caption)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(Color.primary.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+                }
+            }
+        }
     }
 
     @ViewBuilder
