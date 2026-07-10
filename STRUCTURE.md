@@ -347,7 +347,7 @@ The spatial runtime — the heart of CAOCAP.
 | File | Responsibility |
 |---|---|
 | `NodeView.swift` | Renders a single `SpatialNode` on the canvas. Mini-App nodes show the live 9:16 preview; the protected Activity node shows recent save history. |
-| `NodeDetailView.swift` | Opens Mini-App nodes into a full-screen running preview with Mini-App-scoped FAB actions for SRS, Code, Firebase, Agent, Settings, Publish, and Back to Canvas. |
+| `NodeDetailView.swift` | Opens Mini-App nodes into a large-sheet running preview with Mini-App-scoped FAB actions for SRS, Code, Firebase, Agent, Settings, Publish, and Back to Canvas. |
 | `MiniAppPublishView.swift` | Pro-gated publish sheet: GitHub connect, repo push, GitHub Pages, Safari Home Screen install guide. |
 | `NodeFrameData.swift` | Preference-key plumbing that reports rendered node frames so connection arrows can target real node centers. |
 | `ConnectionLayer.swift` | Draws Bezier-curve connections for all `connectedNodeIds` relationships. Operates in screen-space to prevent clipping. |

@@ -3,7 +3,7 @@ import WebKit
 
 /// A thin `UIViewRepresentable` wrapper around `WKWebView` that renders an HTML
 /// string inline inside a SwiftUI view. Used to display compiled Mini-App output
-/// both as a scaled thumbnail inside `NodeView` and as a full-screen preview inside
+/// both as a scaled thumbnail inside `NodeView` and as a large-sheet preview inside
 /// `MiniAppPreviewShell`.
 struct HTMLWebView: UIViewRepresentable {
     /// The complete HTML string to render, typically the `compiledHTML` of a

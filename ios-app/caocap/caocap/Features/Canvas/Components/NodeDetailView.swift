@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Opens a canvas node. Mini-App nodes enter a full-screen running preview with
+/// Opens a canvas node. Mini-App nodes enter a large-sheet running preview with
 /// Mini-App tools behind the floating command button.
 struct NodeDetailView: View {
     /// The canvas node whose detail is being shown. Used as the initial value;
@@ -63,7 +63,7 @@ private enum MiniAppTool: String, Identifiable {
     }
 }
 
-/// Full-screen shell that hosts the live Mini-App HTML preview and surfaces all
+/// Large-sheet shell that hosts the live Mini-App HTML preview and surfaces all
 /// Mini-App tools through the shared omnibox and floating command button.
 private struct MiniAppPreviewShell: View {
     let node: SpatialNode

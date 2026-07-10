@@ -2,7 +2,7 @@ import SwiftUI
 import Observation
 import OSLog
 
-/// Mini-App preview tools surfaced in the omnibox while a full-screen preview is open.
+/// Mini-App preview tools surfaced in the omnibox while a large-sheet preview is open.
 public enum MiniAppPreviewTool: String, CaseIterable, Identifiable {
     case srs
     case code

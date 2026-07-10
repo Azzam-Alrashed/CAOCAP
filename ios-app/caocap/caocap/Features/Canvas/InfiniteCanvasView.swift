@@ -57,7 +57,7 @@ struct InfiniteCanvasView: View {
     /// The node currently presented in the detail sheet context menu/inspector.
     @State private var selectedNode: SpatialNode?
     /// The mini-app node currently presented in a full-screen editing experience.
-    @State private var fullScreenMiniApp: SpatialNode?
+    @State private var presentedMiniApp: SpatialNode?
     /// Temporary translation offsets applied to nodes currently being dragged.
     @State private var nodeDragOffsets: [UUID: CGSize] = [:]
     /// Flag indicating an active node drag, used to disable canvas panning during the gesture.
@@ -197,18 +197,20 @@ struct InfiniteCanvasView: View {
                 onFlyToNode: handleFlyToFromDetail
             )
         }
-        .fullScreenCover(item: $fullScreenMiniApp) { node in
+        .sheet(item: $presentedMiniApp) { node in
             NodeDetailView(
                 node: node,
                 store: store,
                 commandPalette: commandPalette,
                 onFlyToNode: handleFlyToFromDetail
             )
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
         }
         .onAppear {
             currentScale = viewport.scale
         }
-        .onChange(of: fullScreenMiniApp?.id) { _, nodeID in
+        .onChange(of: presentedMiniApp?.id) { _, nodeID in
             guard nodeID == TutorialCanvasProvider.miniAppNodeID,
                   onboarding?.currentStep == .tapMiniAppNode else { return }
             onboarding?.completeCurrentStep()
@@ -306,7 +308,7 @@ struct InfiniteCanvasView: View {
             } else if node.type == .subCanvas, let fileName = node.linkedCanvasFileName {
                 onNavigateToSubCanvas?(fileName)
             } else if node.type == .miniApp {
-                fullScreenMiniApp = node
+                presentedMiniApp = node
             } else {
                 selectedNode = node
             }
@@ -381,7 +383,7 @@ struct InfiniteCanvasView: View {
     /// Dismisses node detail chrome, then flies the workspace camera to the target node.
     private func handleFlyToFromDetail(_ nodeID: UUID) {
         selectedNode = nil
-        fullScreenMiniApp = nil
+        presentedMiniApp = nil
         onFlyToNode?(nodeID)
     }
 
