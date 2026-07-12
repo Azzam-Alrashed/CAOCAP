@@ -62,8 +62,8 @@ struct InfiniteCanvasView: View {
     @State private var nodeDragOffsets: [UUID: CGSize] = [:]
     /// Flag indicating an active node drag, used to disable canvas panning during the gesture.
     @State private var isDraggingNode = false
-    /// Caches rendered dimensions of nodes to calculate precise fly-to padding.
-    @State private var nodeFrames: [UUID: NodeFrameData] = [:]
+    /// Caches intrinsic node dimensions for fly-to and onboarding geometry.
+    @State private var nodeSizes: [UUID: CGSize] = [:]
 
     private var shouldAnchorTutorialNode: Bool {
         guard let step = onboarding?.currentStep else { return false }
@@ -98,8 +98,7 @@ struct InfiniteCanvasView: View {
                     dragOffsets: nodeDragOffsets,
                     viewport: viewport,
                     center: center,
-                    activeAgentStates: store.activeAgentStates,
-                    nodeFrames: nodeFrames
+                    activeAgentStates: store.activeAgentStates
                 )
                 
                 // Layer 3: The Spatial Core (Scaled & Offset)
@@ -190,8 +189,8 @@ struct InfiniteCanvasView: View {
                         completeOnboardingPinchIfNeeded()
                     }
             )
-            .onPreferenceChange(NodeFramePreferenceKey.self) { value in
-                nodeFrames = value
+            .onPreferenceChange(NodeSizePreferenceKey.self) { value in
+                nodeSizes = value
             }
         }
         .background(backgroundColor)
@@ -269,22 +268,22 @@ struct InfiniteCanvasView: View {
         ]
 
         if shouldAnchorTutorialNode,
-           let frameData = nodeFrames[RootCanvasProvider.tutorialNodeID] {
-            frames[.tutorialNode] = frameData.frame
+           let frame = screenFrame(for: RootCanvasProvider.tutorialNodeID, canvasSize: canvasSize) {
+            frames[.tutorialNode] = frame
         }
 
         if onboarding?.currentStep == .openPortal {
-            if let frameData = nodeFrames[RootCanvasProvider.pacManNodeID] {
-                frames[.demoGameNode] = frameData.frame
-            } else if let frameData = nodeFrames[RootCanvasProvider.xoNodeID] {
-                frames[.demoGameNode] = frameData.frame
+            if let frame = screenFrame(for: RootCanvasProvider.pacManNodeID, canvasSize: canvasSize) {
+                frames[.demoGameNode] = frame
+            } else if let frame = screenFrame(for: RootCanvasProvider.xoNodeID, canvasSize: canvasSize) {
+                frames[.demoGameNode] = frame
             }
         }
 
         if let step = onboarding?.currentStep,
            step == .tapMiniAppNode || step == .dragCanvasNode,
-           let frameData = nodeFrames[TutorialCanvasProvider.miniAppNodeID] {
-            frames[.practiceCanvasNode] = frameData.frame
+           let frame = screenFrame(for: TutorialCanvasProvider.miniAppNodeID, canvasSize: canvasSize) {
+            frames[.practiceCanvasNode] = frame
         }
 
         return frames
@@ -384,13 +383,39 @@ struct InfiniteCanvasView: View {
     ///   - containerSize: The physical screen dimensions available.
     /// - Returns: A zoom scale factor capped at 1.2x.
     private func computeTargetScale(for nodeId: UUID, containerSize: CGSize) -> CGFloat {
-        guard let frameData = nodeFrames[nodeId], containerSize != .zero else {
+        guard let nodeSize = nodeSizes[nodeId], containerSize != .zero else {
             return 1.0
         }
         let paddingFactor: CGFloat = 0.8
-        let scaleX = (containerSize.width * paddingFactor) / frameData.size.width
-        let scaleY = (containerSize.height * paddingFactor) / frameData.size.height
+        let scaleX = (containerSize.width * paddingFactor) / nodeSize.width
+        let scaleY = (containerSize.height * paddingFactor) / nodeSize.height
         return min(min(scaleX, scaleY), 1.2)
+    }
+
+    private func screenFrame(for nodeId: UUID, canvasSize: CGSize) -> CGRect? {
+        guard let node = store.nodes.first(where: { $0.id == nodeId }),
+              let nodeSize = nodeSizes[nodeId] else {
+            return nil
+        }
+
+        let center = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
+        let dragOffset = nodeDragOffsets[nodeId] ?? .zero
+        let screenCenter = viewport.screenPoint(
+            for: node.position,
+            canvasCenter: center,
+            additionalOffset: dragOffset
+        )
+        let scaledSize = CGSize(
+            width: nodeSize.width * viewport.scale,
+            height: nodeSize.height * viewport.scale
+        )
+
+        return CGRect(
+            x: screenCenter.x - scaledSize.width / 2,
+            y: screenCenter.y - scaledSize.height / 2,
+            width: scaledSize.width,
+            height: scaledSize.height
+        )
     }
 }
 
@@ -460,7 +485,7 @@ private struct CanvasNodeLayer: View, Equatable {
                 Label("Inspect", systemImage: "info.circle")
             }
         }, preview: {
-            NodeView(node: node)
+            NodeView(node: node, reportsSize: false)
                 .environment(\.colorScheme, .dark)
                 .frame(width: 280)
                 .padding()

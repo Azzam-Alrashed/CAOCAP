@@ -15,10 +15,13 @@ struct NodeView: View, Equatable {
     var agentState: AgentExecutionState = .idle
     /// Brief pulse ring after fly-to navigation from CoCaptain or search.
     var isTransientlyFocused: Bool = false
+    /// Context-menu previews reuse this view but must not publish canvas geometry.
+    var reportsSize: Bool = true
     @State private var isHovering = false
     /// Drives the repeating animation of the "thinking" state border overlay.
     @State private var isPulsing = false
     @State private var isFocusPulsing = false
+    @State private var measuredSize: CGSize = .zero
     @AppStorage(LocalizationManager.languageStorageKey) private var selectedLanguage = "English"
 
     static func == (lhs: NodeView, rhs: NodeView) -> Bool {
@@ -26,6 +29,7 @@ struct NodeView: View, Equatable {
             && lhs.isDragging == rhs.isDragging
             && lhs.agentState == rhs.agentState
             && lhs.isTransientlyFocused == rhs.isTransientlyFocused
+            && lhs.reportsSize == rhs.reportsSize
     }
     
     var body: some View {
@@ -131,17 +135,16 @@ struct NodeView: View, Equatable {
                 isFocusPulsing = false
             }
         }
-        .background(
-            GeometryReader { geometry in
-                Color.clear.preference(
-                    key: NodeFramePreferenceKey.self,
-                    value: [node.id: NodeFrameData(
-                        nodeId: node.id,
-                        frame: geometry.frame(in: .named("canvas")),
-                        size: geometry.size
-                    )]
-                )
+        .onGeometryChange(for: CGSize.self) { geometry in
+            geometry.size
+        } action: { size in
+            if reportsSize && measuredSize != size {
+                measuredSize = size
             }
+        }
+        .preference(
+            key: NodeSizePreferenceKey.self,
+            value: reportsSize && measuredSize != .zero ? [node.id: measuredSize] : [:]
         )
         .scaleEffect(isDragging ? 1.05 : (isHovering ? 1.02 : 1.0))
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isDragging)

@@ -97,6 +97,23 @@ public class ViewportState {
         self.lastOffset = newOffset
     }
 
+    /// Converts a canvas-space node position into the visible canvas coordinate
+    /// space without requiring a per-node geometry measurement.
+    func screenPoint(
+        for canvasPosition: CGPoint,
+        canvasCenter: CGPoint,
+        additionalOffset: CGSize = .zero
+    ) -> CGPoint {
+        CGPoint(
+            x: canvasCenter.x
+                + (canvasPosition.x + additionalOffset.width) * scale
+                + offset.width,
+            y: canvasCenter.y
+                + (canvasPosition.y + additionalOffset.height) * scale
+                + offset.height
+        )
+    }
+
     /// Fits all node positions into the viewport with padding.
     /// Assumes containerSize represents the visible canvas container.
     public func fitTo(nodes: [SpatialNode], containerSize: CGSize, padding: CGFloat = 80) {

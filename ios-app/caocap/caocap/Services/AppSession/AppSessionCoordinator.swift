@@ -30,7 +30,7 @@ final class AppSessionCoordinator {
     var isLaunching = true
     var appUpdateService = AppUpdateService.shared
     var viewport = ViewportState()
-    var nodeFrames: [UUID: NodeFrameData] = [:]
+    var nodeSizes: [UUID: CGSize] = [:]
     var containerSize: CGSize = .zero
     /// Briefly highlights a node after fly-to navigation from CoCaptain or the command palette.
     var canvasFocusNodeID: UUID?
@@ -310,7 +310,7 @@ final class AppSessionCoordinator {
         }
         viewport = ViewportState()
         currentScale = 1
-        nodeFrames = [:]
+        nodeSizes = [:]
         onboardingInitialCoCaptainSuccessBaseline = nil
         actionsConfigured = false
 
@@ -322,8 +322,8 @@ final class AppSessionCoordinator {
         isLaunching = false
     }
 
-    func updateNodeFrames(_ frames: [UUID: NodeFrameData]) {
-        nodeFrames = frames
+    func updateNodeSizes(_ sizes: [UUID: CGSize]) {
+        nodeSizes = sizes
     }
 
     // MARK: - Undo
@@ -558,8 +558,8 @@ final class AppSessionCoordinator {
         guard containerSize != .zero else { return 1.0 }
 
         let size: CGSize
-        if let frameData = nodeFrames[nodeId] {
-            size = frameData.size
+        if let measuredSize = nodeSizes[nodeId] {
+            size = measuredSize
         } else {
             switch node.type {
             case .miniApp:
