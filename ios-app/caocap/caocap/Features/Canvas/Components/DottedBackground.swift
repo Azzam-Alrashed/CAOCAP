@@ -46,15 +46,17 @@ struct DottedBackground: View {
                 let startX = ((offset.width + centerX).truncatingRemainder(dividingBy: scaledSpacing)) - scaledSpacing
                 let startY = ((offset.height + centerY).truncatingRemainder(dividingBy: scaledSpacing)) - scaledSpacing
                 
+                var dots = Path()
                 for x in stride(from: startX, through: size.width + scaledSpacing, by: scaledSpacing) {
                     for y in stride(from: startY, through: size.height + scaledSpacing, by: scaledSpacing) {
-                        // To avoid over-drawing dots that exist in sparser levels, 
-                        // we could add logic here, but for simple dots, overlapping is fine
-                        // and actually slightly sharpens the primary nodes.
                         let rect = CGRect(x: x, y: y, width: dotSize, height: dotSize)
-                        context.fill(Path(ellipseIn: rect), with: .color(color))
+                        dots.addEllipse(in: rect)
                     }
                 }
+
+                // Submit the complete level once instead of issuing a draw call
+                // for every visible dot on each pan or pinch update.
+                context.fill(dots, with: .color(color))
             }
             
             // Draw levels from sparsest to densest

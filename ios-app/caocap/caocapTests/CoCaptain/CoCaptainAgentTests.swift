@@ -2277,10 +2277,11 @@ struct CoCaptainAgentTests {
     }
 
     @MainActor
-    @Test func projectScopeContextPinUsesNodeFocusedPrompt() async throws {
+    @Test func projectScopeMentionsCombineMultipleNodeContexts() async throws {
         let store = makeStore()
         let miniAppID = try #require(store.nodes.first(where: { $0.type == .miniApp })?.id)
-        let llm = TestLLMClient(response: "Looking at the pinned Mini-App.")
+        let otherNodeID = try #require(store.nodes.first(where: { $0.id != miniAppID })?.id)
+        let llm = TestLLMClient(response: "Comparing the mentioned nodes.")
         let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
 
         _ = try await coordinator.run(
@@ -2289,25 +2290,36 @@ struct CoCaptainAgentTests {
             dispatcher: nil,
             scope: .project,
             turnPlan: CoCaptainTurnPlan(purpose: .standard, mode: .ask),
-            contextFocusNodeID: miniAppID
+            contextFocusNodeIDs: [miniAppID, otherNodeID]
         ) { _ in }
 
         let context = try #require(llm.receivedContexts.first ?? nil)
         #expect(context.contains("Selected Node ID: \(miniAppID.uuidString)"))
+        #expect(context.contains("Selected Node ID: \(otherNodeID.uuidString)"))
         #expect(context.contains("Selected Node Context:"))
     }
 
-    @MainActor
-    @Test func viewModelClearsContextPinWhenEnteringNodeSession() throws {
-        let store = makeStore()
-        let miniAppID = try #require(store.nodes.first(where: { $0.type == .miniApp })?.id)
-        let vm = CoCaptainViewModel()
-        vm.configureProjectSession(store: store, dispatcher: nil)
-        vm.pinContext(to: miniAppID)
-        #expect(vm.pinnedContextNodeID == miniAppID)
+    @Test func nodeAgentMessageRoundTripsMentionsAndAttachments() throws {
+        let nodeID = UUID()
+        let message = NodeAgentMessage(
+            text: "Compare @Preview",
+            isUser: true,
+            mentions: [CoCaptainNodeMention(nodeID: nodeID, displayTitle: "Preview")],
+            attachments: [
+                CoCaptainAttachment(
+                    fileName: "reference.txt",
+                    mimeType: "text/plain",
+                    data: Data("hello".utf8)
+                )
+            ]
+        )
 
-        vm.configureNodeSession(store: store, nodeID: miniAppID)
-        #expect(vm.pinnedContextNodeID == nil)
+        let decoded = try JSONDecoder().decode(
+            NodeAgentMessage.self,
+            from: JSONEncoder().encode(message)
+        )
+
+        #expect(decoded == message)
     }
 
     @MainActor

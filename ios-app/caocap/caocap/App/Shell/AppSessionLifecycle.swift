@@ -53,8 +53,8 @@ struct AppSessionLifecycle: ViewModifier {
             .onReceive(NotificationCenter.default.publisher(for: .performRedo)) { _ in
                 session.performRedo(undoManager: undoManager)
             }
-            .onPreferenceChange(NodeFramePreferenceKey.self) { value in
-                session.updateNodeFrames(value)
+            .onPreferenceChange(NodeSizePreferenceKey.self) { value in
+                session.updateNodeSizes(value)
             }
             .onChange(of: geometry.size) { _, newSize in
                 session.updateContainerSize(newSize)

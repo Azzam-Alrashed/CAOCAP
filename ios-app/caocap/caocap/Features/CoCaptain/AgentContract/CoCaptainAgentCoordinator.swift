@@ -159,7 +159,8 @@ public final class CoCaptainAgentCoordinator {
         scope: CoCaptainAgentScope = .project,
         purpose: CoCaptainTurnPurpose = .standard,
         turnPlan: CoCaptainTurnPlan? = nil,
-        contextFocusNodeID: UUID? = nil,
+        contextFocusNodeIDs: [UUID] = [],
+        attachments: [CoCaptainAttachment] = [],
         onVisibleText: @escaping (String) -> Void
     ) async throws -> CoCaptainAgentRunResult {
         let resolvedTurnPlan = turnPlan ?? CoCaptainTurnPlan(purpose: purpose, mode: .agent)
@@ -167,13 +168,14 @@ public final class CoCaptainAgentCoordinator {
         let context = store.map { store in
             switch scope {
             case .project:
-                // Optional @ pin focuses project chat on one node without switching session scope.
-                if let focusID = contextFocusNodeID {
-                    return contextBuilder.buildNodePromptContext(
+                if !contextFocusNodeIDs.isEmpty {
+                    return contextFocusNodeIDs.map { focusID in
+                        contextBuilder.buildNodePromptContext(
                         from: store,
                         nodeID: focusID,
                         detailLevel: contextDetailLevel
                     )
+                    }.joined(separator: "\n\n--- Mentioned node context ---\n\n")
                 }
                 return contextBuilder.buildPromptContext(from: store, detailLevel: contextDetailLevel)
             case .node(let nodeID):
@@ -189,6 +191,7 @@ public final class CoCaptainAgentCoordinator {
         do {
             return try await runOnce(
                 userMessage: userMessage,
+                attachments: attachments,
                 context: context,
                 expectsStructuredResponse: policy.expectsStructuredResponse,
                 store: store,
@@ -207,6 +210,7 @@ public final class CoCaptainAgentCoordinator {
             // `GenerateContentError error 0`), retry with a minimal prompt so chat stays usable.
             let fallbackResult = try await runOnce(
                 userMessage: userMessage,
+                attachments: attachments,
                 context: nil,
                 expectsStructuredResponse: false,
                 store: store,
@@ -232,6 +236,7 @@ public final class CoCaptainAgentCoordinator {
     ///     the response fails parsing or validation.
     private func runOnce(
         userMessage: String,
+        attachments: [CoCaptainAttachment] = [],
         context: String?,
         expectsStructuredResponse: Bool,
         store: ProjectStore?,
@@ -245,6 +250,7 @@ public final class CoCaptainAgentCoordinator {
     ) async throws -> CoCaptainAgentRunResult {
         let directive = try await generateDirective(
             userMessage: userMessage,
+            attachments: attachments,
             context: context,
             expectsStructuredResponse: expectsStructuredResponse,
             availableActions: dispatcher?.availableActions ?? [],
@@ -393,6 +399,7 @@ public final class CoCaptainAgentCoordinator {
 
     private func generateDirective(
         userMessage: String,
+        attachments: [CoCaptainAttachment] = [],
         context: String?,
         expectsStructuredResponse: Bool,
         availableActions: [AppActionDefinition],
@@ -407,16 +414,31 @@ public final class CoCaptainAgentCoordinator {
         var seenFunctionCallIDs = Set<String>()
         // Ask / conversational turns omit tools and action catalogs so the
         // model cannot be steered into structured edit or app-action work.
-        let stream = llmClient.streamAgentEvents(
-            for: userMessage,
-            context: context,
-            expectsStructuredResponse: expectsStructuredResponse,
-            availableActions: expectsStructuredResponse ? availableActions : [],
-            scope: scope,
-            purpose: purpose,
-            chatMode: chatMode,
-            toolExecutor: expectsStructuredResponse ? makeToolExecutor(store: store) : nil
-        )
+        let stream: AsyncThrowingStream<CoCaptainLLMStreamEvent, Error>
+        if !attachments.isEmpty, let multimodalClient = llmClient as? LLMService {
+            stream = multimodalClient.streamAgentEvents(
+                for: userMessage,
+                attachments: attachments,
+                context: context,
+                expectsStructuredResponse: expectsStructuredResponse,
+                availableActions: expectsStructuredResponse ? availableActions : [],
+                scope: scope,
+                purpose: purpose,
+                chatMode: chatMode,
+                toolExecutor: expectsStructuredResponse ? makeToolExecutor(store: store) : nil
+            )
+        } else {
+            stream = llmClient.streamAgentEvents(
+                for: userMessage,
+                context: context,
+                expectsStructuredResponse: expectsStructuredResponse,
+                availableActions: expectsStructuredResponse ? availableActions : [],
+                scope: scope,
+                purpose: purpose,
+                chatMode: chatMode,
+                toolExecutor: expectsStructuredResponse ? makeToolExecutor(store: store) : nil
+            )
+        }
 
         for try await event in stream {
             try Task.checkCancellation()

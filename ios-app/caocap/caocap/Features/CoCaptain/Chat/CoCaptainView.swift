@@ -3,6 +3,8 @@ import SwiftUI
 struct CoCaptainView: View {
     @Bindable var viewModel: CoCaptainViewModel
     @State private var text: String = ""
+    @State private var mentions: [CoCaptainNodeMention] = []
+    @State private var attachments: [CoCaptainAttachment] = []
     @FocusState private var isFocused: Bool
     @AppStorage(CoCaptainChatMode.storageKey) private var chatModeRawValue = CoCaptainChatMode.agent.rawValue
     
@@ -32,7 +34,8 @@ struct CoCaptainView: View {
                 CoCaptainInputComposer(
                     text: $text,
                     chatMode: chatModeBinding,
-                    pinnedContextNodeID: $viewModel.pinnedContextNodeID,
+                    mentions: $mentions,
+                    attachments: $attachments,
                     isFocused: $isFocused,
                     store: viewModel.store,
                     allowsContextPinning: true,
@@ -104,11 +107,19 @@ struct CoCaptainView: View {
 
     private func sendCurrentMessage() {
         let prompt = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !prompt.isEmpty, !viewModel.isThinking else { return }
+        guard (!prompt.isEmpty || !attachments.isEmpty), !viewModel.isThinking else { return }
+        let submittedPrompt = prompt.isEmpty ? "Review the attached files." : prompt
 
         beginChatOnboardingResponseWaitIfNeeded()
-        viewModel.sendMessage(prompt, purpose: currentTurnPurpose)
+        viewModel.sendMessage(
+            submittedPrompt,
+            mentions: mentions,
+            attachments: attachments,
+            purpose: currentTurnPurpose
+        )
         text = ""
+        mentions = []
+        attachments = []
         isFocused = false
     }
 
@@ -116,6 +127,8 @@ struct CoCaptainView: View {
         guard !viewModel.isThinking else { return }
 
         text = ""
+        mentions = []
+        attachments = []
         isFocused = false
         beginChatOnboardingResponseWaitIfNeeded()
         viewModel.sendMessage(prompt, purpose: currentTurnPurpose)

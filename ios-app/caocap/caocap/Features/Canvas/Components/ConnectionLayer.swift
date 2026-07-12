@@ -20,9 +20,6 @@ struct ConnectionLayer: View {
     /// Live agent execution states, keyed by node ID, used to style connections
     /// differently when a downstream agent is actively running.
     let activeAgentStates: [UUID: AgentExecutionState]
-    /// Actual rendered frame data for each node, populated via preference keys.
-    /// Preferred over the mathematical fallback when available.
-    let nodeFrames: [UUID: NodeFrameData]
     
     var body: some View {
         Canvas { context, size in
@@ -53,20 +50,14 @@ struct ConnectionLayer: View {
         .allowsHitTesting(false)
     }
 
-    /// Converts a node's canvas-space position to a screen-space point.
-    /// Prefers the measured frame center reported via `NodeFramePreferenceKey`
-    /// because it accounts for the node's actual rendered size. Falls back to a
-    /// mathematical transform when the preference data is not yet available
-    /// (e.g., on the first layout pass).
+    /// Converts a node's canvas-space center into the visible canvas coordinate
+    /// space using the same viewport transform as the node layer.
     private func screenPoint(for node: SpatialNode) -> CGPoint {
-        if let frameData = nodeFrames[node.id] {
-            return frameData.center
-        }
-
         let nodeOffset = dragOffsets[node.id] ?? .zero
-        return CGPoint(
-            x: center.x + (node.position.x + nodeOffset.width) * viewport.scale + viewport.offset.width,
-            y: center.y + (node.position.y + nodeOffset.height) * viewport.scale + viewport.offset.height
+        return viewport.screenPoint(
+            for: node.position,
+            canvasCenter: center,
+            additionalOffset: nodeOffset
         )
     }
     

@@ -1,12 +1,15 @@
 import SwiftUI
+import PhotosUI
+import UniformTypeIdentifiers
 
 struct CoCaptainInputComposer: View {
     @Binding var text: String
     @Binding var chatMode: CoCaptainChatMode
-    @Binding var pinnedContextNodeID: UUID?
+    @Binding var mentions: [CoCaptainNodeMention]
+    @Binding var attachments: [CoCaptainAttachment]
     @FocusState.Binding var isFocused: Bool
     let store: ProjectStore?
-    /// When false (node-scoped chat), the @ pin control is hidden.
+    /// When false (node-scoped chat), inline cross-node @ suggestions are disabled.
     let allowsContextPinning: Bool
     let pinnableNodes: [SpatialNode]
     let isThinking: Bool
@@ -25,9 +28,13 @@ struct CoCaptainInputComposer: View {
     /// Dictation manager for streaming microphone input and converting it to query text.
     @State private var dictation = DictationController()
     @State private var isContextVisible = false
+    @State private var selectedPhotos: [PhotosPickerItem] = []
+    @State private var isPhotoPickerPresented = false
+    @State private var isFileImporterPresented = false
+    @State private var attachmentError: String?
 
     private var isInputValid: Bool {
-        !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !attachments.isEmpty
     }
 
     private var canSend: Bool {
@@ -111,6 +118,15 @@ struct CoCaptainInputComposer: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .transition(.opacity)
             }
+
+            if let attachmentError {
+                Text(attachmentError)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
         .background(Color.primary.opacity(0.02))
         .animation(.spring(response: 0.25, dampingFraction: 0.85), value: isContextVisible)
@@ -118,8 +134,26 @@ struct CoCaptainInputComposer: View {
         .onChange(of: dictation.transcript) { _, transcript in
             text = transcript
         }
+        .onChange(of: text) { _, draft in
+            mentions.removeAll { !draft.contains("@\($0.displayTitle)") }
+        }
         .onDisappear {
             dictation.stop()
+        }
+        .fileImporter(
+            isPresented: $isFileImporterPresented,
+            allowedContentTypes: [.item],
+            allowsMultipleSelection: true,
+            onCompletion: importFiles
+        )
+        .photosPicker(
+            isPresented: $isPhotoPickerPresented,
+            selection: $selectedPhotos,
+            maxSelectionCount: 5,
+            matching: .images
+        )
+        .onChange(of: selectedPhotos) { _, items in
+            Task { await importPhotos(items) }
         }
     }
 
@@ -127,6 +161,8 @@ struct CoCaptainInputComposer: View {
     private var composerCapsule: some View {
         VStack(alignment: .leading, spacing: 8) {
             composerToolbar
+            if !attachments.isEmpty { attachmentPreview }
+            if !mentionSuggestions.isEmpty { mentionSuggestionList }
             composerInputRow
         }
         .padding(.horizontal, 10)
@@ -149,16 +185,13 @@ struct CoCaptainInputComposer: View {
         .animation(.easeInOut(duration: 0.2), value: isFocused)
         .animation(.easeInOut(duration: 0.2), value: isChatOnboardingActive)
         .animation(.easeInOut(duration: 0.2), value: chatMode)
-        .animation(.easeInOut(duration: 0.2), value: pinnedContextNodeID)
+        .animation(.easeInOut(duration: 0.2), value: mentions)
+        .animation(.easeInOut(duration: 0.2), value: attachments)
     }
 
     private var composerToolbar: some View {
         HStack(spacing: 8) {
             chatModePicker
-
-            if allowsContextPinning {
-                contextPinControl
-            }
 
             Spacer(minLength: 4)
 
@@ -185,6 +218,20 @@ struct CoCaptainInputComposer: View {
 
     private var quickPromptMenu: some View {
         Menu {
+            Button {
+                isPhotoPickerPresented = true
+            } label: {
+                Label("Photos", systemImage: "photo.on.rectangle")
+            }
+
+            Button {
+                isFileImporterPresented = true
+            } label: {
+                Label("Files", systemImage: "doc")
+            }
+
+            Divider()
+
             if store != nil {
                 Button {
                     isContextVisible.toggle()
@@ -246,18 +293,12 @@ struct CoCaptainInputComposer: View {
                         .fill(Color.primary.opacity(0.08))
                 )
         }
-        .accessibilityLabel("Quick prompts")
+        .accessibilityLabel("Add attachments or use a quick prompt")
         .simultaneousGesture(
             TapGesture().onEnded {
                 isFocused = false
             }
         )
-    }
-
-    private var pinnedNode: SpatialNode? {
-        guard let pinnedContextNodeID else { return nil }
-        return pinnableNodes.first(where: { $0.id == pinnedContextNodeID })
-            ?? store?.nodes.first(where: { $0.id == pinnedContextNodeID })
     }
 
     /// Compact Agent/Ask/Plan control on the composer toolbar.
@@ -303,73 +344,121 @@ struct CoCaptainInputComposer: View {
         )
     }
 
-    /// Compact @ pin for project-scope turns — focuses prompt context on one node.
-    @ViewBuilder
-    private var contextPinControl: some View {
-        if let pinned = pinnedNode {
-            HStack(spacing: 4) {
-                Image(systemName: "at")
-                    .font(.system(size: 11, weight: .semibold))
-                Text(pinned.displayTitle)
-                    .font(.system(size: 12, weight: .semibold))
-                    .lineLimit(1)
+    private var activeMentionQuery: String? {
+        guard allowsContextPinning,
+              let atIndex = text.lastIndex(of: "@") else { return nil }
+        let prefix = text[..<atIndex]
+        if let last = prefix.last, !last.isWhitespace { return nil }
+        let query = text[text.index(after: atIndex)...]
+        guard !query.contains(where: { $0.isWhitespace || $0.isNewline }) else { return nil }
+        return String(query)
+    }
+
+    private var mentionSuggestions: [SpatialNode] {
+        guard let query = activeMentionQuery else { return [] }
+        return pinnableNodes.filter {
+            query.isEmpty || $0.displayTitle.localizedCaseInsensitiveContains(query)
+        }.prefix(5).map { $0 }
+    }
+
+    private var mentionSuggestionList: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            ForEach(mentionSuggestions) { node in
                 Button {
-                    pinnedContextNodeID = nil
+                    insertMention(node)
                 } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 9, weight: .bold))
+                    Label(node.displayTitle, systemImage: node.icon ?? node.type.defaultIcon)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 7)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(
-                    LocalizationManager.shared.localizedString("cocaptain.composer.clearContextPin")
+                .accessibilityLabel("Mention \(node.displayTitle)")
+            }
+        }
+        .padding(.horizontal, 8)
+        .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    private var attachmentPreview: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(attachments) { attachment in
+                    HStack(spacing: 6) {
+                        Image(systemName: attachment.isImage ? "photo" : "doc")
+                        Text(attachment.fileName).lineLimit(1)
+                        Button {
+                            attachments.removeAll { $0.id == attachment.id }
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Remove \(attachment.fileName)")
+                    }
+                    .font(.caption)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 6)
+                    .background(Color.blue.opacity(0.1), in: Capsule())
+                }
+            }
+        }
+    }
+
+    private func insertMention(_ node: SpatialNode) {
+        guard let atIndex = text.lastIndex(of: "@") else { return }
+        text.replaceSubrange(atIndex..<text.endIndex, with: "@\(node.displayTitle) ")
+        if !mentions.contains(where: { $0.nodeID == node.id }) {
+            mentions.append(CoCaptainNodeMention(nodeID: node.id, displayTitle: node.displayTitle))
+        }
+    }
+
+    private func importPhotos(_ items: [PhotosPickerItem]) async {
+        for item in items {
+            guard attachments.count < 5 else {
+                attachmentError = "You can attach up to 5 files per message."
+                break
+            }
+            guard let data = try? await item.loadTransferable(type: Data.self) else { continue }
+            guard data.count <= 10 * 1_024 * 1_024 else {
+                attachmentError = "A selected photo is larger than 10 MB."
+                continue
+            }
+            let type = item.supportedContentTypes.first
+            attachments.append(
+                CoCaptainAttachment(
+                    fileName: "Photo \(attachments.count + 1).\(type?.preferredFilenameExtension ?? "jpg")",
+                    mimeType: type?.preferredMIMEType ?? "image/jpeg",
+                    data: data
+                )
+            )
+        }
+        selectedPhotos = []
+    }
+
+    private func importFiles(_ result: Result<[URL], Error>) {
+        do {
+            for url in try result.get() {
+                guard attachments.count < 5 else {
+                    attachmentError = "You can attach up to 5 files per message."
+                    break
+                }
+                let accessed = url.startAccessingSecurityScopedResource()
+                defer { if accessed { url.stopAccessingSecurityScopedResource() } }
+                let data = try Data(contentsOf: url)
+                guard data.count <= 10 * 1_024 * 1_024 else {
+                    attachmentError = "\(url.lastPathComponent) is larger than 10 MB."
+                    continue
+                }
+                let type = (try? url.resourceValues(forKeys: [.contentTypeKey]).contentType)
+                attachments.append(
+                    CoCaptainAttachment(
+                        fileName: url.lastPathComponent,
+                        mimeType: type?.preferredMIMEType ?? "application/octet-stream",
+                        data: data
+                    )
                 )
             }
-            .foregroundStyle(.blue)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
-            .background(
-                Capsule(style: .continuous)
-                    .fill(Color.blue.opacity(0.12))
-            )
-            .layoutPriority(-1)
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel(
-                LocalizationManager.shared.localizedString("cocaptain.composer.contextPinAccessibility")
-            )
-            .accessibilityValue(pinned.displayTitle)
-            .disabled(isThinking)
-        } else {
-            Menu {
-                if pinnableNodes.isEmpty {
-                    Text(LocalizationManager.shared.localizedString("cocaptain.composer.noNodesToPin"))
-                } else {
-                    ForEach(pinnableNodes) { node in
-                        Button {
-                            pinnedContextNodeID = node.id
-                        } label: {
-                            Label(node.displayTitle, systemImage: node.icon ?? node.type.defaultIcon)
-                        }
-                    }
-                }
-            } label: {
-                Image(systemName: "at")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 30, height: 30)
-                    .background(
-                        Circle()
-                            .fill(Color.primary.opacity(0.08))
-                    )
-            }
-            .accessibilityLabel(
-                LocalizationManager.shared.localizedString("cocaptain.composer.contextPinAccessibility")
-            )
-            .disabled(isThinking || pinnableNodes.isEmpty)
-            .simultaneousGesture(
-                TapGesture().onEnded {
-                    isFocused = false
-                }
-            )
+        } catch {
+            attachmentError = error.localizedDescription
         }
     }
 

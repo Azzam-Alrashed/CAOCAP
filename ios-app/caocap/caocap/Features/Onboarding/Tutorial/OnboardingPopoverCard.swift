@@ -369,13 +369,13 @@ extension OnboardingCoordinator.Step {
 
     var tooltipArrowPlacement: UnifiedBubbleWithArrowShape.ArrowPlacement {
         switch self {
-        case .dismissCoCaptain, .pinchZoom, .reviewCoCaptainChange, .applyCoCaptainChange:
+        case .dismissCoCaptain, .pinchZoom, .reviewCoCaptainChange:
             return .top
         case .openTutorial, .tapFAB, .typeCoCaptainPrompt, .submitCoCaptainPrompt, .chatCoCaptain,
              .longPressFAB, .returnToRoot, .typeGoBackInOmnibox, .tapGoBackAction, .panCanvas, .fitAllNodes, .searchFlyToNode, .openPortal,
              .tapMiniAppNode, .interactMiniAppPreview, .openMiniAppCodeTool, .openHelpCenter, .browseHelpGuides, .chatCoCaptainGameEdit,
              .saveMiniAppCodeEdit, .returnFromMiniAppPreview, .dragCanvasNode,
-             .runOrganizeNodes, .undoCanvasEdit, .redoCanvasEdit:
+             .runOrganizeNodes, .undoCanvasEdit, .redoCanvasEdit, .applyCoCaptainChange:
             return .bottom
         }
     }

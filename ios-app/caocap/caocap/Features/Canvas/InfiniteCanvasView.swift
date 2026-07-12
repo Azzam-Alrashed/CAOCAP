@@ -57,13 +57,13 @@ struct InfiniteCanvasView: View {
     /// The node currently presented in the detail sheet context menu/inspector.
     @State private var selectedNode: SpatialNode?
     /// The mini-app node currently presented in a full-screen editing experience.
-    @State private var fullScreenMiniApp: SpatialNode?
+    @State private var presentedMiniApp: SpatialNode?
     /// Temporary translation offsets applied to nodes currently being dragged.
     @State private var nodeDragOffsets: [UUID: CGSize] = [:]
     /// Flag indicating an active node drag, used to disable canvas panning during the gesture.
     @State private var isDraggingNode = false
-    /// Caches rendered dimensions of nodes to calculate precise fly-to padding.
-    @State private var nodeFrames: [UUID: NodeFrameData] = [:]
+    /// Caches intrinsic node dimensions for fly-to and onboarding geometry.
+    @State private var nodeSizes: [UUID: CGSize] = [:]
 
     private var shouldAnchorTutorialNode: Bool {
         guard let step = onboarding?.currentStep else { return false }
@@ -98,8 +98,7 @@ struct InfiniteCanvasView: View {
                     dragOffsets: nodeDragOffsets,
                     viewport: viewport,
                     center: center,
-                    activeAgentStates: store.activeAgentStates,
-                    nodeFrames: nodeFrames
+                    activeAgentStates: store.activeAgentStates
                 )
                 
                 // Layer 3: The Spatial Core (Scaled & Offset)
@@ -117,9 +116,20 @@ struct InfiniteCanvasView: View {
                                 .allowsHitTesting(false)
                         )
                     
-                    ForEach(store.nodes) { node in
-                        spatialNode(node, containerSize: geometry.size)
-                    }
+                    CanvasNodeLayer(
+                        nodes: store.nodes,
+                        activeAgentStates: store.activeAgentStates,
+                        nodeDragOffsets: nodeDragOffsets,
+                        focusedNodeID: canvasFocusNodeID,
+                        containerSize: geometry.size,
+                        onTap: handleNodeTap,
+                        onDoubleTap: handleNodeDoubleTap,
+                        onDelete: handleNodeDelete,
+                        onInspect: handleNodeInspect,
+                        onDragChanged: handleNodeDragChanged,
+                        onDragEnded: handleNodeDragEnded
+                    )
+                    .equatable()
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .scaleEffect(viewport.scale)
@@ -179,8 +189,8 @@ struct InfiniteCanvasView: View {
                         completeOnboardingPinchIfNeeded()
                     }
             )
-            .onPreferenceChange(NodeFramePreferenceKey.self) { value in
-                nodeFrames = value
+            .onPreferenceChange(NodeSizePreferenceKey.self) { value in
+                nodeSizes = value
             }
         }
         .background(backgroundColor)
@@ -197,18 +207,20 @@ struct InfiniteCanvasView: View {
                 onFlyToNode: handleFlyToFromDetail
             )
         }
-        .fullScreenCover(item: $fullScreenMiniApp) { node in
+        .sheet(item: $presentedMiniApp) { node in
             NodeDetailView(
                 node: node,
                 store: store,
                 commandPalette: commandPalette,
                 onFlyToNode: handleFlyToFromDetail
             )
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
         }
         .onAppear {
             currentScale = viewport.scale
         }
-        .onChange(of: fullScreenMiniApp?.id) { _, nodeID in
+        .onChange(of: presentedMiniApp?.id) { _, nodeID in
             guard nodeID == TutorialCanvasProvider.miniAppNodeID,
                   onboarding?.currentStep == .tapMiniAppNode else { return }
             onboarding?.completeCurrentStep()
@@ -256,112 +268,83 @@ struct InfiniteCanvasView: View {
         ]
 
         if shouldAnchorTutorialNode,
-           let frameData = nodeFrames[RootCanvasProvider.tutorialNodeID] {
-            frames[.tutorialNode] = frameData.frame
+           let frame = screenFrame(for: RootCanvasProvider.tutorialNodeID, canvasSize: canvasSize) {
+            frames[.tutorialNode] = frame
         }
 
         if onboarding?.currentStep == .openPortal {
-            if let frameData = nodeFrames[RootCanvasProvider.pacManNodeID] {
-                frames[.demoGameNode] = frameData.frame
-            } else if let frameData = nodeFrames[RootCanvasProvider.xoNodeID] {
-                frames[.demoGameNode] = frameData.frame
+            if let frame = screenFrame(for: RootCanvasProvider.pacManNodeID, canvasSize: canvasSize) {
+                frames[.demoGameNode] = frame
+            } else if let frame = screenFrame(for: RootCanvasProvider.xoNodeID, canvasSize: canvasSize) {
+                frames[.demoGameNode] = frame
             }
         }
 
         if let step = onboarding?.currentStep,
            step == .tapMiniAppNode || step == .dragCanvasNode,
-           let frameData = nodeFrames[TutorialCanvasProvider.miniAppNodeID] {
-            frames[.practiceCanvasNode] = frameData.frame
+           let frame = screenFrame(for: TutorialCanvasProvider.miniAppNodeID, canvasSize: canvasSize) {
+            frames[.practiceCanvasNode] = frame
         }
 
         return frames
     }
 
-    @ViewBuilder
-    private func spatialNode(_ node: SpatialNode, containerSize: CGSize) -> some View {
-        let currentOffset = nodeDragOffsets[node.id] ?? .zero
-        let isDraggingThisNode = nodeDragOffsets[node.id] != nil
-
-        NodeView(
-            node: node,
-            isDragging: isDraggingThisNode,
-            agentState: store.activeAgentStates[node.id] ?? .idle,
-            isTransientlyFocused: canvasFocusNodeID == node.id
-        )
-        .offset(
-            x: node.position.x + currentOffset.width,
-            y: node.position.y + currentOffset.height
-        )
-        .zIndex(isDraggingThisNode ? 1 : 0)
-        .onTapGesture(count: 2) {
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                let targetScale = computeTargetScale(for: node.id, containerSize: containerSize)
-                viewport.flyTo(nodePosition: node.position, containerSize: containerSize, targetScale: targetScale)
-            }
-            HapticsManager.shared.trigger(.medium)
+    private func handleNodeTap(_ node: SpatialNode) {
+        if let action = node.action {
+            onNodeAction?(action)
+        } else if node.type == .subCanvas, let fileName = node.linkedCanvasFileName {
+            onNavigateToSubCanvas?(fileName)
+        } else if node.type == .miniApp {
+            presentedMiniApp = node
+        } else {
+            selectedNode = node
         }
-        .onTapGesture {
-            if let action = node.action {
-                onNodeAction?(action)
-            } else if node.type == .subCanvas, let fileName = node.linkedCanvasFileName {
-                onNavigateToSubCanvas?(fileName)
-            } else if node.type == .miniApp {
-                fullScreenMiniApp = node
-            } else {
-                selectedNode = node
-            }
-        }
-        .contextMenu(menuItems: {
-            if !node.isProtected {
-                Button(role: .destructive) {
-                    HapticsManager.shared.notification(.warning)
-                    store.deleteNode(id: node.id, persist: true)
-                } label: {
-                    Label("Delete Node", systemImage: "trash")
-                }
-            }
-
-            Button {
-                selectedNode = node
-            } label: {
-                Label("Inspect", systemImage: "info.circle")
-            }
-        }, preview: {
-            NodeView(node: node)
-                .environment(\.colorScheme, .dark)
-                .frame(width: 280)
-                .padding()
-        })
-        .gesture(nodeDragGesture(for: node))
     }
 
-    private func nodeDragGesture(for node: SpatialNode) -> some Gesture {
-        DragGesture(minimumDistance: 5, coordinateSpace: .named("canvas"))
-            .onChanged { value in
-                isDraggingNode = true
-                nodeDragOffsets[node.id] = canvasTranslation(for: value.translation)
-            }
-            .onEnded { value in
-                let translation = canvasTranslation(for: value.translation)
-                let finalPosition = CGPoint(
-                    x: node.position.x + translation.width,
-                    y: node.position.y + translation.height
-                )
+    private func handleNodeDoubleTap(_ node: SpatialNode, containerSize: CGSize) {
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+            let targetScale = computeTargetScale(for: node.id, containerSize: containerSize)
+            viewport.flyTo(
+                nodePosition: node.position,
+                containerSize: containerSize,
+                targetScale: targetScale
+            )
+        }
+        HapticsManager.shared.trigger(.medium)
+    }
 
-                store.updateNodePosition(
-                    id: node.id,
-                    position: finalPosition,
-                    persist: true
-                )
+    private func handleNodeDelete(_ node: SpatialNode) {
+        HapticsManager.shared.notification(.warning)
+        store.deleteNode(id: node.id, persist: true)
+    }
 
-                completeOnboardingDragIfNeeded(
-                    translation: canvasTranslation(for: value.translation)
-                )
+    private func handleNodeInspect(_ node: SpatialNode) {
+        selectedNode = node
+    }
 
-                nodeDragOffsets[node.id] = nil
-                isDraggingNode = false
-                HapticsManager.shared.selectionChanged()
-            }
+    private func handleNodeDragChanged(_ node: SpatialNode, translation: CGSize) {
+        isDraggingNode = true
+        nodeDragOffsets[node.id] = canvasTranslation(for: translation)
+    }
+
+    private func handleNodeDragEnded(_ node: SpatialNode, translation: CGSize) {
+        let canvasTranslation = canvasTranslation(for: translation)
+        let finalPosition = CGPoint(
+            x: node.position.x + canvasTranslation.width,
+            y: node.position.y + canvasTranslation.height
+        )
+
+        store.updateNodePosition(
+            id: node.id,
+            position: finalPosition,
+            persist: true
+        )
+
+        completeOnboardingDragIfNeeded(translation: canvasTranslation)
+
+        nodeDragOffsets[node.id] = nil
+        isDraggingNode = false
+        HapticsManager.shared.selectionChanged()
     }
     
     /// Resolves the color of the infinite canvas background grid.
@@ -381,7 +364,7 @@ struct InfiniteCanvasView: View {
     /// Dismisses node detail chrome, then flies the workspace camera to the target node.
     private func handleFlyToFromDetail(_ nodeID: UUID) {
         selectedNode = nil
-        fullScreenMiniApp = nil
+        presentedMiniApp = nil
         onFlyToNode?(nodeID)
     }
 
@@ -400,13 +383,122 @@ struct InfiniteCanvasView: View {
     ///   - containerSize: The physical screen dimensions available.
     /// - Returns: A zoom scale factor capped at 1.2x.
     private func computeTargetScale(for nodeId: UUID, containerSize: CGSize) -> CGFloat {
-        guard let frameData = nodeFrames[nodeId], containerSize != .zero else {
+        guard let nodeSize = nodeSizes[nodeId], containerSize != .zero else {
             return 1.0
         }
         let paddingFactor: CGFloat = 0.8
-        let scaleX = (containerSize.width * paddingFactor) / frameData.size.width
-        let scaleY = (containerSize.height * paddingFactor) / frameData.size.height
+        let scaleX = (containerSize.width * paddingFactor) / nodeSize.width
+        let scaleY = (containerSize.height * paddingFactor) / nodeSize.height
         return min(min(scaleX, scaleY), 1.2)
+    }
+
+    private func screenFrame(for nodeId: UUID, canvasSize: CGSize) -> CGRect? {
+        guard let node = store.nodes.first(where: { $0.id == nodeId }),
+              let nodeSize = nodeSizes[nodeId] else {
+            return nil
+        }
+
+        let center = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
+        let dragOffset = nodeDragOffsets[nodeId] ?? .zero
+        let screenCenter = viewport.screenPoint(
+            for: node.position,
+            canvasCenter: center,
+            additionalOffset: dragOffset
+        )
+        let scaledSize = CGSize(
+            width: nodeSize.width * viewport.scale,
+            height: nodeSize.height * viewport.scale
+        )
+
+        return CGRect(
+            x: screenCenter.x - scaledSize.width / 2,
+            y: screenCenter.y - scaledSize.height / 2,
+            width: scaledSize.width,
+            height: scaledSize.height
+        )
+    }
+}
+
+/// Renders every node and its interaction modifiers behind a single equality
+/// boundary so viewport-only updates can reuse the complete node hierarchy.
+private struct CanvasNodeLayer: View, Equatable {
+    let nodes: [SpatialNode]
+    let activeAgentStates: [UUID: AgentExecutionState]
+    let nodeDragOffsets: [UUID: CGSize]
+    let focusedNodeID: UUID?
+    let containerSize: CGSize
+    let onTap: (SpatialNode) -> Void
+    let onDoubleTap: (SpatialNode, CGSize) -> Void
+    let onDelete: (SpatialNode) -> Void
+    let onInspect: (SpatialNode) -> Void
+    let onDragChanged: (SpatialNode, CGSize) -> Void
+    let onDragEnded: (SpatialNode, CGSize) -> Void
+
+    static func == (lhs: CanvasNodeLayer, rhs: CanvasNodeLayer) -> Bool {
+        lhs.nodes == rhs.nodes
+            && lhs.activeAgentStates == rhs.activeAgentStates
+            && lhs.nodeDragOffsets == rhs.nodeDragOffsets
+            && lhs.focusedNodeID == rhs.focusedNodeID
+            && lhs.containerSize == rhs.containerSize
+    }
+
+    var body: some View {
+        ForEach(nodes) { node in
+            spatialNode(node)
+        }
+    }
+
+    private func spatialNode(_ node: SpatialNode) -> some View {
+        let currentOffset = nodeDragOffsets[node.id] ?? .zero
+        let isDragging = nodeDragOffsets[node.id] != nil
+
+        return NodeView(
+            node: node,
+            isDragging: isDragging,
+            agentState: activeAgentStates[node.id] ?? .idle,
+            isTransientlyFocused: focusedNodeID == node.id
+        )
+        .equatable()
+        .offset(
+            x: node.position.x + currentOffset.width,
+            y: node.position.y + currentOffset.height
+        )
+        .zIndex(isDragging ? 1 : 0)
+        .onTapGesture(count: 2) {
+            onDoubleTap(node, containerSize)
+        }
+        .onTapGesture {
+            onTap(node)
+        }
+        .contextMenu(menuItems: {
+            if !node.isProtected {
+                Button(role: .destructive) {
+                    onDelete(node)
+                } label: {
+                    Label("Delete Node", systemImage: "trash")
+                }
+            }
+
+            Button {
+                onInspect(node)
+            } label: {
+                Label("Inspect", systemImage: "info.circle")
+            }
+        }, preview: {
+            NodeView(node: node, reportsSize: false)
+                .environment(\.colorScheme, .dark)
+                .frame(width: 280)
+                .padding()
+        })
+        .gesture(
+            DragGesture(minimumDistance: 5, coordinateSpace: .named("canvas"))
+                .onChanged { value in
+                    onDragChanged(node, value.translation)
+                }
+                .onEnded { value in
+                    onDragEnded(node, value.translation)
+                }
+        )
     }
 }
 
