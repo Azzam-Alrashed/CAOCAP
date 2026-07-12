@@ -4,7 +4,7 @@ import SwiftUI
 /// Renders the node's icon, title, subtitle, SRS readiness badge, and — for
 /// Mini-App nodes — a scaled live HTML preview. Applies glass-morphism styling and
 /// animated overlays that reflect the current CoCaptain agent execution state.
-struct NodeView: View {
+struct NodeView: View, Equatable {
     /// The underlying domain model whose data is displayed.
     let node: SpatialNode
     /// `true` while the user is actively dragging this node; drives slightly
@@ -20,6 +20,13 @@ struct NodeView: View {
     @State private var isPulsing = false
     @State private var isFocusPulsing = false
     @AppStorage(LocalizationManager.languageStorageKey) private var selectedLanguage = "English"
+
+    static func == (lhs: NodeView, rhs: NodeView) -> Bool {
+        lhs.node == rhs.node
+            && lhs.isDragging == rhs.isDragging
+            && lhs.agentState == rhs.agentState
+            && lhs.isTransientlyFocused == rhs.isTransientlyFocused
+    }
     
     var body: some View {
         VStack(spacing: 0) {
