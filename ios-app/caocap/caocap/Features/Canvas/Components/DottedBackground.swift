@@ -56,6 +56,7 @@ private final class DottedGridView: UIView {
         gridOpacity: 0.1,
         colorScheme: .light
     )
+    private var layoutSignature: LayoutSignature?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -75,7 +76,8 @@ private final class DottedGridView: UIView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        render()
+        layoutSignature = nil
+        updateGrid()
     }
 
     func update(offset: CGSize, scale: CGFloat, gridOpacity: Double, colorScheme: ColorScheme) {
@@ -85,12 +87,34 @@ private final class DottedGridView: UIView {
             gridOpacity: gridOpacity,
             colorScheme: colorScheme
         )
-        render()
+        updateGrid()
     }
 
-    private func render() {
+    private func updateGrid() {
         let bounds = self.bounds
         guard bounds.width > 0, bounds.height > 0 else { return }
+
+        let newLayoutSignature = LayoutSignature(
+            bounds: bounds,
+            scale: configuration.scale,
+            gridOpacity: configuration.gridOpacity,
+            colorScheme: configuration.colorScheme
+        )
+
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+
+        if layoutSignature != newLayoutSignature {
+            configureLayout(in: bounds)
+            layoutSignature = newLayoutSignature
+        }
+
+        updateOrigins()
+
+        CATransaction.commit()
+    }
+
+    private func configureLayout(in bounds: CGRect) {
 
         let maxAlpha = CGFloat(configuration.gridOpacity * 5)
         let sparseAlpha = fade(
@@ -107,30 +131,24 @@ private final class DottedGridView: UIView {
         )
         let dotColor: UIColor = configuration.colorScheme == .dark ? .white : .black
 
-        CATransaction.begin()
-        CATransaction.setDisableActions(true)
-
-        sparseLevel.update(
+        sparseLevel.configureLayout(
             in: bounds,
-            offset: configuration.offset,
             scale: configuration.scale,
             spacing: dotSpacing * 4,
             dotSize: dotSize,
             alpha: sparseAlpha,
             color: dotColor
         )
-        mediumLevel.update(
+        mediumLevel.configureLayout(
             in: bounds,
-            offset: configuration.offset,
             scale: configuration.scale,
             spacing: dotSpacing * 2,
             dotSize: dotSize,
             alpha: mediumAlpha,
             color: dotColor
         )
-        denseLevel.update(
+        denseLevel.configureLayout(
             in: bounds,
-            offset: configuration.offset,
             scale: configuration.scale,
             spacing: dotSpacing,
             dotSize: dotSize,
@@ -138,7 +156,12 @@ private final class DottedGridView: UIView {
             color: dotColor
         )
 
-        CATransaction.commit()
+    }
+
+    private func updateOrigins() {
+        sparseLevel.updateOrigin(offset: configuration.offset)
+        mediumLevel.updateOrigin(offset: configuration.offset)
+        denseLevel.updateOrigin(offset: configuration.offset)
     }
 
     private func fade(value: CGFloat, maxAlpha: CGFloat) -> CGFloat {
@@ -151,12 +174,20 @@ private final class DottedGridView: UIView {
         let gridOpacity: Double
         let colorScheme: ColorScheme
     }
+
+    private struct LayoutSignature: Equatable {
+        let bounds: CGRect
+        let scale: CGFloat
+        let gridOpacity: Double
+        let colorScheme: ColorScheme
+    }
 }
 
 private final class DottedGridLevel {
     let layer = CAReplicatorLayer()
     private let rowReplicator = CAReplicatorLayer()
     private let dotLayer = CALayer()
+    private var layout: Layout?
 
     init(name: String) {
         layer.name = "caocap.dottedGrid.\(name)"
@@ -170,9 +201,8 @@ private final class DottedGridLevel {
         layer.addSublayer(rowReplicator)
     }
 
-    func update(
+    func configureLayout(
         in bounds: CGRect,
-        offset: CGSize,
         scale: CGFloat,
         spacing: CGFloat,
         dotSize: CGFloat,
@@ -182,13 +212,9 @@ private final class DottedGridLevel {
         let scaledSpacing = spacing * scale
         guard alpha > 0, scaledSpacing > 0 else {
             layer.isHidden = true
+            layout = nil
             return
         }
-
-        let centerX = bounds.width / 2
-        let centerY = bounds.height / 2
-        let startX = (offset.width + centerX).truncatingRemainder(dividingBy: scaledSpacing) - scaledSpacing
-        let startY = (offset.height + centerY).truncatingRemainder(dividingBy: scaledSpacing) - scaledSpacing
 
         layer.isHidden = false
         layer.frame = bounds
@@ -196,22 +222,38 @@ private final class DottedGridLevel {
         rowReplicator.frame = bounds
         rowReplicator.instanceTransform = CATransform3DMakeTranslation(scaledSpacing, 0, 0)
         layer.instanceTransform = CATransform3DMakeTranslation(0, scaledSpacing, 0)
-        rowReplicator.instanceCount = instanceCount(
-            from: startX,
-            through: bounds.width + scaledSpacing,
-            spacing: scaledSpacing
-        )
-        layer.instanceCount = instanceCount(
-            from: startY,
-            through: bounds.height + scaledSpacing,
-            spacing: scaledSpacing
-        )
-        dotLayer.frame = CGRect(x: startX, y: startY, width: dotSize, height: dotSize)
+        rowReplicator.instanceCount = instanceCount(for: bounds.width, spacing: scaledSpacing)
+        layer.instanceCount = instanceCount(for: bounds.height, spacing: scaledSpacing)
+        dotLayer.bounds = CGRect(x: 0, y: 0, width: dotSize, height: dotSize)
         dotLayer.cornerRadius = dotSize / 2
         dotLayer.backgroundColor = color.cgColor
+
+        layout = Layout(bounds: bounds, scaledSpacing: scaledSpacing, dotSize: dotSize)
     }
 
-    private func instanceCount(from start: CGFloat, through end: CGFloat, spacing: CGFloat) -> Int {
-        max(1, Int(ceil((end - start) / spacing)) + 1)
+    func updateOrigin(offset: CGSize) {
+        guard let layout else { return }
+
+        let centerX = layout.bounds.width / 2
+        let centerY = layout.bounds.height / 2
+        let startX = (offset.width + centerX).truncatingRemainder(dividingBy: layout.scaledSpacing) - layout.scaledSpacing
+        let startY = (offset.height + centerY).truncatingRemainder(dividingBy: layout.scaledSpacing) - layout.scaledSpacing
+
+        dotLayer.position = CGPoint(
+            x: startX + layout.dotSize / 2,
+            y: startY + layout.dotSize / 2
+        )
+    }
+
+    private func instanceCount(for length: CGFloat, spacing: CGFloat) -> Int {
+        // The origin may be almost one spacing before the layer bounds. Reserve the
+        // extra replicas once so panning only changes the dot phase.
+        max(1, Int(ceil(length / spacing)) + 3)
+    }
+
+    private struct Layout {
+        let bounds: CGRect
+        let scaledSpacing: CGFloat
+        let dotSize: CGFloat
     }
 }

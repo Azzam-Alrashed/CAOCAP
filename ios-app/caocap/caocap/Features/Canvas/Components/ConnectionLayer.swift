@@ -13,8 +13,9 @@ struct ConnectionLayer: View {
     /// connection endpoints in sync with a dragged node before the position is
     /// committed to the store.
     let dragOffsets: [UUID: CGSize]
-    /// Current pan/zoom state, used to convert canvas coordinates to screen points.
-    let viewport: ViewportState
+    /// Current visual viewport transform, including gesture-local pan translation.
+    let offset: CGSize
+    let scale: CGFloat
     /// The screen-space midpoint of the canvas view, acting as the coordinate origin.
     let center: CGPoint
     /// Live agent execution states, keyed by node ID, used to style connections
@@ -41,7 +42,7 @@ struct ConnectionLayer: View {
                             || activeAgentStates[targetNode.id] == .applying
                             || activeAgentStates[targetNode.id] == .awaitingReview
                         
-                        drawArrow(context: context, from: start, to: end, themeColor: node.theme.color, scale: viewport.scale, isEventPipe: isEventPipe, isActive: isActive, isLogic: false)
+                        drawArrow(context: context, from: start, to: end, themeColor: node.theme.color, scale: scale, isEventPipe: isEventPipe, isActive: isActive, isLogic: false)
                     }
                 }
             }
@@ -54,10 +55,9 @@ struct ConnectionLayer: View {
     /// space using the same viewport transform as the node layer.
     private func screenPoint(for node: SpatialNode) -> CGPoint {
         let nodeOffset = dragOffsets[node.id] ?? .zero
-        return viewport.screenPoint(
-            for: node.position,
-            canvasCenter: center,
-            additionalOffset: nodeOffset
+        return CGPoint(
+            x: center.x + (node.position.x + nodeOffset.width) * scale + offset.width,
+            y: center.y + (node.position.y + nodeOffset.height) * scale + offset.height
         )
     }
     
