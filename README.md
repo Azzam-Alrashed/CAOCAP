@@ -1,6 +1,5 @@
 <div style="display: flex; align-items: center; gap: 32px; margin-bottom: 16px;">
-   <img width="200" alt="Azzam-Alrashed" src="https://github.com/user-attachments/assets/5ebe3f09-2bad-4aa3-9b30-2d88159b242d" />
-   <img width="200" alt="CAOCAP-CAOCAP" src="https://github.com/user-attachments/assets/379cf647-5d89-48c5-85c8-5d83e851e298" />
+   <img width="200" alt="CAOCAP-Azzam" src="https://github.com/user-attachments/assets/108c81bf-a98d-449d-b936-f149b6e2d1a8" />
 </div>
 
 # CAOCAP 🪐 كوكب
