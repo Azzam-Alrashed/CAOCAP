@@ -121,7 +121,7 @@ struct NodeView: View, Equatable {
         }
         .padding(.horizontal, node.type == .miniApp ? 12 : 20)
         .padding(.vertical, node.type == .miniApp ? 12 : 20)
-        .background(backgroundStack)
+        .background(backgroundWithoutShadow)
         .overlay(borderOverlay)
         .overlay(statusOverlay)
         .overlay(transientFocusOverlay)
@@ -188,10 +188,9 @@ struct NodeView: View, Equatable {
         return node.displaySubtitle
     }
 
-    /// Layered background: frosted glass base + theme-tinted linear gradient +
-    /// radial highlight from the top-leading corner. All color intensities increase
-    /// while the node is being dragged to reinforce the lifted appearance.
-    private var backgroundStack: some View {
+    /// Temporary performance probe: preserves the normal material and gradient
+    /// chrome but removes only the permanent per-card shadow.
+    private var backgroundWithoutShadow: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(.ultraThinMaterial)
@@ -215,16 +214,8 @@ struct NodeView: View, Equatable {
                     )
                 )
         }
-        .shadow(
-            color: (gradientColors.first ?? .black).opacity(isDragging ? 0.28 : 0.18),
-            radius: isDragging ? 30 : 20,
-            x: 0,
-            y: isDragging ? 20 : 10
-        )
     }
 
-    /// A rounded-rectangle stroke whose gradient colors and line width intensify
-    /// during a drag to emphasise the node boundary.
     private var borderOverlay: some View {
         RoundedRectangle(cornerRadius: 24, style: .continuous)
             .stroke(

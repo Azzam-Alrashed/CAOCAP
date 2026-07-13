@@ -64,6 +64,19 @@ struct InfiniteCanvasView: View {
     @State private var isDraggingNode = false
     /// Caches intrinsic node dimensions for fly-to and onboarding geometry.
     @State private var nodeSizes: [UUID: CGSize] = [:]
+    /// Touch-pan translation stays view-local until the gesture ends, avoiding a
+    /// global observable viewport mutation for every touch event.
+    @GestureState private var panTranslation: CGSize = .zero
+    /// UIKit trackpad gestures cannot use `@GestureState`, but must follow the
+    /// same transient-update rule as touch panning.
+    @State private var trackpadPanTranslation: CGSize = .zero
+
+    private var displayedOffset: CGSize {
+        CGSize(
+            width: viewport.offset.width + panTranslation.width + trackpadPanTranslation.width,
+            height: viewport.offset.height + panTranslation.height + trackpadPanTranslation.height
+        )
+    }
 
     private var shouldAnchorTutorialNode: Bool {
         guard let step = onboarding?.currentStep else { return false }
@@ -78,14 +91,15 @@ struct InfiniteCanvasView: View {
             
             ZStack {
                 // Layer 1: The Infinite Dotted Grid
-                DottedBackground(offset: viewport.offset, scale: viewport.scale)
+                DottedBackground(offset: displayedOffset, scale: viewport.scale)
                     .contentShape(Rectangle())
                     .gesture(
                         DragGesture()
-                            .onChanged { value in
-                                viewport.handleDragChanged(value)
+                            .updating($panTranslation) { value, state, _ in
+                                state = value.translation
                             }
-                            .onEnded { _ in
+                            .onEnded { value in
+                                viewport.handleDragTranslation(value.translation)
                                 viewport.handleDragEnded()
                                 persistViewportIfNeeded()
                                 completeOnboardingPanIfNeeded()
@@ -96,7 +110,8 @@ struct InfiniteCanvasView: View {
                 ConnectionLayer(
                     nodes: store.nodes,
                     dragOffsets: nodeDragOffsets,
-                    viewport: viewport,
+                    offset: displayedOffset,
+                    scale: viewport.scale,
                     center: center,
                     activeAgentStates: store.activeAgentStates
                 )
@@ -133,7 +148,7 @@ struct InfiniteCanvasView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .scaleEffect(viewport.scale)
-                .offset(viewport.offset)
+                .offset(displayedOffset)
 
                 if let message = store.unsupportedProjectMessage {
                     UnsupportedProjectCard(
@@ -162,11 +177,13 @@ struct InfiniteCanvasView: View {
                 TrackpadPanGesture(
                     onChanged: { translation in
                         guard !isDraggingNode else { return }
-                        viewport.handleDragTranslation(translation)
+                        trackpadPanTranslation = translation
                     },
-                    onEnded: {
+                    onEnded: { translation in
                         guard !isDraggingNode else { return }
+                        viewport.handleDragTranslation(translation)
                         viewport.handleDragEnded()
+                        trackpadPanTranslation = .zero
                         persistViewportIfNeeded()
                         completeOnboardingPanIfNeeded()
                     }
@@ -400,10 +417,9 @@ struct InfiniteCanvasView: View {
 
         let center = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
         let dragOffset = nodeDragOffsets[nodeId] ?? .zero
-        let screenCenter = viewport.screenPoint(
-            for: node.position,
-            canvasCenter: center,
-            additionalOffset: dragOffset
+        let screenCenter = CGPoint(
+            x: center.x + (node.position.x + dragOffset.width) * viewport.scale + displayedOffset.width,
+            y: center.y + (node.position.y + dragOffset.height) * viewport.scale + displayedOffset.height
         )
         let scaledSize = CGSize(
             width: nodeSize.width * viewport.scale,
@@ -505,10 +521,14 @@ private struct CanvasNodeLayer: View, Equatable {
 /// A custom UIKit pan gesture wrapper specifically for two-finger trackpad panning on iPadOS/macOS.
 private struct TrackpadPanGesture: UIGestureRecognizerRepresentable {
     var onChanged: (CGSize) -> Void
-    var onEnded: () -> Void
+    var onEnded: (CGSize) -> Void
 
     func makeUIGestureRecognizer(context: Context) -> UIPanGestureRecognizer {
         let recognizer = UIPanGestureRecognizer()
+        // Keep direct touch panning with SwiftUI's DragGesture. Without this
+        // restriction, this recognizer receives the same finger movement and
+        // the two transient translations are added together.
+        recognizer.allowedTouchTypes = [NSNumber(value: UITouch.TouchType.indirectPointer.rawValue)]
         recognizer.allowedScrollTypesMask = .continuous
         recognizer.delegate = context.coordinator
         recognizer.cancelsTouchesInView = false
@@ -523,7 +543,7 @@ private struct TrackpadPanGesture: UIGestureRecognizerRepresentable {
         case .began, .changed:
             onChanged(canvasTranslation)
         case .ended, .cancelled, .failed:
-            onEnded()
+            onEnded(canvasTranslation)
         default:
             break
         }
