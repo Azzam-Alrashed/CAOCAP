@@ -259,9 +259,21 @@ State management, persistence, checkpoints, and reactive compilation for the spa
 #### `Services/CoCaptain/`
 Decoupled backend engines and API clients specific to the CoCaptain agentic flow.
 
+The CoCaptain service layer also owns `LocalModelDeviceEligibility`, the pure
+hardware capability and persisted-selection policy used to gate on-device
+Gemma independently from Settings UI and inference runtime details.
+`LocalGemmaModelManager` owns the LiteRT model artifact lifecycle: direct
+download, progress, validation, cache inspection, cancellation, deletion, and
+one-time removal of the former MLX cache and token.
+`CoCaptainModelRoutingPolicy` resolves explicit and automatic-offline model
+routes while `NetworkConnectivityMonitor` supplies shared connectivity state.
+
 | File | Responsibility |
 |---|---|
-| `LLMService.swift` | Interface for the Firebase AI Logic SDK. Manages streaming and multimodal attachment turns with the Gemini backend. Also coordinates local on-device MLX model download and inference. |
+| `LLMService.swift` | Shared CoCaptain model boundary. Manages Gemini cloud turns, local LiteRT-LM streaming, and automatic offline routing. |
+| `LocalGemmaModelManager.swift` | Downloads, validates, streams, cancels, and deletes the on-device Gemma model and LiteRT engine cache. |
+| `LocalModelDeviceEligibility.swift` | Pure hardware capability gate and persisted model-selection policy. |
+| `CoCaptainModelRoutingPolicy.swift` | Resolves cloud/local/offline routes and conservatively treats unknown connectivity as offline. |
 | `TokenUsageLimiter.swift` | Local estimated-token quota tracker for free CoCaptain and AI node usage; Pro entitlements bypass the free monthly cap. |
 | `CommandIntentResolver.swift` | Maps plain-language command palette and CoCaptain prompts to available app actions. |
 | `ProjectContextBuilder.swift` | Logic to "harvest" the spatial graph and serialize it into a grounded prompt context for the LLM. |
@@ -492,7 +504,8 @@ Profile, app settings, support, legal, account, and preference screens.
 
 | File | Responsibility |
 |---|---|
-| `SettingsView.swift` | Global app options, gated models configuration, and clear cache panels. |
+| `SettingsView.swift` | Global app options and settings-screen composition. |
+| `GemmaModelSettingsSection.swift` | Device-gated Gemma selection, download progress, readiness, errors, and cache management. |
 | `ProfileView.swift` | Firebase authentication state details, account deletion, and linking. |
 | `SettingsComponents.swift` | Visual sections and utility controls for configuration rows. |
 

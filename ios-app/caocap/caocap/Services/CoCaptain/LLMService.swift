@@ -1,7 +1,6 @@
 import Foundation
 import FirebaseAILogic
 import OSLog
-import MLXLMCommon
 import Observation
 
 /// A singleton service that manages the interaction with the Gemini LLM via Firebase AI Logic.
@@ -29,19 +28,29 @@ public final class LLMService {
     /// for misconfigured/unsupported model names; using a stable default and allowing
     /// overrides helps unblock runtime debugging without code changes.
     private var preferredModelName: String {
-        if let overridden = UserDefaults.standard.string(forKey: "cocaptain.modelName"),
-           !overridden.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return overridden
-        }
-        // Prefer a stable, non-retired model name.
-        // Firebase AI Logic retired all Gemini 1.5 models on 2025-09-24, and Gemini 2.x models on 2026-03-09.
-        return "gemini-3-flash-preview"
+        CoCaptainModelSelectionPolicy.resolvedModelName(
+            UserDefaults.standard.string(forKey: "cocaptain.modelName")
+        )
     }
 
-    /// The local MLX backend has no function calling, so tool-based prompt
-    /// rules are omitted and full-budget canvas context is kept for it.
+    private var currentModelRoute: CoCaptainModelRoute {
+        CoCaptainModelRoutingPolicy.route(
+            requestedModelName: UserDefaults.standard.string(forKey: "cocaptain.modelName"),
+            eligibility: .current,
+            isLocalModelReady: LocalGemmaModelManager.shared.isLocalModelCached,
+            connectivity: NetworkConnectivityMonitor.shared.currentStatus
+        )
+    }
+
+    /// CAOCAP keeps LiteRT-LM tool calling disabled in the first release, so
+    /// tool-based prompt rules are omitted and full-budget context is retained.
     private var currentModelSupportsFunctionCalling: Bool {
-        preferredModelName != "gemma-4-local"
+        if case .cloud = currentModelRoute { return true }
+        return false
+    }
+
+    public var supportsOnDemandCodeReads: Bool {
+        currentModelSupportsFunctionCalling
     }
 
     /// The active chat session that maintains history.
@@ -61,8 +70,16 @@ public final class LLMService {
     /// Resets the current chat session, clearing all history.
     public func resetChat(scope: CoCaptainAgentScope = .project) {
         chats[scope] = nil
-        LocalMLXModelManager.shared.resetChat(scope: scope)
+        LocalGemmaModelManager.shared.resetChat(scope: scope)
         logger.info("Chat session reset for \(scope.storageKey, privacy: .public).")
+    }
+
+    public func submissionError(
+        for attachments: [CoCaptainAttachment]
+    ) -> CoCaptainSubmissionError? {
+        guard !attachments.isEmpty else { return nil }
+        if case .cloud = currentModelRoute { return nil }
+        return .attachmentsRequireCloud
     }
 
     /// Generates a streaming response for the given user prompt, maintaining conversation history.
@@ -102,7 +119,7 @@ public final class LLMService {
     /// The method:
     /// 1. Builds the full prompt (context + instructions + user message).
     /// 2. Refreshes StoreKit entitlements, then runs a preflight token-budget check.
-    /// 3. Routes to the local MLX model when `gemma-4-local` is selected,
+    /// 3. Routes to local LiteRT-LM when selected or automatically while offline,
     ///    otherwise delegates to the Firebase AI Logic Gemini session.
     /// 4. Yields `.text` chunks as they arrive and `.functionCalls` when the
     ///    model uses the `request_app_action` tool.
@@ -148,6 +165,13 @@ public final class LLMService {
         chatMode: CoCaptainChatMode = .agent,
         toolExecutor: CoCaptainToolExecutor? = nil
     ) -> AsyncThrowingStream<CoCaptainLLMStreamEvent, Error> {
+        let route = currentModelRoute
+        let supportsFunctionCalling: Bool
+        if case .cloud = route {
+            supportsFunctionCalling = true
+        } else {
+            supportsFunctionCalling = false
+        }
         let prompt = buildPrompt(
             userMessage: userMessage,
             context: context,
@@ -155,22 +179,30 @@ public final class LLMService {
             availableActions: availableActions,
             scope: scope,
             purpose: purpose,
-            chatMode: chatMode
+            chatMode: chatMode,
+            nodeEditToolsEnabled: NodeEditToolsFeature.isEnabled && supportsFunctionCalling,
+            modelSupportsFunctionCalling: supportsFunctionCalling
         )
 
-        let currentPreferred = preferredModelName
-        let isLocal = currentPreferred == "gemma-4-local"
+        let currentPreferred: String
+        let isLocal: Bool
+        switch route {
+        case .local:
+            currentPreferred = CoCaptainModelSelectionPolicy.localModelName
+            isLocal = true
+        case .cloud(let modelName):
+            currentPreferred = modelName
+            isLocal = false
+        case .unavailableOffline:
+            return AsyncThrowingStream { continuation in
+                continuation.finish(throwing: CoCaptainRoutingError.offlineModelUnavailable)
+            }
+        }
 
         if isLocal {
-            if !attachments.isEmpty {
+            if let submissionError = submissionError(for: attachments) {
                 return AsyncThrowingStream { continuation in
-                    continuation.finish(
-                        throwing: NSError(
-                            domain: "LLMService",
-                            code: -2,
-                            userInfo: [NSLocalizedDescriptionKey: "Attachments require a Gemini model. Choose a cloud model and try again; your draft is still available."]
-                        )
-                    )
+                    continuation.finish(throwing: submissionError)
                 }
             }
             return AsyncThrowingStream { continuation in
@@ -181,26 +213,28 @@ public final class LLMService {
                         }
 
                         var responseText = ""
-                        logger.debug("Starting local MLX stream.")
-                        
-                        let session = try await LocalMLXModelManager.shared.getMLXSession(scope: scope)
-                        let stream = session.streamResponse(to: prompt)
-                        
+                        logger.debug("Starting local LiteRT-LM stream.")
+
+                        let stream = LocalGemmaModelManager.shared.streamResponse(
+                            to: prompt,
+                            scope: scope
+                        )
+
                         for try await chunk in stream {
                             responseText += chunk
                             continuation.yield(.text(chunk))
                         }
-                        
+
                         self.tokenUsageLimiter.record(
                             prompt: prompt,
                             response: responseText,
                             isSubscribed: self.subscriptionManager.isSubscribed
                         )
                         continuation.finish()
-                        logger.info("Local MLX stream completed.")
+                        logger.info("Local LiteRT-LM stream completed.")
                     } catch {
-                        logger.error("Local MLX stream error: \(error.localizedDescription, privacy: .public)")
-                        LocalMLXModelManager.shared.resetChat(scope: scope)
+                        logger.error("Local LiteRT-LM stream error: \(error.localizedDescription, privacy: .public)")
+                        LocalGemmaModelManager.shared.resetChat(scope: scope)
                         continuation.finish(throwing: error)
                     }
                 }
@@ -508,7 +542,8 @@ public final class LLMService {
     /// on `NodeEditToolsFeature`), and the split list of autonomous vs.
     /// review-required actions.
     ///
-    /// `nodeEditToolsEnabled` is injectable for tests; `nil` reads the feature flag.
+    /// Tool capability inputs are injectable for tests; `nil` reads the active
+    /// feature flag and model route.
     func buildPrompt(
         userMessage: String,
         context: String?,
@@ -517,7 +552,8 @@ public final class LLMService {
         scope: CoCaptainAgentScope,
         purpose: CoCaptainTurnPurpose,
         chatMode: CoCaptainChatMode = .agent,
-        nodeEditToolsEnabled: Bool? = nil
+        nodeEditToolsEnabled: Bool? = nil,
+        modelSupportsFunctionCalling: Bool? = nil
     ) -> String {
         var parts: [String] = []
 
@@ -558,7 +594,9 @@ public final class LLMService {
                 }
                 .joined(separator: "\n")
 
-            let readToolInstructions = currentModelSupportsFunctionCalling
+            let readToolInstructions = (
+                modelSupportsFunctionCalling ?? currentModelSupportsFunctionCalling
+            )
                 ? """
                 - The canvas context may show only a short head of each Mini-App's code or SRS. Before proposing edits to an existing Mini-App, call `read_node_section(nodeId, section)` to read the full current text — never guess at code you have not seen.
                 """

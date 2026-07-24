@@ -111,12 +111,12 @@ struct CoCaptainView: View {
         let submittedPrompt = prompt.isEmpty ? "Review the attached files." : prompt
 
         beginChatOnboardingResponseWaitIfNeeded()
-        viewModel.sendMessage(
+        guard viewModel.sendMessage(
             submittedPrompt,
             mentions: mentions,
             attachments: attachments,
             purpose: currentTurnPurpose
-        )
+        ) else { return }
         text = ""
         mentions = []
         attachments = []

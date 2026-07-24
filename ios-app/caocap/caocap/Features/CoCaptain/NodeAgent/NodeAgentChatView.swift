@@ -98,7 +98,7 @@ struct NodeAgentChatView: View {
         guard (!prompt.isEmpty || !attachments.isEmpty), !viewModel.isThinking else { return }
         let submittedPrompt = prompt.isEmpty ? "Review the attached files." : prompt
 
-        viewModel.sendMessage(submittedPrompt, attachments: attachments)
+        guard viewModel.sendMessage(submittedPrompt, attachments: attachments) else { return }
         text = ""
         attachments = []
         isFocused = false

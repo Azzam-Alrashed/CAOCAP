@@ -7,13 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		08C16FF37B35C98A575493DA /* MLXLMCommon in Frameworks */ = {isa = PBXBuildFile; productRef = B36C7D0E9F35FACB923F7C12 /* MLXLMCommon */; };
-		1E7E0941E8A1E99F92036D1D /* MLXLLM in Frameworks */ = {isa = PBXBuildFile; productRef = 14A8BB25C54E18ED8B4AD721 /* MLXLLM */; };
-		24D84E26DDACC82D5BEF289E /* MLXHuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = 5950B62AA800AE6451CBA5A2 /* MLXHuggingFace */; };
-		36CB7DDAA31CDC310422C97D /* MLXLMCommon in Frameworks */ = {isa = PBXBuildFile; productRef = D0569E361C87D506CF4D97B6 /* MLXLMCommon */; };
-		3BB60B13F4B0C5F54C3E2D75 /* MLXLLM in Frameworks */ = {isa = PBXBuildFile; productRef = 65AD28C9CC90B00E135BC8F1 /* MLXLLM */; };
-		5AE67EFAD82A272F4725633E /* HuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = C4A6F5FD7C601A46F2976FE4 /* HuggingFace */; };
-		82AB960F5CAFE3BFD295E7D0 /* Transformers in Frameworks */ = {isa = PBXBuildFile; productRef = E1BD64795D39222A0BF8BFF1 /* Transformers */; };
+		CA0C00012FB0000000000001 /* LiteRTLM in Frameworks */ = {isa = PBXBuildFile; productRef = CA0C00032FB0000000000003 /* LiteRTLM */; };
 		ECA100012FA0000000000001 /* FirebaseRemoteConfig in Frameworks */ = {isa = PBXBuildFile; productRef = ECA100022FA0000000000001 /* FirebaseRemoteConfig */; };
 		ECD77F7D2F99BCBA00C96BF7 /* FirebaseAI in Frameworks */ = {isa = PBXBuildFile; productRef = ECD77F7C2F99BCBA00C96BF7 /* FirebaseAI */; };
 		ECD77F7F2F99BCBA00C96BF7 /* FirebaseAILogic in Frameworks */ = {isa = PBXBuildFile; productRef = ECD77F7E2F99BCBA00C96BF7 /* FirebaseAILogic */; };
@@ -101,6 +95,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CA0C00012FB0000000000001 /* LiteRTLM in Frameworks */,
 				ECD77F912F99BCBA00C96BF7 /* FirebasePerformance in Frameworks */,
 				ECD77F832F99BCBA00C96BF7 /* FirebaseAppCheck in Frameworks */,
 				ECD77F852F99BCBA00C96BF7 /* FirebaseAuth in Frameworks */,
@@ -119,11 +114,6 @@
 				ECD77F8B2F99BCBA00C96BF7 /* FirebaseFirestore in Frameworks */,
 				ECD77F872F99BCBA00C96BF7 /* FirebaseCore in Frameworks */,
 				ECD77F812F99BCBA00C96BF7 /* FirebaseAnalytics in Frameworks */,
-				1E7E0941E8A1E99F92036D1D /* MLXLLM in Frameworks */,
-				36CB7DDAA31CDC310422C97D /* MLXLMCommon in Frameworks */,
-				24D84E26DDACC82D5BEF289E /* MLXHuggingFace in Frameworks */,
-				5AE67EFAD82A272F4725633E /* HuggingFace in Frameworks */,
-				82AB960F5CAFE3BFD295E7D0 /* Transformers in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -138,8 +128,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				3BB60B13F4B0C5F54C3E2D75 /* MLXLLM in Frameworks */,
-				08C16FF37B35C98A575493DA /* MLXLMCommon in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -186,6 +174,7 @@
 			);
 			name = caocap;
 			packageProductDependencies = (
+				CA0C00032FB0000000000003 /* LiteRTLM */,
 				ECD77F7C2F99BCBA00C96BF7 /* FirebaseAI */,
 				ECD77F7E2F99BCBA00C96BF7 /* FirebaseAILogic */,
 				ECD77F802F99BCBA00C96BF7 /* FirebaseAnalytics */,
@@ -204,11 +193,6 @@
 				ECD77FAB2F9AA6C400C96BF7 /* Popovers */,
 				ECD77FAE2F9AA83700C96BF7 /* Lottie */,
 				ECEC6A1C2F9AA8D3007F3CF0 /* SwiftSoup */,
-				14A8BB25C54E18ED8B4AD721 /* MLXLLM */,
-				D0569E361C87D506CF4D97B6 /* MLXLMCommon */,
-				5950B62AA800AE6451CBA5A2 /* MLXHuggingFace */,
-				C4A6F5FD7C601A46F2976FE4 /* HuggingFace */,
-				E1BD64795D39222A0BF8BFF1 /* Transformers */,
 			);
 			productName = caocap;
 			productReference = EC997C772F96178E00C19E5E /* caocap.app */;
@@ -255,8 +239,6 @@
 			);
 			name = caocapUITests;
 			packageProductDependencies = (
-				65AD28C9CC90B00E135BC8F1 /* MLXLLM */,
-				B36C7D0E9F35FACB923F7C12 /* MLXLMCommon */,
 			);
 			productName = caocapUITests;
 			productReference = EC997C952F96179000C19E5E /* caocapUITests.xctest */;
@@ -296,14 +278,12 @@
 			mainGroup = EC997C6E2F96178E00C19E5E;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				CA0C00022FB0000000000002 /* XCRemoteSwiftPackageReference "LiteRT-LM" */,
 				ECD77F7B2F99BCBA00C96BF7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 				ECD77FA12F99C9C900C96BF7 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 				ECD77FAA2F9AA6C400C96BF7 /* XCRemoteSwiftPackageReference "Popovers" */,
 				ECD77FAD2F9AA83700C96BF7 /* XCRemoteSwiftPackageReference "lottie-ios" */,
 				ECEC6A1B2F9AA8D3007F3CF0 /* XCRemoteSwiftPackageReference "SwiftSoup" */,
-				148A25BC04F83D65386EC1C1 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */,
-				168C7A289235C4B5228581EC /* XCRemoteSwiftPackageReference "swift-huggingface" */,
-				0C81F71445D1E42CE6A93B3B /* XCRemoteSwiftPackageReference "swift-transformers" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = EC997C782F96178E00C19E5E /* Products */;
@@ -408,7 +388,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 8.0.3;
+				MARKETING_VERSION = 8.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.Ficruty.caocap;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -446,7 +426,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 8.0.3;
+				MARKETING_VERSION = 8.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.Ficruty.caocap;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -509,7 +489,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -569,7 +549,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -587,7 +567,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 9;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.Ficruty.caocapTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -605,7 +585,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 9;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.Ficruty.caocapTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -690,28 +670,12 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		0C81F71445D1E42CE6A93B3B /* XCRemoteSwiftPackageReference "swift-transformers" */ = {
+		CA0C00022FB0000000000002 /* XCRemoteSwiftPackageReference "LiteRT-LM" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/huggingface/swift-transformers";
+			repositoryURL = "https://github.com/google-ai-edge/LiteRT-LM";
 			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.3.0;
-			};
-		};
-		148A25BC04F83D65386EC1C1 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/ml-explore/mlx-swift-lm";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 3.31.3;
-			};
-		};
-		168C7A289235C4B5228581EC /* XCRemoteSwiftPackageReference "swift-huggingface" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/huggingface/swift-huggingface";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 0.9.0;
+				kind = revision;
+				revision = ffed38adbc33509480b5340e5173638bc20a68ff;
 			};
 		};
 		ECD77F7B2F99BCBA00C96BF7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
@@ -757,40 +721,10 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		14A8BB25C54E18ED8B4AD721 /* MLXLLM */ = {
+		CA0C00032FB0000000000003 /* LiteRTLM */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 148A25BC04F83D65386EC1C1 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
-			productName = MLXLLM;
-		};
-		5950B62AA800AE6451CBA5A2 /* MLXHuggingFace */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 148A25BC04F83D65386EC1C1 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
-			productName = MLXHuggingFace;
-		};
-		65AD28C9CC90B00E135BC8F1 /* MLXLLM */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 148A25BC04F83D65386EC1C1 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
-			productName = MLXLLM;
-		};
-		B36C7D0E9F35FACB923F7C12 /* MLXLMCommon */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 148A25BC04F83D65386EC1C1 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
-			productName = MLXLMCommon;
-		};
-		C4A6F5FD7C601A46F2976FE4 /* HuggingFace */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 168C7A289235C4B5228581EC /* XCRemoteSwiftPackageReference "swift-huggingface" */;
-			productName = HuggingFace;
-		};
-		D0569E361C87D506CF4D97B6 /* MLXLMCommon */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 148A25BC04F83D65386EC1C1 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
-			productName = MLXLMCommon;
-		};
-		E1BD64795D39222A0BF8BFF1 /* Transformers */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 0C81F71445D1E42CE6A93B3B /* XCRemoteSwiftPackageReference "swift-transformers" */;
-			productName = Transformers;
+			package = CA0C00022FB0000000000002 /* XCRemoteSwiftPackageReference "LiteRT-LM" */;
+			productName = LiteRTLM;
 		};
 		ECA100022FA0000000000001 /* FirebaseRemoteConfig */ = {
 			isa = XCSwiftPackageProductDependency;

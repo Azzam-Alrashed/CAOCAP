@@ -275,7 +275,7 @@ final class AppSessionCoordinator {
     }
 
     func eraseEverything(authManager: AuthenticationManager) async throws {
-        guard !LocalMLXModelManager.shared.isDownloadingLocalModel else {
+        guard !LocalGemmaModelManager.shared.isDownloadingLocalModel else {
             throw AppDataResetError.localModelDownloadInProgress
         }
 
@@ -288,8 +288,7 @@ final class AppSessionCoordinator {
         }
 
         authManager.signOut()
-        LocalMLXModelManager.shared.updateHFToken("")
-        LocalMLXModelManager.shared.clearLocalModelCache()
+        LocalGemmaModelManager.shared.clearLocalModelCache()
         try await AppDataResetService.eraseLocalData()
         ActivityStore.shared.reset()
         GamificationStore.shared.reset()

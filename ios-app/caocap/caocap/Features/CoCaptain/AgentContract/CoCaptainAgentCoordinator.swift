@@ -8,9 +8,13 @@ import OSLog
 /// lightweight stub without touching `LLMService` or Firebase AI Logic.
 @MainActor
 public protocol CoCaptainLLMClient: AnyObject {
+    /// Whether the active backend can fetch full node sections through tools.
+    var supportsOnDemandCodeReads: Bool { get }
     /// Clears the model's conversation history for the given scope, starting a
     /// fresh chat session. Called when the user taps "Clear" in the chat UI.
     func resetChat(scope: CoCaptainAgentScope)
+    /// Returns a recoverable validation error before the composer clears a draft.
+    func submissionError(for attachments: [CoCaptainAttachment]) -> CoCaptainSubmissionError?
     /// Streams incremental model output for one user turn.
     ///
     /// - Parameters:
@@ -38,6 +42,12 @@ public protocol CoCaptainLLMClient: AnyObject {
 }
 
 public extension CoCaptainLLMClient {
+    var supportsOnDemandCodeReads: Bool { true }
+
+    func submissionError(for attachments: [CoCaptainAttachment]) -> CoCaptainSubmissionError? {
+        nil
+    }
+
     /// Convenience overload for callers without an in-turn tool executor.
     func streamAgentEvents(
         for userMessage: String,
@@ -109,7 +119,7 @@ public struct CoCaptainAgentRunResult: Hashable {
 @MainActor
 public final class CoCaptainAgentCoordinator {
     private let llmClient: any CoCaptainLLMClient
-    private let contextBuilder: ProjectContextBuilder
+    private let contextBuilder: ProjectContextBuilder?
     private let patchEngine: NodePatchEngine
     private let outputAdapter: any CoCaptainAgentOutputAdapting
     private let validator: CoCaptainAgentValidator
@@ -121,7 +131,7 @@ public final class CoCaptainAgentCoordinator {
     /// values when you need to inject stubs or alternative implementations.
     public init(
         llmClient: (any CoCaptainLLMClient)? = nil,
-        contextBuilder: ProjectContextBuilder = ProjectContextBuilder(),
+        contextBuilder: ProjectContextBuilder? = nil,
         patchEngine: NodePatchEngine = NodePatchEngine(),
         parser: CoCaptainAgentParser = CoCaptainAgentParser(),
         outputAdapter: (any CoCaptainAgentOutputAdapting)? = nil,
@@ -149,6 +159,13 @@ public final class CoCaptainAgentCoordinator {
         llmClient.resetChat(scope: scope)
     }
 
+    /// Validates capabilities before a view clears its composer draft.
+    public func submissionError(
+        for attachments: [CoCaptainAttachment]
+    ) -> CoCaptainSubmissionError? {
+        llmClient.submissionError(for: attachments)
+    }
+
     /// Runs one assistant turn against the active project context. Structured
     /// responses are preferred so the UI can separate visible chat text from
     /// executable actions and reviewable node edits.
@@ -165,6 +182,9 @@ public final class CoCaptainAgentCoordinator {
     ) async throws -> CoCaptainAgentRunResult {
         let resolvedTurnPlan = turnPlan ?? CoCaptainTurnPlan(purpose: purpose, mode: .agent)
         let contextDetailLevel = resolvedTurnPlan.contextDetailLevel
+        let contextBuilder = contextBuilder ?? ProjectContextBuilder(
+            usesOnDemandCodeReads: llmClient.supportsOnDemandCodeReads
+        )
         let context = store.map { store in
             switch scope {
             case .project:

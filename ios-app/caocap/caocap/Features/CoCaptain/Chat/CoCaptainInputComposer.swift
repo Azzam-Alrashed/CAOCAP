@@ -24,7 +24,7 @@ struct CoCaptainInputComposer: View {
     
     @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
     @AppStorage("app.dictationLocale") private var dictationLocaleRawValue = DictationLocaleOption.auto.rawValue
-    @State private var localModelManager = LocalMLXModelManager.shared
+    @State private var localModelManager = LocalGemmaModelManager.shared
     /// Dictation manager for streaming microphone input and converting it to query text.
     @State private var dictation = DictationController()
     @State private var isContextVisible = false

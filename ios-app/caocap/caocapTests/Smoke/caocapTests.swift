@@ -140,9 +140,15 @@ struct caocapTests {
     }
 
     @MainActor
-    @Test func llmServiceLocalStreamingDelegatesToLocalMLXModelManager() async throws {
+    @Test func llmServiceLocalStreamingRequiresDownloadedLiteRTModel() async throws {
+        guard LocalModelDeviceEligibility.current.isSupported else { return }
+
         let originalModelName = UserDefaults.standard.string(forKey: "cocaptain.modelName")
-        UserDefaults.standard.set("gemma-4-local", forKey: "cocaptain.modelName")
+        UserDefaults.standard.set(
+            CoCaptainModelSelectionPolicy.localModelName,
+            forKey: "cocaptain.modelName"
+        )
+        defer { UserDefaults.standard.set(originalModelName, forKey: "cocaptain.modelName") }
         
         let llmService = LLMService.shared
         
@@ -151,18 +157,15 @@ struct caocapTests {
         var threwExpectedError = false
         do {
             for try await _ in events {
-                // Expect an error because of missing/invalid local token/cache
+                // Expect an error because the LiteRT model fixture is not installed.
             }
         } catch {
             let errorDescription = error.localizedDescription
-            if errorDescription.contains("Access Token") || errorDescription.contains("LocalMLXModelManager") || errorDescription.contains("token") {
+            if errorDescription.contains("Download Gemma 4") || errorDescription.contains("not ready") {
                 threwExpectedError = true
             }
         }
         
         #expect(threwExpectedError)
-        
-        // Restore original
-        UserDefaults.standard.set(originalModelName, forKey: "cocaptain.modelName")
     }
 }

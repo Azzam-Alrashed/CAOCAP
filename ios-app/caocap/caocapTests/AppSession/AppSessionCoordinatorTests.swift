@@ -130,16 +130,12 @@ struct AppSessionCoordinatorTests {
         #expect(session.showingHelp)
     }
 
-    @Test func flyToTargetScaleUsesMeasuredFrameWhenAvailable() {
+    @Test func flyToTargetScaleUsesMeasuredSizeWhenAvailable() {
         let session = AppSessionCoordinator()
         let nodeID = UUID()
         let node = SpatialNode(id: nodeID, type: .miniApp, position: CGPoint(x: 10, y: 20), title: "Mini")
         session.containerSize = CGSize(width: 400, height: 800)
-        session.nodeFrames[nodeID] = NodeFrameData(
-            nodeId: nodeID,
-            frame: CGRect(x: 0, y: 0, width: 200, height: 400),
-            size: CGSize(width: 200, height: 400)
-        )
+        session.nodeSizes[nodeID] = CGSize(width: 200, height: 400)
 
         let scale = session.flyToTargetScale(for: node, nodeId: nodeID)
 
