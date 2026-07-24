@@ -14,7 +14,7 @@ enum LocalGemmaModelError: LocalizedError {
         switch self {
         case .unsupportedDevice:
             return String(
-                localized: "Gemma 4 requires iPhone 15 Pro, iPhone 15 Pro Max, or a newer iPhone."
+                localized: "Gemma 4 requires an iPhone 15 Pro or newer iPhone, or an iPad with an M-series chip."
             )
         case .insufficientStorage(let required):
             return String(

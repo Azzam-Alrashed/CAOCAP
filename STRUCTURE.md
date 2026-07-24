@@ -261,7 +261,9 @@ Decoupled backend engines and API clients specific to the CoCaptain agentic flow
 
 The CoCaptain service layer also owns `LocalModelDeviceEligibility`, the pure
 hardware capability and persisted-selection policy used to gate on-device
-Gemma independently from Settings UI and inference runtime details.
+Gemma independently from Settings UI and inference runtime details. It supports
+the iPhone 15 Pro family and newer iPhones, plus explicitly allowlisted
+M-series iPads; A-series iPads remain cloud-only.
 `LocalGemmaModelManager` owns the LiteRT model artifact lifecycle: direct
 download, progress, validation, cache inspection, cancellation, deletion, and
 one-time removal of the former MLX cache and token.

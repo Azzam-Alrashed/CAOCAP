@@ -1813,22 +1813,22 @@
         }
       }
     },
-    "Gemma 4 requires iPhone 15 Pro, iPhone 15 Pro Max, or a newer iPhone." : {
+    "Gemma 4 requires an iPhone 15 Pro or newer iPhone, or an iPad with an M-series chip." : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "يتطلب Gemma 4 جهاز iPhone 15 Pro أو iPhone 15 Pro Max أو جهاز iPhone أحدث."
+            "value" : "يتطلب Gemma 4 جهاز iPhone 15 Pro أو جهاز iPhone أحدث، أو جهاز iPad بشريحة من سلسلة M."
           }
         }
       }
     },
-    "Gemma 4 runs privately on this iPhone after a one-time download." : {
+    "Gemma 4 runs privately on this device after a one-time download." : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "يعمل Gemma 4 بخصوصية على هذا الـ iPhone بعد تنزيله مرة واحدة."
+            "value" : "يعمل Gemma 4 بخصوصية على هذا الجهاز بعد تنزيله مرة واحدة."
           }
         }
       }
@@ -3367,12 +3367,12 @@
         }
       }
     },
-    "On-Device Gemma Requires a Newer iPhone" : {
+    "On-Device Gemma Requires a Supported Device" : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "يتطلب Gemma على الجهاز جهاز iPhone أحدث"
+            "value" : "يتطلب Gemma على الجهاز جهازاً مدعوماً"
           }
         }
       }

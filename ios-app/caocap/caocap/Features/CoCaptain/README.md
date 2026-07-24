@@ -13,7 +13,7 @@ CoCaptain is the agentic assistant for CAOCAP. It reads the current spatial proj
 Supporting services live outside this feature:
 
 - `ProjectContextBuilder` serializes the canvas for the model.
-- `LLMService` routes and streams from Firebase AI Logic or local LiteRT-LM; `LocalGemmaModelManager` owns the downloaded model and local sessions.
+- `LLMService` routes and streams from Firebase AI Logic or local LiteRT-LM; `LocalGemmaModelManager` owns the downloaded model and local sessions. On-device Gemma is available on the iPhone 15 Pro family and newer iPhones, plus M-series iPads; unsupported devices use Gemini cloud.
 - `AppActionDispatcher` performs high-level app actions.
 - `NodePatchEngine` previews and applies node edits using flexible target matching for all exact operations.
 

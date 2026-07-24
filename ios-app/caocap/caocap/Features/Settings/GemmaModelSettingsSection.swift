@@ -58,13 +58,13 @@ struct GemmaModelSettingsSection: View {
     private var unsupportedDeviceMessage: some View {
         VStack(alignment: .leading, spacing: 6) {
             Label(
-                "On-Device Gemma Requires a Newer iPhone",
-                systemImage: "iphone.gen3.slash"
+                "On-Device Gemma Requires a Supported Device",
+                systemImage: "ipad.and.iphone.slash"
             )
             .font(.system(size: 14, weight: .semibold))
             .foregroundStyle(.secondary)
 
-            Text("Gemma 4 requires iPhone 15 Pro, iPhone 15 Pro Max, or a newer iPhone.")
+            Text("Gemma 4 requires an iPhone 15 Pro or newer iPhone, or an iPad with an M-series chip.")
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
         }
@@ -78,7 +78,7 @@ struct GemmaModelSettingsSection: View {
         Divider().padding(.leading, 56).opacity(0.3)
 
         VStack(alignment: .leading, spacing: 6) {
-            Text("Gemma 4 runs privately on this iPhone after a one-time download.")
+            Text("Gemma 4 runs privately on this device after a one-time download.")
                 .font(.system(size: 11, weight: .bold))
                 .foregroundStyle(.secondary)
             Text("The model uses approximately 2.6 GB of storage.")
