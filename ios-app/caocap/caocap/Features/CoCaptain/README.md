@@ -13,7 +13,7 @@ CoCaptain is the agentic assistant for CAOCAP. It reads the current spatial proj
 Supporting services live outside this feature:
 
 - `ProjectContextBuilder` serializes the canvas for the model.
-- `LLMService` streams from Firebase AI Logic.
+- `LLMService` routes and streams from Firebase AI Logic or local LiteRT-LM; `LocalGemmaModelManager` owns the downloaded model and local sessions.
 - `AppActionDispatcher` performs high-level app actions.
 - `NodePatchEngine` previews and applies node edits using flexible target matching for all exact operations.
 
@@ -21,9 +21,9 @@ Supporting services live outside this feature:
 
 1. The user picks Agent, Ask, or Plan in the composer (persisted as `cocaptain.chatMode`, default Agent) and sends a message through `CoCaptainViewModel`.
 2. Direct commands are resolved locally with `CommandIntentResolver` when possible. In Ask/Plan modes, mutating shortcuts are skipped so those messages go to the model as chat.
-3. Otherwise, `CoCaptainAgentCoordinator` builds project context from the active `ProjectStore` using the turn plan’s detail level (implementation for Agent, product for Ask/Plan). In project scope, an optional `@` pin focuses the prompt on one node via `buildNodePromptContext` without switching to a node-scoped session. By default Agent context carries only a short head of each Mini-App's code/SRS; the model reads full sections on demand (see the read tool below). The full-budget context is kept when the local MLX backend (`gemma-4-local`) is selected, since it has no function calling.
+3. Otherwise, `CoCaptainAgentCoordinator` builds project context from the active `ProjectStore` using the turn plan’s detail level (implementation for Agent, product for Ask/Plan). In project scope, an optional `@` pin focuses the prompt on one node via `buildNodePromptContext` without switching to a node-scoped session. By default Agent context carries only a short head of each Mini-App's code/SRS; the model reads full sections on demand (see the read tool below). The full-budget context is kept when the local LiteRT-LM backend (`gemma-4-local`) is selected, since CAOCAP does not expose its function calling in the first release.
 4. `CoCaptainTurnPlan` merges turn purpose with the selected `CoCaptainChatMode` to choose the effective execution policy. There is no keyword intent classifier.
-5. `LLMService` streams text back into the current assistant bubble. When the model calls the read-only `read_node_section(nodeId, section)` tool, the coordinator answers it inline against the active `ProjectStore` and `LLMService` sends the result back on the same chat session (bounded to 4 tool-response rounds per turn).
+5. `LLMService` streams text back into the current assistant bubble. Offline turns automatically use a ready local Gemma model without changing the saved online preference. On cloud turns, when the model calls the read-only `read_node_section(nodeId, section)` tool, the coordinator answers it inline against the active `ProjectStore` and `LLMService` sends the result back on the same chat session (bounded to 4 tool-response rounds per turn).
 6. `CoCaptainAgentOutputAdapter` hides machine output while streaming and turns the final response into a directive. The ViewModel updates the assistant bubble from `onVisibleText` so prose streams live; XML/tool payloads stay hidden.
 7. For structured turns, `CoCaptainAgentValidator` checks action IDs, action safety, and node edit shape. Executable work is enforced only when the policy requires it (onboarding guided edit), not for standard Agent chat.
 8. Safe actions execute immediately when autonomous; pending actions and node edits become `ReviewBundleItem` entries for human approval.
@@ -90,7 +90,7 @@ When `NodeEditToolsFeature` is enabled (default on in Debug/TestFlight, off in p
 
 `CoCaptainNodeEditFunctionAdapter` maps these calls into the payload. With the flag on, the XML schema block is omitted from the prompt and the agentic retry message references the tools; the XML parser stays in place as a silent fallback for models that still emit it. If a turn contains both tool calls and an XML block, the function-call edits win and the XML edits are dropped. `CoCaptainAgentOutputSource` records which format delivered each directive for rollout telemetry.
 
-### XML block (fallback, and the only format for the local MLX backend)
+### XML block (fallback, and the first-release format for local LiteRT-LM)
 
 The model may include one trailing XML block:
 

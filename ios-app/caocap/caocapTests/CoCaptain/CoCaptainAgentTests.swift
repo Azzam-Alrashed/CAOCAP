@@ -2187,6 +2187,32 @@ struct CoCaptainAgentTests {
     }
 
     @MainActor
+    @Test func rejectedAttachmentsAreNotSubmittedOrRemovedFromComposerState() {
+        let llm = AttachmentRejectingLLMClient()
+        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
+        let vm = CoCaptainViewModel(agentCoordinator: coordinator)
+        let attachment = CoCaptainAttachment(
+            fileName: "reference.png",
+            mimeType: "image/png",
+            data: Data([0])
+        )
+
+        let accepted = vm.sendMessage("Review this", attachments: [attachment])
+
+        #expect(!accepted)
+        #expect(llm.streamCount == 0)
+        #expect(vm.items.allSatisfy { item in
+            guard case .message(let bubble) = item.content else { return true }
+            return !bubble.isUser
+        })
+        let assistantText = vm.items.compactMap { item -> String? in
+            guard case .message(let bubble) = item.content, !bubble.isUser else { return nil }
+            return bubble.text
+        }.last
+        #expect(assistantText?.contains("text-only") == true)
+    }
+
+    @MainActor
     @Test func completedAssistantResponseCountAdvancesAfterSuccessfulAgentTurn() async throws {
         let dispatcher = TestActionDispatcher()
         let llm = TestLLMClient(
@@ -3763,6 +3789,33 @@ private final class ThrowingLLMClient: CoCaptainLLMClient {
     ) -> AsyncThrowingStream<CoCaptainLLMStreamEvent, Error> {
         AsyncThrowingStream { continuation in
             continuation.finish(throwing: error)
+        }
+    }
+}
+
+@MainActor
+private final class AttachmentRejectingLLMClient: CoCaptainLLMClient {
+    private(set) var streamCount = 0
+
+    func resetChat(scope: CoCaptainAgentScope) {}
+
+    func submissionError(for attachments: [CoCaptainAttachment]) -> CoCaptainSubmissionError? {
+        attachments.isEmpty ? nil : .attachmentsRequireCloud
+    }
+
+    func streamAgentEvents(
+        for userMessage: String,
+        context: String?,
+        expectsStructuredResponse: Bool,
+        availableActions: [AppActionDefinition],
+        scope: CoCaptainAgentScope,
+        purpose: CoCaptainTurnPurpose,
+        chatMode: CoCaptainChatMode = .agent,
+        toolExecutor: CoCaptainToolExecutor? = nil
+    ) -> AsyncThrowingStream<CoCaptainLLMStreamEvent, Error> {
+        streamCount += 1
+        return AsyncThrowingStream { continuation in
+            continuation.finish()
         }
     }
 }

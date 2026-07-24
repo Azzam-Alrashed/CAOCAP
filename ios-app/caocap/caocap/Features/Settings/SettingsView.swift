@@ -15,10 +15,9 @@ struct SettingsView: View {
     @AppStorage("grid_opacity") private var gridOpacity: Double = 0.1
     @AppStorage("connection_style") private var connectionStyle = "Dashed"
     @AppStorage("spatial_glow_enabled") private var spatialGlowEnabled = true
-    @AppStorage("cocaptain.modelName") private var modelName = "gemini-3-flash-preview"
-    @AppStorage("cocaptain.hfToken") private var hfToken = ""
+    @AppStorage("cocaptain.modelName") private var modelName = CoCaptainModelSelectionPolicy.cloudModelName
 
-    @State private var localModelManager = LocalMLXModelManager.shared
+    @State private var localModelManager = LocalGemmaModelManager.shared
     @State private var showingEraseConfirmation = false
     @State private var isErasingEverything = false
     @State private var eraseErrorMessage: String?
@@ -27,30 +26,6 @@ struct SettingsView: View {
     let themes = ["System", "Light", "Dark"]
     let intensities = ["Subtle", "Medium", "Sharp"]
     let styles = ["Solid", "Dashed", "Neon"]
-    let modelOptions = ["Gemini 3 Flash (Cloud)", "Gemma 4 (Local)"]
-
-    private var modelSelectionBinding: Binding<String> {
-        Binding(
-            get: {
-                if modelName == "gemma-4-local" {
-                    return "Gemma 4 (Local)"
-                } else {
-                    return "Gemini 3 Flash (Cloud)"
-                }
-            },
-            set: { newValue in
-                if newValue == "Gemma 4 (Local)" {
-                    modelName = "gemma-4-local"
-                    let hasToken = !hfToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                    if localModelManager.isLocalModelCached || hasToken {
-                        localModelManager.preloadLocalModelIfNeeded()
-                    }
-                } else {
-                    modelName = "gemini-3-flash-preview"
-                }
-            }
-        )
-    }
     
     var body: some View {
         NavigationStack {
@@ -80,141 +55,11 @@ struct SettingsView: View {
                                 SettingsPickerRow(icon: "globe", title: "Language", selection: $selectedLanguage, options: languages, color: .blue)
                             }
 
-                            // MARK: - CoCaptain AI
-                            SettingsSection("CoCaptain AI") {
-                                SettingsPickerRow(icon: "cpu", title: "Active Model", selection: modelSelectionBinding, options: modelOptions, color: .orange)
-                                
-                                if modelName == "gemma-4-local" {
-                                    Divider().padding(.leading, 56).opacity(0.3)
-                                    
-                                    HStack {
-                                        Label("Hugging Face Token", systemImage: "key.fill")
-                                            .font(.system(size: 16, weight: .medium))
-                                        Spacer()
-                                        SecureField("hf_...", text: $hfToken)
-                                            .textFieldStyle(.plain)
-                                            .multilineTextAlignment(.trailing)
-                                            .font(.system(size: 14, design: .monospaced))
-                                            .foregroundStyle(.primary)
-                                            .frame(maxWidth: 180)
-                                            .autocorrectionDisabled()
-                                            .textInputAutocapitalization(.never)
-                                            .onChange(of: hfToken) { _, newValue in
-                                                localModelManager.updateHFToken(newValue)
-                                            }
-                                    }
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 14)
-                                    
-                                    Divider().padding(.leading, 56).opacity(0.3)
-                                    
-                                    VStack(alignment: .leading, spacing: 6) {
-                                        Text("Gemma 4 is a gated model. To download it, you must:")
-                                            .font(.system(size: 11, weight: .bold))
-                                            .foregroundStyle(.secondary)
-                                        Text("• Accept the license at huggingface.co/google/gemma-4-E2B-it")
-                                            .font(.system(size: 11))
-                                            .foregroundStyle(.secondary)
-                                        Text("• Create a Read token at huggingface.co/settings/tokens")
-                                            .font(.system(size: 11))
-                                            .foregroundStyle(.secondary)
-                                    }
-                                    .padding(.horizontal, 16)
-                                    .padding(.bottom, 8)
-                                    
-                                    Divider().padding(.leading, 56).opacity(0.3)
-                                    
-                                    HStack {
-                                        Label("Local Cache Size", systemImage: "internaldrive")
-                                            .font(.system(size: 16, weight: .medium))
-                                        Spacer()
-                                        Text(localModelManager.localModelCacheSizeFormatted)
-                                            .font(.system(size: 14, design: .monospaced))
-                                            .foregroundStyle(.secondary)
-                                    }
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 14)
-                                    
-                                    if localModelManager.isDownloadingLocalModel {
-                                        Divider().padding(.leading, 56).opacity(0.3)
-                                        
-                                        VStack(alignment: .leading, spacing: 8) {
-                                            HStack {
-                                                Text("Downloading local model...")
-                                                    .font(.system(size: 14, weight: .medium))
-                                                    .foregroundStyle(.secondary)
-                                                Spacer()
-                                                Text("\(Int(localModelManager.localModelDownloadProgress * 100))%")
-                                                    .font(.system(size: 14, design: .monospaced))
-                                                    .foregroundStyle(.secondary)
-                                            }
-                                            ProgressView(value: localModelManager.localModelDownloadProgress)
-                                                .tint(.orange)
-                                        }
-                                        .padding(.horizontal, 16)
-                                        .padding(.vertical, 14)
-                                    } else {
-                                        if let error = localModelManager.localModelError {
-                                            Divider().padding(.leading, 56).opacity(0.3)
-                                            VStack(alignment: .leading, spacing: 6) {
-                                                Label("Download Error", systemImage: "exclamationmark.triangle.fill")
-                                                    .font(.system(size: 14, weight: .semibold))
-                                                    .foregroundStyle(.red)
-                                                Text(error)
-                                                    .font(.system(size: 12))
-                                                    .foregroundStyle(.secondary)
-                                            }
-                                            .padding(.horizontal, 16)
-                                            .padding(.vertical, 10)
-                                        }
-                                        
-                                        Divider().padding(.leading, 56).opacity(0.3)
-                                        
-                                        if localModelManager.isLocalModelCached {
-                                            HStack {
-                                                Label("Local Model Ready", systemImage: "checkmark.circle.fill")
-                                                    .font(.system(size: 16, weight: .semibold))
-                                                    .foregroundStyle(.green)
-                                                Spacer()
-                                            }
-                                            .padding(.horizontal, 16)
-                                            .padding(.vertical, 14)
-                                            
-                                            Divider().padding(.leading, 56).opacity(0.3)
-                                            
-                                            Button(role: .destructive) {
-                                                localModelManager.clearLocalModelCache()
-                                            } label: {
-                                                Label("Delete Local Model", systemImage: "trash.fill")
-                                                    .font(.system(size: 16, weight: .medium))
-                                                    .foregroundStyle(.red)
-                                            }
-                                            .padding(.horizontal, 16)
-                                            .padding(.vertical, 14)
-                                        } else {
-                                            VStack(alignment: .leading, spacing: 8) {
-                                                Button {
-                                                    localModelManager.downloadLocalModel()
-                                                } label: {
-                                                    Label(localModelManager.localModelError != nil ? "Retry Download" : "Download Local Model", 
-                                                          systemImage: localModelManager.localModelError != nil ? "arrow.clockwise" : "arrow.down.circle")
-                                                        .font(.system(size: 16, weight: .semibold))
-                                                        .foregroundStyle(hfToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.secondary : Color.orange)
-                                                }
-                                                .disabled(hfToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                                                
-                                                if hfToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                                                    Label("Access Token is required to download.", systemImage: "info.circle")
-                                                        .font(.system(size: 11))
-                                                        .foregroundStyle(.orange)
-                                                }
-                                            }
-                                            .padding(.horizontal, 16)
-                                            .padding(.vertical, 14)
-                                        }
-                                    }
-                                }
-                            }
+                            GemmaModelSettingsSection(
+                                modelName: $modelName,
+                                localModelManager: localModelManager,
+                                eligibility: .current
+                            )
                             
                             // MARK: - Canvas & Graphics
                             SettingsSection("Canvas & Graphics") {
@@ -382,6 +227,13 @@ struct SettingsView: View {
                     }
                 }
             }
+            .onAppear {
+                modelName = CoCaptainModelSelectionPolicy.resolvedModelName(
+                    modelName,
+                    eligibility: .current
+                )
+                localModelManager.refreshCacheSize()
+            }
             .preferredColorScheme(currentColorScheme)
             .alert(
                 "Couldn’t Erase Everything",
@@ -407,7 +259,7 @@ struct SettingsView: View {
 }
 
 // MARK: - Helper View
-private struct SettingsPickerRow: View {
+struct SettingsPickerRow: View {
     let icon: String
     let title: LocalizedStringKey
     @Binding var selection: String

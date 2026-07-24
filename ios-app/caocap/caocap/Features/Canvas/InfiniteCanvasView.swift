@@ -62,6 +62,9 @@ struct InfiniteCanvasView: View {
     @State private var nodeDragOffsets: [UUID: CGSize] = [:]
     /// Flag indicating an active node drag, used to disable canvas panning during the gesture.
     @State private var isDraggingNode = false
+    /// Prevents a multi-touch magnification gesture from being interpreted as a
+    /// node drag by the card's single-finger `DragGesture`.
+    @State private var isPinchingCanvas = false
     /// Caches intrinsic node dimensions for fly-to and onboarding geometry.
     @State private var nodeSizes: [UUID: CGSize] = [:]
     /// Touch-pan translation stays view-local until the gesture ends, avoiding a
@@ -192,6 +195,11 @@ struct InfiniteCanvasView: View {
             .simultaneousGesture(
                 MagnifyGesture()
                     .onChanged { value in
+                        if !isPinchingCanvas {
+                            isPinchingCanvas = true
+                            nodeDragOffsets.removeAll()
+                            isDraggingNode = false
+                        }
                         let location = CGPoint(
                             x: value.startAnchor.x * geometry.size.width,
                             y: value.startAnchor.y * geometry.size.height
@@ -204,6 +212,9 @@ struct InfiniteCanvasView: View {
                         currentScale = viewport.scale
                         persistViewportIfNeeded()
                         completeOnboardingPinchIfNeeded()
+                        DispatchQueue.main.async {
+                            isPinchingCanvas = false
+                        }
                     }
             )
             .onPreferenceChange(NodeSizePreferenceKey.self) { value in
@@ -340,11 +351,13 @@ struct InfiniteCanvasView: View {
     }
 
     private func handleNodeDragChanged(_ node: SpatialNode, translation: CGSize) {
+        guard !isPinchingCanvas else { return }
         isDraggingNode = true
         nodeDragOffsets[node.id] = canvasTranslation(for: translation)
     }
 
     private func handleNodeDragEnded(_ node: SpatialNode, translation: CGSize) {
+        guard !isPinchingCanvas else { return }
         let canvasTranslation = canvasTranslation(for: translation)
         let finalPosition = CGPoint(
             x: node.position.x + canvasTranslation.width,

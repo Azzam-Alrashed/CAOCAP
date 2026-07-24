@@ -26,16 +26,12 @@ public struct ProjectContextBuilder {
 
     /// When `true`, non-selected Mini-Apps get a short section head plus size
     /// stats instead of a large budget, because the model can read full text
-    /// through the `read_node_section` tool. The local MLX backend has no
-    /// function calling, so it keeps the full budgets.
+    /// through the `read_node_section` tool. CAOCAP keeps LiteRT-LM tool
+    /// calling disabled in the first release, so it retains the full budgets.
     private let usesOnDemandCodeReads: Bool
 
-    public init(usesOnDemandCodeReads: Bool? = nil) {
-        self.usesOnDemandCodeReads = usesOnDemandCodeReads ?? Self.defaultUsesOnDemandCodeReads()
-    }
-
-    static func defaultUsesOnDemandCodeReads() -> Bool {
-        UserDefaults.standard.string(forKey: "cocaptain.modelName") != "gemma-4-local"
+    public init(usesOnDemandCodeReads: Bool = true) {
+        self.usesOnDemandCodeReads = usesOnDemandCodeReads
     }
 
     /// Builds a full-project context string from every node on the canvas.

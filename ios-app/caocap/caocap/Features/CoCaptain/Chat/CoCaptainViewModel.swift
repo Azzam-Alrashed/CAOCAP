@@ -189,13 +189,19 @@ public final class CoCaptainViewModel {
         sendMessage(suggestion.suggestedPrompt)
     }
 
+    @discardableResult
     public func sendMessage(
         _ text: String,
         mentions: [CoCaptainNodeMention] = [],
         attachments: [CoCaptainAttachment] = [],
         purpose: CoCaptainTurnPurpose = .standard
-    ) {
-        guard !isThinking else { return }
+    ) -> Bool {
+        guard !isThinking else { return false }
+
+        if let error = agentCoordinator.submissionError(for: attachments) {
+            appendAssistantMessage(error.localizedDescription)
+            return false
+        }
 
         let turnID = UUID()
         let userItem = ChatBubbleItem(
@@ -210,7 +216,7 @@ public final class CoCaptainViewModel {
 
         if purpose == .standard,
            handleDirectCommand(text, turnID: turnID, purpose: purpose) {
-            return
+            return true
         }
 
         isThinking = true
@@ -350,6 +356,7 @@ public final class CoCaptainViewModel {
                 )
             }
         }
+        return true
     }
 
     public func stopStreaming() {
