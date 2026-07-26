@@ -5,7 +5,7 @@ import Foundation
 /// Most turns use the standard agent behavior. The onboarding welcome keeps
 /// the response model-generated while giving the first interaction a focused
 /// UX outcome.
-public enum CoCaptainTurnPurpose: Hashable {
+public enum CoCaptainTurnPurpose: String, Hashable, Codable {
     case standard
     case onboardingWelcome
     case onboardingBuildHandoff
@@ -76,7 +76,7 @@ public enum CoCaptainTurnPurpose: Hashable {
 /// Agent is the default. Ask and Plan are prose-only: no tools, no staging,
 /// product-level context. Plan steers toward numbered step outlines.
 /// The composer picker persists the choice under `storageKey`.
-public enum CoCaptainChatMode: String, Hashable, CaseIterable, Identifiable {
+public enum CoCaptainChatMode: String, Hashable, CaseIterable, Identifiable, Codable {
     case agent
     case ask
     case plan
@@ -107,6 +107,25 @@ public enum CoCaptainChatMode: String, Hashable, CaseIterable, Identifiable {
             return LocalizationManager.shared.localizedString("cocaptain.composer.placeholder.ask")
         case .plan:
             return LocalizationManager.shared.localizedString("cocaptain.composer.placeholder.plan")
+        }
+    }
+
+    /// Short explanation used in the mode menu so builders can predict whether
+    /// a turn may propose canvas work.
+    var explanation: String {
+        switch self {
+        case .agent:
+            return LocalizationManager.shared.localizedString(
+                "Can propose changes; you approve before they apply"
+            )
+        case .ask:
+            return LocalizationManager.shared.localizedString(
+                "Answers questions without changing the canvas"
+            )
+        case .plan:
+            return LocalizationManager.shared.localizedString(
+                "Creates a step-by-step plan without implementing it"
+            )
         }
     }
 
@@ -360,6 +379,33 @@ public enum AgentExecutionState: Equatable {
     /// A terminal error occurred during the turn; the associated string
     /// carries a user-facing description.
     case error(String)
+}
+
+/// Short, observable progress labels shown while an agent turn is active.
+///
+/// These phases describe product-visible work only. They must never expose raw
+/// model reasoning or hidden tool payloads.
+public enum CoCaptainProgressPhase: String, Hashable, Codable {
+    case connecting
+    case readingContext
+    case thinking
+    case preparingChanges
+    case applying
+
+    public var localizedTitle: String {
+        switch self {
+        case .connecting:
+            return LocalizationManager.shared.localizedString("Connecting")
+        case .readingContext:
+            return LocalizationManager.shared.localizedString("Reading canvas")
+        case .thinking:
+            return LocalizationManager.shared.localizedString("Thinking")
+        case .preparingChanges:
+            return LocalizationManager.shared.localizedString("Preparing changes")
+        case .applying:
+            return LocalizationManager.shared.localizedString("Applying")
+        }
+    }
 }
 
 /// A single app-level action emitted by the model, referencing a registered
@@ -743,20 +789,23 @@ public enum ReviewItemStatus: String, Hashable, Codable {
 
 /// A confirmation record that appears in the timeline after the coordinator
 /// has automatically executed one or more safe app actions.
-public struct ExecutionStatusItem: Identifiable, Hashable {
+public struct ExecutionStatusItem: Identifiable, Hashable, Codable {
     public let id: UUID
     /// A comma-joined, human-readable list of the action titles that were run.
     public let summary: String
+    /// True when the action can be reversed through the active ProjectStore undo manager.
+    public let allowsUndo: Bool
 
-    public init(id: UUID = UUID(), summary: String) {
+    public init(id: UUID = UUID(), summary: String, allowsUndo: Bool = false) {
         self.id = id
         self.summary = summary
+        self.allowsUndo = allowsUndo
     }
 }
 
 /// An in-chat call-to-action card that nudges the user toward a specific app
 /// action — for example, upgrading to a paid tier or enabling a feature.
-public struct CoCaptainProductCTAItem: Identifiable, Hashable {
+public struct CoCaptainProductCTAItem: Identifiable, Hashable, Codable {
     public let id: UUID
     /// The bold headline displayed at the top of the CTA card.
     public let title: String
@@ -876,7 +925,36 @@ public struct ReviewBundleItem: Identifiable, Hashable, Codable {
 
 /// A single chat message in the CoCaptain timeline, from either the user
 /// or the assistant.
-public struct ChatBubbleItem: Identifiable, Hashable {
+public enum CoCaptainMessageFeedback: String, Hashable, Codable {
+    case helpful
+    case notHelpful
+}
+
+/// One-shot request from a timeline action to restore a prior user message into
+/// the composer for editing.
+public struct CoCaptainComposerDraft: Identifiable, Hashable {
+    public let id: UUID
+    public let text: String
+    public let mentions: [CoCaptainNodeMention]
+    public let attachments: [CoCaptainAttachment]
+    public let shouldFocus: Bool
+
+    public init(
+        id: UUID = UUID(),
+        text: String,
+        mentions: [CoCaptainNodeMention],
+        attachments: [CoCaptainAttachment],
+        shouldFocus: Bool = true
+    ) {
+        self.id = id
+        self.text = text
+        self.mentions = mentions
+        self.attachments = attachments
+        self.shouldFocus = shouldFocus
+    }
+}
+
+public struct ChatBubbleItem: Identifiable, Hashable, Codable {
     public let id: UUID
     /// The raw message text; mutable so streaming chunks can be appended
     /// to the last assistant bubble while the model is responding.
@@ -885,19 +963,34 @@ public struct ChatBubbleItem: Identifiable, Hashable {
     public let isUser: Bool
     public let mentions: [CoCaptainNodeMention]
     public let attachments: [CoCaptainAttachment]
+    /// The user message this assistant response belongs to.
+    public let inReplyToMessageID: UUID?
+    /// Captured on user messages so retries preserve the original execution posture.
+    public let turnMode: CoCaptainChatMode?
+    public let turnPurpose: CoCaptainTurnPurpose?
+    /// Lightweight local feedback used to acknowledge the user's rating.
+    public var feedback: CoCaptainMessageFeedback?
 
     public init(
         id: UUID = UUID(),
         text: String,
         isUser: Bool,
         mentions: [CoCaptainNodeMention] = [],
-        attachments: [CoCaptainAttachment] = []
+        attachments: [CoCaptainAttachment] = [],
+        inReplyToMessageID: UUID? = nil,
+        turnMode: CoCaptainChatMode? = nil,
+        turnPurpose: CoCaptainTurnPurpose? = nil,
+        feedback: CoCaptainMessageFeedback? = nil
     ) {
         self.id = id
         self.text = text
         self.isUser = isUser
         self.mentions = mentions
         self.attachments = attachments
+        self.inReplyToMessageID = inReplyToMessageID
+        self.turnMode = turnMode
+        self.turnPurpose = turnPurpose
+        self.feedback = feedback
     }
 
     /// The message rendered as an `AttributedString` with full markdown support.
@@ -929,7 +1022,7 @@ public struct ChatBubbleItem: Identifiable, Hashable {
 
 /// A timeline card presenting a clarifying question with tappable answer
 /// options. Once answered, the chosen option is recorded so the card locks.
-public struct CoCaptainClarifyingQuestionItem: Identifiable, Hashable {
+public struct CoCaptainClarifyingQuestionItem: Identifiable, Hashable, Codable {
     public let id: UUID
     public let question: CoCaptainClarifyingQuestion
     /// The option the user tapped, or `nil` while the question is open.
@@ -950,7 +1043,7 @@ public struct CoCaptainClarifyingQuestionItem: Identifiable, Hashable {
 ///
 /// Appears after the execution confirmation once the user taps Apply, so the
 /// learning moment lands right when the change becomes real on the canvas.
-public struct CoCaptainMentorNoteItem: Identifiable, Hashable {
+public struct CoCaptainMentorNoteItem: Identifiable, Hashable, Codable {
     public let id: UUID
     public let note: CoCaptainLearningNote
 
@@ -962,7 +1055,44 @@ public struct CoCaptainMentorNoteItem: Identifiable, Hashable {
 
 /// The discriminated content carried by a single row in the CoCaptain
 /// timeline, covering all visual card types the UI can render.
-public enum CoCaptainTimelineContent: Hashable {
+/// A recoverable failure or user-stopped turn rendered separately from assistant prose.
+public struct CoCaptainErrorItem: Identifiable, Hashable, Codable {
+    public enum Kind: String, Hashable, Codable {
+        case model
+        case network
+        case attachment
+        case quota
+        case stopped
+    }
+
+    public let id: UUID
+    public let kind: Kind
+    public let title: String
+    public let message: String
+    public let technicalDetails: String?
+    public let sourceMessageID: UUID?
+    public let isRecoverable: Bool
+
+    public init(
+        id: UUID = UUID(),
+        kind: Kind,
+        title: String,
+        message: String,
+        technicalDetails: String? = nil,
+        sourceMessageID: UUID? = nil,
+        isRecoverable: Bool = true
+    ) {
+        self.id = id
+        self.kind = kind
+        self.title = title
+        self.message = message
+        self.technicalDetails = technicalDetails
+        self.sourceMessageID = sourceMessageID
+        self.isRecoverable = isRecoverable
+    }
+}
+
+public enum CoCaptainTimelineContent: Hashable, Codable {
     /// A user or assistant chat bubble.
     case message(ChatBubbleItem)
     /// A confirmation banner summarising auto-executed safe actions.
@@ -975,19 +1105,23 @@ public enum CoCaptainTimelineContent: Hashable {
     case clarifyingQuestion(CoCaptainClarifyingQuestionItem)
     /// A "What you just learned" card revealed after an edit is applied.
     case mentorNote(CoCaptainMentorNoteItem)
+    /// A typed failure or stopped-turn notice with an optional retry action.
+    case error(CoCaptainErrorItem)
 }
 
 /// One identifiable row in the CoCaptain conversation timeline.
 ///
 /// The `content` is mutable so the view model can patch streaming text or
 /// update review-item statuses without rebuilding the whole list.
-public struct CoCaptainTimelineItem: Identifiable, Hashable {
+public struct CoCaptainTimelineItem: Identifiable, Hashable, Codable {
     public let id: UUID
     public var content: CoCaptainTimelineContent
+    public let createdAt: Date
 
-    public init(id: UUID = UUID(), content: CoCaptainTimelineContent) {
+    public init(id: UUID = UUID(), content: CoCaptainTimelineContent, createdAt: Date = Date()) {
         self.id = id
         self.content = content
+        self.createdAt = createdAt
     }
 }
 

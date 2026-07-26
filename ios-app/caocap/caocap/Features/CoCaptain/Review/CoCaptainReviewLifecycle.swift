@@ -243,6 +243,14 @@ public final class CoCaptainReviewLifecycle {
             replacePersistedRecords(with: [])
         }
 
+        /// Rebinds the in-memory Review Bundles when the user switches between
+        /// project conversations. Node sessions continue to restore exclusively
+        /// from `NodeAgentState` so their persistence contract is unchanged.
+        public func restoreProjectRecords(_ records: [Record]) {
+            guard case .project = scope else { return }
+            self.records = records
+        }
+
         private func stageAction(_ action: CoCaptainAgentAction) -> PendingReviewItem {
             guard let actionID = AppActionID(rawValue: action.actionID) else {
                 let reason = LocalizationManager.shared.localizedString(

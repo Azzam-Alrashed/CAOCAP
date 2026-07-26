@@ -13,5 +13,6 @@ struct CopilotAvatarView: View {
             .clipShape(Circle())
             .overlay(Circle().stroke(Color(hex: persona.accentHex).opacity(0.35), lineWidth: 1))
             .shadow(color: Color(hex: persona.accentHex).opacity(0.35), radius: size * 0.18)
+            .accessibilityHidden(true)
     }
 }

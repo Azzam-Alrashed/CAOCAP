@@ -446,6 +446,11 @@ final class AppSessionCoordinator {
         }
     }
 
+    func requestCoCaptainExpandedPresentation() {
+        coCaptainAllowsMediumDetent = true
+        coCaptainDetent = .large
+    }
+
     // MARK: - File Import
 
     func importProject(from result: Result<[URL], Error>) {

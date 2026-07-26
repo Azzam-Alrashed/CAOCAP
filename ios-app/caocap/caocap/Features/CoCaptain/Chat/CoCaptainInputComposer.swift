@@ -13,32 +13,43 @@ struct CoCaptainInputComposer: View {
     let allowsContextPinning: Bool
     let pinnableNodes: [SpatialNode]
     let isThinking: Bool
+    let isConversationArchiveLoading: Bool
     let analysisItems: [ProjectSuggestion]
     let pendingReviewCount: Int
     let onSend: () -> Void
     let onStop: () -> Void
-    let onQuickPrompt: (String) -> Void
     let onFocusPendingReviews: () -> Void
     let onApplySuggestion: (ProjectSuggestion) -> Void
     let onDismissSuggestion: (ProjectSuggestion) -> Void
     
     @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage("app.dictationLocale") private var dictationLocaleRawValue = DictationLocaleOption.auto.rawValue
     @State private var localModelManager = LocalGemmaModelManager.shared
     /// Dictation manager for streaming microphone input and converting it to query text.
     @State private var dictation = DictationController()
-    @State private var isContextVisible = false
     @State private var selectedPhotos: [PhotosPickerItem] = []
     @State private var isPhotoPickerPresented = false
     @State private var isFileImporterPresented = false
     @State private var attachmentError: String?
+    @State private var isImportingAttachments = false
+    @State private var lastAttachmentSource: AttachmentSource?
+    @State private var isContextDetailsPresented = false
+
+    private enum AttachmentSource {
+        case photos
+        case files
+    }
 
     private var isInputValid: Bool {
         !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !attachments.isEmpty
     }
 
     private var canSend: Bool {
-        isInputValid && !isThinking
+        isInputValid
+            && !isThinking
+            && !isConversationArchiveLoading
+            && !isImportingAttachments
     }
 
     /// Grows with wrapped/newline content; scrolls once the user exceeds this.
@@ -96,40 +107,15 @@ struct CoCaptainInputComposer: View {
                 .transition(.move(edge: .top).combined(with: .opacity))
             }
 
-            if isContextVisible, let store {
-                ContextPill(
-                    projectName: store.projectName,
-                    fileName: store.fileName,
-                    nodeCount: store.nodes.count
-                )
-                .transition(.move(edge: .top).combined(with: .opacity))
+            if pendingReviewCount > 0 {
+                pendingReviewBanner
             }
 
             composerCapsule
-                .padding(.horizontal, 12)
-                .padding(.bottom, 10)
-
-            if let errorMessage = dictation.errorMessage {
-                Text(errorMessage)
-                    .font(.caption)
-                    .foregroundStyle(.red)
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 8)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .transition(.opacity)
-            }
-
-            if let attachmentError {
-                Text(attachmentError)
-                    .font(.caption)
-                    .foregroundStyle(.red)
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 8)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
+                .padding(.horizontal, CoCaptainChatStyle.standardSpacing)
+                .padding(.bottom, CoCaptainChatStyle.smallSpacing)
         }
         .background(Color.primary.opacity(0.02))
-        .animation(.spring(response: 0.25, dampingFraction: 0.85), value: isContextVisible)
         .animation(.easeInOut(duration: 0.2), value: dictation.errorMessage)
         .onChange(of: dictation.transcript) { _, transcript in
             text = transcript
@@ -144,7 +130,9 @@ struct CoCaptainInputComposer: View {
             isPresented: $isFileImporterPresented,
             allowedContentTypes: [.item],
             allowsMultipleSelection: true,
-            onCompletion: importFiles
+            onCompletion: { result in
+                Task { await importFiles(result) }
+            }
         )
         .photosPicker(
             isPresented: $isPhotoPickerPresented,
@@ -157,27 +145,137 @@ struct CoCaptainInputComposer: View {
         }
     }
 
-    /// Two-row capsule: tools on top, text + send below — one continuous composer surface.
-    private var composerCapsule: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            composerToolbar
-            if !attachments.isEmpty { attachmentPreview }
-            if !mentionSuggestions.isEmpty { mentionSuggestionList }
-            composerInputRow
+    @ViewBuilder
+    private var attachmentErrorBanner: some View {
+        if let attachmentError {
+            HStack(spacing: 8) {
+                Image(systemName: "exclamationmark.circle.fill")
+                    .accessibilityHidden(true)
+                Text(attachmentError)
+                    .font(.caption)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 8)
+                if let lastAttachmentSource {
+                    Button(LocalizationManager.shared.localizedString("Choose again")) {
+                        retryAttachmentSelection(from: lastAttachmentSource)
+                    }
+                    .font(.caption.weight(.semibold))
+                }
+                Button {
+                    self.attachmentError = nil
+                } label: {
+                    Image(systemName: "xmark")
+                        .frame(width: 44, height: 44)
+                }
+                .accessibilityLabel(
+                    LocalizationManager.shared.localizedString("Dismiss error")
+                )
+            }
+            .foregroundStyle(.red)
+            .padding(.leading, CoCaptainChatStyle.compactSpacing)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.horizontal, 10)
-        .padding(.top, 10)
-        .padding(.bottom, 8)
+    }
+
+    @ViewBuilder
+    private var dictationErrorBanner: some View {
+        if let errorMessage = dictation.errorMessage {
+            Label(errorMessage, systemImage: "mic.slash")
+                .font(.caption)
+                .foregroundStyle(.red)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.leading, CoCaptainChatStyle.compactSpacing)
+                .transition(.opacity)
+        }
+    }
+
+    private var pendingReviewBanner: some View {
+        Button {
+            onFocusPendingReviews()
+        } label: {
+            HStack(spacing: CoCaptainChatStyle.smallSpacing) {
+                Image(systemName: "tray.full.fill")
+                    .foregroundStyle(CoCaptainChatStyle.pending)
+                Text(
+                    LocalizationManager.shared.localizedString(
+                        "Review changes (%lld)",
+                        arguments: [Int64(pendingReviewCount)]
+                    )
+                )
+                .font(.subheadline.weight(.semibold))
+                Spacer()
+                Image(systemName: "chevron.forward")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, CoCaptainChatStyle.standardSpacing)
+            .frame(minHeight: CoCaptainChatStyle.minimumHitSize)
+            .coCaptainCardSurface(tint: CoCaptainChatStyle.pending)
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, CoCaptainChatStyle.standardSpacing)
+        .disabled(isThinking)
+        .accessibilityHint(
+            LocalizationManager.shared.localizedString(
+                "Moves to the next change awaiting your review."
+            )
+        )
+    }
+
+    private func retryAttachmentSelection(from source: AttachmentSource) {
+        attachmentError = nil
+        switch source {
+        case .photos:
+            isPhotoPickerPresented = true
+        case .files:
+            isFileImporterPresented = true
+        }
+    }
+
+    /// Adaptive composer that expands only when the draft needs more context.
+    private var composerCapsule: some View {
+        VStack(alignment: .leading, spacing: CoCaptainChatStyle.smallSpacing) {
+            if let store {
+                contextSummaryButton(store: store)
+            }
+            if !mentions.isEmpty { draftContextChips }
+            if !attachments.isEmpty { attachmentPreview }
+            if isImportingAttachments {
+                HStack(spacing: CoCaptainChatStyle.smallSpacing) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text(LocalizationManager.shared.localizedString("Preparing attachments"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 4)
+                .accessibilityElement(children: .combine)
+            }
+            attachmentErrorBanner
+            dictationErrorBanner
+            if !mentionSuggestions.isEmpty { mentionSuggestionList }
+            composerTextField
+            composerActionRow
+        }
+        .padding(.horizontal, CoCaptainChatStyle.standardSpacing)
+        .padding(.top, CoCaptainChatStyle.standardSpacing)
+        .padding(.bottom, CoCaptainChatStyle.smallSpacing)
         .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(Color.primary.opacity(0.06))
+            RoundedRectangle(
+                cornerRadius: CoCaptainChatStyle.composerCornerRadius,
+                style: .continuous
+            )
+            .fill(.regularMaterial)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
+            RoundedRectangle(
+                cornerRadius: CoCaptainChatStyle.composerCornerRadius,
+                style: .continuous
+            )
                 .stroke(
                     isChatOnboardingActive || isFocused
-                        ? Color.blue.opacity(isChatOnboardingActive ? 0.55 : 0.3)
-                        : Color.primary.opacity(0.06),
+                        ? Color.accentColor.opacity(isChatOnboardingActive ? 0.55 : 0.35)
+                        : CoCaptainChatStyle.subtleStroke,
                     lineWidth: isChatOnboardingActive || isFocused ? 1.5 : 1
                 )
         )
@@ -189,111 +287,85 @@ struct CoCaptainInputComposer: View {
         .animation(.easeInOut(duration: 0.2), value: attachments)
     }
 
-    private var composerToolbar: some View {
-        HStack(spacing: 8) {
+    private var composerTextField: some View {
+        TextField(chatMode.composerPlaceholder, text: $text, axis: .vertical)
+            .lineLimit(Self.composerLineLimit)
+            .fixedSize(horizontal: false, vertical: true)
+            .focused($isFocused)
+            .submitLabel(.send)
+            .accessibilityHint(
+                LocalizationManager.shared.localizedString(
+                    "Return sends. Shift-Return adds a new line."
+                )
+            )
+            .onSubmit {
+                if canSend {
+                    onSend()
+                }
+            }
+            .padding(.horizontal, CoCaptainChatStyle.compactSpacing)
+            .padding(.vertical, CoCaptainChatStyle.smallSpacing)
+            .disabled(isConversationArchiveLoading || isImportingAttachments)
+            .animation(.easeInOut(duration: 0.15), value: composerNewlineCount)
+    }
+
+    private var composerActionRow: some View {
+        HStack(spacing: CoCaptainChatStyle.compactSpacing) {
+            attachmentMenu
             chatModePicker
-
-            Spacer(minLength: 4)
-
-            quickPromptMenu
-        }
-    }
-
-    private var composerInputRow: some View {
-        HStack(alignment: .bottom, spacing: 8) {
-            TextField(chatMode.composerPlaceholder, text: $text, axis: .vertical)
-                .lineLimit(Self.composerLineLimit)
-                // Expand with wrapped/newline content up to `composerLineLimit`, then scroll.
-                .fixedSize(horizontal: false, vertical: true)
-                .focused($isFocused)
-                // Return inserts a newline so the capsule can grow; send via the button.
-                .submitLabel(.return)
-                .padding(.leading, 4)
-                .padding(.vertical, 6)
-
+            Spacer(minLength: CoCaptainChatStyle.compactSpacing)
             sendButton
+            Button(action: onSend) {
+                EmptyView()
+            }
+            .keyboardShortcut(.return, modifiers: .command)
+            .frame(width: 0, height: 0)
+            .opacity(0)
+            .disabled(!canSend)
+            .accessibilityHidden(true)
         }
-        .animation(.easeInOut(duration: 0.15), value: composerNewlineCount)
     }
 
-    private var quickPromptMenu: some View {
+    private var attachmentMenu: some View {
         Menu {
             Button {
+                lastAttachmentSource = .photos
+                attachmentError = nil
                 isPhotoPickerPresented = true
             } label: {
                 Label("Photos", systemImage: "photo.on.rectangle")
             }
 
             Button {
+                lastAttachmentSource = .files
+                attachmentError = nil
                 isFileImporterPresented = true
             } label: {
                 Label("Files", systemImage: "doc")
             }
-
-            Divider()
-
-            if store != nil {
-                Button {
-                    isContextVisible.toggle()
-                } label: {
-                    Label(
-                        isContextVisible ? "Hide Canvas Context" : "Show Canvas Context",
-                        systemImage: "scope"
-                    )
-                }
-                .disabled(isThinking)
-
-                Divider()
-            }
-
-            if pendingReviewCount > 0 {
-                Button {
-                    onFocusPendingReviews()
-                } label: {
-                    Label(
-                        LocalizationManager.shared.localizedString(
-                            "Show Pending Reviews (%lld)",
-                            arguments: [Int64(pendingReviewCount)]
-                        ),
-                        systemImage: "tray.full"
-                    )
-                }
-                .disabled(isThinking)
-
-                Divider()
-            }
-
-            Button {
-                onQuickPrompt("Summarize the current canvas and point out the most important next step.")
-            } label: {
-                Label("Summarize Canvas", systemImage: "doc.text.magnifyingglass")
-            }
-            .disabled(isThinking)
-
-            Button {
-                onQuickPrompt("Review the current canvas for obvious issues, missing pieces, or polish opportunities.")
-            } label: {
-                Label("Review Canvas", systemImage: "checklist")
-            }
-            .disabled(isThinking)
-
-            Button {
-                onQuickPrompt("Suggest three useful next improvements for this project.")
-            } label: {
-                Label("Suggest Next Steps", systemImage: "sparkles")
-            }
-            .disabled(isThinking)
         } label: {
             Image(systemName: "plus")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.secondary)
-                .frame(width: 30, height: 30)
+                .frame(
+                    width: CoCaptainChatStyle.compactControlSize,
+                    height: CoCaptainChatStyle.compactControlSize
+                )
                 .background(
                     Circle()
-                        .fill(Color.primary.opacity(0.08))
+                        .fill(CoCaptainChatStyle.raisedFill)
+                )
+                .frame(
+                    width: CoCaptainChatStyle.minimumHitSize,
+                    height: CoCaptainChatStyle.minimumHitSize
                 )
         }
-        .accessibilityLabel("Add attachments or use a quick prompt")
+        .accessibilityLabel(
+            LocalizationManager.shared.localizedString("Add attachment")
+        )
+        .disabled(
+            isThinking || isConversationArchiveLoading || isImportingAttachments
+        )
         .simultaneousGesture(
             TapGesture().onEnded {
                 isFocused = false
@@ -307,12 +379,12 @@ struct CoCaptainInputComposer: View {
             ForEach(CoCaptainChatMode.allCases) { mode in
                 Button {
                     chatMode = mode
+                    HapticsManager.shared.selectionChanged()
                 } label: {
-                    if mode == chatMode {
-                        Label(mode.displayName, systemImage: "checkmark")
-                    } else {
-                        Label(mode.displayName, systemImage: mode.systemImageName)
-                    }
+                    Label(
+                        "\(mode.displayName) — \(mode.explanation)",
+                        systemImage: mode == chatMode ? "checkmark" : mode.systemImageName
+                    )
                 }
             }
         } label: {
@@ -327,9 +399,10 @@ struct CoCaptainInputComposer: View {
             .foregroundStyle(.secondary)
             .padding(.horizontal, 8)
             .padding(.vertical, 6)
+            .frame(minHeight: CoCaptainChatStyle.minimumHitSize)
             .background(
                 Capsule(style: .continuous)
-                    .fill(Color.primary.opacity(0.08))
+                    .fill(CoCaptainChatStyle.raisedFill)
             )
         }
         .accessibilityLabel(
@@ -354,6 +427,169 @@ struct CoCaptainInputComposer: View {
         return String(query)
     }
 
+    private func contextSummaryButton(store: ProjectStore) -> some View {
+        Button {
+            isContextDetailsPresented.toggle()
+        } label: {
+            HStack(spacing: 6) {
+                Label(contextSummary(store: store), systemImage: "scope")
+                    .lineLimit(1)
+                Spacer(minLength: 4)
+                Label(modelRouteLabel, systemImage: modelRouteIcon)
+                    .lineLimit(1)
+                Image(systemName: "info.circle")
+                    .foregroundStyle(.tertiary)
+                    .accessibilityHidden(true)
+            }
+            .font(.caption.weight(.medium))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 10)
+            .frame(minHeight: CoCaptainChatStyle.compactControlSize)
+            .background(CoCaptainChatStyle.subtleFill, in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .popover(isPresented: $isContextDetailsPresented) {
+            contextDetails(store: store)
+                .presentationCompactAdaptation(.popover)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(
+            LocalizationManager.shared.localizedString("CoCaptain context")
+        )
+    }
+
+    private func contextSummary(store: ProjectStore) -> String {
+        if !mentions.isEmpty {
+            return LocalizationManager.shared.localizedString(
+                "%lld pinned",
+                arguments: [Int64(mentions.count)]
+            )
+        }
+        if !allowsContextPinning {
+            return LocalizationManager.shared.localizedString("Focused node")
+        }
+        return LocalizationManager.shared.localizedProjectName(
+            store.projectName,
+            fileName: store.fileName
+        )
+    }
+
+    private func contextDetails(store: ProjectStore) -> some View {
+        VStack(alignment: .leading, spacing: CoCaptainChatStyle.standardSpacing) {
+            Label(
+                LocalizationManager.shared.localizedString("CoCaptain context"),
+                systemImage: "scope"
+            )
+            .font(.headline)
+
+            Text(
+                LocalizationManager.shared.localizedString(
+                    "CoCaptain can read the current canvas and the nodes you pin for this message."
+                )
+            )
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+
+            Divider()
+
+            Label(
+                LocalizationManager.shared.localizedString(
+                    "context.nodeCount",
+                    arguments: [Int64(store.nodes.count)]
+                ),
+                systemImage: "square.grid.2x2"
+            )
+            Label(modelRouteLabel, systemImage: modelRouteIcon)
+
+            Text(routeDisclosure)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(CoCaptainChatStyle.sectionSpacing)
+        .frame(idealWidth: 300)
+    }
+
+    private var routeDisclosure: String {
+        if isOnDeviceRoute {
+            return LocalizationManager.shared.localizedString(
+                "On-device processing keeps this request on your device."
+            )
+        }
+        return LocalizationManager.shared.localizedString(
+            "Cloud processing sends the selected canvas context and attachments to Gemini."
+        )
+    }
+
+    private var draftContextChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(mentions) { mention in
+                    HStack(spacing: 5) {
+                        Image(systemName: "scope")
+                        Text(mention.displayTitle)
+                            .lineLimit(1)
+                        Button {
+                            removeMention(mention)
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .frame(width: 44, height: 44)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(
+                            LocalizationManager.shared.localizedString(
+                                "Remove %@ from context",
+                                arguments: [mention.displayTitle]
+                            )
+                        )
+                    }
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.blue)
+                    .padding(.leading, 9)
+                    .padding(.trailing, 3)
+                    .frame(minHeight: 44)
+                    .background(Color.blue.opacity(0.1), in: Capsule())
+                }
+            }
+        }
+    }
+
+    private var modelRouteLabel: String {
+        let connectivity = NetworkConnectivityMonitor.shared.currentStatus
+        if connectivity == .disconnected {
+            return localModelManager.isLocalModelCached
+                ? LocalizationManager.shared.localizedString("On-device · Offline")
+                : LocalizationManager.shared.localizedString("Offline")
+        }
+
+        return usesLocalModelRoute
+            ? LocalizationManager.shared.localizedString("On-device")
+            : LocalizationManager.shared.localizedString("Gemini cloud")
+    }
+
+    private var modelRouteIcon: String {
+        let connectivity = NetworkConnectivityMonitor.shared.currentStatus
+        if connectivity == .disconnected && !localModelManager.isLocalModelCached {
+            return "wifi.slash"
+        }
+        return usesLocalModelRoute || connectivity == .disconnected ? "cpu" : "cloud"
+    }
+
+    private var usesLocalModelRoute: Bool {
+        let requested = UserDefaults.standard.string(forKey: "cocaptain.modelName")
+        return CoCaptainModelSelectionPolicy.resolvedModelName(requested)
+            == CoCaptainModelSelectionPolicy.localModelName
+    }
+
+    private var isOnDeviceRoute: Bool {
+        usesLocalModelRoute
+            || (
+                NetworkConnectivityMonitor.shared.currentStatus == .disconnected
+                    && localModelManager.isLocalModelCached
+            )
+    }
+
     private var mentionSuggestions: [SpatialNode] {
         guard let query = activeMentionQuery else { return [] }
         return pinnableNodes.filter {
@@ -369,10 +605,15 @@ struct CoCaptainInputComposer: View {
                 } label: {
                     Label(node.displayTitle, systemImage: node.icon ?? node.type.defaultIcon)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.vertical, 7)
+                        .frame(minHeight: 44)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Mention \(node.displayTitle)")
+                .accessibilityLabel(
+                    LocalizationManager.shared.localizedString(
+                        "Mention %@",
+                        arguments: [node.displayTitle]
+                    )
+                )
             }
         }
         .padding(.horizontal, 8)
@@ -380,26 +621,60 @@ struct CoCaptainInputComposer: View {
     }
 
     private var attachmentPreview: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(attachments) { attachment in
-                    HStack(spacing: 6) {
-                        Image(systemName: attachment.isImage ? "photo" : "doc")
-                        Text(attachment.fileName).lineLimit(1)
-                        Button {
-                            attachments.removeAll { $0.id == attachment.id }
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
+        VStack(alignment: .leading, spacing: 4) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(attachments) { attachment in
+                        HStack(spacing: 6) {
+                            Image(systemName: attachment.isImage ? "photo" : "doc")
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(attachment.fileName).lineLimit(1)
+                                HStack(spacing: 4) {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundStyle(CoCaptainChatStyle.success)
+                                    Text(LocalizationManager.shared.localizedString("Ready"))
+                                    Text(verbatim: "·")
+                                    Text(
+                                        ByteCountFormatter.string(
+                                            fromByteCount: Int64(attachment.data.count),
+                                            countStyle: .file
+                                        )
+                                    )
+                                }
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Button {
+                                attachments.removeAll { $0.id == attachment.id }
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .frame(width: 44, height: 44)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(
+                                LocalizationManager.shared.localizedString(
+                                    "Remove %@",
+                                    arguments: [attachment.fileName]
+                                )
+                            )
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Remove \(attachment.fileName)")
+                        .font(.caption)
+                        .padding(.leading, 8)
+                        .padding(.trailing, 3)
+                        .padding(.vertical, 3)
+                        .frame(minHeight: 44)
+                        .background(Color.accentColor.opacity(0.1), in: Capsule())
                     }
-                    .font(.caption)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 6)
-                    .background(Color.blue.opacity(0.1), in: Capsule())
                 }
             }
+            Text(
+                LocalizationManager.shared.localizedString(
+                    "Up to 5 files, 10 MB each. Attachments require Gemini cloud."
+                )
+            )
+            .font(.caption2)
+            .foregroundStyle(.tertiary)
+            .padding(.leading, 4)
         }
     }
 
@@ -411,15 +686,45 @@ struct CoCaptainInputComposer: View {
         }
     }
 
+    private func removeMention(_ mention: CoCaptainNodeMention) {
+        mentions.removeAll { $0.id == mention.id }
+        text = text.replacingOccurrences(
+            of: "@\(mention.displayTitle)",
+            with: ""
+        )
+        while text.contains("  ") {
+            text = text.replacingOccurrences(of: "  ", with: " ")
+        }
+        text = text.trimmingCharacters(in: .whitespaces)
+    }
+
     private func importPhotos(_ items: [PhotosPickerItem]) async {
+        guard !items.isEmpty else { return }
+        lastAttachmentSource = .photos
+        attachmentError = nil
+        isImportingAttachments = true
+        defer {
+            isImportingAttachments = false
+            selectedPhotos = []
+        }
+
         for item in items {
             guard attachments.count < 5 else {
-                attachmentError = "You can attach up to 5 files per message."
+                attachmentError = LocalizationManager.shared.localizedString(
+                    "You can attach up to 5 files per message."
+                )
                 break
             }
-            guard let data = try? await item.loadTransferable(type: Data.self) else { continue }
+            guard let data = try? await item.loadTransferable(type: Data.self) else {
+                attachmentError = LocalizationManager.shared.localizedString(
+                    "A selected photo couldn't be prepared. Choose it again."
+                )
+                continue
+            }
             guard data.count <= 10 * 1_024 * 1_024 else {
-                attachmentError = "A selected photo is larger than 10 MB."
+                attachmentError = LocalizationManager.shared.localizedString(
+                    "A selected photo is larger than 10 MB."
+                )
                 continue
             }
             let type = item.supportedContentTypes.first
@@ -431,28 +736,44 @@ struct CoCaptainInputComposer: View {
                 )
             )
         }
-        selectedPhotos = []
     }
 
-    private func importFiles(_ result: Result<[URL], Error>) {
+    private func importFiles(_ result: Result<[URL], Error>) async {
+        lastAttachmentSource = .files
+        attachmentError = nil
+        isImportingAttachments = true
+        defer { isImportingAttachments = false }
+
         do {
             for url in try result.get() {
                 guard attachments.count < 5 else {
-                    attachmentError = "You can attach up to 5 files per message."
+                    attachmentError = LocalizationManager.shared.localizedString(
+                        "You can attach up to 5 files per message."
+                    )
                     break
                 }
-                let accessed = url.startAccessingSecurityScopedResource()
-                defer { if accessed { url.stopAccessingSecurityScopedResource() } }
-                let data = try Data(contentsOf: url)
+                let imported = try await Task.detached(priority: .userInitiated) {
+                    let accessed = url.startAccessingSecurityScopedResource()
+                    defer { if accessed { url.stopAccessingSecurityScopedResource() } }
+                    let data = try Data(contentsOf: url)
+                    let type = try? url.resourceValues(forKeys: [.contentTypeKey]).contentType
+                    return (
+                        data,
+                        type?.preferredMIMEType ?? "application/octet-stream"
+                    )
+                }.value
+                let data = imported.0
                 guard data.count <= 10 * 1_024 * 1_024 else {
-                    attachmentError = "\(url.lastPathComponent) is larger than 10 MB."
+                    attachmentError = LocalizationManager.shared.localizedString(
+                        "%@ is larger than 10 MB.",
+                        arguments: [url.lastPathComponent]
+                    )
                     continue
                 }
-                let type = (try? url.resourceValues(forKeys: [.contentTypeKey]).contentType)
                 attachments.append(
                     CoCaptainAttachment(
                         fileName: url.lastPathComponent,
-                        mimeType: type?.preferredMIMEType ?? "application/octet-stream",
+                        mimeType: imported.1,
                         data: data
                     )
                 )
@@ -464,7 +785,9 @@ struct CoCaptainInputComposer: View {
 
     private var sendButton: some View {
         Button(action: {
-            if isThinking {
+            if isConversationArchiveLoading || isImportingAttachments {
+                return
+            } else if isThinking {
                 onStop()
             } else if dictation.isRecording {
                 dictation.stop()
@@ -500,20 +823,34 @@ struct CoCaptainInputComposer: View {
                         .transition(.scale.combined(with: .opacity))
                 }
             }
+            .frame(width: 44, height: 44)
             .foregroundStyle(sendButtonForeground)
         }
         .accessibilityLabel(sendButtonAccessibilityLabel)
+        .disabled(isConversationArchiveLoading || isImportingAttachments)
         .contextMenu {
             if !isInputValid || dictation.isRecording {
                 dictationLocaleMenu
             }
         }
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isInputValid)
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isThinking)
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: dictation.isRecording)
+        .animation(
+            reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.7),
+            value: isInputValid
+        )
+        .animation(
+            reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.7),
+            value: isThinking
+        )
+        .animation(
+            reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.7),
+            value: dictation.isRecording
+        )
     }
 
     private var sendButtonBackground: Color {
+        if isConversationArchiveLoading || isImportingAttachments {
+            return Color.primary.opacity(0.05)
+        }
         if dictation.isRecording {
             return .red.opacity(0.15)
         }
@@ -552,7 +889,11 @@ struct CoCaptainInputComposer: View {
     }
 
     private var sendButtonAccessibilityLabel: String {
-        if isThinking {
+        if isConversationArchiveLoading {
+            "Loading conversation"
+        } else if isImportingAttachments {
+            "Preparing attachments"
+        } else if isThinking {
             "Stop CoCaptain"
         } else if dictation.isRecording {
             "Stop dictation"

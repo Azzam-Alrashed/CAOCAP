@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// A specialized instance of the CoCaptain interface bound strictly to a single
 /// node's local agent context, allowing node-specific conversational editing.
@@ -12,6 +13,7 @@ struct NodeAgentChatView: View {
     @State private var text = ""
     @State private var mentions: [CoCaptainNodeMention] = []
     @State private var attachments: [CoCaptainAttachment] = []
+    @State private var showsClearConfirmation = false
     @FocusState private var isFocused: Bool
     @AppStorage(CoCaptainChatMode.storageKey) private var chatModeRawValue = CoCaptainChatMode.agent.rawValue
 
@@ -47,11 +49,11 @@ struct NodeAgentChatView: View {
                 allowsContextPinning: false,
                 pinnableNodes: [],
                 isThinking: viewModel.isThinking,
+                isConversationArchiveLoading: false,
                 analysisItems: [],
                 pendingReviewCount: viewModel.pendingReviewCount,
                 onSend: sendCurrentMessage,
                 onStop: viewModel.stopStreaming,
-                onQuickPrompt: sendQuickPrompt,
                 onFocusPendingReviews: viewModel.focusPendingReviews,
                 onApplySuggestion: viewModel.applySuggestion,
                 onDismissSuggestion: viewModel.dismissSuggestion
@@ -62,7 +64,7 @@ struct NodeAgentChatView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button("Clear") {
-                    viewModel.clearHistory()
+                    showsClearConfirmation = true
                 }
                 .foregroundColor(.red)
             }
@@ -79,11 +81,59 @@ struct NodeAgentChatView: View {
         .onChange(of: chatModeRawValue) { _, _ in
             syncChatModeFromStorage()
         }
+        .onChange(of: viewModel.composerDraftRequest) { _, draft in
+            guard let draft else { return }
+            text = draft.text
+            mentions = draft.mentions
+            attachments = draft.attachments
+            viewModel.composerDraftRequest = nil
+            isFocused = draft.shouldFocus
+        }
+        .onChange(of: viewModel.progressPhase) { oldPhase, newPhase in
+            if let newPhase {
+                announceForAccessibility(newPhase.localizedTitle)
+            } else if oldPhase != nil {
+                announceForAccessibility(
+                    LocalizationManager.shared.localizedString(
+                        "CoCaptain response ready."
+                    )
+                )
+            }
+        }
+        .onChange(of: viewModel.pendingReviewCount) { oldCount, newCount in
+            guard newCount > oldCount else { return }
+            announceForAccessibility(
+                LocalizationManager.shared.localizedString(
+                    "Changes are ready for review."
+                )
+            )
+        }
+        .confirmationDialog(
+            LocalizationManager.shared.localizedString("Clear this node conversation?"),
+            isPresented: $showsClearConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button(LocalizationManager.shared.localizedString("Clear"), role: .destructive) {
+                viewModel.clearHistory()
+            }
+            Button(LocalizationManager.shared.localizedString("Cancel"), role: .cancel) {}
+        } message: {
+            Text(
+                LocalizationManager.shared.localizedString(
+                    "Pending Review Bundles in this node chat will also be removed."
+                )
+            )
+        }
     }
 
     /// Shares the same persisted Agent/Ask/Plan selection as project-scoped CoCaptain.
     private func syncChatModeFromStorage() {
         viewModel.chatMode = CoCaptainChatMode(rawValue: chatModeRawValue) ?? .agent
+    }
+
+    private func announceForAccessibility(_ message: String) {
+        guard UIAccessibility.isVoiceOverRunning else { return }
+        UIAccessibility.post(notification: .announcement, argument: message)
     }
 
     /// Extracts the display name from the node's agent profile.
@@ -99,18 +149,10 @@ struct NodeAgentChatView: View {
         let submittedPrompt = prompt.isEmpty ? "Review the attached files." : prompt
 
         guard viewModel.sendMessage(submittedPrompt, attachments: attachments) else { return }
+        HapticsManager.shared.trigger(.soft)
         text = ""
         attachments = []
         isFocused = false
     }
 
-    /// Submits a pre-defined quick prompt directly without user typing.
-    private func sendQuickPrompt(_ prompt: String) {
-        guard !viewModel.isThinking else { return }
-
-        text = ""
-        attachments = []
-        isFocused = false
-        viewModel.sendMessage(prompt)
-    }
 }

@@ -1930,9 +1930,11 @@ struct CoCaptainAgentTests {
         #expect(vm.completedAssistantResponseCount == 1)
         #expect(vm.successfulAssistantResponseCount == 0)
 
-        let assistantMessage = vm.items.compactMap { item -> ChatBubbleItem? in
-            guard case .message(let bubble) = item.content, !bubble.isUser else { return nil }
-            return bubble
+        let quotaError = vm.items.compactMap { item -> CoCaptainErrorItem? in
+            guard case .error(let error) = item.content, error.kind == .quota else {
+                return nil
+            }
+            return error
         }.last
 
         let proReviewBundleItem = vm.items.first { item in
@@ -1949,7 +1951,8 @@ struct CoCaptainAgentTests {
             return cta
         }.first
 
-        #expect(assistantMessage?.text.contains("You've reached this month's free CoCaptain usage") == true)
+        #expect(quotaError?.title == "Usage limit reached")
+        #expect(quotaError?.isRecoverable == false)
         #expect(proReviewBundleItem == nil)
         #expect(productCTAItem?.title == "Free CoCaptain usage reached")
         #expect(productCTAItem?.primaryButtonTitle == "View Pro")
@@ -1985,11 +1988,13 @@ struct CoCaptainAgentTests {
             guard case .message(let bubble) = item.content else { return true }
             return !bubble.isUser
         })
-        let assistantText = vm.items.compactMap { item -> String? in
-            guard case .message(let bubble) = item.content, !bubble.isUser else { return nil }
-            return bubble.text
+        let attachmentError = vm.items.compactMap { item -> CoCaptainErrorItem? in
+            guard case .error(let error) = item.content else { return nil }
+            return error
         }.last
-        #expect(assistantText?.contains("text-only") == true)
+        #expect(attachmentError?.kind == .attachment)
+        #expect(attachmentError?.message.contains("text-only") == true)
+        #expect(attachmentError?.isRecoverable == false)
     }
 
     @MainActor
@@ -2019,6 +2024,64 @@ struct CoCaptainAgentTests {
         #expect(vm.completedAssistantResponseCount == 1)
         #expect(vm.successfulAssistantResponseCount == 1)
         #expect(dispatcher.executedActionIDs == [.openSettings])
+    }
+
+    @MainActor
+    @Test func retryPreservesOriginalModeWithoutDuplicatingUserMessage() async throws {
+        let llm = TestLLMClient(responses: ["First answer", "Second answer"])
+        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
+        let vm = CoCaptainViewModel(agentCoordinator: coordinator)
+        vm.chatMode = .ask
+
+        vm.sendMessage("Explain this canvas")
+        for _ in 0..<20 where vm.isThinking {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+
+        let sourceMessage = try #require(
+            vm.items.compactMap { item -> ChatBubbleItem? in
+                guard case .message(let message) = item.content, message.isUser else {
+                    return nil
+                }
+                return message
+            }.first
+        )
+        vm.chatMode = .agent
+        vm.retryTurn(sourceMessageID: sourceMessage.id)
+        for _ in 0..<20 where vm.isThinking {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+
+        let userMessageCount = vm.items.reduce(into: 0) { count, item in
+            guard case .message(let message) = item.content, message.isUser else { return }
+            count += 1
+        }
+        #expect(userMessageCount == 1)
+        #expect(llm.receivedMessages == ["Explain this canvas", "Explain this canvas"])
+        #expect(llm.receivedChatModes == [.ask, .ask])
+    }
+
+    @MainActor
+    @Test func dismissingChatDoesNotCancelAnActiveTurn() async throws {
+        let llm = TestLLMClient(response: "Finished in the background")
+        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
+        let vm = CoCaptainViewModel(agentCoordinator: coordinator)
+        vm.setPresented(true)
+
+        vm.sendMessage("Keep working")
+        vm.setPresented(false)
+        for _ in 0..<20 where vm.isThinking {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+
+        #expect(!vm.isPresented)
+        #expect(vm.successfulAssistantResponseCount == 1)
+        #expect(vm.items.contains { item in
+            guard case .message(let message) = item.content, !message.isUser else {
+                return false
+            }
+            return message.text.contains("Finished in the background")
+        })
     }
 
     @MainActor
