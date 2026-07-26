@@ -54,7 +54,7 @@ struct AnalysisTests {
                 )
             ]
         )
-        let record = NodeAgentReviewRecord(timelineItemID: UUID(), bundle: bundle)
+        let record = CoCaptainReviewLifecycle.Record(bundle: bundle)
         var agentState = NodeAgentState()
         agentState.pendingReviewBundlesData = [try encoder.encode(record)]
 

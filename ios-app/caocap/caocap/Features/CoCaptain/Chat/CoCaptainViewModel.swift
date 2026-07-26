@@ -18,7 +18,11 @@ public final class CoCaptainViewModel {
     @ObservationIgnored
     private let analyzer = ProjectAnalyzer()
     @ObservationIgnored
-    public var actionDispatcher: (any AppActionPerforming)?
+    public var actionDispatcher: (any AppActionPerforming)? {
+        didSet {
+            bindReviewSessionIfNeeded()
+        }
+    }
 
     /// Tracks the ID of the message that was last visible to the user.
     public var lastScrollPosition: UUID?
@@ -32,9 +36,17 @@ public final class CoCaptainViewModel {
     @ObservationIgnored
     private let commandIntentResolver = CommandIntentResolver()
     @ObservationIgnored
-    private let patchEngine = NodePatchEngine()
+    private let reviewLifecycle: CoCaptainReviewLifecycle
     @ObservationIgnored
-    private var lastStoreFileName: String?
+    private var reviewSession: CoCaptainReviewLifecycle.Session?
+    @ObservationIgnored
+    private var reviewSessionScope: CoCaptainAgentScope?
+    @ObservationIgnored
+    private var reviewSessionStoreID: ObjectIdentifier?
+    @ObservationIgnored
+    private var reviewSessionDispatcherID: ObjectIdentifier?
+    @ObservationIgnored
+    private var lastStoreID: ObjectIdentifier?
     @ObservationIgnored
     private var streamingTask: Task<Void, Never>?
 
@@ -66,14 +78,11 @@ public final class CoCaptainViewModel {
         return lastMessage.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    /// Statuses that still need a decision from the user.
-    private static let awaitingUserStatuses: Set<ReviewItemStatus> = [.pending, .needsClarification]
-
     /// Count of review items still awaiting user approval in the current timeline.
     public var pendingReviewCount: Int {
         items.reduce(into: 0) { count, item in
             guard case .reviewBundle(let bundle) = item.content else { return }
-            count += bundle.items.filter { Self.awaitingUserStatuses.contains($0.status) }.count
+            count += bundle.items.filter { $0.status.isUnresolved }.count
         }
     }
 
@@ -81,7 +90,7 @@ public final class CoCaptainViewModel {
     public var firstPendingReviewBundleID: UUID? {
         items.first { item in
             guard case .reviewBundle(let bundle) = item.content else { return false }
-            return bundle.items.contains { Self.awaitingUserStatuses.contains($0.status) }
+            return bundle.items.contains { $0.status.isUnresolved }
         }?.id
     }
 
@@ -99,13 +108,17 @@ public final class CoCaptainViewModel {
     }
 
     public init(
-        agentCoordinator: CoCaptainAgentCoordinator? = nil
+        agentCoordinator: CoCaptainAgentCoordinator? = nil,
+        reviewLifecycle: CoCaptainReviewLifecycle? = nil
     ) {
         self.agentCoordinator = agentCoordinator ?? CoCaptainAgentCoordinator()
+        self.reviewLifecycle = reviewLifecycle ?? CoCaptainReviewLifecycle()
         self.items = [CoCaptainViewModel.greetingItem()]
+        bindReviewSessionIfNeeded()
     }
 
     public func clearHistory() {
+        activeReviewSession().clear()
         items = [CoCaptainViewModel.greetingItem()]
         agentCoordinator.resetChat(scope: scope)
         if case .node(let nodeID) = scope {
@@ -121,6 +134,7 @@ public final class CoCaptainViewModel {
         self.focusedNodeID = nil
         self.store = store
         self.actionDispatcher = dispatcher
+        bindReviewSessionIfNeeded()
     }
 
     public func configureNodeSession(store: ProjectStore, nodeID: UUID, dispatcher: (any AppActionPerforming)? = nil) {
@@ -136,6 +150,7 @@ public final class CoCaptainViewModel {
         self.focusedNodeID = nodeID
         self.store = store
         self.actionDispatcher = dispatcher
+        bindReviewSessionIfNeeded()
         loadPersistedNodeMessages(nodeID: nodeID)
         runAnalysis()
     }
@@ -265,7 +280,7 @@ public final class CoCaptainViewModel {
                 let hasUsableResponse =
                     !result.visibleText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
                     result.executionSummary != nil ||
-                    result.reviewBundle != nil ||
+                    result.reviewDraft != nil ||
                     result.clarifyingQuestion != nil
 
                 if purpose.isConversationalTurn, !hasUsableResponse {
@@ -297,10 +312,11 @@ public final class CoCaptainViewModel {
                     items.append(CoCaptainTimelineItem(content: .execution(executionSummary)))
                 }
 
-                if let reviewBundle = result.reviewBundle {
-                    let reviewItem = CoCaptainTimelineItem(content: .reviewBundle(reviewBundle))
-                    items.append(reviewItem)
-                    persistNodeReviewBundleIfNeeded(timelineItemID: reviewItem.id, bundle: reviewBundle)
+                var presentedReviewBundle = false
+                if let reviewDraft = result.reviewDraft,
+                   let record = stageReviewDraft(reviewDraft) {
+                    appendReviewRecord(record)
+                    presentedReviewBundle = true
                 } else if purpose == .onboardingGuidedEdit {
                     presentOnboardingReviewFallback(turnID: turnID, replacingMessageID: aiMessageID)
                     return
@@ -320,7 +336,7 @@ public final class CoCaptainViewModel {
                     turnID: turnID,
                     purpose: purpose,
                     successful: hasUsableResponse,
-                    presentedReviewBundle: result.reviewBundle != nil
+                    presentedReviewBundle: presentedReviewBundle
                 )
             } catch {
                 if error is CancellationError || Task.isCancelled {
@@ -412,22 +428,12 @@ public final class CoCaptainViewModel {
                     )
                 )
             )
-            let reviewBundle = ReviewBundleItem(
-                items: [
-                    PendingReviewItem(
-                        targetLabel: definition.localizedTitle,
-                        summary: LocalizationManager.shared.localizedString(
-                            "Awaiting approval to run %@.",
-                            arguments: [definition.localizedTitle]
-                        ),
-                        preview: definition.localizedTitle,
-                        source: .appAction(actionID, nil)
-                    )
-                ]
+            let reviewDraft = CoCaptainReviewLifecycle.Draft(
+                pendingActions: [CoCaptainAgentAction(actionID: actionID.rawValue)]
             )
-            let reviewItem = CoCaptainTimelineItem(content: .reviewBundle(reviewBundle))
-            items.append(reviewItem)
-            persistNodeReviewBundleIfNeeded(timelineItemID: reviewItem.id, bundle: reviewBundle)
+            if let record = stageReviewDraft(reviewDraft) {
+                appendReviewRecord(record)
+            }
             markAssistantResponseCompleted(
                 turnID: turnID,
                 purpose: purpose,
@@ -451,174 +457,19 @@ public final class CoCaptainViewModel {
         return true
     }
 
-    /// Applies one user-approved review item. Node edits are revalidated against
-    /// their captured base text so stale AI suggestions cannot overwrite newer
-    /// user edits.
-    public func applyReviewItem(bundleID: UUID, itemID: UUID, createCheckpoint: Bool = true) {
-        guard let bundleIndex = items.firstIndex(where: { $0.id == bundleID }),
-              case .reviewBundle(var bundle) = items[bundleIndex].content,
-              let itemIndex = bundle.items.firstIndex(where: { $0.id == itemID }) else {
-            return
-        }
-
-        var item = bundle.items[itemIndex]
-        
-        if createCheckpoint {
-            store?.createCheckpoint(label: "Apply Suggestion: \(item.targetLabel)")
-        }
-
-        switch item.source {
-        case .appAction(let actionID, let arguments):
-            let result = actionDispatcher?.perform(actionID, source: .agentApproved, arguments: arguments)
-            item.status = result?.executed == true ? .applied : .conflicted
-            if let result, result.executed {
-                items.append(
-                    CoCaptainTimelineItem(
-                        content: .execution(ExecutionStatusItem(summary: result.message))
-                    )
-                )
-            }
-        case .nodeEdit(let role, let section, let operations, let baseText):
-            guard let store,
-                  let node = patchEngine.resolveNode(nodeID: item.targetNodeID, for: role, in: store) else {
-                item.status = .conflicted
-                item.conflictDescription = LocalizationManager.shared.localizedString("The node could not be found in the current project.")
-                break
-            }
-
-            let currentText: String
-            switch section {
-            case .srs:
-                currentText = node.miniApp?.srsText ?? ""
-            case .code:
-                currentText = node.miniApp?.codeText ?? ""
-            }
-
-            guard currentText == baseText else {
-                item.status = .conflicted
-                item.conflictDescription = LocalizationManager.shared.localizedString("This node was edited after the suggestion was generated. Ask Co-Captain to revise.")
-                break
-            }
-
-            do {
-                let preview = try patchEngine.preview(nodeID: item.targetNodeID, role: role, section: section, operations: operations, in: store)
-                switch section {
-                case .srs:
-                    store.updateMiniAppSRS(id: node.id, text: preview.resultText, persist: true)
-                case .code:
-                    store.updateMiniAppCode(id: node.id, text: preview.resultText, persist: true)
-                }
-                item.status = .applied
-                items.append(
-                    CoCaptainTimelineItem(
-                        content: .execution(
-                            ExecutionStatusItem(
-                                summary: LocalizationManager.shared.localizedString(
-                                    "Applied updates to %@.",
-                                    arguments: [role.localizedDisplayName]
-                                )
-                            )
-                        )
-                    )
-                )
-            } catch {
-                item.status = .conflicted
-                item.conflictDescription = error.localizedDescription
-            }
-        }
-
-        bundle.items[itemIndex] = item
-        items[bundleIndex].content = .reviewBundle(bundle)
-        persistNodeReviewBundleIfNeeded(bundleID: bundleID, bundle: bundle)
-        if item.status == .applied {
-            // The learning moment is revealed only now, after the change is real.
-            if let note = item.learningNote {
-                items.append(
-                    CoCaptainTimelineItem(content: .mentorNote(CoCaptainMentorNoteItem(note: note)))
-                )
-            }
-            onReviewItemApplied?(bundleID, itemID)
-        }
+    public func applyReviewItem(bundleID: UUID, itemID: UUID) {
+        resolveReviewDecision(.approve(itemID: itemID), in: bundleID)
     }
 
     public func rejectReviewItem(bundleID: UUID, itemID: UUID) {
-        updateReviewItem(bundleID: bundleID, itemID: itemID, status: .rejected)
+        resolveReviewDecision(.reject(itemID: itemID), in: bundleID)
     }
 
-    /// Resolves a "which one did you mean?" review item by re-staging the edit
-    /// against the user's chosen candidate. Runs entirely locally — no model
-    /// call — and turns the item into a normal pending review on success.
     public func resolveClarification(bundleID: UUID, itemID: UUID, candidateID: UUID) {
-        guard let bundleIndex = items.firstIndex(where: { $0.id == bundleID }),
-              case .reviewBundle(var bundle) = items[bundleIndex].content,
-              let itemIndex = bundle.items.firstIndex(where: { $0.id == itemID }) else {
-            return
-        }
-
-        let item = bundle.items[itemIndex]
-        guard item.status == .needsClarification,
-              case .nodeEdit(let role, let section, let operations, let baseText) = item.source,
-              let candidate = item.clarificationCandidates?.first(where: { $0.id == candidateID }),
-              let store else {
-            return
-        }
-
-        var updatedItem = item
-
-        do {
-            guard let node = patchEngine.resolveNode(nodeID: item.targetNodeID, for: role, in: store) else {
-                throw NodePatchError.missingNode(role)
-            }
-            let currentText: String
-            switch section {
-            case .srs:
-                currentText = node.miniApp?.srsText ?? ""
-            case .code:
-                currentText = node.miniApp?.codeText ?? ""
-            }
-            guard currentText == baseText else {
-                throw NodePatchError.conflict(
-                    "This node was edited after the suggestion was generated. Ask Co-Captain to revise."
-                )
-            }
-
-            let resolved = try patchEngine.previewResolving(
-                nodeID: node.id,
-                role: role,
-                section: section,
-                operations: operations,
-                in: store,
-                choosing: candidate
-            )
-            let snippets = CoCaptainReviewDiffSnippetter.makeSnippets(
-                before: resolved.preview.originalText,
-                after: resolved.preview.resultText
-            )
-            updatedItem = PendingReviewItem(
-                id: item.id,
-                targetNodeID: resolved.preview.nodeID,
-                targetLabel: item.targetLabel,
-                summary: item.summary,
-                preview: snippets.after,
-                beforePreview: snippets.before,
-                status: .pending,
-                source: .nodeEdit(
-                    role: role,
-                    section: section,
-                    operations: resolved.canonicalOperations,
-                    baseText: resolved.preview.originalText
-                ),
-                learningNote: item.learningNote
-            )
-        } catch {
-            updatedItem.status = .conflicted
-            updatedItem.conflictDescription = error.localizedDescription
-            updatedItem.clarificationCandidates = nil
-        }
-
-        bundle.items[itemIndex] = updatedItem
-        items[bundleIndex].content = .reviewBundle(bundle)
-        persistNodeReviewBundleIfNeeded(bundleID: bundleID, bundle: bundle)
+        resolveReviewDecision(
+            .chooseClarification(itemID: itemID, candidateID: candidateID),
+            in: bundleID
+        )
     }
 
     /// Records the tapped option on a clarifying-question card and sends it as
@@ -637,32 +488,22 @@ public final class CoCaptainViewModel {
     }
 
     public func applyAll(in bundleID: UUID) {
-        guard let bundle = reviewBundle(for: bundleID) else { return }
-        
-        // Create one checkpoint for the whole bundle
-        store?.createCheckpoint(label: "Apply All Changes")
-        
-        for itemID in bundle.items.filter({ $0.status == .pending }).map(\.id) {
-            applyReviewItem(bundleID: bundleID, itemID: itemID, createCheckpoint: false)
-        }
+        resolveReviewDecision(.approveAll, in: bundleID)
     }
 
     public func rejectAll(in bundleID: UUID) {
-        guard let bundle = reviewBundle(for: bundleID) else { return }
-        let dismissable: Set<ReviewItemStatus> = [.pending, .needsClarification]
-        for itemID in bundle.items.filter({ dismissable.contains($0.status) }).map(\.id) {
-            rejectReviewItem(bundleID: bundleID, itemID: itemID)
-        }
+        resolveReviewDecision(.rejectAll, in: bundleID)
     }
 
     /// Resets chat state when the active project changes so streamed responses
     /// and review bundles cannot leak across project contexts.
     private func handleStoreChange() {
-        let currentFileName = store?.fileName
-        guard currentFileName != lastStoreFileName else { return }
-        defer { lastStoreFileName = currentFileName }
+        let currentStoreID = store.map { ObjectIdentifier($0) }
+        bindReviewSessionIfNeeded()
+        guard currentStoreID != lastStoreID else { return }
+        defer { lastStoreID = currentStoreID }
 
-        if scope == .project, lastStoreFileName != nil {
+        if scope == .project, lastStoreID != nil {
             streamingTask?.cancel()
             streamingTask = nil
             isThinking = false
@@ -672,24 +513,111 @@ public final class CoCaptainViewModel {
         runAnalysis()
     }
 
-    private func reviewBundle(for bundleID: UUID) -> ReviewBundleItem? {
-        guard let bundleIndex = items.firstIndex(where: { $0.id == bundleID }),
-              case .reviewBundle(let bundle) = items[bundleIndex].content else {
-            return nil
+    private func activeReviewSession() -> CoCaptainReviewLifecycle.Session {
+        bindReviewSessionIfNeeded()
+        guard let reviewSession else {
+            preconditionFailure("Review lifecycle session was not configured.")
         }
-        return bundle
+        return reviewSession
     }
 
-    private func updateReviewItem(bundleID: UUID, itemID: UUID, status: ReviewItemStatus) {
-        guard let bundleIndex = items.firstIndex(where: { $0.id == bundleID }),
-              case .reviewBundle(var bundle) = items[bundleIndex].content,
-              let itemIndex = bundle.items.firstIndex(where: { $0.id == itemID }) else {
+    private func bindReviewSessionIfNeeded() {
+        let currentStoreID = store.map { ObjectIdentifier($0) }
+        let currentDispatcherID = actionDispatcher.map { ObjectIdentifier($0) }
+
+        if let reviewSession,
+           reviewSessionScope == scope,
+           reviewSessionStoreID == currentStoreID {
+            if reviewSessionDispatcherID != currentDispatcherID {
+                reviewSession.updateDispatcher(actionDispatcher)
+                reviewSessionDispatcherID = currentDispatcherID
+            }
             return
         }
 
-        bundle.items[itemIndex].status = status
-        items[bundleIndex].content = .reviewBundle(bundle)
-        persistNodeReviewBundleIfNeeded(bundleID: bundleID, bundle: bundle)
+        reviewSession = reviewLifecycle.session(
+            scope: scope,
+            store: store,
+            dispatcher: actionDispatcher
+        )
+        reviewSessionScope = scope
+        reviewSessionStoreID = currentStoreID
+        reviewSessionDispatcherID = currentDispatcherID
+    }
+
+    @discardableResult
+    private func stageReviewDraft(
+        _ draft: CoCaptainReviewLifecycle.Draft,
+        createdAt: Date = Date()
+    ) -> CoCaptainReviewLifecycle.Record? {
+        activeReviewSession().stage(draft, createdAt: createdAt)
+    }
+
+    private func appendReviewRecord(_ record: CoCaptainReviewLifecycle.Record) {
+        items.append(
+            CoCaptainTimelineItem(
+                id: record.id,
+                content: .reviewBundle(record.bundle)
+            )
+        )
+    }
+
+    private func resolveReviewDecision(
+        _ decision: CoCaptainReviewLifecycle.Decision,
+        in bundleID: UUID
+    ) {
+        switch activeReviewSession().resolve(decision, in: bundleID) {
+        case .failure:
+            return
+        case .success(let transition):
+            guard let bundleIndex = items.firstIndex(where: { $0.id == transition.record.id }) else {
+                return
+            }
+            items[bundleIndex].content = .reviewBundle(transition.record.bundle)
+            renderReviewEffects(transition.effects, bundleID: transition.record.id)
+        }
+    }
+
+    private func renderReviewEffects(
+        _ effects: [CoCaptainReviewLifecycle.Effect],
+        bundleID: UUID
+    ) {
+        for effect in effects {
+            switch effect {
+            case .nodeEditApplied(let itemID, _, let role, _):
+                items.append(
+                    CoCaptainTimelineItem(
+                        content: .execution(
+                            ExecutionStatusItem(
+                                summary: LocalizationManager.shared.localizedString(
+                                    "Applied updates to %@.",
+                                    arguments: [role.localizedDisplayName]
+                                )
+                            )
+                        )
+                    )
+                )
+                onReviewItemApplied?(bundleID, itemID)
+
+            case .appActionPerformed(let itemID, let result):
+                items.append(
+                    CoCaptainTimelineItem(
+                        content: .execution(ExecutionStatusItem(summary: result.message))
+                    )
+                )
+                onReviewItemApplied?(bundleID, itemID)
+
+            case .learningNote(_, let note):
+                items.append(
+                    CoCaptainTimelineItem(
+                        content: .mentorNote(CoCaptainMentorNoteItem(note: note))
+                    )
+                )
+
+            case .rejected, .clarificationResolved, .conflicted:
+                break
+            }
+        }
     }
 
     private func updateMessage(id: UUID, text: String) {
@@ -779,13 +707,19 @@ public final class CoCaptainViewModel {
                 "onboarding.guidedEdit.fallback.message"
             )
         )
-        let bundle = OnboardingCoCaptainReviewFixture.makeBundle(
+        let draft = OnboardingCoCaptainReviewFixture.makeDraft(
             nodeID: nodeID,
             baseText: baseText
         )
-        let reviewItem = CoCaptainTimelineItem(content: .reviewBundle(bundle))
-        items.append(reviewItem)
-        persistNodeReviewBundleIfNeeded(timelineItemID: reviewItem.id, bundle: bundle)
+        guard let record = stageReviewDraft(draft) else {
+            markAssistantResponseCompleted(
+                turnID: turnID,
+                purpose: .onboardingGuidedEdit,
+                successful: false
+            )
+            return
+        }
+        appendReviewRecord(record)
         onOnboardingReviewFallback?()
         requestScrollToBottom()
         markAssistantResponseCompleted(
@@ -916,11 +850,11 @@ public final class CoCaptainViewModel {
             )
         }
 
-        for record in NodeAgentReviewPersistence.decode(from: node.agentState) {
+        for record in activeReviewSession().records {
             timeline.append(
                 (
                     record.createdAt,
-                    CoCaptainTimelineItem(id: record.timelineItemID, content: .reviewBundle(record.bundle))
+                    CoCaptainTimelineItem(id: record.id, content: .reviewBundle(record.bundle))
                 )
             )
         }
@@ -930,20 +864,6 @@ public final class CoCaptainViewModel {
         } else {
             items = timeline.sorted { $0.0 < $1.0 }.map(\.1)
         }
-    }
-
-    private func persistNodeReviewBundleIfNeeded(timelineItemID: UUID, bundle: ReviewBundleItem) {
-        guard case .node(let nodeID) = scope, let store else { return }
-        NodeAgentReviewPersistence.persist(
-            timelineItemID: timelineItemID,
-            bundle: bundle,
-            nodeID: nodeID,
-            store: store
-        )
-    }
-
-    private func persistNodeReviewBundleIfNeeded(bundleID: UUID, bundle: ReviewBundleItem) {
-        persistNodeReviewBundleIfNeeded(timelineItemID: bundleID, bundle: bundle)
     }
 
     private static func nodeGreetingItem(title: String) -> CoCaptainTimelineItem {

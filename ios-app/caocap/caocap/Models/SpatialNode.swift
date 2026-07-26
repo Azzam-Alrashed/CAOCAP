@@ -215,7 +215,8 @@ public struct NodeAgentState: Codable, Equatable, Hashable {
     /// Compact textual memory injected into the CoCaptain system prompt to
     /// preserve context across sessions without sending the full history.
     public var memorySummary: String?
-    /// JSON-encoded pending review records managed by CoCaptain (`NodeAgentReviewRecord`).
+    /// JSON-encoded unresolved Review Bundle records managed by
+    /// `CoCaptainReviewLifecycle`.
     public var pendingReviewBundlesData: [Data]
 
     public init(

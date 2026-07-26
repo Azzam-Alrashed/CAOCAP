@@ -48,9 +48,9 @@ struct ReviewBundleView: View {
                     viewModel.applyAll(in: bundleID)
                 }
                 .font(.system(size: 12, weight: .semibold))
-                .disabled(!hasPendingItems)
+                .disabled(!hasApprovableItems)
                 .background {
-                    if isOnboardingApplyAnchorActive, hasPendingItems {
+                    if isOnboardingApplyAnchorActive, hasApprovableItems {
                         Color.clear.onboardingTooltipAnchor(.coCaptainReviewApply)
                     }
                 }
@@ -60,7 +60,7 @@ struct ReviewBundleView: View {
                 }
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundColor(.red)
-                .disabled(!hasPendingItems)
+                .disabled(!hasUnresolvedItems)
             }
             .padding(.top, 2)
         }
@@ -69,9 +69,12 @@ struct ReviewBundleView: View {
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
-    /// Returns `true` if at least one item in the bundle has not yet been resolved.
-    private var hasPendingItems: Bool {
-        bundle.items.contains { $0.status == .pending || $0.status == .needsClarification }
+    private var hasApprovableItems: Bool {
+        bundle.items.contains { $0.status == .pending }
+    }
+
+    private var hasUnresolvedItems: Bool {
+        bundle.items.contains { $0.status.isUnresolved }
     }
 }
 

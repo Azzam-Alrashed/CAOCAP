@@ -43,7 +43,9 @@ public class ProjectStore {
     
     
     /// Tracks active background agents working on specific nodes.
-    public var activeAgentStates: [UUID: AgentExecutionState] { agentPipeline.activeAgentStates }
+    public var activeAgentStates: [UUID: AgentExecutionState] {
+        agentPipeline.executionStates(for: nodes)
+    }
     
     /// The current version of the project file schema. Incremented when
     /// structural changes are made to nodes or the project envelope.

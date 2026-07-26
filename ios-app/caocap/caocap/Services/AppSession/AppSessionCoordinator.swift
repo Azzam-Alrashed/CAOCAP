@@ -878,7 +878,7 @@ final class AppSessionCoordinator {
     private var coCaptainHasPendingOnboardingReview: Bool {
         coCaptain.items.contains { item in
             guard case .reviewBundle(let bundle) = item.content else { return false }
-            return bundle.items.contains { $0.status == .pending }
+            return bundle.items.contains { $0.status.isUnresolved }
         }
     }
 

@@ -18,6 +18,7 @@ CAOCAP/
 ├── README.md             # Project overview, mission, and devlog
 ├── ROADMAP.md            # Strategic milestone tracker
 ├── STRUCTURE.md          # This document — the architectural map
+├── CONTEXT.md            # Canonical product/domain language
 ├── CONTRIBUTING.md       # Contribution standards and git workflow
 └── LICENSE               # GNU GPL v3.0
 ```
@@ -252,7 +253,7 @@ State management, persistence, checkpoints, and reactive compilation for the spa
 | `NodeMutationEngine.swift` | Manages standard node and layout mutations. |
 | `LivePreviewOrchestrator.swift` | Orchestrates WebView live compiles. |
 | `ProjectSaveController.swift` | Saves projects with debounced JSON serialization. |
-| `AgentPipelineEngine.swift` | Triggers node-scoped local/remote AI agent request turns for opted-in downstream nodes. |
+| `AgentPipelineEngine.swift` | Triggers node-scoped local/remote AI agent request turns for opted-in downstream nodes and derives canvas agent state from transient execution plus unresolved Review Bundles. |
 
 ---
 
@@ -399,9 +400,9 @@ The agentic AI companion. A native sheet interface for real-time collaboration.
 
 | Folder/File | Responsibility |
 |---|---|
-| `Chat/` | CoCaptain sheet UI, chat timeline, bubbles, two-row prompt composer with Agent/Ask/Plan mode, inline multi-node `@` mentions, image/file attachments, clarifying-question option cards, and view-model state (including local clarification resolution). |
-| `AgentContract/` | Model-output adapter, XML parser (including the `clarifying_question` element), validator, coordinator, and shared agent/review/timeline models including `CoCaptainChatMode` and turn execution policy. Mode is user-selected (not keyword-classified). |
-| `Review/` | Review bundle and pending edit/action cards for human approval, including the "Which one did you mean?" candidate picker for ambiguous edit targets. |
+| `Chat/` | CoCaptain sheet UI, chat timeline, bubbles, two-row prompt composer with Agent/Ask/Plan mode, inline multi-node `@` mentions, image/file attachments, clarifying-question option cards, and thin lifecycle-effect rendering in the view model. |
+| `AgentContract/` | Model-output adapter, XML parser (including the `clarifying_question` element), validator, coordinator, typed review drafts, and shared agent/review/timeline models including `CoCaptainChatMode` and turn execution policy. Mode is user-selected (not keyword-classified). |
+| `Review/` | `CoCaptainReviewLifecycle` staging, canonical Review Bundle identity, clarification, approval/rejection, stale-edit protection, checkpoints, node-session persistence, terminal outcomes, and the human-approval views. |
 | `Analysis/` | Structural parser warnings and recommendations from the analyzer. |
 | `NodeAgent/` | Embedded node chat interface that shares the same persisted Agent/Ask/Plan mode as project-scoped CoCaptain. |
 

@@ -1,30 +1,27 @@
 import Foundation
 
-/// Offline-safe review bundle used when the guided onboarding edit cannot reach the model.
+/// Offline-safe typed review draft used when the guided onboarding edit cannot reach the model.
 enum OnboardingCoCaptainReviewFixture {
-    static func makeBundle(
+    static func makeDraft(
         nodeID: UUID,
         baseText: String
-    ) -> ReviewBundleItem {
+    ) -> CoCaptainReviewLifecycle.Draft {
         let updatedText = baseText.replacingOccurrences(
             of: "Hello World!",
             with: "Hello from CoCaptain!"
         )
-        return ReviewBundleItem(
-            items: [
-                PendingReviewItem(
-                    targetNodeID: nodeID,
-                    targetLabel: "Hello World CODE",
+        return CoCaptainReviewLifecycle.Draft(
+            nodeEdits: [
+                CoCaptainNodeEditProposal(
+                    nodeID: nodeID,
+                    role: .miniApp,
+                    section: .code,
                     summary: LocalizationManager.shared.localizedString(
                         "Update the headline to greet you from CoCaptain."
                     ),
-                    preview: updatedText,
-                    source: .nodeEdit(
-                        role: .miniApp,
-                        section: .code,
-                        operations: [NodePatchOperation(type: .replaceAll, content: updatedText)],
-                        baseText: baseText
-                    )
+                    operations: [
+                        NodePatchOperation(type: .replaceAll, content: updatedText)
+                    ]
                 )
             ]
         )

@@ -333,13 +333,20 @@ struct OnboardingManifestTests {
         #expect(!OnboardingCoordinator.Step.chatCoCaptain.blocksCoCaptainPrompt)
     }
 
+    @MainActor
     @Test func onboardingReviewFixtureTargetsHelloWorldHeadline() {
         let nodeID = TutorialCanvasProvider.miniAppNodeID
         let baseText = TutorialCanvasProvider.practiceMiniAppNode.miniApp?.codeText ?? ""
-        let bundle = OnboardingCoCaptainReviewFixture.makeBundle(nodeID: nodeID, baseText: baseText)
+        let draft = OnboardingCoCaptainReviewFixture.makeDraft(
+            nodeID: nodeID,
+            baseText: baseText
+        )
 
-        #expect(bundle.items.count == 1)
-        #expect(bundle.items.first?.preview.contains("Hello from CoCaptain!") == true)
+        #expect(draft.nodeEdits.count == 1)
+        #expect(
+            draft.nodeEdits.first?.operations.first?.content
+                .contains("Hello from CoCaptain!") == true
+        )
     }
 
     @MainActor

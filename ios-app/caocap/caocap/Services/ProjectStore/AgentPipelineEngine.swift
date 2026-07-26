@@ -11,14 +11,41 @@ import OSLog
 @Observable
 @MainActor
 public final class AgentPipelineEngine {
-    /// Keyed by node ID; tracks the current execution state of each in-flight agent run.
-    public var activeAgentStates: [UUID: AgentExecutionState] = [:]
+    /// Keyed by node ID; contains only transient in-flight and error states.
+    private var transientAgentStates: [UUID: AgentExecutionState] = [:]
     /// One cancellable task per source node, used to debounce rapid upstream edits.
     private var agentTriggerTasks: [UUID: Task<Void, Never>] = [:]
     
     private let logger = Logger(subsystem: "com.caocap.AgentPipelineEngine", category: "Engine")
+    private let reviewLifecycle: CoCaptainReviewLifecycle
     
-    public init() {}
+    public init(reviewLifecycle: CoCaptainReviewLifecycle? = nil) {
+        self.reviewLifecycle = reviewLifecycle ?? CoCaptainReviewLifecycle()
+    }
+
+    /// Derives canvas presentation state from transient execution plus
+    /// lifecycle-owned unresolved Review Bundle persistence.
+    public func executionStates(for nodes: [SpatialNode]) -> [UUID: AgentExecutionState] {
+        var states = transientAgentStates
+        for node in nodes where states[node.id] == nil {
+            if CoCaptainReviewLifecycle.hasUnresolvedPersistedRecords(in: node.agentState) {
+                states[node.id] = .awaitingReview
+            }
+        }
+        return states
+    }
+
+    public func executionState(for nodeID: UUID, in store: ProjectStore) -> AgentExecutionState {
+        if let transientState = transientAgentStates[nodeID] {
+            return transientState
+        }
+        guard let node = store.nodes.first(where: { $0.id == nodeID }) else {
+            return .idle
+        }
+        return CoCaptainReviewLifecycle.hasUnresolvedPersistedRecords(in: node.agentState)
+            ? .awaitingReview
+            : .idle
+    }
     
     /// Autonomously triggers agents on downstream nodes when an upstream node updates.
     public func triggerDownstreamAgents(from sourceNodeID: UUID, nodes: [SpatialNode], store: ProjectStore) {
@@ -53,7 +80,7 @@ public final class AgentPipelineEngine {
                 
                 let triggerMsg = NodeAgentMessage(text: prompt, isUser: true)
                 store.appendNodeAgentMessage(id: downstreamNode.id, message: triggerMsg)
-                self.activeAgentStates[downstreamNode.id] = .thinking
+                self.transientAgentStates[downstreamNode.id] = .thinking
                 
                 let coordinator = CoCaptainAgentCoordinator()
                 
@@ -71,14 +98,13 @@ public final class AgentPipelineEngine {
                         store.appendNodeAgentMessage(id: downstreamNode.id, message: aiMsg)
                     }
                     
-                    if let reviewBundle = result.reviewBundle, !reviewBundle.items.isEmpty {
-                        self.stageReviewBundle(
-                            reviewBundle,
-                            timelineItemID: UUID(),
+                    if let reviewDraft = result.reviewDraft,
+                       let reviewRecord = self.stageReviewDraft(
+                            reviewDraft,
                             nodeID: downstreamNode.id,
                             store: store
-                        )
-                        let summaries = reviewBundle.items
+                       ) {
+                        let summaries = reviewRecord.bundle.items
                             .map { "- \($0.targetLabel): \($0.summary)" }
                             .joined(separator: "\n")
                         let reviewMsg = NodeAgentMessage(
@@ -87,21 +113,19 @@ public final class AgentPipelineEngine {
                         )
                         store.appendNodeAgentMessage(id: downstreamNode.id, message: reviewMsg)
                     }
-                    
-                    if self.activeAgentStates[downstreamNode.id] != .awaitingReview {
-                        self.activeAgentStates[downstreamNode.id] = .idle
-                    }
+
+                    self.transientAgentStates[downstreamNode.id] = nil
                 } catch {
                     let errorMsg = NodeAgentMessage(text: "Auto-trigger failed: \(error.localizedDescription)", isUser: false)
                     store.appendNodeAgentMessage(id: downstreamNode.id, message: errorMsg)
-                    self.activeAgentStates[downstreamNode.id] = .error(error.localizedDescription)
+                    self.transientAgentStates[downstreamNode.id] = .error(error.localizedDescription)
                     
                     // Clear error after a short delay
                     Task { @MainActor [weak self] in
                         try? await Task.sleep(nanoseconds: 3_000_000_000)
                         guard let self = self else { return }
-                        if case .error = self.activeAgentStates[downstreamNode.id] {
-                            self.activeAgentStates[downstreamNode.id] = .idle
+                        if case .error = self.transientAgentStates[downstreamNode.id] {
+                            self.transientAgentStates[downstreamNode.id] = nil
                         }
                     }
                 }
@@ -109,19 +133,16 @@ public final class AgentPipelineEngine {
         }
     }
 
-    /// Persists a review bundle on the node and marks the pipeline state as awaiting review.
-    func stageReviewBundle(
-        _ reviewBundle: ReviewBundleItem,
-        timelineItemID: UUID,
+    @discardableResult
+    func stageReviewDraft(
+        _ reviewDraft: CoCaptainReviewLifecycle.Draft,
         nodeID: UUID,
         store: ProjectStore
-    ) {
-        NodeAgentReviewPersistence.persist(
-            timelineItemID: timelineItemID,
-            bundle: reviewBundle,
-            nodeID: nodeID,
-            store: store
-        )
-        activeAgentStates[nodeID] = .awaitingReview
+    ) -> CoCaptainReviewLifecycle.Record? {
+        reviewLifecycle.session(
+            scope: .node(nodeID),
+            store: store,
+            dispatcher: nil
+        ).stage(reviewDraft)
     }
 }

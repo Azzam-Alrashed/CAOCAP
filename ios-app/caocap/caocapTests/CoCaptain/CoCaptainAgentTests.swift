@@ -754,8 +754,8 @@ struct CoCaptainAgentTests {
             dispatcher: dispatcher
         ) { _ in }
 
-        #expect(result.reviewBundle?.items.count == 2)
-        #expect(result.reviewBundle?.title.contains("2") == true)
+        #expect(result.reviewDraft?.pendingActions.count == 1)
+        #expect(result.reviewDraft?.nodeEdits.count == 1)
     }
 
     @Test func parserExtractsTrailingStructuredBlock() throws {
@@ -1069,7 +1069,7 @@ struct CoCaptainAgentTests {
 
         #expect(llm.receivedMessages.count == 2)
         #expect(llm.receivedMessages.last?.contains("satisfied the machine-readable CoCaptain action contract") == true)
-        #expect(result.reviewBundle?.items.first?.status == .pending)
+        #expect(result.reviewDraft?.nodeEdits.count == 1)
     }
 
     @MainActor
@@ -1125,7 +1125,7 @@ struct CoCaptainAgentTests {
             !$0.contains("machine-readable CoCaptain action contract")
         })
         #expect(!result.visibleText.isEmpty)
-        #expect(result.reviewBundle == nil)
+        #expect(result.reviewDraft == nil)
         #expect(result.executionSummary == nil)
     }
 
@@ -1158,7 +1158,7 @@ struct CoCaptainAgentTests {
         ) { _ in }
 
         #expect(llm.receivedMessages.count == 1)
-        #expect(result.reviewBundle == nil)
+        #expect(result.reviewDraft == nil)
         #expect(result.executionSummary == nil)
         #expect(result.visibleText.contains("Pac-Man"))
         #expect(dispatcher.executedActionIDs.isEmpty)
@@ -1196,7 +1196,7 @@ struct CoCaptainAgentTests {
 
         #expect(llm.receivedMessages.count == 2)
         #expect(llm.receivedMessages.last?.contains("machine-readable CoCaptain action contract") == true)
-        #expect(result.reviewBundle?.items.first?.status == .pending)
+        #expect(result.reviewDraft?.nodeEdits.count == 1)
     }
 
     @MainActor
@@ -1235,8 +1235,7 @@ struct CoCaptainAgentTests {
 
         #expect(llm.receivedMessages.count == 2)
         #expect(llm.receivedMessages.last?.contains("documentation, requirements, spec, or SRS requests") == true)
-        #expect(result.reviewBundle?.items.first?.targetLabel == "Mini-App SRS")
-        #expect(result.reviewBundle?.items.first?.status == .pending)
+        #expect(result.reviewDraft?.nodeEdits.first?.section == .srs)
     }
 
     @MainActor
@@ -1273,7 +1272,8 @@ struct CoCaptainAgentTests {
 
         #expect(dispatcher.executedActionIDs == [.goRoot])
         #expect(result.executionSummary?.summary.contains("Go to Root") == true)
-        #expect(result.reviewBundle?.items.count == 2)
+        #expect(result.reviewDraft?.pendingActions.count == 1)
+        #expect(result.reviewDraft?.nodeEdits.count == 1)
     }
 
     @MainActor
@@ -1308,8 +1308,8 @@ struct CoCaptainAgentTests {
         ) { _ in }
 
         #expect(llm.receivedScopes == [.node(miniAppNode.id)])
-        #expect(result.reviewBundle?.items.first?.targetNodeID == miniAppNode.id)
-        #expect(result.reviewBundle?.items.first?.targetLabel == "Mini-App CODE")
+        #expect(result.reviewDraft?.nodeEdits.first?.nodeID == miniAppNode.id)
+        #expect(result.reviewDraft?.nodeEdits.first?.section == .code)
     }
 
     @MainActor
@@ -1357,7 +1357,7 @@ struct CoCaptainAgentTests {
         ) { _ in }
 
         #expect(dispatcher.executedActionIDs.isEmpty)
-        #expect(result.reviewBundle?.items.first?.targetLabel == "Create New Node")
+        #expect(result.reviewDraft?.pendingActions.first?.actionID == AppActionID.createNode.rawValue)
     }
 
     @MainActor
@@ -1394,7 +1394,7 @@ struct CoCaptainAgentTests {
         #expect(dispatcher.executedActionIDs.isEmpty)
         #expect(llm.receivedMessages.count == 2)
         #expect(llm.receivedMessages.last?.contains("move it to `pendingActions`") == true)
-        #expect(result.reviewBundle?.items.first?.targetLabel == "Create New Node")
+        #expect(result.reviewDraft?.pendingActions.first?.actionID == AppActionID.createNode.rawValue)
     }
 
     @MainActor
@@ -1471,7 +1471,7 @@ struct CoCaptainAgentTests {
         #expect(dispatcher.executedActionIDs.isEmpty)
         #expect(llm.receivedMessages.count == 2)
         #expect(llm.receivedMessages.last?.contains("move it to `pendingActions`") == true)
-        #expect(result.reviewBundle?.items.count == 1)
+        #expect(result.reviewDraft?.pendingActions.count == 1)
     }
 
     @MainActor
@@ -1498,7 +1498,7 @@ struct CoCaptainAgentTests {
 
         #expect(dispatcher.executedActionIDs.isEmpty)
         #expect(result.executionSummary == nil)
-        #expect(result.reviewBundle == nil)
+        #expect(result.reviewDraft == nil)
         #expect(result.payloadMessage?.contains("another run") == true)
         #expect(llm.receivedMessages.count == 3)
     }
@@ -1545,94 +1545,7 @@ struct CoCaptainAgentTests {
 
         #expect(llm.receivedMessages.count == 2)
         #expect(llm.receivedMessages.last?.contains("must include at least one operation") == true)
-        #expect(result.reviewBundle?.items.first?.status == .pending)
-    }
-
-    @MainActor
-    @Test func applyReviewItemConflictsWhenNodeEditedAfterSuggestion() {
-        let store = makeStore()
-        let vm = CoCaptainViewModel()
-        vm.store = store
-
-        let miniAppNode = store.nodes.first(where: { $0.title == "Mini-App" })!
-        let baseText = miniAppNode.miniApp?.codeText ?? ""
-        let bundleID = UUID()
-        let itemID = UUID()
-
-        vm.items.append(CoCaptainTimelineItem(
-            id: bundleID,
-            content: .reviewBundle(ReviewBundleItem(
-                id: bundleID,
-                items: [PendingReviewItem(
-                    id: itemID,
-                    targetLabel: "Mini-App CODE",
-                    summary: "Update headline",
-                    preview: "<h1>Agentic Hello!</h1>",
-                    source: .nodeEdit(
-                        role: .miniApp,
-                        section: .code,
-                        operations: [NodePatchOperation(type: .replaceAll, content: "<h1>Agentic Hello!</h1>")],
-                        baseText: baseText
-                    )
-                )]
-            ))
-        ))
-
-        // User edits the Mini-App code before clicking Apply — stale scenario.
-        store.updateMiniAppCode(id: miniAppNode.id, text: "<h1>User wrote this instead</h1>", persist: false)
-        vm.applyReviewItem(bundleID: bundleID, itemID: itemID)
-
-        guard case .reviewBundle(let bundle) = vm.items.first(where: { $0.id == bundleID })?.content,
-              let result = bundle.items.first(where: { $0.id == itemID }) else {
-            Issue.record("Review bundle or item not found")
-            return
-        }
-
-        #expect(result.status == .conflicted)
-        #expect(result.conflictDescription?.contains("edited after") == true)
-    }
-
-    @MainActor
-    @Test func applyReviewItemSucceedsWhenNodeUnchanged() {
-        let store = makeStore()
-        let vm = CoCaptainViewModel()
-        vm.store = store
-
-        let miniAppNode = store.nodes.first(where: { $0.title == "Mini-App" })!
-        let baseText = miniAppNode.miniApp?.codeText ?? ""
-        let bundleID = UUID()
-        let itemID = UUID()
-
-        vm.items.append(CoCaptainTimelineItem(
-            id: bundleID,
-            content: .reviewBundle(ReviewBundleItem(
-                id: bundleID,
-                items: [PendingReviewItem(
-                    id: itemID,
-                    targetLabel: "Mini-App CODE",
-                    summary: "Update headline",
-                    preview: "<h1>Agentic Hello!</h1>",
-                    source: .nodeEdit(
-                        role: .miniApp,
-                        section: .code,
-                        operations: [NodePatchOperation(type: .replaceAll, content: "<h1>Agentic Hello!</h1>")],
-                        baseText: baseText
-                    )
-                )]
-            ))
-        ))
-
-        // No user edits between suggestion and apply — should succeed.
-        vm.applyReviewItem(bundleID: bundleID, itemID: itemID)
-
-        guard case .reviewBundle(let bundle) = vm.items.first(where: { $0.id == bundleID })?.content,
-              let result = bundle.items.first(where: { $0.id == itemID }) else {
-            Issue.record("Review bundle or item not found")
-            return
-        }
-
-        #expect(result.status == .applied)
-        #expect(result.conflictDescription == nil)
+        #expect(result.reviewDraft?.nodeEdits.count == 1)
     }
 
     @Test func parserExtractsLearningNoteFromNodeEdit() throws {
@@ -1712,13 +1625,13 @@ struct CoCaptainAgentTests {
             dispatcher: TestActionDispatcher()
         ) { _ in }
 
-        let note = result.reviewBundle?.items.first?.learningNote
+        let note = result.reviewDraft?.nodeEdits.first?.learningNote
         #expect(note?.concept == "Headings")
         #expect(note?.body == "The h1 tag is your page's main headline.")
     }
 
     @MainActor
-    @Test func coordinatorBuildsFallbackLearningNoteWhenModelOmitsOne() async throws {
+    @Test func reviewLifecycleBuildsFallbackLearningNoteWhenModelOmitsOne() async throws {
         let llm = TestLLMClient(
             response:
                 """
@@ -1736,51 +1649,56 @@ struct CoCaptainAgentTests {
         )
         let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
 
+        let store = makeStore()
         let result = try await coordinator.run(
             userMessage: "update the headline",
-            store: makeStore(),
+            store: store,
             dispatcher: TestActionDispatcher()
         ) { _ in }
 
-        let note = result.reviewBundle?.items.first?.learningNote
+        let draft = try #require(result.reviewDraft)
+        let record = try #require(
+            CoCaptainReviewLifecycle()
+                .session(scope: .project, store: store, dispatcher: nil)
+                .stage(draft)
+        )
+        let note = record.bundle.items.first?.learningNote
         #expect(note != nil)
         #expect(note?.body.contains("Update headline") == true)
         #expect(note?.body.contains("Headline shows New") == false)
     }
 
     @MainActor
-    @Test func applyReviewItemAppendsMentorNoteCardOnApply() {
+    @Test func viewModelRendersLifecycleExecutionBeforeMentorNote() throws {
         let store = makeStore()
-        let vm = CoCaptainViewModel()
-        vm.store = store
-
-        let miniAppNode = store.nodes.first(where: { $0.title == "Mini-App" })!
-        let baseText = miniAppNode.miniApp?.codeText ?? ""
-        let bundleID = UUID()
-        let itemID = UUID()
+        let miniAppNode = try #require(store.nodes.first(where: { $0.title == "Mini-App" }))
+        let lifecycle = CoCaptainReviewLifecycle()
         let note = CoCaptainLearningNote(concept: "Headings", body: "The h1 tag is your headline.")
+        let record = try #require(
+            lifecycle.session(
+                scope: .node(miniAppNode.id),
+                store: store,
+                dispatcher: nil
+            ).stage(
+                CoCaptainReviewLifecycle.Draft(
+                    nodeEdits: [
+                        CoCaptainNodeEditProposal(
+                            nodeID: miniAppNode.id,
+                            summary: "Update headline",
+                            operations: [
+                                NodePatchOperation(type: .replaceAll, content: "<h1>New</h1>")
+                            ],
+                            learningNote: note
+                        )
+                    ]
+                )
+            )
+        )
+        let itemID = try #require(record.bundle.items.first?.id)
+        let vm = CoCaptainViewModel(reviewLifecycle: lifecycle)
+        vm.configureNodeSession(store: store, nodeID: miniAppNode.id)
 
-        vm.items.append(CoCaptainTimelineItem(
-            id: bundleID,
-            content: .reviewBundle(ReviewBundleItem(
-                id: bundleID,
-                items: [PendingReviewItem(
-                    id: itemID,
-                    targetLabel: "Mini-App CODE",
-                    summary: "Update headline",
-                    preview: "<h1>New</h1>",
-                    source: .nodeEdit(
-                        role: .miniApp,
-                        section: .code,
-                        operations: [NodePatchOperation(type: .replaceAll, content: "<h1>New</h1>")],
-                        baseText: baseText
-                    ),
-                    learningNote: note
-                )]
-            ))
-        ))
-
-        vm.applyReviewItem(bundleID: bundleID, itemID: itemID)
+        vm.applyReviewItem(bundleID: record.id, itemID: itemID)
 
         let mentorNotes = vm.items.compactMap { item -> CoCaptainMentorNoteItem? in
             guard case .mentorNote(let noteItem) = item.content else { return nil }
@@ -1793,44 +1711,11 @@ struct CoCaptainAgentTests {
         let executionIndex = vm.items.firstIndex { if case .execution = $0.content { return true } else { return false } }
         let noteIndex = vm.items.firstIndex { if case .mentorNote = $0.content { return true } else { return false } }
         #expect(executionIndex != nil && noteIndex != nil && executionIndex! < noteIndex!)
-    }
-
-    @MainActor
-    @Test func applyReviewItemDoesNotAppendMentorNoteOnConflict() {
-        let store = makeStore()
-        let vm = CoCaptainViewModel()
-        vm.store = store
-
-        let miniAppNode = store.nodes.first(where: { $0.title == "Mini-App" })!
-        let baseText = miniAppNode.miniApp?.codeText ?? ""
-        let bundleID = UUID()
-        let itemID = UUID()
-
-        vm.items.append(CoCaptainTimelineItem(
-            id: bundleID,
-            content: .reviewBundle(ReviewBundleItem(
-                id: bundleID,
-                items: [PendingReviewItem(
-                    id: itemID,
-                    targetLabel: "Mini-App CODE",
-                    summary: "Update headline",
-                    preview: "<h1>New</h1>",
-                    source: .nodeEdit(
-                        role: .miniApp,
-                        section: .code,
-                        operations: [NodePatchOperation(type: .replaceAll, content: "<h1>New</h1>")],
-                        baseText: baseText
-                    ),
-                    learningNote: CoCaptainLearningNote(concept: "Headings", body: "Body.")
-                )]
-            ))
-        ))
-
-        store.updateMiniAppCode(id: miniAppNode.id, text: "<h1>User change</h1>", persist: false)
-        vm.applyReviewItem(bundleID: bundleID, itemID: itemID)
-
-        let hasMentorNote = vm.items.contains { if case .mentorNote = $0.content { return true } else { return false } }
-        #expect(!hasMentorNote)
+        guard case .reviewBundle(let updatedBundle) = vm.items.first(where: { $0.id == record.id })?.content else {
+            Issue.record("Expected the lifecycle record to replace its timeline row")
+            return
+        }
+        #expect(updatedBundle.items.first?.status == .applied)
     }
 
     @Test func pendingReviewItemDecodesLegacyPayloadWithoutLearningNote() throws {
@@ -1905,7 +1790,7 @@ struct CoCaptainAgentTests {
         #expect(llm.capturedToolResults.count == 1)
         #expect(llm.capturedToolResults.first?.contains("<h1>Hello World!</h1>") == true)
         // The turn still produced a normal review bundle from the follow-up response.
-        #expect(result.reviewBundle?.items.first?.status == .pending)
+        #expect(result.reviewDraft?.nodeEdits.count == 1)
     }
 
     @MainActor
@@ -2025,111 +1910,6 @@ struct CoCaptainAgentTests {
         vm.flyToReviewTarget(nodeID)
 
         #expect(flownNodeID == nodeID)
-    }
-
-    @MainActor
-    @Test func applyAllCreatesSingleCheckpointForBatchApply() {
-        let store = makeStore()
-        let vm = CoCaptainViewModel()
-        vm.store = store
-
-        let miniAppNode = store.nodes.first(where: { $0.title == "Mini-App" })!
-        let baseText = miniAppNode.miniApp?.codeText ?? ""
-        let bundleID = UUID()
-
-        vm.items.append(CoCaptainTimelineItem(
-            id: bundleID,
-            content: .reviewBundle(ReviewBundleItem(
-                items: [
-                    PendingReviewItem(
-                        targetLabel: "Mini-App CODE 1",
-                        summary: "First change",
-                        preview: "<h1>First</h1>",
-                        source: .nodeEdit(
-                            role: .miniApp,
-                            section: .code,
-                            operations: [NodePatchOperation(type: .replaceAll, content: "<h1>First</h1>")],
-                            baseText: baseText
-                        )
-                    ),
-                    PendingReviewItem(
-                        targetLabel: "Mini-App SRS",
-                        summary: "SRS update",
-                        preview: "Updated SRS",
-                        source: .nodeEdit(
-                            role: .miniApp,
-                            section: .srs,
-                            operations: [NodePatchOperation(type: .replaceAll, content: "Updated SRS")],
-                            baseText: miniAppNode.miniApp?.srsText ?? ""
-                        )
-                    )
-                ]
-            ))
-        ))
-
-        let checkpointsBefore = store.history.count
-        vm.applyAll(in: bundleID)
-
-        #expect(store.history.count == checkpointsBefore + 1)
-        #expect(store.history.first?.label == "Apply All Changes")
-    }
-
-    @MainActor
-    @Test func applyAllLeavesConflictedItemsWhenOneItemIsStale() {
-        let store = makeStore()
-        let vm = CoCaptainViewModel()
-        vm.store = store
-
-        let miniAppNode = store.nodes.first(where: { $0.title == "Mini-App" })!
-        let baseText = miniAppNode.miniApp?.codeText ?? ""
-        let bundleID = UUID()
-        let staleItemID = UUID()
-        let freshItemID = UUID()
-
-        vm.items.append(CoCaptainTimelineItem(
-            id: bundleID,
-            content: .reviewBundle(ReviewBundleItem(
-                items: [
-                    PendingReviewItem(
-                        id: staleItemID,
-                        targetLabel: "Mini-App CODE",
-                        summary: "Stale change",
-                        preview: "<h1>Stale</h1>",
-                        source: .nodeEdit(
-                            role: .miniApp,
-                            section: .code,
-                            operations: [NodePatchOperation(type: .replaceAll, content: "<h1>Stale</h1>")],
-                            baseText: baseText
-                        )
-                    ),
-                    PendingReviewItem(
-                        id: freshItemID,
-                        targetLabel: "Mini-App SRS",
-                        summary: "Fresh SRS update",
-                        preview: "Fresh SRS",
-                        source: .nodeEdit(
-                            role: .miniApp,
-                            section: .srs,
-                            operations: [NodePatchOperation(type: .replaceAll, content: "Fresh SRS")],
-                            baseText: miniAppNode.miniApp?.srsText ?? ""
-                        )
-                    )
-                ]
-            ))
-        ))
-
-        store.updateMiniAppCode(id: miniAppNode.id, text: "<h1>User edited after review</h1>", persist: false)
-        vm.applyAll(in: bundleID)
-
-        guard case .reviewBundle(let bundle) = vm.items.first(where: { $0.id == bundleID })?.content else {
-            Issue.record("Review bundle missing")
-            return
-        }
-
-        let stale = bundle.items.first { $0.id == staleItemID }
-        let fresh = bundle.items.first { $0.id == freshItemID }
-        #expect(stale?.status == .conflicted)
-        #expect(fresh?.status == .applied)
     }
 
     @MainActor
@@ -2367,13 +2147,20 @@ struct CoCaptainAgentTests {
                 """
         )
         let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
+        let store = makeStore()
         let result = try await coordinator.run(
             userMessage: "rename",
-            store: makeStore(),
+            store: store,
             dispatcher: nil
         ) { _ in }
 
-        let item = try #require(result.reviewBundle?.items.first)
+        let draft = try #require(result.reviewDraft)
+        let record = try #require(
+            CoCaptainReviewLifecycle()
+                .session(scope: .project, store: store, dispatcher: nil)
+                .stage(draft)
+        )
+        let item = try #require(record.bundle.items.first)
         #expect(item.beforePreview?.contains("Hello World!") == true)
         #expect(item.preview.contains("hi azzam"))
     }
@@ -2605,7 +2392,7 @@ struct CoCaptainAgentTests {
     }
 
     @MainActor
-    @Test func coordinatorSurfacesUnknownPendingActionsAsConflictedReview() async throws {
+    @Test func coordinatorRejectsUnknownPendingActionsBeforeDraft() async throws {
         let dispatcher = TestActionDispatcher()
         let llm = TestLLMClient(
             response:
@@ -2624,9 +2411,7 @@ struct CoCaptainAgentTests {
             dispatcher: dispatcher
         ) { _ in }
 
-        #expect(result.reviewBundle?.items.count == 1)
-        #expect(result.reviewBundle?.items.first?.status == .conflicted)
-        #expect(result.reviewBundle?.items.first?.preview.contains("launch_rocket") == true)
+        #expect(result.reviewDraft == nil)
     }
 
     @MainActor
@@ -2657,8 +2442,7 @@ struct CoCaptainAgentTests {
         ) { _ in }
 
         #expect(dispatcher.executedActionIDs.isEmpty)
-        #expect(result.reviewBundle?.items.first?.status == .pending)
-        #expect(result.reviewBundle?.items.first?.preview.contains("Fallback") == true)
+        #expect(result.reviewDraft?.nodeEdits.first?.operations.first?.content.contains("Fallback") == true)
     }
 
     @MainActor
@@ -2674,7 +2458,7 @@ struct CoCaptainAgentTests {
             turnPlan: turnPlan
         ) { _ in }
 
-        #expect(result.reviewBundle == nil)
+        #expect(result.reviewDraft == nil)
         #expect(
             result.visibleText.contains(
                 LocalizationManager.shared.localizedString("cocaptain.fallback.editsUnavailable")
@@ -2751,7 +2535,7 @@ struct CoCaptainAgentTests {
         #expect(llm.receivedToolExecutorPresence == [false])
         #expect(llm.receivedChatModes == [.ask])
         #expect(dispatcher.executedActionIDs.isEmpty)
-        #expect(result.reviewBundle == nil)
+        #expect(result.reviewDraft == nil)
         #expect(result.executionSummary == nil)
         #expect(result.clarifyingQuestion == nil)
         #expect(result.visibleText.contains("Here is advice"))
@@ -2794,7 +2578,7 @@ struct CoCaptainAgentTests {
         #expect(llm.receivedToolExecutorPresence == [false])
         #expect(llm.receivedChatModes == [.plan])
         #expect(dispatcher.executedActionIDs.isEmpty)
-        #expect(result.reviewBundle == nil)
+        #expect(result.reviewDraft == nil)
         #expect(result.visibleText.contains("Clarify the goal"))
         #expect(!result.visibleText.contains("Should Not Stage"))
 
@@ -2908,7 +2692,7 @@ struct CoCaptainAgentTests {
         ) { _ in }
 
         #expect(llm.receivedMessages.count == 1)
-        #expect(result.reviewBundle == nil)
+        #expect(result.reviewDraft == nil)
         #expect(result.visibleText.contains("three ideas"))
     }
 
@@ -2939,8 +2723,7 @@ struct CoCaptainAgentTests {
         ) { _ in }
 
         #expect(llm.receivedMessages.count == 1)
-        #expect(result.reviewBundle?.items.first?.status == .pending)
-        #expect(result.reviewBundle?.items.first?.preview.contains("Cafe Menu") == true)
+        #expect(result.reviewDraft?.nodeEdits.first?.operations.first?.content.contains("Cafe Menu") == true)
     }
 
     @MainActor
@@ -2984,8 +2767,7 @@ struct CoCaptainAgentTests {
         ) { _ in }
 
         #expect(llm.receivedMessages.count == 2)
-        #expect(result.reviewBundle?.items.first?.status == .pending)
-        #expect(result.reviewBundle?.items.first?.preview.contains("Retry") == true)
+        #expect(result.reviewDraft?.nodeEdits.first?.operations.first?.content.contains("Retry") == true)
     }
 
     @MainActor
@@ -3050,7 +2832,7 @@ struct CoCaptainAgentTests {
             turnPlan: turnPlan
         ) { _ in }
 
-        #expect(result.reviewBundle == nil)
+        #expect(result.reviewDraft == nil)
         #expect(llm.receivedMessages.count == 1)
     }
 
@@ -3058,29 +2840,29 @@ struct CoCaptainAgentTests {
     @Test func nodeScopedReviewBundleReloadsFromPersistedNodeState() throws {
         let store = makeStore()
         let nodeID = store.nodes[0].id
-        let bundleID = UUID()
-        let reviewBundle = ReviewBundleItem(
-            items: [
-                PendingReviewItem(
-                    targetLabel: "Mini-App CODE",
-                    summary: "Update heading",
-                    preview: "<h1>Persisted</h1>",
-                    source: .nodeEdit(
-                        role: .miniApp,
-                        section: .code,
-                        operations: [NodePatchOperation(type: .replaceAll, content: "<h1>Persisted</h1>")],
-                        baseText: store.nodes[0].miniApp?.codeText ?? ""
+        let record = try #require(
+            CoCaptainReviewLifecycle()
+                .session(scope: .node(nodeID), store: store, dispatcher: nil)
+                .stage(
+                    CoCaptainReviewLifecycle.Draft(
+                        nodeEdits: [
+                            CoCaptainNodeEditProposal(
+                                nodeID: nodeID,
+                                role: .miniApp,
+                                section: .code,
+                                summary: "Update heading",
+                                operations: [
+                                    NodePatchOperation(
+                                        type: .replaceAll,
+                                        content: "<h1>Persisted</h1>"
+                                    )
+                                ]
+                            )
+                        ]
                     )
                 )
-            ]
         )
-
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        let record = NodeAgentReviewRecord(timelineItemID: bundleID, bundle: reviewBundle)
-        var agentState = store.nodes[0].agentState
-        agentState.pendingReviewBundlesData = [try encoder.encode(record)]
-        store.updateNodeAgentState(id: nodeID, agentState: agentState, persist: false)
+        let bundleID = record.id
 
         let vm = CoCaptainViewModel()
         vm.configureNodeSession(store: store, nodeID: nodeID)
@@ -3099,13 +2881,20 @@ struct CoCaptainAgentTests {
         )
         let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
 
+        let store = makeStore()
         let result = try await coordinator.run(
             userMessage: "change hello world to hello azzam",
-            store: makeStore(),
+            store: store,
             dispatcher: nil
         ) { _ in }
 
-        let item = try #require(result.reviewBundle?.items.first)
+        let draft = try #require(result.reviewDraft)
+        let record = try #require(
+            CoCaptainReviewLifecycle()
+                .session(scope: .project, store: store, dispatcher: nil)
+                .stage(draft)
+        )
+        let item = try #require(record.bundle.items.first)
         #expect(item.status == .pending)
         guard case .nodeEdit(_, _, let operations, _) = item.source else {
             Issue.record("Expected node edit review item")
@@ -3136,13 +2925,20 @@ struct CoCaptainAgentTests {
         )
         let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
 
+        let store = makeStore()
         let result = try await coordinator.run(
             userMessage: "Rename the title from hello world to hi azzam",
-            store: makeStore(),
+            store: store,
             dispatcher: nil
         ) { _ in }
 
-        let item = try #require(result.reviewBundle?.items.first)
+        let draft = try #require(result.reviewDraft)
+        let record = try #require(
+            CoCaptainReviewLifecycle()
+                .session(scope: .project, store: store, dispatcher: nil)
+                .stage(draft)
+        )
+        let item = try #require(record.bundle.items.first)
         #expect(item.status == .pending)
         #expect(item.preview.contains("hi azzam"))
         #expect(result.clarifyingQuestion == nil)
@@ -3240,7 +3036,7 @@ struct CoCaptainAgentTests {
 
         #expect(result.clarifyingQuestion?.prompt == "Which look do you want?")
         #expect(result.clarifyingQuestion?.options.count == 2)
-        #expect(result.reviewBundle == nil)
+        #expect(result.reviewDraft == nil)
     }
 
     @MainActor
@@ -3257,7 +3053,13 @@ struct CoCaptainAgentTests {
             dispatcher: nil
         ) { _ in }
 
-        let item = try #require(result.reviewBundle?.items.first)
+        let draft = try #require(result.reviewDraft)
+        let record = try #require(
+            CoCaptainReviewLifecycle()
+                .session(scope: .project, store: store, dispatcher: nil)
+                .stage(draft)
+        )
+        let item = try #require(record.bundle.items.first)
         #expect(item.status == .needsClarification)
         #expect(item.clarificationCandidates?.count == 2)
         guard case .nodeEdit(_, _, _, let baseText) = item.source else {
@@ -3295,42 +3097,34 @@ struct CoCaptainAgentTests {
 
         #expect(result.clarifyingQuestion != nil)
         #expect(result.clarifyingQuestion?.options.isEmpty == false)
-        #expect(result.reviewBundle == nil)
+        #expect(result.reviewDraft == nil)
     }
 
     @MainActor
-    @Test func resolveClarificationRestagesChosenCandidateLocally() async throws {
+    @Test func reviewLifecycleRestagesChosenCandidateLocally() async throws {
         let llm = TestLLMClient(
             response: looseHeadlineEditResponse(replacement: "hi azzam", target: "Hello World!")
         )
         let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
         let store = makeAmbiguousStore()
-        let viewModel = CoCaptainViewModel(agentCoordinator: coordinator)
-        viewModel.configureProjectSession(store: store, dispatcher: nil)
-
         let result = try await coordinator.run(
             userMessage: "change Hello World! to hi azzam",
             store: store,
             dispatcher: nil
         ) { _ in }
 
-        let bundle = try #require(result.reviewBundle)
-        let bundleItem = CoCaptainTimelineItem(content: .reviewBundle(bundle))
-        viewModel.items.append(bundleItem)
-
-        let pendingItem = try #require(bundle.items.first)
+        let draft = try #require(result.reviewDraft)
+        let session = CoCaptainReviewLifecycle()
+            .session(scope: .project, store: store, dispatcher: nil)
+        let record = try #require(session.stage(draft))
+        let pendingItem = try #require(record.bundle.items.first)
         let candidate = try #require(pendingItem.clarificationCandidates?.first)
-        viewModel.resolveClarification(
-            bundleID: bundleItem.id,
-            itemID: pendingItem.id,
-            candidateID: candidate.id
-        )
+        let transition = try session.resolve(
+            .chooseClarification(itemID: pendingItem.id, candidateID: candidate.id),
+            in: record.id
+        ).get()
 
-        guard case .reviewBundle(let updatedBundle) = viewModel.items.last?.content,
-              let updatedItem = updatedBundle.items.first else {
-            Issue.record("Expected an updated review bundle")
-            return
-        }
+        let updatedItem = try #require(transition.record.bundle.items.first)
         #expect(updatedItem.status == .pending)
         #expect(updatedItem.clarificationCandidates == nil)
         #expect(updatedItem.preview.contains("hi azzam"))
@@ -3584,10 +3378,9 @@ struct CoCaptainAgentTests {
             dispatcher: nil
         ) { _ in }
 
-        let item = try #require(result.reviewBundle?.items.first)
-        #expect(item.status == .pending)
-        #expect(item.targetNodeID == nodeID)
-        #expect(item.learningNote?.concept == "Full rebuild")
+        let edit = try #require(result.reviewDraft?.nodeEdits.first)
+        #expect(edit.nodeID == nodeID)
+        #expect(edit.learningNote?.concept == "Full rebuild")
         // Human-in-the-loop guard: staging must never touch the live node.
         #expect(store.nodes[0].miniApp?.codeText.contains("From tool") == false)
     }
@@ -3622,7 +3415,7 @@ struct CoCaptainAgentTests {
         ) { _ in }
 
         #expect(result.clarifyingQuestion?.prompt == "Which look do you want?")
-        #expect(result.reviewBundle == nil)
+        #expect(result.reviewDraft == nil)
     }
 
     @MainActor
@@ -3670,7 +3463,7 @@ struct CoCaptainAgentTests {
         #expect(llm.receivedMessages.count == 2)
         #expect(llm.receivedMessages[1].contains("propose_node_edit"))
         #expect(llm.receivedMessages[1].contains("cocaptain_actions") == false)
-        #expect(result.reviewBundle?.items.first?.status == .pending)
+        #expect(result.reviewDraft?.nodeEdits.count == 1)
     }
 
     @MainActor

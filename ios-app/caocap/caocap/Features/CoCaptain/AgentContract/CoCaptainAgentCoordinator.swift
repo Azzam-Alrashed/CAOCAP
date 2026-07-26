@@ -83,9 +83,9 @@ public struct CoCaptainAgentRunResult: Hashable {
     public let payloadMessage: String?
     /// A confirmation item to append when one or more safe actions were executed.
     public let executionSummary: ExecutionStatusItem?
-    /// A set of node edits or pending actions the user must review before they
-    /// take effect, or `nil` when the model produced no reviewable changes.
-    public let reviewBundle: ReviewBundleItem?
+    /// Validated node edits and pending actions that the review lifecycle can
+    /// stage, or `nil` when the model produced no reviewable changes.
+    public let reviewDraft: CoCaptainReviewLifecycle.Draft?
     /// A question with tappable answer options to render after the messages,
     /// or `nil` when the assistant did not need to ask anything.
     public let clarifyingQuestion: CoCaptainClarifyingQuestion?
@@ -94,13 +94,13 @@ public struct CoCaptainAgentRunResult: Hashable {
         preamble: String,
         payloadMessage: String?,
         executionSummary: ExecutionStatusItem?,
-        reviewBundle: ReviewBundleItem?,
+        reviewDraft: CoCaptainReviewLifecycle.Draft?,
         clarifyingQuestion: CoCaptainClarifyingQuestion? = nil
     ) {
         self.preamble = preamble
         self.payloadMessage = payloadMessage
         self.executionSummary = executionSummary
-        self.reviewBundle = reviewBundle
+        self.reviewDraft = reviewDraft
         self.clarifyingQuestion = clarifyingQuestion
     }
 
@@ -395,25 +395,23 @@ public final class CoCaptainAgentCoordinator {
                 preamble: directive.preamble,
                 payloadMessage: payload?.assistantMessage,
                 executionSummary: nil,
-                reviewBundle: nil,
+                reviewDraft: nil,
                 clarifyingQuestion: question
             )
         }
 
         let safeActions = connectionFallback ? [] : (payload?.safeActions ?? [])
         let executionSummary = executeSafeActions(safeActions, dispatcher: dispatcher, store: store)
-        let reviewBundle = buildReviewBundle(
+        let reviewDraft = makeReviewDraft(
             pendingActions: payload?.pendingActions ?? [],
-            nodeEdits: payload?.nodeEdits ?? [],
-            store: store,
-            dispatcher: dispatcher
+            nodeEdits: payload?.nodeEdits ?? []
         )
 
         return CoCaptainAgentRunResult(
             preamble: directive.preamble,
             payloadMessage: payload?.assistantMessage,
             executionSummary: executionSummary,
-            reviewBundle: reviewBundle
+            reviewDraft: reviewDraft
         )
     }
 
@@ -562,7 +560,7 @@ public final class CoCaptainAgentCoordinator {
             preamble: directive.preamble,
             payloadMessage: nil,
             executionSummary: nil,
-            reviewBundle: nil
+            reviewDraft: nil
         )
     }
 
@@ -573,7 +571,7 @@ public final class CoCaptainAgentCoordinator {
         turnPlan: CoCaptainTurnPlan
     ) -> CoCaptainAgentRunResult {
         guard turnPlan.requiresDegradedConnectionNotice,
-              result.reviewBundle == nil,
+              result.reviewDraft == nil,
               result.executionSummary == nil else {
             return result
         }
@@ -586,7 +584,7 @@ public final class CoCaptainAgentCoordinator {
             preamble: preamble,
             payloadMessage: result.payloadMessage,
             executionSummary: result.executionSummary,
-            reviewBundle: result.reviewBundle
+            reviewDraft: result.reviewDraft
         )
     }
 
@@ -671,7 +669,7 @@ public final class CoCaptainAgentCoordinator {
             preamble: preamble,
             payloadMessage: encouragement,
             executionSummary: nil,
-            reviewBundle: nil,
+            reviewDraft: nil,
             clarifyingQuestion: Self.recoveryQuestion
         )
     }
@@ -706,193 +704,17 @@ public final class CoCaptainAgentCoordinator {
         )
     }
 
-    /// Converts pending actions and node edits into review items. Node edit
-    /// previews capture the current text as `baseText` so apply can detect
-    /// whether the user changed the node after the model response.
-    private func buildReviewBundle(
+    /// Packages validated reviewable work for the review lifecycle. Previewing,
+    /// target resolution, identity, and persistence are owned by that module.
+    private func makeReviewDraft(
         pendingActions: [CoCaptainAgentAction],
-        nodeEdits: [CoCaptainNodeEditProposal],
-        store: ProjectStore?,
-        dispatcher: (any AppActionPerforming)?
-    ) -> ReviewBundleItem? {
-        var items: [PendingReviewItem] = []
-
-        for action in pendingActions {
-            guard let id = AppActionID(rawValue: action.actionID),
-                  let definition = dispatcher?.definition(for: id) else {
-                let reason = AppActionID(rawValue: action.actionID) == nil
-                    ? LocalizationManager.shared.localizedString(
-                        "Unknown pending action id `%@`.",
-                        arguments: [action.actionID]
-                    )
-                    : LocalizationManager.shared.localizedString(
-                        "Pending action `%@` is not available in the current context.",
-                        arguments: [action.actionID]
-                    )
-                items.append(
-                    PendingReviewItem(
-                        targetLabel: action.actionID,
-                        summary: LocalizationManager.shared.localizedString(
-                            "The assistant proposed an action that could not be staged for review."
-                        ),
-                        preview: reason,
-                        status: .conflicted,
-                        source: .nodeEdit(role: .miniApp, section: .srs, operations: [], baseText: "")
-                    )
-                )
-                continue
-            }
-
-            items.append(
-                PendingReviewItem(
-                    targetLabel: definition.localizedTitle,
-                    summary: LocalizationManager.shared.localizedString(
-                        "Awaiting approval to run %@.",
-                        arguments: [definition.localizedTitle]
-                    ),
-                    preview: actionPreview(for: action, definition: definition),
-                    source: .appAction(id, action.args)
-                )
-            )
-        }
-
-        if let store {
-            for edit in nodeEdits {
-                do {
-                    let resolved = try patchEngine.previewResolving(
-                        nodeID: edit.nodeID,
-                        role: edit.role,
-                        section: edit.section,
-                        operations: edit.operations,
-                        in: store
-                    )
-                    let preview = resolved.preview
-                    let targetNode = store.nodes.first(where: { $0.id == preview.nodeID })
-                    let sectionLabel = edit.section.rawValue.uppercased()
-                    let snippets = CoCaptainReviewDiffSnippetter.makeSnippets(
-                        before: preview.originalText,
-                        after: preview.resultText
-                    )
-                    items.append(
-                        PendingReviewItem(
-                            targetNodeID: preview.nodeID,
-                            targetLabel: "\(targetNode?.displayTitle ?? edit.role.localizedDisplayName) \(sectionLabel)",
-                            summary: edit.summary,
-                            preview: snippets.after,
-                            beforePreview: snippets.before,
-                            source: .nodeEdit(
-                                role: edit.role,
-                                section: edit.section,
-                                operations: resolved.canonicalOperations,
-                                baseText: preview.originalText
-                            ),
-                            learningNote: edit.learningNote ?? Self.fallbackLearningNote(for: edit)
-                        )
-                    )
-                } catch let NodePatchError.ambiguous(_, candidates) {
-                    items.append(
-                        clarificationReviewItem(for: edit, candidates: candidates, store: store)
-                    )
-                } catch {
-                    items.append(
-                        PendingReviewItem(
-                            targetNodeID: edit.nodeID,
-                            targetLabel: edit.role.localizedDisplayName,
-                            summary: edit.summary,
-                            preview: error.localizedDescription,
-                            status: .conflicted,
-                            source: .nodeEdit(role: edit.role, section: edit.section, operations: edit.operations, baseText: "")
-                        )
-                    )
-                }
-            }
-        } else {
-            for edit in nodeEdits {
-                items.append(
-                    PendingReviewItem(
-                        targetNodeID: edit.nodeID,
-                        targetLabel: edit.role.localizedDisplayName,
-                        summary: edit.summary,
-                        preview: LocalizationManager.shared.localizedString("No active project context is available for this edit."),
-                        status: .conflicted,
-                        source: .nodeEdit(role: edit.role, section: edit.section, operations: edit.operations, baseText: "")
-                    )
-                )
-            }
-        }
-
-        return items.isEmpty ? nil : ReviewBundleItem(
-            title: reviewBundleTitle(for: items),
-            items: items
+        nodeEdits: [CoCaptainNodeEditProposal]
+    ) -> CoCaptainReviewLifecycle.Draft? {
+        let draft = CoCaptainReviewLifecycle.Draft(
+            pendingActions: pendingActions,
+            nodeEdits: nodeEdits
         )
-    }
-
-    /// Builds a review item that asks the user to pick which matched location
-    /// an ambiguous edit should target. Captures the node's current section
-    /// text as `baseText` so the pick can re-stage deterministically.
-    private func clarificationReviewItem(
-        for edit: CoCaptainNodeEditProposal,
-        candidates: [PatchMatchCandidate],
-        store: ProjectStore
-    ) -> PendingReviewItem {
-        let node = patchEngine.resolveNode(nodeID: edit.nodeID, for: edit.role, in: store)
-        let baseText: String
-        switch edit.section {
-        case .srs:
-            baseText = node?.miniApp?.srsText ?? ""
-        case .code:
-            baseText = node?.miniApp?.codeText ?? ""
-        }
-        let sectionLabel = edit.section.rawValue.uppercased()
-
-        return PendingReviewItem(
-            targetNodeID: node?.id ?? edit.nodeID,
-            targetLabel: "\(node?.displayTitle ?? edit.role.localizedDisplayName) \(sectionLabel)",
-            summary: edit.summary,
-            preview: LocalizationManager.shared.localizedString(
-                "I found a few places that could match. Pick the one you meant and I'll make the change."
-            ),
-            status: .needsClarification,
-            source: .nodeEdit(role: edit.role, section: edit.section, operations: edit.operations, baseText: baseText),
-            clarificationCandidates: candidates,
-            learningNote: edit.learningNote ?? Self.fallbackLearningNote(for: edit)
-        )
-    }
-
-    /// Builds a locally-authored lesson from the edit summary when the model
-    /// omitted a `learning_note`, so the post-apply learning moment never
-    /// silently disappears.
-    static func fallbackLearningNote(for edit: CoCaptainNodeEditProposal) -> CoCaptainLearningNote? {
-        let summary = edit.summary.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !summary.isEmpty else { return nil }
-
-        return CoCaptainLearningNote(
-            concept: LocalizationManager.shared.localizedString("cocaptain.mentorNote.fallbackConcept"),
-            body: LocalizationManager.shared.localizedString(
-                "cocaptain.mentorNote.fallbackBody",
-                arguments: [summary]
-            )
-        )
-    }
-
-    private func actionPreview(for action: CoCaptainAgentAction, definition: AppActionDefinition) -> String {
-        guard let args = action.args, !args.isEmpty else {
-            return definition.localizedTitle
-        }
-        let formattedArgs = args
-            .sorted { $0.key < $1.key }
-            .map { "\($0.key)=\($0.value)" }
-            .joined(separator: ", ")
-        return "\(definition.localizedTitle)\n\(formattedArgs)"
-    }
-
-    private func reviewBundleTitle(for items: [PendingReviewItem]) -> String {
-        let base = LocalizationManager.shared.localizedString("Pending changes")
-        guard items.count > 1 else { return base }
-        return LocalizationManager.shared.localizedString(
-            "Pending changes (%lld)",
-            arguments: [Int64(items.count)]
-        )
+        return draft.isEmpty ? nil : draft
     }
 
 }

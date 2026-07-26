@@ -718,6 +718,12 @@ public enum ReviewItemStatus: String, Hashable, Codable {
     /// item's `clarificationCandidates` before the edit can become pending.
     case needsClarification
 
+    /// The canonical definition used by review persistence, bulk decisions,
+    /// badges, and pipeline state.
+    public var isUnresolved: Bool {
+        self == .pending || self == .needsClarification
+    }
+
     /// A short localized label suitable for display in the review chip.
     public var localizedTitle: String {
         switch self {
@@ -776,11 +782,14 @@ public struct CoCaptainProductCTAItem: Identifiable, Hashable {
     }
 }
 
-/// Describes the origin of a `PendingReviewItem`, driving how the
-/// coordinator applies or rejects the item when the user acts on it.
+/// Describes the origin of a `PendingReviewItem`, driving how the Review
+/// Lifecycle resolves the item after an explicit user decision.
 public enum PendingReviewSource: Hashable, Codable {
     /// An app-level action (e.g. navigate, open settings) waiting for approval.
     case appAction(AppActionID, [String: String]?)
+    /// An action that could not be staged because its identifier is unknown or
+    /// no matching action is available in the current app context.
+    case unavailableAction(actionID: String, reason: String)
     /// A proposed node text edit. `baseText` is captured at proposal time so
     /// `NodePatchEngine` can detect intervening changes and flag conflicts.
     case nodeEdit(role: NodeRole, section: CoCaptainNodeEditProposal.MiniAppSection, operations: [NodePatchOperation], baseText: String)
@@ -862,20 +871,6 @@ public struct ReviewBundleItem: Identifiable, Hashable, Codable {
         self.id = id
         self.title = title
         self.items = items
-    }
-}
-
-/// A review bundle persisted on a node so pending approvals survive scope changes.
-public struct NodeAgentReviewRecord: Codable, Equatable, Hashable, Identifiable {
-    public var id: UUID { timelineItemID }
-    public let timelineItemID: UUID
-    public var bundle: ReviewBundleItem
-    public let createdAt: Date
-
-    public init(timelineItemID: UUID, bundle: ReviewBundleItem, createdAt: Date = Date()) {
-        self.timelineItemID = timelineItemID
-        self.bundle = bundle
-        self.createdAt = createdAt
     }
 }
 

@@ -4,9 +4,9 @@ CoCaptain is the agentic assistant for CAOCAP. It reads the current spatial proj
 
 ## Ownership
 
-- `Chat/` owns the CoCaptain sheet, timeline, bubbles, input composer (two-row capsule with Agent/Ask/Plan mode, optional `@` pin, and `cocaptain.chatMode` persistence), streaming task lifetime, direct command handling, and review item application.
-- `AgentContract/` owns the machine-readable agent contract: coordinator, parser, output adapters, validator, and shared agent/review/timeline models.
-- `Review/` owns review bundle and pending edit/action card rendering for human approval.
+- `Chat/` owns the CoCaptain sheet, timeline, bubbles, input composer (two-row capsule with Agent/Ask/Plan mode, optional `@` pin, and `cocaptain.chatMode` persistence), streaming task lifetime, direct command handling, and rendering Review Lifecycle effects.
+- `AgentContract/` owns the machine-readable agent contract: coordinator, parser, output adapters, validator, typed review drafts, and shared agent/review/timeline models.
+- `Review/` owns `CoCaptainReviewLifecycle` plus Review Bundle and pending edit/action card rendering for human approval. The lifecycle owns staging, identity, clarification, decisions, conflicts, checkpoints, and node-session persistence.
 - `Analysis/` owns structural parser warnings and project recommendations from the analyzer.
 - `NodeAgent/` owns the embedded node-scoped chat interface.
 
@@ -26,8 +26,9 @@ Supporting services live outside this feature:
 5. `LLMService` streams text back into the current assistant bubble. Offline turns automatically use a ready local Gemma model without changing the saved online preference. On cloud turns, when the model calls the read-only `read_node_section(nodeId, section)` tool, the coordinator answers it inline against the active `ProjectStore` and `LLMService` sends the result back on the same chat session (bounded to 4 tool-response rounds per turn).
 6. `CoCaptainAgentOutputAdapter` hides machine output while streaming and turns the final response into a directive. The ViewModel updates the assistant bubble from `onVisibleText` so prose streams live; XML/tool payloads stay hidden.
 7. For structured turns, `CoCaptainAgentValidator` checks action IDs, action safety, and node edit shape. Executable work is enforced only when the policy requires it (onboarding guided edit), not for standard Agent chat.
-8. Safe actions execute immediately when autonomous; pending actions and node edits become `ReviewBundleItem` entries for human approval.
-9. Applying a review item revalidates the original base node text before writing changes to `ProjectStore`. Undo and checkpoints remain available after Apply.
+8. Safe actions execute immediately when autonomous; validated pending actions and node edits leave the coordinator as a typed review draft.
+9. `CoCaptainReviewLifecycle` stages that draft into a canonically identified Review Bundle without mutating the canvas or performing pending actions.
+10. An explicit approval revalidates the original base node text before writing changes to `ProjectStore` or performing an app action. Undo and checkpoints remain available after Apply.
 
 The core contract is human-in-the-loop code editing. Do not auto-apply node edits without explicit user approval.
 Free-usage and subscription prompts are product CTA timeline items, not review bundles.
@@ -52,8 +53,8 @@ Each tier returns a 3-way `Resolution` (`unique` / `ambiguous` / `none`) instead
 
 Ambiguity never dead-ends:
 
-- `buildReviewBundle` converts `NodePatchError.ambiguous` into a `.needsClarification` review item whose card asks "Which one did you mean?" with one tappable button per candidate.
-- `CoCaptainViewModel.resolveClarification` re-stages the chosen candidate locally — no model round-trip — and the item becomes a normal `.pending` review.
+- Review Lifecycle staging converts `NodePatchError.ambiguous` into a `.needsClarification` review item whose card asks "Which one did you mean?" with one tappable button per candidate.
+- `CoCaptainReviewLifecycle` re-stages the chosen candidate locally — no model round-trip or canvas mutation — and the item becomes a normal `.pending` review.
 
 Intent-level ambiguity ("make it pop") is handled by the model with a `clarifying_question` contract element (see below), rendered as a tappable option card. Picking an option sends it as the user's next message. Validation failures also append a locally-built recovery question so every failure path has a tappable next step.
 
@@ -139,16 +140,18 @@ If this payload changes, update parser/coordinator tests and the prompt contract
 
 ## Review Safety
 
-Node edits store their original section `baseText` when the review bundle is created. On apply, the view model checks that the current Mini-App section text still matches that base text before applying operations. This prevents silently overwriting user edits made after the model response.
+Node edits store their original section `baseText` when the Review Lifecycle stages the Review Bundle. On every approval, the lifecycle checks that the current Mini-App section still matches that base text before applying operations. This prevents silently overwriting user edits made after the model response.
 
 Preserve this conflict guard when refactoring review state.
 
 ## Node-Scoped Review Persistence
 
-Pending review bundles on node-scoped CoCaptain sessions are JSON-encoded into
-`NodeAgentState.pendingReviewBundlesData` and restored when the node CoCaptain
-panel reopens. Auto-triggered agent pipeline runs use the same persistence path so
-`awaitingReview` nodes expose Apply/Reject controls after reopening CoCaptain.
+Unresolved Review Bundles on node-scoped CoCaptain sessions are JSON-encoded by
+`CoCaptainReviewLifecycle` into `NodeAgentState.pendingReviewBundlesData` and
+restored when the node CoCaptain panel reopens. Both `.pending` and
+`.needsClarification` are unresolved. Project-scoped Review Bundles remain
+ephemeral. Auto-triggered agent pipeline runs stage through the same lifecycle,
+and canvas `awaitingReview` state is derived from persisted unresolved records.
 
 Clearing node chat history also clears persisted pending review bundles.
 
@@ -157,6 +160,7 @@ Review cards with a target node include **View on Canvas**, which flies the work
 ## Editing Guidance
 
 - Keep sheet UI rendering in `Chat/CoCaptainView`; keep timeline and async state in `Chat/CoCaptainViewModel`.
+- Keep Review Bundle staging, decisions, conflicts, checkpoints, and node persistence behind the `CoCaptainReviewLifecycle` interface.
 - Assistant chat bubbles may render Markdown for readable explanations, but raw structured payloads must stay hidden.
 - Keep model orchestration in `AgentContract/CoCaptainAgentCoordinator`.
 - Keep payload parsing deterministic and tolerant of malformed model output.
@@ -197,7 +201,7 @@ Useful test coverage for this feature:
 - node-edit function adapter mapping for `propose_node_edit` / `ask_clarifying_question`, precedence of tool edits over XML edits, and flag-dependent prompt/retry content.
 - learning-note extraction, coordinator carry-through, fallback generation, and the apply-time mentor card.
 - `read_node_section` tool round-trips and context-budget slimming behavior.
-- node edit conflict handling when base text changes.
+- Review Lifecycle staging and transitions, including unavailable actions, ambiguity, stale base text, bulk decisions, and node-only persistence.
 - direct command handling for autonomous vs review-required actions; Ask skips mutating short-circuits.
 - retry behavior when agentic work is required (onboarding guided edit) but no structured payload is returned.
 - retry behavior when the structured payload is present but invalid (Agent and guided edit).

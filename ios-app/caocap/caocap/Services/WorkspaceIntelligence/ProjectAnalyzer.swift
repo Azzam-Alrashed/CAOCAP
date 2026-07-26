@@ -81,7 +81,9 @@ public struct ProjectAnalyzer {
                 ))
             }
 
-            if !miniAppNode.agentState.pendingReviewBundlesData.isEmpty {
+            if CoCaptainReviewLifecycle.hasUnresolvedPersistedRecords(
+                in: miniAppNode.agentState
+            ) {
                 suggestions.append(ProjectSuggestion(
                     title: "\(miniAppNode.title) has pending CoCaptain reviews",
                     detail: "Open this node's CoCaptain panel to approve or reject staged changes.",
