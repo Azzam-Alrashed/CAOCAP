@@ -4,25 +4,10 @@ import SwiftUI
 struct AppSheetsModifier: ViewModifier {
     @Bindable var session: AppSessionCoordinator
     @Environment(AuthenticationManager.self) private var authManager
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     func body(content: Content) -> some View {
-        content
-            .sheet(isPresented: Binding(
-                get: { session.coCaptain.isPresented },
-                set: { session.coCaptain.setPresented($0) }
-            )) {
-                CoCaptainView(viewModel: session.coCaptain)
-                    .presentationDetents(session.coCaptainAvailableDetents, selection: $session.coCaptainDetent)
-                    .presentationDragIndicator(.visible)
-                    .presentationBackground {
-                        Color.white.opacity(0.4)
-                            .background(.ultraThinMaterial)
-                    }
-                    .presentationBackgroundInteraction(.enabled)
-                    .onAppear {
-                        session.handleCoCaptainSheetAppeared()
-                    }
-            }
+        coCaptainPresentation(content)
             .sheet(isPresented: $session.showingSignIn) {
                 SignInView()
                     .presentationDetents([.large])
@@ -108,5 +93,41 @@ struct AppSheetsModifier: ViewModifier {
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
             }
+    }
+
+    @ViewBuilder
+    private func coCaptainPresentation<Content: View>(_ content: Content) -> some View {
+        let isPresented = Binding(
+            get: { session.coCaptain.isPresented },
+            set: { session.coCaptain.setPresented($0) }
+        )
+
+        if horizontalSizeClass == .regular {
+            content
+                .inspector(isPresented: isPresented) {
+                    CoCaptainView(viewModel: session.coCaptain)
+                        .inspectorColumnWidth(min: 360, ideal: 420, max: 520)
+                }
+        } else {
+            content
+                .sheet(isPresented: isPresented) {
+                    CoCaptainView(
+                        viewModel: session.coCaptain,
+                        onRequestExpandedPresentation: {
+                            session.requestCoCaptainExpandedPresentation()
+                        }
+                    )
+                        .presentationDetents(
+                            session.coCaptainAvailableDetents,
+                            selection: $session.coCaptainDetent
+                        )
+                        .presentationDragIndicator(.visible)
+                        .presentationBackground(.ultraThinMaterial)
+                        .presentationBackgroundInteraction(.enabled)
+                        .onAppear {
+                            session.handleCoCaptainSheetAppeared()
+                        }
+                }
+        }
     }
 }

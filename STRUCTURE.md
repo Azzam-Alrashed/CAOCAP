@@ -274,6 +274,7 @@ routes while `NetworkConnectivityMonitor` supplies shared connectivity state.
 | File | Responsibility |
 |---|---|
 | `LLMService.swift` | Shared CoCaptain model boundary. Manages Gemini cloud turns, local LiteRT-LM streaming, and automatic offline routing. |
+| `CoCaptainConversationStore.swift` | Local, versioned sidecar persistence for project-scoped conversation timelines, active conversation selection, and per-conversation scroll position. |
 | `LocalGemmaModelManager.swift` | Downloads, validates, streams, cancels, and deletes the on-device Gemma model and LiteRT engine cache. |
 | `LocalModelDeviceEligibility.swift` | Pure hardware capability gate and persisted model-selection policy. |
 | `CoCaptainModelRoutingPolicy.swift` | Resolves cloud/local/offline routes and conservatively treats unknown connectivity as offline. |
@@ -400,7 +401,7 @@ The agentic AI companion. A native sheet interface for real-time collaboration.
 
 | Folder/File | Responsibility |
 |---|---|
-| `Chat/` | CoCaptain sheet UI, chat timeline, bubbles, two-row prompt composer with Agent/Ask/Plan mode, inline multi-node `@` mentions, image/file attachments, clarifying-question option cards, and thin lifecycle-effect rendering in the view model. |
+| `Chat/` | CoCaptain compact-sheet/regular-width inspector UI, shared chat visual tokens, grouped project conversation browser, lazy timeline, on-demand message actions, typed errors and progress, adaptive context-aware composer with Agent/Ask/Plan mode, inline multi-node `@` mentions, image/file attachments, clarifying-question option cards, and thin lifecycle-effect rendering in the view model. |
 | `AgentContract/` | Model-output adapter, XML parser (including the `clarifying_question` element), validator, coordinator, typed review drafts, and shared agent/review/timeline models including `CoCaptainChatMode` and turn execution policy. Mode is user-selected (not keyword-classified). |
 | `Review/` | `CoCaptainReviewLifecycle` staging, canonical Review Bundle identity, clarification, approval/rejection, stale-edit protection, checkpoints, node-session persistence, terminal outcomes, and the human-approval views. |
 | `Analysis/` | Structural parser warnings and recommendations from the analyzer. |

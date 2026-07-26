@@ -8,65 +8,126 @@ struct ReviewBundleView: View {
     let bundleID: UUID
     var isOnboardingReviewAnchorActive: Bool = false
     var isOnboardingApplyAnchorActive: Bool = false
+    @State private var isExpanded: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    init(
+        bundle: ReviewBundleItem,
+        viewModel: CoCaptainViewModel,
+        bundleID: UUID,
+        isOnboardingReviewAnchorActive: Bool = false,
+        isOnboardingApplyAnchorActive: Bool = false
+    ) {
+        self.bundle = bundle
+        self.viewModel = viewModel
+        self.bundleID = bundleID
+        self.isOnboardingReviewAnchorActive = isOnboardingReviewAnchorActive
+        self.isOnboardingApplyAnchorActive = isOnboardingApplyAnchorActive
+        _isExpanded = State(
+            initialValue: bundle.items.contains { $0.status.isUnresolved }
+        )
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text(bundle.title)
-                    .font(.system(size: 16, weight: .bold))
-                Spacer()
-            }
-
-            ForEach(bundle.items) { item in
-                ReviewCardView(
-                    item: item,
-                    onApply: {
-                        viewModel.applyReviewItem(bundleID: bundleID, itemID: item.id)
-                    },
-                    onReject: {
-                        viewModel.rejectReviewItem(bundleID: bundleID, itemID: item.id)
-                    },
-                    onFlyTo: {
-                        if let nodeID = item.targetNodeID {
-                            viewModel.flyToReviewTarget(nodeID)
-                        }
-                    },
-                    onPickCandidate: { candidateID in
-                        viewModel.resolveClarification(
-                            bundleID: bundleID,
-                            itemID: item.id,
-                            candidateID: candidateID
-                        )
-                    },
-                    isOnboardingReviewAnchorActive: isOnboardingReviewAnchorActive
-                )
-            }
-
-            HStack(spacing: 16) {
-                Spacer()
-                Button(LocalizationManager.shared.localizedString("Apply All")) {
-                    viewModel.applyAll(in: bundleID)
+        VStack(alignment: .leading, spacing: CoCaptainChatStyle.standardSpacing) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isExpanded.toggle()
                 }
-                .font(.system(size: 12, weight: .semibold))
-                .disabled(!hasApprovableItems)
-                .background {
-                    if isOnboardingApplyAnchorActive, hasApprovableItems {
-                        Color.clear.onboardingTooltipAnchor(.coCaptainReviewApply)
+            } label: {
+                HStack(spacing: CoCaptainChatStyle.smallSpacing) {
+                    Image(systemName: "tray.full")
+                        .foregroundStyle(.white)
+                        .frame(width: 34, height: 34)
+                        .background(bundleTint, in: Circle())
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(bundle.title)
+                            .font(.headline)
+                            .foregroundStyle(.primary)
+                        Text(bundleSummary)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
+                    Spacer()
+                    Image(systemName: "chevron.down")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .rotationEffect(.degrees(isExpanded ? 180 : 0))
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(bundleSummary)
+
+            if isExpanded {
+                ForEach(bundle.items) { item in
+                    ReviewCardView(
+                        item: item,
+                        onApply: {
+                            viewModel.applyReviewItem(bundleID: bundleID, itemID: item.id)
+                        },
+                        onReject: {
+                            viewModel.rejectReviewItem(bundleID: bundleID, itemID: item.id)
+                        },
+                        onFlyTo: {
+                            if let nodeID = item.targetNodeID {
+                                viewModel.flyToReviewTarget(nodeID)
+                            }
+                        },
+                        onPickCandidate: { candidateID in
+                            viewModel.resolveClarification(
+                                bundleID: bundleID,
+                                itemID: item.id,
+                                candidateID: candidateID
+                            )
+                        },
+                        isOnboardingReviewAnchorActive: isOnboardingReviewAnchorActive
+                    )
                 }
 
-                Button(LocalizationManager.shared.localizedString("Reject All")) {
-                    viewModel.rejectAll(in: bundleID)
+                if unresolvedItemCount > 1 {
+                    HStack(spacing: CoCaptainChatStyle.standardSpacing) {
+                        Spacer()
+                        Button(LocalizationManager.shared.localizedString("Reject All")) {
+                            viewModel.rejectAll(in: bundleID)
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .disabled(!hasUnresolvedItems)
+                        .frame(minHeight: CoCaptainChatStyle.minimumHitSize)
+
+                        Button(LocalizationManager.shared.localizedString("Apply All")) {
+                            viewModel.applyAll(in: bundleID)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
+                        .frame(minHeight: CoCaptainChatStyle.minimumHitSize)
+                        .disabled(!hasApprovableItems)
+                        .background {
+                            if isOnboardingApplyAnchorActive, hasApprovableItems {
+                                Color.clear.onboardingTooltipAnchor(.coCaptainReviewApply)
+                            }
+                        }
+                    }
+                    .padding(.top, 2)
+                    .transition(
+                        reduceMotion
+                            ? .opacity
+                            : .opacity.combined(with: .move(edge: .top))
+                    )
                 }
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(.red)
-                .disabled(!hasUnresolvedItems)
             }
-            .padding(.top, 2)
         }
-        .padding(14)
-        .background(Color.primary.opacity(0.05))
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .padding(CoCaptainChatStyle.sectionSpacing)
+        .coCaptainCardSurface(tint: bundleTint, cornerRadius: 18)
+        .onChange(of: hasUnresolvedItems) { _, unresolved in
+            if !unresolved {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isExpanded = false
+                }
+            }
+        }
     }
 
     private var hasApprovableItems: Bool {
@@ -75,6 +136,32 @@ struct ReviewBundleView: View {
 
     private var hasUnresolvedItems: Bool {
         bundle.items.contains { $0.status.isUnresolved }
+    }
+
+    private var unresolvedItemCount: Int {
+        bundle.items.filter { $0.status.isUnresolved }.count
+    }
+
+    private var bundleTint: Color {
+        hasUnresolvedItems ? CoCaptainChatStyle.pending : CoCaptainChatStyle.success
+    }
+
+    private var bundleSummary: String {
+        let unresolvedCount = unresolvedItemCount
+        if unresolvedCount > 0 {
+            return LocalizationManager.shared.localizedString(
+                "%lld changes need your review",
+                arguments: [Int64(unresolvedCount)]
+            )
+        }
+        let appliedCount = bundle.items.filter { $0.status == .applied }.count
+        if appliedCount > 0 {
+            return LocalizationManager.shared.localizedString(
+                "%lld changes applied",
+                arguments: [Int64(appliedCount)]
+            )
+        }
+        return LocalizationManager.shared.localizedString("Review completed")
     }
 }
 
@@ -89,10 +176,11 @@ struct ReviewCardView: View {
     var isOnboardingReviewAnchorActive: Bool = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: CoCaptainChatStyle.standardSpacing) {
             HStack {
-                Text(item.targetLabel)
-                    .font(.system(size: 14, weight: .bold))
+                Text(item.summary)
+                    .font(.subheadline.weight(.semibold))
+                    .fixedSize(horizontal: false, vertical: true)
                 Spacer()
                 Text(item.status.localizedTitle)
                     .font(.system(size: 11, weight: .bold))
@@ -103,9 +191,9 @@ struct ReviewCardView: View {
                     .clipShape(Capsule())
             }
 
-            Text(item.summary)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundColor(.secondary)
+            Label(item.targetLabel, systemImage: "square.dashed")
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.secondary)
 
             if item.status == .conflicted, let reason = item.conflictDescription {
                 HStack(alignment: .top, spacing: 6) {
@@ -130,7 +218,8 @@ struct ReviewCardView: View {
                     reviewTextBlock(
                         title: LocalizationManager.shared.localizedString("Before"),
                         text: beforeText,
-                        accent: .red
+                        accent: .red,
+                        linePrefix: "−"
                     )
                 }
 
@@ -141,47 +230,72 @@ struct ReviewCardView: View {
                     text: item.preview.isEmpty
                         ? LocalizationManager.shared.localizedString("No preview available.")
                         : item.preview,
-                    accent: focusedBeforeText == nil ? nil : .green
+                    accent: focusedBeforeText == nil ? nil : .green,
+                    linePrefix: focusedBeforeText == nil ? nil : "+"
                 )
             }
 
-            HStack {
-                if item.targetNodeID != nil, let onFlyTo {
-                    Button(LocalizationManager.shared.localizedString("View on Canvas")) {
-                        onFlyTo()
-                    }
-                    .buttonStyle(.bordered)
-                    .disabled(item.status != .pending)
-                }
+            reviewActions
+        }
+        .padding(CoCaptainChatStyle.standardSpacing)
+        .background(CoCaptainChatStyle.subtleFill)
+        .clipShape(
+            RoundedRectangle(
+                cornerRadius: CoCaptainChatStyle.cardCornerRadius,
+                style: .continuous
+            )
+        )
+    }
 
-                if item.status == .needsClarification {
-                    Button(LocalizationManager.shared.localizedString("Never mind")) {
-                        onReject()
-                    }
-                    .buttonStyle(.bordered)
-                } else {
-                    Button(LocalizationManager.shared.localizedString("Apply")) {
-                        onApply()
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(item.status != .pending)
-                    .background {
-                        if isOnboardingReviewAnchorActive, item.status == .pending {
-                            Color.clear.onboardingTooltipAnchor(.coCaptainReviewApply)
-                        }
-                    }
+    private var reviewActions: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: CoCaptainChatStyle.smallSpacing) {
+                reviewActionButtons
+            }
 
-                    Button(LocalizationManager.shared.localizedString("Reject")) {
-                        onReject()
-                    }
-                    .buttonStyle(.bordered)
-                    .disabled(item.status != .pending)
+            VStack(alignment: .leading, spacing: CoCaptainChatStyle.smallSpacing) {
+                reviewActionButtons
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var reviewActionButtons: some View {
+        if item.targetNodeID != nil, let onFlyTo {
+            Button(LocalizationManager.shared.localizedString("View on Canvas")) {
+                onFlyTo()
+            }
+            .buttonStyle(.bordered)
+            .disabled(!item.status.isUnresolved)
+            .frame(minHeight: CoCaptainChatStyle.minimumHitSize)
+        }
+
+        if item.status == .needsClarification {
+            Button(LocalizationManager.shared.localizedString("Never mind")) {
+                onReject()
+            }
+            .buttonStyle(.bordered)
+            .frame(minHeight: CoCaptainChatStyle.minimumHitSize)
+        } else {
+            Button(LocalizationManager.shared.localizedString("Reject")) {
+                onReject()
+            }
+            .buttonStyle(.bordered)
+            .disabled(item.status != .pending)
+            .frame(minHeight: CoCaptainChatStyle.minimumHitSize)
+
+            Button(LocalizationManager.shared.localizedString("Apply")) {
+                onApply()
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(item.status != .pending)
+            .frame(minHeight: CoCaptainChatStyle.minimumHitSize)
+            .background {
+                if isOnboardingReviewAnchorActive, item.status == .pending {
+                    Color.clear.onboardingTooltipAnchor(.coCaptainReviewApply)
                 }
             }
         }
-        .padding(12)
-        .background(Color.white.opacity(0.04))
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
     /// Tappable candidate choices shown when the edit target matched several
@@ -215,6 +329,7 @@ struct ReviewCardView: View {
                             .stroke(Color.blue.opacity(0.22), lineWidth: 1)
                     )
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .frame(minHeight: 44)
                 }
                 .buttonStyle(.plain)
             }
@@ -238,23 +353,48 @@ struct ReviewCardView: View {
     }
 
     @ViewBuilder
-    private func reviewTextBlock(title: String?, text: String, accent: Color? = nil) -> some View {
+    private func reviewTextBlock(
+        title: String?,
+        text: String,
+        accent: Color? = nil,
+        linePrefix: String? = nil
+    ) -> some View {
+        let lines = text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
         VStack(alignment: .leading, spacing: 4) {
             if let title {
                 Text(title)
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(accent ?? .secondary)
             }
-            Text(text)
-                .font(.system(size: 12, weight: .regular, design: .monospaced))
-                .padding(10)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background((accent ?? Color.primary).opacity(accent == nil ? 0.06 : 0.08))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke((accent ?? .clear).opacity(0.25), lineWidth: accent == nil ? 0 : 1)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            ScrollView(.horizontal, showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(lines.indices, id: \.self) { index in
+                        HStack(alignment: .firstTextBaseline, spacing: 7) {
+                            if let accent, let linePrefix {
+                                Text(linePrefix)
+                                    .foregroundStyle(accent)
+                                    .fontWeight(.bold)
+                                    .accessibilityHidden(true)
+                            }
+                            Text(lines[index].isEmpty ? " " : lines[index])
+                                .textSelection(.enabled)
+                        }
+                        .font(.caption.monospaced())
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 3)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background((accent ?? Color.primary).opacity(accent == nil ? 0.04 : 0.07))
+                    }
+                }
+            }
+            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background((accent ?? Color.primary).opacity(accent == nil ? 0.04 : 0.05))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke((accent ?? .clear).opacity(0.25), lineWidth: accent == nil ? 0 : 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
     }
 

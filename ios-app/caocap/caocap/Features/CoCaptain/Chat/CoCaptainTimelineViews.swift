@@ -21,9 +21,9 @@ struct TimelineItemView: View {
         Group {
             switch item.content {
             case .message(let bubble):
-                ChatBubbleView(message: bubble)
+                messageView(for: bubble)
             case .execution(let status):
-                ExecutionSummaryView(status: status)
+                executionView(for: status)
             case .productCTA(let cta):
                 ProductCTAView(item: cta) {
                     viewModel.performProductCTA(cta)
@@ -42,8 +42,58 @@ struct TimelineItemView: View {
                 }
             case .mentorNote(let noteItem):
                 MentorNoteCardView(item: noteItem)
+            case .error(let errorItem):
+                CoCaptainErrorCardView(item: errorItem) {
+                    viewModel.recoverFromError(errorItem)
+                }
             }
         }
+    }
+
+    private func messageView(for bubble: ChatBubbleItem) -> some View {
+        ChatBubbleView(
+            message: bubble,
+            createdAt: item.createdAt,
+            onRetry: retryAction(for: bubble),
+            onEdit: editAction(for: bubble),
+            onResend: resendAction(for: bubble),
+            onFeedback: feedbackAction(for: bubble),
+            showsActions: !viewModel.isStreamingAssistantMessage(id: item.id)
+        )
+    }
+
+    private func executionView(for status: ExecutionStatusItem) -> some View {
+        ExecutionSummaryView(status: status, onUndo: undoAction(for: status))
+    }
+
+    private func retryAction(for bubble: ChatBubbleItem) -> (() -> Void)? {
+        guard let sourceID = bubble.inReplyToMessageID else { return nil }
+        return { viewModel.retryTurn(sourceMessageID: sourceID) }
+    }
+
+    private func editAction(for bubble: ChatBubbleItem) -> (() -> Void)? {
+        guard bubble.isUser else { return nil }
+        return { viewModel.editUserMessage(id: bubble.id) }
+    }
+
+    private func resendAction(for bubble: ChatBubbleItem) -> (() -> Void)? {
+        guard bubble.isUser else { return nil }
+        return { viewModel.resendUserMessage(id: bubble.id) }
+    }
+
+    private func feedbackAction(for bubble: ChatBubbleItem) -> ((CoCaptainMessageFeedback) -> Void)? {
+        guard !bubble.isUser else { return nil }
+        return { feedback in
+            viewModel.recordFeedback(messageID: bubble.id, feedback: feedback)
+        }
+    }
+
+    private func undoAction(for status: ExecutionStatusItem) -> (() -> Void)? {
+        guard status.allowsUndo,
+              viewModel.canUndoExecution(timelineItemID: item.id) else {
+            return nil
+        }
+        return { viewModel.undoLastCanvasChange() }
     }
 }
 
@@ -59,51 +109,113 @@ extension CoCaptainTimelineItem {
     }
 }
 
-/// A small pill indicating the current project and node context implicitly passed to the LLM.
-struct ContextPill: View {
-    let projectName: String
-    let fileName: String
-    let nodeCount: Int
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "scope")
-            Text("Using current canvas")
-            Text(verbatim: "·")
-            Text(LocalizationManager.shared.localizedProjectName(projectName, fileName: fileName))
-            Text(verbatim: "·")
-            Text(
-                LocalizationManager.shared.localizedString(
-                    "context.nodeCount",
-                    arguments: [Int64(nodeCount)]
-                )
-            )
-        }
-        .font(.system(size: 12, weight: .medium))
-        .foregroundColor(.secondary)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(Color.primary.opacity(0.04))
-        .clipShape(Capsule())
-    }
-}
-
 /// A discreet success indicator shown when the agent executes an app action without requiring review.
 struct ExecutionSummaryView: View {
     let status: ExecutionStatusItem
+    var onUndo: (() -> Void)? = nil
 
     var body: some View {
-        HStack {
+        HStack(spacing: CoCaptainChatStyle.smallSpacing) {
             Image(systemName: "checkmark.circle.fill")
                 .foregroundColor(.green)
             Text(status.summary)
                 .font(.system(size: 13, weight: .medium))
             Spacer()
+            if status.allowsUndo, let onUndo {
+                Button(LocalizationManager.shared.localizedString("Undo")) {
+                    onUndo()
+                }
+                .font(.caption.weight(.semibold))
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .frame(minHeight: CoCaptainChatStyle.minimumHitSize)
+            }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(Color.green.opacity(0.08))
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .padding(.horizontal, CoCaptainChatStyle.standardSpacing)
+        .padding(.vertical, CoCaptainChatStyle.smallSpacing)
+        .coCaptainCardSurface(tint: CoCaptainChatStyle.success)
+    }
+}
+
+/// Distinct recovery surface for failed or explicitly stopped turns.
+struct CoCaptainErrorCardView: View {
+    let item: CoCaptainErrorItem
+    let onRetry: () -> Void
+
+    @State private var showsDetails = false
+
+    var body: some View {
+        HStack(alignment: .top, spacing: CoCaptainChatStyle.smallSpacing) {
+            Image(systemName: iconName)
+                .font(.body.weight(.semibold))
+                .foregroundStyle(accentColor)
+                .frame(width: 32, height: 32)
+                .background(accentColor.opacity(0.12), in: Circle())
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: CoCaptainChatStyle.smallSpacing) {
+                Text(item.title)
+                    .font(.body.weight(.semibold))
+
+                Text(item.message)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if let details = item.technicalDetails, !details.isEmpty {
+                    DisclosureGroup(
+                        LocalizationManager.shared.localizedString("Technical details"),
+                        isExpanded: $showsDetails
+                    ) {
+                        Text(details)
+                            .font(.caption.monospaced())
+                            .textSelection(.enabled)
+                            .foregroundStyle(.secondary)
+                            .padding(.top, 4)
+                    }
+                    .font(.caption.weight(.semibold))
+                }
+
+                if item.isRecoverable, item.sourceMessageID != nil {
+                    Button {
+                        onRetry()
+                    } label: {
+                        Label(
+                            LocalizationManager.shared.localizedString(
+                                item.kind == .stopped ? "Continue" : "Try again"
+                            ),
+                            systemImage: "arrow.clockwise"
+                        )
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .frame(minHeight: CoCaptainChatStyle.minimumHitSize)
+                }
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(CoCaptainChatStyle.standardSpacing)
+        .coCaptainCardSurface(tint: accentColor)
+        .accessibilityElement(children: .contain)
+    }
+
+    private var iconName: String {
+        switch item.kind {
+        case .stopped: return "stop.circle"
+        case .network: return "wifi.slash"
+        case .attachment: return "paperclip.badge.ellipsis"
+        case .quota: return "gauge.with.dots.needle.67percent"
+        case .model: return "exclamationmark.bubble"
+        }
+    }
+
+    private var accentColor: Color {
+        switch item.kind {
+        case .stopped: return .secondary
+        case .quota: return .orange
+        case .network, .attachment, .model: return .red
+        }
     }
 }
 
@@ -111,9 +223,10 @@ struct ExecutionSummaryView: View {
 /// Turns the apply moment into a small lesson about the user's own app.
 struct MentorNoteCardView: View {
     let item: CoCaptainMentorNoteItem
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
+        HStack(alignment: .top, spacing: CoCaptainChatStyle.smallSpacing) {
             Image(systemName: "lightbulb.fill")
                 .font(.system(size: 15, weight: .bold))
                 .foregroundStyle(Color.yellow)
@@ -139,14 +252,16 @@ struct MentorNoteCardView: View {
 
             Spacer(minLength: 0)
         }
-        .padding(14)
-        .background(Color.accentColor.opacity(0.06))
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.accentColor.opacity(0.2), lineWidth: 1)
+        .padding(CoCaptainChatStyle.standardSpacing)
+        .coCaptainCardSurface(tint: Color.accentColor, cornerRadius: 18)
+        .transition(
+            reduceMotion
+                ? .opacity
+                : .asymmetric(
+                    insertion: .push(from: .bottom).combined(with: .opacity),
+                    removal: .opacity
+                )
         )
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .transition(.asymmetric(insertion: .push(from: .bottom).combined(with: .opacity), removal: .opacity))
     }
 }
 
@@ -154,13 +269,14 @@ struct MentorNoteCardView: View {
 struct ProductCTAView: View {
     let item: CoCaptainProductCTAItem
     let onPrimaryAction: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
+        HStack(alignment: .top, spacing: CoCaptainChatStyle.smallSpacing) {
             CopilotAvatarView(size: 32)
 
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .top, spacing: 10) {
+            VStack(alignment: .leading, spacing: CoCaptainChatStyle.standardSpacing) {
+                HStack(alignment: .top, spacing: CoCaptainChatStyle.smallSpacing) {
                     Image(systemName: "sparkles")
                         .font(.system(size: 15, weight: .bold))
                         .foregroundStyle(Color.blue)
@@ -193,17 +309,19 @@ struct ProductCTAView: View {
                     Spacer(minLength: 0)
                 }
             }
-            .padding(14)
-            .background(.ultraThinMaterial)
-            .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(Color.blue.opacity(0.22), lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .padding(CoCaptainChatStyle.standardSpacing)
+            .coCaptainCardSurface(tint: Color.accentColor, cornerRadius: 18)
             .frame(maxWidth: 420, alignment: .leading)
 
             Spacer(minLength: 0)
         }
-        .transition(.asymmetric(insertion: .push(from: .bottom).combined(with: .opacity), removal: .opacity))
+        .transition(
+            reduceMotion
+                ? .opacity
+                : .asymmetric(
+                    insertion: .push(from: .bottom).combined(with: .opacity),
+                    removal: .opacity
+                )
+        )
     }
 }

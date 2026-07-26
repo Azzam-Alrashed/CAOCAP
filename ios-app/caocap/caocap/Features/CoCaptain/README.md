@@ -4,7 +4,7 @@ CoCaptain is the agentic assistant for CAOCAP. It reads the current spatial proj
 
 ## Ownership
 
-- `Chat/` owns the CoCaptain sheet, timeline, bubbles, input composer (two-row capsule with Agent/Ask/Plan mode, optional `@` pin, and `cocaptain.chatMode` persistence), streaming task lifetime, direct command handling, and rendering Review Lifecycle effects.
+- `Chat/` owns the adaptive CoCaptain sheet/inspector, shared chat visual language, grouped project conversation browser, lazy timeline, bubbles and on-demand message actions, typed progress/errors, context-aware input composer (Agent/Ask/Plan mode, optional `@` pin, route disclosure, and `cocaptain.chatMode` persistence), streaming task lifetime, direct command handling, and rendering Review Lifecycle effects.
 - `AgentContract/` owns the machine-readable agent contract: coordinator, parser, output adapters, validator, typed review drafts, and shared agent/review/timeline models.
 - `Review/` owns `CoCaptainReviewLifecycle` plus Review Bundle and pending edit/action card rendering for human approval. The lifecycle owns staging, identity, clarification, decisions, conflicts, checkpoints, and node-session persistence.
 - `Analysis/` owns structural parser warnings and project recommendations from the analyzer.
@@ -13,6 +13,7 @@ CoCaptain is the agentic assistant for CAOCAP. It reads the current spatial proj
 Supporting services live outside this feature:
 
 - `ProjectContextBuilder` serializes the canvas for the model.
+- `CoCaptainConversationStore` persists project-scoped timelines, active conversation selection, and reading position in a versioned local sidecar keyed by canvas file name.
 - `LLMService` routes and streams from Firebase AI Logic or local LiteRT-LM; `LocalGemmaModelManager` owns the downloaded model and local sessions. On-device Gemma is available on the iPhone 15 Pro family and newer iPhones, plus M-series iPads; unsupported devices use Gemini cloud.
 - `AppActionDispatcher` performs high-level app actions.
 - `NodePatchEngine` previews and applies node edits using flexible target matching for all exact operations.
@@ -32,6 +33,24 @@ Supporting services live outside this feature:
 
 The core contract is human-in-the-loop code editing. Do not auto-apply node edits without explicit user approval.
 Free-usage and subscription prompts are product CTA timeline items, not review bundles.
+
+## Conversation Continuity
+
+Project-scoped CoCaptain keeps a local conversation archive outside
+`ProjectSnapshot`, so conversation attachments and long timelines do not slow
+ordinary canvas saves or require a project schema migration. Each canvas has an
+independent active conversation, and builders can create, search, switch,
+rename, and delete chats without affecting nodes, checkpoints, or snapshots.
+
+Switching or restoring a conversation resets the underlying model session, then
+replays a bounded recent transcript on the next turn. Review Bundles remain
+attached to the conversation where they were proposed and are restored into the
+Review Lifecycle before a decision can be made. Node-scoped messages continue
+to use `NodeAgentState`.
+
+Explicit **Stop** cancels a turn. Dismissing CoCaptain does not: the shared view
+model keeps streaming, persists the completed result, and shows it when the
+surface reopens.
 
 ### Flexible Patch Matching
 
@@ -149,9 +168,11 @@ Preserve this conflict guard when refactoring review state.
 Unresolved Review Bundles on node-scoped CoCaptain sessions are JSON-encoded by
 `CoCaptainReviewLifecycle` into `NodeAgentState.pendingReviewBundlesData` and
 restored when the node CoCaptain panel reopens. Both `.pending` and
-`.needsClarification` are unresolved. Project-scoped Review Bundles remain
-ephemeral. Auto-triggered agent pipeline runs stage through the same lifecycle,
-and canvas `awaitingReview` state is derived from persisted unresolved records.
+`.needsClarification` are unresolved. Project-scoped Review Bundles are stored
+inside their `CoCaptainConversationStore` timeline sidecar and restored when
+that conversation becomes active. Auto-triggered agent pipeline runs stage
+through the same lifecycle, and canvas `awaitingReview` state is derived from
+persisted unresolved records.
 
 Clearing node chat history also clears persisted pending review bundles.
 
@@ -167,7 +188,8 @@ Review cards with a target node include **View on Canvas**, which flies the work
 - Prefer adding new app capabilities through `AppActionDispatcher` and `AppActionID`.
 - Add tests when changing parser fences, action classification, review item states, patch behavior, or retry behavior.
 - Do not leak raw structured payload text into the visible chat timeline.
-- Be careful with cancellation: closing the sheet cancels streaming and removes empty assistant messages.
+- Be careful with cancellation: only explicit Stop cancels streaming; dismissing and reopening the chat must preserve the active turn.
+- Keep project conversation persistence in `CoCaptainConversationStore`; do not add large chat timelines or attachments to `ProjectSnapshot`.
 - Keep validation near the coordinator boundary. SwiftUI views should render review state, not decide whether model output is safe.
 - Keep raw model wire formats behind output adapters. The coordinator should consume directives, not Firebase/Gemini-specific response parts.
 - Keep app actions in `request_app_action`; keep Mini-App SRS/code changes in `nodeEdits`.
@@ -176,7 +198,12 @@ Review cards with a target node include **View on Canvas**, which flies the work
 ## Verification Checklist
 
 - Send a normal chat message and confirm streaming text appears.
-- Confirm assistant Markdown renders cleanly and message text can be selected or copied.
+- Dismiss CoCaptain during streaming, reopen it, and confirm the same turn continues.
+- Create, rename, search, switch, and delete project conversations; confirm each canvas restores its own active chat.
+- Confirm assistant Markdown renders cleanly and message text can be selected, copied, shared, retried, and rated.
+- Confirm user messages can be copied, restored into the composer for editing, and resent.
+- Stop a response and confirm its partial prose remains with a recoverable Continue card.
+- Simulate model/network/attachment/quota failures and confirm each has distinct recovery copy.
 - Open the input plus menu and confirm quick prompts send once.
 - Switch Agent ↔ Ask from the composer chip; confirm the placeholder updates and the choice survives relaunch (default Agent).
 - Pin a Mini-App with `@` in project CoCaptain; confirm the next turn’s context focuses that node; clear the pin and confirm full-canvas context returns.
@@ -187,8 +214,11 @@ Review cards with a target node include **View on Canvas**, which flies the work
 - Ask for a code change and confirm review items are created rather than auto-applied.
 - Confirm review cards show focused Before/After windows around the change (not the entire Mini-App file).
 - Apply a Mini-App code edit and confirm the target Mini-App section updates plus the preview recompiles.
+- Confirm resolved Review Bundles collapse and an applied node edit exposes Undo while the undo manager can reverse it.
 - Modify a node after a review bundle is created, then apply the stale review item and confirm it conflicts.
-- Switch projects while streaming and confirm the task cancels and history resets.
+- Scroll up during streaming and confirm the timeline does not pull away; use Jump to Latest and confirm the reading position restores after switching chats.
+- On regular-width iPad, confirm CoCaptain stays beside the canvas as an inspector; on compact width, confirm the detented sheet remains.
+- Switch projects while streaming and confirm the old task cancels while each project’s archived history remains isolated.
 
 ## Test Targets
 
@@ -208,3 +238,5 @@ Useful test coverage for this feature:
 - Agent pure-prose turns finish without forced edit retries; Agent stages reviews from structured fixtures without keyword verbs.
 - Ask never stages a review bundle from model output; Ask uses product context and omits degraded edit notices.
 - turn-plan policy mapping for Agent, Ask, and onboarding purposes.
+- conversation archive encoding, per-project isolation, unsupported schema handling, and deletion.
+- retry/edit metadata preservation, explicit-stop behavior, background dismissal, and typed error transitions.
