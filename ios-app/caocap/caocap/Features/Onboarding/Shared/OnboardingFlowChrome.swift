@@ -1,26 +1,15 @@
 import SwiftUI
 
-/// Visual palette for first-run flow chrome shared by intro and personalization.
+/// Visual palette for first-run flow chrome.
 enum OnboardingFlowChromePalette {
     case introIllustration
-    case personalizationSpace
 
     var logoForeground: Color {
-        switch self {
-        case .introIllustration:
-            return .white.opacity(0.9)
-        case .personalizationSpace:
-            return PersonalizationTheme.textPrimary.opacity(0.82)
-        }
+        .white.opacity(0.9)
     }
 
     var skipForeground: Color {
-        switch self {
-        case .introIllustration:
-            return .white.opacity(0.78)
-        case .personalizationSpace:
-            return PersonalizationTheme.textSecondary
-        }
+        .white.opacity(0.78)
     }
 }
 
@@ -53,7 +42,7 @@ struct OnboardingFlowTopBar: View {
     }
 }
 
-/// Shared circular back control used in intro and personalization bottom bars.
+/// Shared circular back control used in onboarding bottom bars.
 struct OnboardingFlowBackButton: View {
     let foregroundOpacity: CGFloat
     var isEnabled: Bool = true

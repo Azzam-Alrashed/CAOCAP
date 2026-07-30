@@ -3,7 +3,7 @@
 First-run onboarding in CAOCAP is a three-phase funnel:
 
 1. **Intro** (`Intro/`) — motivational full-bleed story screens (`intro_completed_v1`).
-2. **Personalization** (`Personalization/`) — CDL co-pilot picker + one-question-per-screen survey.
+2. **Personalization** (`Personalization/`) — temporary placeholder preserving the handoff to the upcoming redesigned flow.
 3. **Interactive tutorial** (`Tutorial/`) — short **main tutorial** (3 required lessons) plus optional advanced lessons for replay.
 
 ## Folder layout
@@ -11,12 +11,12 @@ First-run onboarding in CAOCAP is a three-phase funnel:
 ```
 Features/Onboarding/
 ├── Intro/            # Full-bleed product tour after launch
-├── Shared/           # Chrome shared by Intro + Personalization (top bar, back, CTA, glass, language)
-├── Personalization/  # Co-pilot picker + survey scene, coordinator, and manifests
+├── Shared/           # Reusable first-run chrome
+├── Personalization/  # Temporary placeholder view and completion coordinator
 └── Tutorial/         # Interactive canvas walkthrough coordinator, manifests, and tooltips
 ```
 
-`Shared/` is used by both `Intro/` and `Personalization/` for the shared top bar, back button, and primary CTA.
+The placeholder keeps the existing completion key and session handoff so it can be replaced without changing the surrounding flow.
 
 ## Main tutorial (required first-run)
 
@@ -58,7 +58,7 @@ Interactive tutorial events continue through `OnboardingAnalytics`:
 
 ## Reset / testing
 
-- `PersonalizationOnboardingCoordinator.reset()` clears completion and stored answers.
+- `PersonalizationOnboardingCoordinator.reset()` clears placeholder completion and any legacy stored answers.
 - Settings → **Replay Personalization** calls `AppSessionCoordinator.restartPersonalization()`.
 - Settings → **Restart Onboarding** resets intro, personalization, and tutorial.
 - Playtest script: `docs/onboarding-first-session-playtest.md`
