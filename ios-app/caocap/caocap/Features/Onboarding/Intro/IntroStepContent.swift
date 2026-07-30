@@ -27,30 +27,15 @@ struct IntroIllustrationTextPlacement: Equatable {
     /// Extra vertical nudge applied after `verticalAlignment` is resolved.
     var verticalOffset: CGFloat = 0
 
-    static let intro1 = IntroIllustrationTextPlacement(
+    static let intro0 = IntroIllustrationTextPlacement(
         horizontalAlignment: .leading,
         verticalAlignment: .top,
         topInset: 4,
         maxWidth: 340
     )
 
-    /// Dead-center in the open nebula band between planets and clouds.
-    static let intro2 = IntroIllustrationTextPlacement(
-        horizontalAlignment: .center,
-        verticalAlignment: .center,
-        maxWidth: 300
-    )
-
-    /// Left-aligned, slightly above center — clear of the sunset and tower.
-    static let intro3 = IntroIllustrationTextPlacement(
-        horizontalAlignment: .leading,
-        verticalAlignment: .aboveCenter,
-        maxWidthFraction: 0.58,
-        verticalOffset: -8
-    )
-
     /// Top-left open space above the Earth horizon.
-    static let intro4 = IntroIllustrationTextPlacement(
+    static let intro1 = IntroIllustrationTextPlacement(
         horizontalAlignment: .leading,
         verticalAlignment: .top,
         topInset: 8,
@@ -58,7 +43,7 @@ struct IntroIllustrationTextPlacement: Equatable {
     )
 
     /// Upper sky band above the lander — centered, clear of Earth and the galaxy sweep.
-    static let intro5 = IntroIllustrationTextPlacement(
+    static let intro2 = IntroIllustrationTextPlacement(
         horizontalAlignment: .center,
         verticalAlignment: .top,
         topInset: 10,
@@ -82,6 +67,6 @@ struct IntroStepContent: Equatable, Identifiable {
     let ctaLabelKey: String
 
     var resolvedTextPlacement: IntroIllustrationTextPlacement {
-        textPlacement ?? .intro1
+        textPlacement ?? .intro0
     }
 }

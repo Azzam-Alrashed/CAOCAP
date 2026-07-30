@@ -3163,74 +3163,6 @@
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "الخوف أثقل على الأرض. تخطَّه—السماء ملك لمن يجرؤ على الصعود."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fear is heaviest on the ground. Push through—the sky belongs to anyone willing to rise."
-          }
-        }
-      }
-    },
-    "intro.step1.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "اخترق الغلاف الجوي."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Break atmosphere."
-          }
-        }
-      }
-    },
-    "intro.step2.message" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "التعلّم قوس طويل عبر سماء مفتوحة. ثق بكل خطوة—أنت بالفعل في طريقك."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Learning is a long arc across open sky. Trust each step—you are already on your way."
-          }
-        }
-      }
-    },
-    "intro.step2.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "حدِّد اتجاهك."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Find your bearing."
-          }
-        }
-      }
-    },
-    "intro.step3.message" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
             "value" : "من المدار، تبدو الحدود القديمة صغيرة. ما بدا مستحيلاً هو فقط أبعد مما سافرت حتى الآن."
           }
         },
@@ -3242,7 +3174,7 @@
         }
       }
     },
-    "intro.step3.title" : {
+    "intro.step1.title" : {
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
@@ -3259,7 +3191,7 @@
         }
       }
     },
-    "intro.step4.message" : {
+    "intro.step2.message" : {
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
@@ -3276,7 +3208,7 @@
         }
       }
     },
-    "intro.step4.title" : {
+    "intro.step2.title" : {
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
