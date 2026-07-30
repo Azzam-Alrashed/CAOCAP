@@ -3,13 +3,24 @@ import SwiftUI
 /// Visual palette for first-run flow chrome.
 enum OnboardingFlowChromePalette {
     case introIllustration
+    case lightSurface
 
     var logoForeground: Color {
-        .white.opacity(0.9)
+        switch self {
+        case .introIllustration:
+            return .white.opacity(0.9)
+        case .lightSurface:
+            return Color(hex: "17213D")
+        }
     }
 
     var skipForeground: Color {
-        .white.opacity(0.78)
+        switch self {
+        case .introIllustration:
+            return .white.opacity(0.78)
+        case .lightSurface:
+            return Color(hex: "17213D").opacity(0.78)
+        }
     }
 }
 
@@ -28,7 +39,7 @@ struct OnboardingFlowTopBar: View {
             Spacer(minLength: 0)
 
             HStack(spacing: 12) {
-                OnboardingLanguageButton(usesLightChrome: true)
+                OnboardingLanguageButton(usesLightChrome: false)
 
                 Button(action: onSkip) {
                     Text(LocalizedStringKey("Skip"))
