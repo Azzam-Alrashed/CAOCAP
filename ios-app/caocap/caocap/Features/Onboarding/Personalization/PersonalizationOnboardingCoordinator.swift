@@ -7,6 +7,12 @@ enum PersonalizationPage {
     case final
 }
 
+enum PersonalizationFlowResult {
+    case continueInPersonalization
+    case returnToIntro
+    case finished
+}
+
 enum PersonalizationCodingLevel: Int, CaseIterable, Equatable {
     case zero
     case beginner
@@ -32,7 +38,7 @@ enum PersonalizationCodingLevel: Int, CaseIterable, Equatable {
     }
 }
 
-/// Tracks whether the temporary personalization placeholder should be presented.
+/// Owns Personalization state, valid page transitions, and persisted completion.
 @MainActor
 @Observable
 final class PersonalizationOnboardingCoordinator {
@@ -54,29 +60,56 @@ final class PersonalizationOnboardingCoordinator {
         !isCompleted
     }
 
+    var canAdvance: Bool {
+        switch currentPage {
+        case .copilot:
+            return selectedCopilot != nil
+        case .codingLevel:
+            return true
+        case .final:
+            return false
+        }
+    }
+
     func toggleCopilot(_ persona: CopilotPersona) {
         selectedCopilot = selectedCopilot == persona ? nil : persona
     }
 
-    func showCodingLevel() {
-        guard selectedCopilot != nil else { return }
-        currentPage = .codingLevel
+    func advance() -> PersonalizationFlowResult {
+        switch currentPage {
+        case .copilot:
+            guard canAdvance else { return .continueInPersonalization }
+            currentPage = .codingLevel
+        case .codingLevel:
+            currentPage = .final
+        case .final:
+            return .continueInPersonalization
+        }
+
+        return .continueInPersonalization
     }
 
-    func showCopilot() {
-        currentPage = .copilot
-    }
+    func back() -> PersonalizationFlowResult {
+        switch currentPage {
+        case .copilot:
+            return .returnToIntro
+        case .codingLevel:
+            currentPage = .copilot
+        case .final:
+            currentPage = .codingLevel
+        }
 
-    func showFinal() {
-        currentPage = .final
+        return .continueInPersonalization
     }
 
     func selectCodingLevel(_ level: PersonalizationCodingLevel) {
         selectedCodingLevel = level
     }
 
-    func complete() {
-        guard let selectedCopilot else { return }
+    func complete() -> PersonalizationFlowResult {
+        guard currentPage == .final, let selectedCopilot else {
+            return .continueInPersonalization
+        }
         profileStore.saveAnswers(
             PersonalizationSurveyAnswers(
                 selections: ["coding_level": selectedCodingLevel.answerID],
@@ -85,11 +118,13 @@ final class PersonalizationOnboardingCoordinator {
         )
         isCompleted = true
         profileStore.isSurveyCompleted = true
+        return .finished
     }
 
-    func skip() {
+    func skip() -> PersonalizationFlowResult {
         isCompleted = true
         profileStore.isSurveyCompleted = true
+        return .finished
     }
 
     func reset() {
