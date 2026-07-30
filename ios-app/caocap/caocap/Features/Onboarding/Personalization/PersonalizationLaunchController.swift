@@ -27,12 +27,6 @@ final class PersonalizationLaunchController {
     private(set) var titleOpacity = 1.0
     private(set) var rocketShakeOffset: CGFloat = 0
     private(set) var rocketVerticalOffset: CGFloat = 0
-    private(set) var baseSmokeOpacity = 0.0
-    private(set) var baseSmokeScale: CGFloat = 0.72
-    private(set) var trailSmokeOpacity = 0.0
-    private(set) var trailSmokeScale: CGFloat = 0.08
-    private(set) var wipeSmokeOpacity = 0.0
-    private(set) var wipeSmokeScale: CGFloat = 0.55
 
     var isLaunching: Bool {
         phase != .idle && phase != .completed
@@ -97,10 +91,6 @@ final class PersonalizationLaunchController {
             guard shouldContinue else { return }
 
             phase = .buildup
-            withAnimation(.easeOut(duration: 0.5)) {
-                baseSmokeOpacity = 0.96
-                baseSmokeScale = 1
-            }
 
             await timing.wait(for: .milliseconds(500))
             guard shouldContinue else { return }
@@ -113,11 +103,6 @@ final class PersonalizationLaunchController {
                 rocketShakeOffset = 0
             }
 
-            withAnimation(.easeOut(duration: 0.28)) {
-                trailSmokeOpacity = 0.94
-                trailSmokeScale = 1
-            }
-
             withAnimation(.timingCurve(0.42, 0, 0.82, 1, duration: 0.8)) {
                 rocketVerticalOffset = -travelDistance
             }
@@ -126,11 +111,6 @@ final class PersonalizationLaunchController {
             guard shouldContinue else { return }
 
             phase = .wipe
-            withAnimation(.easeInOut(duration: 0.5)) {
-                wipeSmokeOpacity = 0.98
-                wipeSmokeScale = 3.2
-                baseSmokeScale = 1.35
-            }
 
             await timing.wait(for: .milliseconds(500))
             guard shouldContinue else { return }
@@ -155,8 +135,6 @@ final class PersonalizationLaunchController {
 
         withAnimation(.easeOut(duration: 0.25)) {
             titleOpacity = 0
-            baseSmokeOpacity = 0.96
-            baseSmokeScale = 1
         }
 
         launchTask = Task { @MainActor [weak self] in
@@ -166,10 +144,6 @@ final class PersonalizationLaunchController {
             guard shouldContinue else { return }
 
             phase = .wipe
-            withAnimation(.easeInOut(duration: 0.3)) {
-                wipeSmokeOpacity = 0.98
-                wipeSmokeScale = 3.2
-            }
 
             await timing.wait(for: .milliseconds(300))
             guard shouldContinue else { return }

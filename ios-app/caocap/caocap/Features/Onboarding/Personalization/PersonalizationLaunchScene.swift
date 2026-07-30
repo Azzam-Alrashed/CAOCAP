@@ -102,26 +102,6 @@ struct PersonalizationLaunchScene: View {
             }
 
             ZStack(alignment: .bottom) {
-                Image("OnboardingLaunchSmokeBase")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: launchPadWidth * 0.72)
-                    .padding(.bottom, -(launchPadWidth * 0.12))
-                    .scaleEffect(controller.baseSmokeScale, anchor: .bottom)
-                    .opacity(controller.baseSmokeOpacity)
-
-                Image("OnboardingLaunchSmokeTrail")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: launchPadWidth * 0.34)
-                    .padding(.bottom, -(launchPadWidth * 0.11))
-                    .scaleEffect(
-                        x: 1,
-                        y: controller.trailSmokeScale,
-                        anchor: .bottom
-                    )
-                    .opacity(controller.trailSmokeOpacity)
-
                 Image(rocketImageName)
                     .resizable()
                     .scaledToFit()
@@ -135,15 +115,6 @@ struct PersonalizationLaunchScene: View {
             .padding(.bottom, launchSiteBottomPadding)
             .frame(maxHeight: .infinity, alignment: .bottom)
             .ignoresSafeArea(edges: .bottom)
-
-            Image("OnboardingLaunchSmokeBase")
-                .resizable()
-                .scaledToFit()
-                .frame(width: geometry.size.width * 1.15)
-                .scaleEffect(controller.wipeSmokeScale, anchor: .bottom)
-                .opacity(controller.wipeSmokeOpacity)
-                .frame(maxHeight: .infinity, alignment: .bottom)
-                .ignoresSafeArea()
         }
         .accessibilityHidden(true)
     }
