@@ -4,6 +4,7 @@ import Observation
 enum PersonalizationPage {
     case copilot
     case codingLevel
+    case final
 }
 
 enum PersonalizationCodingLevel: Int, CaseIterable, Equatable {
@@ -64,6 +65,10 @@ final class PersonalizationOnboardingCoordinator {
 
     func showCopilot() {
         currentPage = .copilot
+    }
+
+    func showFinal() {
+        currentPage = .final
     }
 
     func selectCodingLevel(_ level: PersonalizationCodingLevel) {

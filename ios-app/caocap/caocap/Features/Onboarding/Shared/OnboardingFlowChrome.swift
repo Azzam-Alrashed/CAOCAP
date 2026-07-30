@@ -3,14 +3,14 @@ import SwiftUI
 /// Visual palette for first-run flow chrome.
 enum OnboardingFlowChromePalette {
     case introIllustration
-    case lightSurface
+    case adaptiveSurface
 
     var logoForeground: Color {
         switch self {
         case .introIllustration:
             return .white.opacity(0.9)
-        case .lightSurface:
-            return Color(hex: "17213D")
+        case .adaptiveSurface:
+            return .primary
         }
     }
 
@@ -18,8 +18,8 @@ enum OnboardingFlowChromePalette {
         switch self {
         case .introIllustration:
             return .white.opacity(0.78)
-        case .lightSurface:
-            return Color(hex: "17213D").opacity(0.78)
+        case .adaptiveSurface:
+            return .primary.opacity(0.78)
         }
     }
 }

@@ -1,5 +1,11 @@
 import SwiftUI
 
+private enum LaunchAnimationPhase {
+    case idle
+    case ignition
+    case liftoff
+}
+
 /// Temporary handoff screen shown while the new personalization experience is designed.
 struct PersonalizationOnboardingView: View {
     @Bindable var coordinator: PersonalizationOnboardingCoordinator
@@ -8,10 +14,19 @@ struct PersonalizationOnboardingView: View {
 
     @AppStorage(LocalizationManager.languageStorageKey) private var selectedLanguage = "English"
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var colorScheme
+    @State private var launchPhase: LaunchAnimationPhase = .idle
+    @State private var rocketShakeOffset: CGFloat = 0
+    @State private var rocketVerticalOffset: CGFloat = 0
+    @State private var groundSmokeOpacity = 0.0
+    @State private var groundSmokeScale: CGFloat = 0.55
+    @State private var trailOpacity = 0.0
+    @State private var trailScale: CGFloat = 0.2
+    @State private var launchTitleOpacity = 1.0
 
     var body: some View {
         ZStack {
-            Color(hex: "F7F5F2")
+            Color(uiColor: .systemBackground)
                 .ignoresSafeArea()
 
             GeometryReader { geometry in
@@ -21,155 +36,252 @@ struct PersonalizationOnboardingView: View {
                     .frame(width: geometry.size.width, height: geometry.size.height)
                     .clipped()
             }
-            .opacity(0.2)
-            .blendMode(.multiply)
+            .opacity(colorScheme == .dark ? 0.4 : 0.25)
+            .blendMode(colorScheme == .dark ? .screen : .multiply)
             .accessibilityHidden(true)
 
-            OnboardingFlowTopBar(palette: .lightSurface) {
-                coordinator.skip()
-                onFinish()
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .padding(.horizontal, 24)
-            .padding(.top, 16)
-
-            Text(pageTitle)
-                .font(.system(size: 30, weight: .semibold, design: .rounded))
-                .foregroundStyle(Color(hex: "17213D"))
-                .multilineTextAlignment(.center)
-                .frame(width: 240)
+            if !isFinalPage {
+                OnboardingFlowTopBar(palette: .adaptiveSurface) {
+                    coordinator.skip()
+                    onFinish()
+                }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .padding(.top, 140)
-
-            Ellipse()
-                .stroke(Color(hex: "3157D5").opacity(0.12), lineWidth: 1)
-                .frame(width: 340, height: 220)
-                .rotationEffect(.degrees(18))
-                .accessibilityHidden(true)
-
-            Ellipse()
-                .stroke(Color(hex: "3157D5").opacity(0.22), lineWidth: 1)
-                .frame(width: 260, height: 160)
-                .rotationEffect(.degrees(-12))
-                .accessibilityHidden(true)
-
-            if isCodingLevelPage {
-                if reduceMotion {
-                    codingLevelOrbit(angle: 3.7)
-                } else {
-                    TimelineView(.animation) { context in
-                        let angle = context.date.timeIntervalSinceReferenceDate
-                            .truncatingRemainder(dividingBy: 12) / 12 * .pi * 2
-                        codingLevelOrbit(angle: angle)
-                    }
-                }
-            } else {
-                if reduceMotion {
-                    orbitingAvatars(angle: 3.7)
-                } else {
-                    TimelineView(.animation) { context in
-                        let angle = context.date.timeIntervalSinceReferenceDate
-                            .truncatingRemainder(dividingBy: 16) / 16 * .pi * 2
-                        orbitingAvatars(angle: angle)
-                    }
-                }
+                .padding(.horizontal, 24)
+                .padding(.top, 16)
             }
 
-            if isCodingLevelPage {
-                selectedCopilotAvatar
-            } else {
-                Image(systemName: "sparkle")
-                    .font(.system(size: 34, weight: .medium))
-                    .foregroundStyle(starColor)
-                    .animation(.easeInOut(duration: 0.3), value: coordinator.selectedCopilot)
+            if !isFinalPage {
+                Text(pageTitle)
+                    .font(.system(size: 30, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.primary)
+                    .multilineTextAlignment(.center)
+                    .frame(width: 240)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    .padding(.top, 140)
+
+                Ellipse()
+                    .stroke(
+                        Color(hex: "3157D5").opacity(colorScheme == .dark ? 0.28 : 0.12),
+                        lineWidth: 1
+                    )
+                    .frame(width: 340, height: 220)
+                    .rotationEffect(.degrees(18))
                     .accessibilityHidden(true)
-            }
 
-            VStack {
-                Spacer()
+                Ellipse()
+                    .stroke(
+                        Color(hex: "3157D5").opacity(colorScheme == .dark ? 0.46 : 0.22),
+                        lineWidth: 1
+                    )
+                    .frame(width: 260, height: 160)
+                    .rotationEffect(.degrees(-12))
+                    .accessibilityHidden(true)
 
                 if isCodingLevelPage {
-                    codingLevelTrack
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 22)
+                    if reduceMotion {
+                        codingLevelOrbit(angle: 3.7)
+                    } else {
+                        TimelineView(.animation) { context in
+                            let angle = context.date.timeIntervalSinceReferenceDate
+                                .truncatingRemainder(dividingBy: 12) / 12 * .pi * 2
+                            codingLevelOrbit(angle: angle)
+                        }
+                    }
+                } else {
+                    if reduceMotion {
+                        orbitingAvatars(angle: 3.7)
+                    } else {
+                        TimelineView(.animation) { context in
+                            let angle = context.date.timeIntervalSinceReferenceDate
+                                .truncatingRemainder(dividingBy: 16) / 16 * .pi * 2
+                            orbitingAvatars(angle: angle)
+                        }
+                    }
                 }
 
-                HStack(spacing: 12) {
-                    Button(action: handleBack) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 17, weight: .semibold))
-                            .frame(width: 54, height: 54)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(Color(hex: "17213D"))
-                    .background(Color.white, in: Circle())
-                    .accessibilityLabel(Text(LocalizedStringKey("Back")))
-
-                    Button {
-                        handleContinue()
-                    } label: {
-                        Text(continueButtonTitle)
-                            .font(.system(size: 17, weight: .semibold))
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 54)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.white)
-                    .background(Color(hex: "17213D"), in: Capsule())
-                    .opacity(canContinue ? 1 : 0.42)
-                    .disabled(!canContinue)
+                if isCodingLevelPage {
+                    selectedCopilotAvatar
+                } else {
+                    Image(systemName: "sparkle")
+                        .font(.system(size: 34, weight: .medium))
+                        .foregroundStyle(starColor)
+                        .animation(.easeInOut(duration: 0.3), value: coordinator.selectedCopilot)
+                        .accessibilityHidden(true)
                 }
             }
-            .padding(24)
+
+            if isFinalPage {
+                launchScene
+            }
+
+            if !isFinalPage {
+                VStack {
+                    Spacer()
+
+                    if isCodingLevelPage {
+                        codingLevelTrack
+                            .padding(.horizontal, 20)
+                            .padding(.bottom, 22)
+                    }
+
+                    HStack(spacing: 12) {
+                        Button(action: handleBack) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 17, weight: .semibold))
+                                .frame(width: 54, height: 54)
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.primary)
+                        .background(.ultraThinMaterial, in: Circle())
+                        .overlay {
+                            Circle()
+                                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+                        }
+                        .accessibilityLabel(Text(LocalizedStringKey("Back")))
+
+                        OnboardingPrimaryButton(
+                            titleKey: continueButtonTitle,
+                            isLastStep: false,
+                            action: handleContinue
+                        )
+                        .opacity(canContinue ? 1 : 0.42)
+                        .disabled(!canContinue)
+                    }
+                }
+                .padding(24)
+            }
         }
         .environment(\.layoutDirection, .leftToRight)
         .environment(\.locale, LocalizationManager.shared.locale(for: selectedLanguage))
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private var continueButtonTitle: LocalizedStringKey {
-        if isCodingLevelPage {
+    private var continueButtonTitle: String {
+        switch coordinator.currentPage {
+        case .codingLevel:
             return "Continue"
-        }
-
-        switch coordinator.selectedCopilot {
-        case .cocaptain: return "Choose CoCaptain"
-        case .costar: return "Choose CoStar"
-        case nil: return "Choose a co-pilot"
+        case .final:
+            return "Launch CAOCAP"
+        case .copilot:
+            switch coordinator.selectedCopilot {
+            case .cocaptain: return "Choose CoCaptain"
+            case .costar: return "Choose CoStar"
+            case nil: return "Choose a co-pilot"
+            }
         }
     }
 
     private var pageTitle: LocalizedStringKey {
-        isCodingLevelPage
-            ? "personalization.coding_level.title"
-            : "personalization.copilot.title"
+        switch coordinator.currentPage {
+        case .copilot: return "personalization.copilot.title"
+        case .codingLevel: return "personalization.coding_level.title"
+        case .final: return ""
+        }
     }
 
     private var isCodingLevelPage: Bool {
         switch coordinator.currentPage {
         case .copilot: return false
         case .codingLevel: return true
+        case .final: return false
+        }
+    }
+
+    private var isFinalPage: Bool {
+        switch coordinator.currentPage {
+        case .final: return true
+        case .copilot, .codingLevel: return false
         }
     }
 
     private var canContinue: Bool {
-        isCodingLevelPage || coordinator.selectedCopilot != nil
+        switch coordinator.currentPage {
+        case .copilot: return coordinator.selectedCopilot != nil
+        case .codingLevel, .final: return true
+        }
     }
 
     private func handleBack() {
-        if isCodingLevelPage {
-            coordinator.showCopilot()
-        } else {
+        switch coordinator.currentPage {
+        case .copilot:
             onBackToIntro()
+        case .codingLevel:
+            coordinator.showCopilot()
+        case .final:
+            coordinator.showCodingLevel()
         }
     }
 
     private func handleContinue() {
-        if isCodingLevelPage {
+        switch coordinator.currentPage {
+        case .copilot:
+            coordinator.showCodingLevel()
+        case .codingLevel:
+            coordinator.showFinal()
+        case .final:
             coordinator.complete()
             onFinish()
-        } else {
-            coordinator.showCodingLevel()
+        }
+    }
+
+    private func launchJourney(travelDistance: CGFloat) {
+        guard launchPhase == .idle else { return }
+
+        if reduceMotion {
+            launchPhase = .liftoff
+            HapticsManager.shared.trigger(.medium)
+
+            withAnimation(.easeOut(duration: 0.25)) {
+                launchTitleOpacity = 0
+                groundSmokeOpacity = 1
+                groundSmokeScale = 1
+            }
+
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(350))
+                coordinator.complete()
+                onFinish()
+            }
+            return
+        }
+
+        launchPhase = .ignition
+        HapticsManager.shared.trigger(.medium)
+
+        withAnimation(.easeOut(duration: 0.22)) {
+            launchTitleOpacity = 0
+            groundSmokeOpacity = 1
+            groundSmokeScale = 1
+        }
+
+        withAnimation(.linear(duration: 0.055).repeatCount(8, autoreverses: true)) {
+            rocketShakeOffset = 5
+        }
+
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(440))
+            guard launchPhase == .ignition else { return }
+
+            launchPhase = .liftoff
+            rocketShakeOffset = 0
+            HapticsManager.shared.trigger(.heavy)
+
+            withAnimation(.easeOut(duration: 0.18)) {
+                trailOpacity = 1
+                trailScale = 1
+                groundSmokeScale = 1.12
+            }
+
+            withAnimation(
+                .timingCurve(0.45, 0, 0.78, 1, duration: 1.15)
+            ) {
+                rocketVerticalOffset = -travelDistance
+                groundSmokeOpacity = 0.72
+            }
+
+            try? await Task.sleep(for: .milliseconds(1_180))
+            coordinator.complete()
+            onFinish()
         }
     }
 
@@ -178,6 +290,76 @@ struct PersonalizationOnboardingView: View {
             return Color(hex: "F59E0B")
         }
         return Color(hex: selectedCopilot.accentHex)
+    }
+
+    private var launchScene: some View {
+        GeometryReader { geometry in
+            ZStack {
+                VStack {
+                    Text("Tap to launch your coding journey.")
+                        .font(.system(size: 34, weight: .bold, design: .rounded))
+                        .foregroundStyle(.primary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                        .padding(.top, 150)
+                        .opacity(launchTitleOpacity)
+                        .scaleEffect(launchTitleOpacity == 0 ? 0.96 : 1)
+
+                    Spacer()
+                }
+
+                Image("OnboardingLaunchSmokeBase")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 390, height: 190)
+                    .scaleEffect(groundSmokeScale, anchor: .bottom)
+                    .opacity(groundSmokeOpacity)
+                    .offset(y: 315)
+                    .accessibilityHidden(true)
+
+                ZStack {
+                    Image("OnboardingLaunchSmokeTrail")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 180, height: 360)
+                        .scaleEffect(x: 0.82, y: trailScale, anchor: .top)
+                        .opacity(trailOpacity)
+                        .offset(y: 350)
+                        .accessibilityHidden(true)
+
+                    Image(launchRocketImageName)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 220, height: 320)
+                        .offset(y: 170)
+                        .accessibilityHidden(true)
+                }
+                .offset(
+                    x: rocketShakeOffset,
+                    y: rocketVerticalOffset
+                )
+            }
+            .frame(width: geometry.size.width, height: geometry.size.height)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                launchJourney(travelDistance: geometry.size.height + 520)
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text("Tap to launch your coding journey."))
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction {
+                launchJourney(travelDistance: geometry.size.height + 520)
+            }
+        }
+    }
+
+    private var launchRocketImageName: String {
+        switch coordinator.selectedCopilot {
+        case .costar:
+            return "OnboardingLaunchRocketCoStar"
+        case .cocaptain, nil:
+            return "OnboardingLaunchRocketV2"
+        }
     }
 
     private func orbitAvatar(for persona: CopilotPersona) -> some View {
@@ -191,7 +373,7 @@ struct PersonalizationOnboardingView: View {
             VStack(spacing: 6) {
                 ZStack {
                     Circle()
-                        .fill(Color.white.opacity(0.92))
+                        .fill(Color(uiColor: .systemBackground).opacity(0.92))
                         .frame(width: 76, height: 76)
 
                     Image(persona.avatarImageName)
@@ -214,7 +396,7 @@ struct PersonalizationOnboardingView: View {
 
                 Text(LocalizedStringKey(persona.nameKey))
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .foregroundStyle(Color(hex: "17213D"))
+                    .foregroundStyle(.primary)
             }
         }
         .buttonStyle(.plain)
@@ -243,7 +425,7 @@ struct PersonalizationOnboardingView: View {
                     .resizable()
                     .scaledToFit()
                     .frame(width: 94, height: 94)
-                    .background(Color.white.opacity(0.92), in: Circle())
+                    .background(Color(uiColor: .systemBackground).opacity(0.92), in: Circle())
                     .shadow(color: Color(hex: selectedCopilot.accentHex).opacity(0.24), radius: 16, y: 6)
                     .accessibilityHidden(true)
             }
@@ -267,14 +449,14 @@ struct PersonalizationOnboardingView: View {
         VStack(spacing: 10) {
             Text(coordinator.selectedCodingLevel.title)
                 .font(.system(size: 18, weight: .semibold, design: .rounded))
-                .foregroundStyle(Color(hex: "17213D"))
+                .foregroundStyle(.primary)
                 .contentTransition(.numericText())
                 .animation(.easeInOut(duration: 0.2), value: coordinator.selectedCodingLevel.rawValue)
 
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
                     Capsule()
-                        .fill(Color.black.opacity(0.25))
+                        .fill(Color.secondary.opacity(0.22))
                         .frame(height: 48)
 
                     if coordinator.selectedCodingLevel != .zero {
@@ -443,7 +625,11 @@ struct PersonalizationOnboardingView: View {
             .resizable()
             .scaledToFit()
             .frame(width: 58, height: 58)
-            .shadow(color: Color(hex: "17213D").opacity(0.1), radius: 8, y: 4)
+            .shadow(
+                color: Color.black.opacity(colorScheme == .dark ? 0.32 : 0.1),
+                radius: 8,
+                y: 4
+            )
             .accessibilityHidden(true)
     }
 
