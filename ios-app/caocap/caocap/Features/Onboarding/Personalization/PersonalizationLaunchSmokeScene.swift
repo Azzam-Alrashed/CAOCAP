@@ -4,7 +4,6 @@ import UIKit
 @MainActor
 final class PersonalizationLaunchSmokeScene: SKScene {
     private let emitter = SKEmitterNode()
-    private let wipeEmitter = SKEmitterNode()
     private var launchPhase: PersonalizationLaunchPhase = .idle
     private var restingEmitterHeight: CGFloat = 72
 
@@ -47,7 +46,7 @@ final class PersonalizationLaunchSmokeScene: SKScene {
         case .ignition:
             beginIgnition()
         case .buildup:
-            emitter.particleBirthRate = 130
+            emitter.particleBirthRate = 360
         case .liftoff:
             beginLiftoff()
         case .wipe:
@@ -66,27 +65,25 @@ final class PersonalizationLaunchSmokeScene: SKScene {
     func stop() {
         emitter.removeAllActions()
         emitter.particleBirthRate = 0
-        wipeEmitter.removeAllActions()
-        wipeEmitter.particleBirthRate = 0
         removeAllActions()
     }
 
     private func configureEmitter() {
         emitter.particleTexture = makeSmokeTexture()
         emitter.particleBirthRate = 0
-        emitter.particleLifetime = 1.05
-        emitter.particleLifetimeRange = 0.25
-        emitter.particlePositionRange = CGVector(dx: 16, dy: 5)
+        emitter.particleLifetime = 1.35
+        emitter.particleLifetimeRange = 0.35
+        emitter.particlePositionRange = CGVector(dx: 20, dy: 8)
         emitter.emissionAngle = -.pi / 2
-        emitter.emissionAngleRange = .pi * 0.85
-        emitter.particleSpeed = 34
-        emitter.particleSpeedRange = 20
-        emitter.particleAlpha = 0.92
-        emitter.particleAlphaRange = 0.08
-        emitter.particleAlphaSpeed = -0.7
-        emitter.particleScale = 0.2
-        emitter.particleScaleRange = 0.08
-        emitter.particleScaleSpeed = 0.48
+        emitter.emissionAngleRange = .pi * 0.95
+        emitter.particleSpeed = 48
+        emitter.particleSpeedRange = 32
+        emitter.particleAlpha = 0.96
+        emitter.particleAlphaRange = 0.04
+        emitter.particleAlphaSpeed = -0.5
+        emitter.particleScale = 0.3
+        emitter.particleScaleRange = 0.14
+        emitter.particleScaleSpeed = 0.58
         emitter.particleRotationRange = .pi
         emitter.particleRotationSpeed = 0.35
         emitter.particleColorBlendFactor = 1
@@ -101,28 +98,6 @@ final class PersonalizationLaunchSmokeScene: SKScene {
         emitter.targetNode = self
         emitter.fieldBitMask = 1
         addChild(emitter)
-
-        wipeEmitter.particleTexture = makeSmokeTexture()
-        wipeEmitter.particleBirthRate = 0
-        wipeEmitter.particleLifetime = 1.2
-        wipeEmitter.particleLifetimeRange = 0.35
-        wipeEmitter.particlePositionRange = CGVector(dx: 1, dy: 1)
-        wipeEmitter.emissionAngleRange = .pi * 2
-        wipeEmitter.particleSpeed = 70
-        wipeEmitter.particleSpeedRange = 55
-        wipeEmitter.particleAlpha = 0.94
-        wipeEmitter.particleAlphaRange = 0.12
-        wipeEmitter.particleAlphaSpeed = -0.42
-        wipeEmitter.particleScale = 0.48
-        wipeEmitter.particleScaleRange = 0.24
-        wipeEmitter.particleScaleSpeed = 0.72
-        wipeEmitter.particleRotationRange = .pi
-        wipeEmitter.particleRotationSpeed = 0.25
-        wipeEmitter.particleColorBlendFactor = 1
-        wipeEmitter.particleColorSequence = smokeColorSequence()
-        wipeEmitter.targetNode = self
-        wipeEmitter.fieldBitMask = 1
-        addChild(wipeEmitter)
     }
 
     private func configureTurbulence() {
@@ -139,12 +114,13 @@ final class PersonalizationLaunchSmokeScene: SKScene {
     private func beginIgnition() {
         emitter.removeAllActions()
         updateRestingEmitterPosition()
-        emitter.particleBirthRate = 18
+        configureLaunchSiteExhaust()
+        emitter.particleBirthRate = 70
 
         emitter.run(
             .customAction(withDuration: 0.55) { [weak emitter] _, elapsedTime in
                 let progress = min(max(elapsedTime / 0.55, 0), 1)
-                emitter?.particleBirthRate = 18 + (112 * progress)
+                emitter?.particleBirthRate = 70 + (290 * progress)
             },
             withKey: "ignition-ramp"
         )
@@ -152,7 +128,7 @@ final class PersonalizationLaunchSmokeScene: SKScene {
 
     private func beginLiftoff() {
         emitter.removeAction(forKey: "ignition-ramp")
-        emitter.particleBirthRate = 95
+        emitter.particleBirthRate = 420
 
         let travel = SKAction.moveTo(
             y: size.height * 1.2,
@@ -160,35 +136,29 @@ final class PersonalizationLaunchSmokeScene: SKScene {
         )
         travel.timingMode = .easeIn
 
-        emitter.run(
-            .sequence([
-                travel,
-                .run { [weak emitter] in
-                    emitter?.particleBirthRate = 0
-                }
-            ]),
-            withKey: "liftoff"
-        )
+        emitter.run(travel, withKey: "liftoff")
     }
 
     private func beginWipe() {
-        emitter.removeAllActions()
-        emitter.particleBirthRate = 0
-        wipeEmitter.removeAllActions()
-        wipeEmitter.position = CGPoint(
-            x: size.width / 2,
-            y: size.height * 0.38
-        )
-        wipeEmitter.particlePositionRange = CGVector(
-            dx: size.width * 0.92,
-            dy: size.height * 0.65
-        )
-        wipeEmitter.particleBirthRate = 180
+        // The final cloud is still emitted from the rocket: by this point the
+        // emitter is travelling beyond the top of the scene with its engine.
+        emitter.removeAction(forKey: "screen-fill-ramp")
+        emitter.particlePositionRange = CGVector(dx: 44, dy: 20)
+        emitter.emissionAngleRange = .pi * 2
+        emitter.particleSpeed = 220
+        emitter.particleSpeedRange = 120
+        emitter.particleLifetime = 1.7
+        emitter.particleLifetimeRange = 0.35
+        emitter.particleScale = 0.76
+        emitter.particleScaleRange = 0.3
+        emitter.particleScaleSpeed = 1.2
+        emitter.particleAlphaSpeed = -0.34
+        emitter.particleBirthRate = 500
 
-        wipeEmitter.run(
-            .customAction(withDuration: 0.42) { [weak wipeEmitter] _, elapsedTime in
-                let progress = min(max(elapsedTime / 0.42, 0), 1)
-                wipeEmitter?.particleBirthRate = 180 + (420 * progress)
+        emitter.run(
+            .customAction(withDuration: 0.45) { [weak emitter] _, elapsedTime in
+                let progress = min(max(elapsedTime / 0.45, 0), 1)
+                emitter?.particleBirthRate = 500 + (400 * progress)
             },
             withKey: "screen-fill-ramp"
         )
@@ -197,9 +167,22 @@ final class PersonalizationLaunchSmokeScene: SKScene {
     private func reset() {
         emitter.removeAllActions()
         emitter.particleBirthRate = 0
-        wipeEmitter.removeAllActions()
-        wipeEmitter.particleBirthRate = 0
+        configureLaunchSiteExhaust()
         updateRestingEmitterPosition()
+    }
+
+    private func configureLaunchSiteExhaust() {
+        emitter.particlePositionRange = CGVector(dx: 20, dy: 8)
+        emitter.emissionAngle = -.pi / 2
+        emitter.emissionAngleRange = .pi * 0.95
+        emitter.particleSpeed = 48
+        emitter.particleSpeedRange = 32
+        emitter.particleLifetime = 1.35
+        emitter.particleLifetimeRange = 0.35
+        emitter.particleScale = 0.3
+        emitter.particleScaleRange = 0.14
+        emitter.particleScaleSpeed = 0.58
+        emitter.particleAlphaSpeed = -0.5
     }
 
     private func updateRestingEmitterPosition() {
@@ -237,14 +220,4 @@ final class PersonalizationLaunchSmokeScene: SKScene {
         return SKTexture(image: image)
     }
 
-    private func smokeColorSequence() -> SKKeyframeSequence {
-        SKKeyframeSequence(
-            keyframeValues: [
-                UIColor.white,
-                UIColor(red: 0.78, green: 0.88, blue: 1, alpha: 1),
-                UIColor(red: 0.82, green: 0.73, blue: 1, alpha: 1)
-            ],
-            times: [0, 0.55, 1]
-        )
-    }
 }

@@ -92,7 +92,9 @@ final class PersonalizationLaunchController {
 
             phase = .buildup
 
-            await timing.wait(for: .milliseconds(500))
+            // Let the final rocket-driven smoke burst finish, then hold the
+            // fully covered scene for a short beat before the reveal.
+            await timing.wait(for: .milliseconds(650))
             guard shouldContinue else { return }
 
             phase = .liftoff
@@ -119,7 +121,7 @@ final class PersonalizationLaunchController {
             audio.stop()
             launchTask = nil
 
-            withAnimation(.easeOut(duration: 0.35)) {
+            withAnimation(.easeOut(duration: 0.25)) {
                 onComplete()
             }
         }
