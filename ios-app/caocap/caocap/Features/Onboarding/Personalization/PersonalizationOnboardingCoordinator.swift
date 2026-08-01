@@ -1,217 +1,137 @@
 import Foundation
 import Observation
 
-/// Drives the first-run personalization survey between intro and interactive tutorial.
+enum PersonalizationPage {
+    case copilot
+    case codingLevel
+    case final
+}
+
+enum PersonalizationFlowResult {
+    case continueInPersonalization
+    case returnToIntro
+    case finished
+}
+
+enum PersonalizationCodingLevel: Int, CaseIterable, Equatable {
+    case zero
+    case beginner
+    case intermediate
+    case experienced
+
+    var title: String {
+        switch self {
+        case .zero: return "Zero"
+        case .beginner: return "Beginner"
+        case .intermediate: return "Intermediate"
+        case .experienced: return "Experienced"
+        }
+    }
+
+    var answerID: String {
+        switch self {
+        case .zero: return "zero"
+        case .beginner: return "beginner"
+        case .intermediate: return "intermediate"
+        case .experienced: return "experienced"
+        }
+    }
+}
+
+/// Owns Personalization state, valid page transitions, and persisted completion.
 @MainActor
 @Observable
 final class PersonalizationOnboardingCoordinator {
-    var currentIndex: Int = 0
-    var selections: [String: String] = [:]
-    var selectedCopilot: CopilotPersona = .cocaptain
-    var hasUserSelectedCopilot = false
-    var showSkipConfirmation = false
-    var showCompletionMoment = false
-
     private(set) var isCompleted: Bool
-    private var didLogSurveyStart = false
+    private(set) var selectedCopilot: CopilotPersona?
+    private(set) var selectedCodingLevel: PersonalizationCodingLevel = .beginner
+    private(set) var currentPage: PersonalizationPage = .copilot
 
     @ObservationIgnored
     private let profileStore: UserProfileStore
 
-    @ObservationIgnored
-    private let analytics: any AnalyticsTracking
-
-    init(
-        profileStore: UserProfileStore = UserProfileStore(),
-        analytics: any AnalyticsTracking = AnalyticsService.shared
-    ) {
+    init(profileStore: UserProfileStore = UserProfileStore()) {
         self.profileStore = profileStore
-        self.analytics = analytics
-        isCompleted = !Self.needsPresentation(profileStore: profileStore)
-
-        if let saved = profileStore.loadAnswers() {
-            selections = saved.selections
-            selectedCopilot = saved.selectedCopilot ?? .cocaptain
-        }
+        isCompleted = profileStore.isSurveyCompleted
+        selectedCopilot = nil
     }
 
     var shouldPresent: Bool {
         !isCompleted
     }
 
-    var currentStep: PersonalizationStepKind {
-        PersonalizationOnboardingManifest.step(at: currentIndex)
+    var canAdvance: Bool {
+        switch currentPage {
+        case .copilot:
+            return selectedCopilot != nil
+        case .codingLevel:
+            return true
+        case .final:
+            return false
+        }
     }
 
-    var currentQuestion: PersonalizationSurveyQuestion? {
-        currentStep.surveyQuestion
+    func toggleCopilot(_ persona: CopilotPersona) {
+        selectedCopilot = selectedCopilot == persona ? nil : persona
     }
 
-    var isFirstPage: Bool {
-        currentIndex == 0
+    func advance() -> PersonalizationFlowResult {
+        switch currentPage {
+        case .copilot:
+            guard canAdvance else { return .continueInPersonalization }
+            currentPage = .codingLevel
+        case .codingLevel:
+            currentPage = .final
+        case .final:
+            return .continueInPersonalization
+        }
+
+        return .continueInPersonalization
     }
 
-    var isCopilotPickerStep: Bool {
-        PersonalizationOnboardingManifest.isCopilotPickerStep(at: currentIndex)
+    func back() -> PersonalizationFlowResult {
+        switch currentPage {
+        case .copilot:
+            return .returnToIntro
+        case .codingLevel:
+            currentPage = .copilot
+        case .final:
+            currentPage = .codingLevel
+        }
+
+        return .continueInPersonalization
     }
 
-    var isLastStep: Bool {
-        currentIndex >= PersonalizationOnboardingManifest.lastIndex
+    func selectCodingLevel(_ level: PersonalizationCodingLevel) {
+        selectedCodingLevel = level
     }
 
-    func isAnswered(questionID: String) -> Bool {
-        guard let answerID = selections[questionID] else { return false }
-        return answerID != PersonalizationSurveyAnswers.unansweredAnswerID
-    }
-
-    var stepLabel: String {
-        PersonalizationOnboardingManifest.stepLabel(for: currentIndex)
-    }
-
-    func selectedAnswerID(for questionID: String) -> String? {
-        selections[questionID]
-    }
-
-    func onAppearIfNeeded() {
-        guard shouldPresent, !didLogSurveyStart else { return }
-        didLogSurveyStart = true
-        analytics.logEvent(
-            PersonalizationSurveyAnalytics.started,
-            parameters: [PersonalizationSurveyAnalytics.surveyVersion: PersonalizationOnboardingManifest.surveyVersion]
-        )
-    }
-
-    func selectCopilot(_ persona: CopilotPersona) {
-        selectedCopilot = persona
-        hasUserSelectedCopilot = true
-    }
-
-    func select(answerID: String, for questionID: String? = nil) {
-        let questionKey = questionID ?? currentQuestion?.id
-        guard let questionKey else { return }
-        selections[questionKey] = answerID
-    }
-
-    func next() {
-        if PersonalizationOnboardingManifest.isCopilotPickerStep(at: currentIndex) {
-            analytics.logEvent(
-                PersonalizationSurveyAnalytics.copilotSelected,
-                parameters: [
-                    PersonalizationSurveyAnalytics.copilotID: selectedCopilot.rawValue,
-                    PersonalizationSurveyAnalytics.surveyVersion: PersonalizationOnboardingManifest.surveyVersion
-                ]
+    func complete() -> PersonalizationFlowResult {
+        guard currentPage == .final, let selectedCopilot else {
+            return .continueInPersonalization
+        }
+        profileStore.saveAnswers(
+            PersonalizationSurveyAnswers(
+                selections: ["coding_level": selectedCodingLevel.answerID],
+                selectedCopilot: selectedCopilot
             )
-        } else if let question = currentQuestion {
-            if selections[question.id] == nil {
-                selections[question.id] = PersonalizationSurveyAnswers.unansweredAnswerID
-            }
-            logAnsweredEvent(for: question, stepIndex: currentIndex)
-        }
-
-        if isLastStep {
-            showCompletionMoment = true
-            return
-        }
-
-        currentIndex = min(currentIndex + 1, PersonalizationOnboardingManifest.lastIndex)
-    }
-
-    func back() {
-        guard !isFirstPage else { return }
-
-        analytics.logEvent(
-            PersonalizationSurveyAnalytics.back,
-            parameters: [PersonalizationSurveyAnalytics.stepIndex: String(currentIndex)]
         )
-        currentIndex = max(currentIndex - 1, 0)
-        if currentIndex == 0 {
-            hasUserSelectedCopilot = false
-        }
+        isCompleted = true
+        profileStore.isSurveyCompleted = true
+        return .finished
     }
 
-    func requestSkip() {
-        showSkipConfirmation = true
-    }
-
-    func cancelSkip() {
-        showSkipConfirmation = false
-    }
-
-    func confirmSkip() {
-        showSkipConfirmation = false
-        persistAnswers(wasSkipped: true)
-        analytics.logEvent(
-            PersonalizationSurveyAnalytics.skipped,
-            parameters: [
-                PersonalizationSurveyAnalytics.lastStepIndex: String(currentIndex),
-                PersonalizationSurveyAnalytics.answersProvidedCount: String(PersonalizationSurveyAnswers(selections: selections).answeredSelectionCount),
-                PersonalizationSurveyAnalytics.surveyVersion: PersonalizationOnboardingManifest.surveyVersion,
-                PersonalizationSurveyAnalytics.copilotID: selectedCopilot.rawValue
-            ]
-        )
-        markCompleted()
-    }
-
-    func finishAfterCompletionMoment() {
-        showCompletionMoment = false
-        persistAnswers(wasSkipped: false)
-        analytics.logEvent(
-            PersonalizationSurveyAnalytics.completed,
-            parameters: [
-                PersonalizationSurveyAnalytics.surveyVersion: PersonalizationOnboardingManifest.surveyVersion,
-                PersonalizationSurveyAnalytics.answersProvidedCount: String(PersonalizationSurveyAnswers(selections: selections).answeredSelectionCount),
-                PersonalizationSurveyAnalytics.copilotID: selectedCopilot.rawValue
-            ]
-        )
-        markCompleted()
+    func skip() -> PersonalizationFlowResult {
+        isCompleted = true
+        profileStore.isSurveyCompleted = true
+        return .finished
     }
 
     func reset() {
         isCompleted = false
-        currentIndex = 0
-        selections = [:]
-        selectedCopilot = .cocaptain
-        hasUserSelectedCopilot = false
-        showSkipConfirmation = false
-        showCompletionMoment = false
-        didLogSurveyStart = false
+        selectedCopilot = nil
+        selectedCodingLevel = .beginner
+        currentPage = .copilot
         profileStore.resetSurvey()
-    }
-
-    private static func needsPresentation(profileStore: UserProfileStore) -> Bool {
-        guard profileStore.isSurveyCompleted else { return true }
-        guard let answers = profileStore.loadAnswers() else { return true }
-        return answers.surveyVersion != PersonalizationSurveyAnswers.currentSurveyVersion
-    }
-
-    private func persistAnswers(wasSkipped: Bool) {
-        let answers = PersonalizationSurveyAnswers(
-            selections: selections,
-            completedAt: Date(),
-            wasSkipped: wasSkipped,
-            surveyVersion: PersonalizationOnboardingManifest.surveyVersion,
-            selectedCopilot: selectedCopilot
-        )
-        profileStore.saveAnswers(answers)
-    }
-
-    private func markCompleted() {
-        isCompleted = true
-        profileStore.isSurveyCompleted = true
-        currentIndex = 0
-        selections = [:]
-    }
-
-    private func logAnsweredEvent(for question: PersonalizationSurveyQuestion, stepIndex: Int) {
-        guard let answerID = selections[question.id] else { return }
-        analytics.logEvent(
-            PersonalizationSurveyAnalytics.answered,
-            parameters: [
-                PersonalizationSurveyAnalytics.questionID: question.id,
-                PersonalizationSurveyAnalytics.answerID: answerID,
-                PersonalizationSurveyAnalytics.stepIndex: String(stepIndex),
-                PersonalizationSurveyAnalytics.surveyVersion: PersonalizationOnboardingManifest.surveyVersion
-            ]
-        )
     }
 }

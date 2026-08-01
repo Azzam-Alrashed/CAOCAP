@@ -134,8 +134,8 @@ Pure domain data. No UI, no persistence, no side effects. These structs define t
 | `NodeRole.swift` | Canonical role inference for Mini-App, Sub-Canvas, and custom/action nodes. |
 | `SRSReadinessState.swift` | Domain state for whether a Mini-App SRS section is empty, structured, drafted, or ready. |
 | `SRSScaffold.swift` | Definition of Software Requirements Specification (SRS) templates and check helpers. |
-| `PersonalizationSurveyAnswers.swift` | Codable saved responses from the first-run personalization survey (question ID → answer ID, selected copilot, survey version). |
-| `CopilotPersona.swift` | Cocaptain vs CoStar persona enum; asset names and CDL accent colors for picker and chat avatars. |
+| `PersonalizationSurveyAnswers.swift` | Legacy-compatible saved personalization responses retained as a foundation for the replacement flow. |
+| `CopilotPersona.swift` | CoCaptain vs CoStar persona enum and compact avatar presentation metadata used outside onboarding. |
 
 ---
 
