@@ -28,6 +28,15 @@ enum PersonalizationCodingLevel: Int, CaseIterable, Equatable {
         }
     }
 
+    var subtitle: String {
+        switch self {
+        case .zero: return "Starting completely from scratch!"
+        case .beginner: return "I know a few basic concepts!"
+        case .intermediate: return "I can build simple apps & features!"
+        case .experienced: return "I write code like a pro!"
+        }
+    }
+
     var answerID: String {
         switch self {
         case .zero: return "zero"

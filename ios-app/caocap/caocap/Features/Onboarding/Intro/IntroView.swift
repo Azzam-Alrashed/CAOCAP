@@ -273,7 +273,6 @@ private struct TypewriterText: View {
     let onFinished: (() -> Void)?
 
     @AppStorage(LocalizationManager.languageStorageKey) private var selectedLanguage = "English"
-    @State private var visibleCount: Int = 0
     @State private var fullText: String = ""
 
     init(
@@ -301,61 +300,38 @@ private struct TypewriterText: View {
     }
 
     var body: some View {
-        Text(displayedText)
+        Text(fullText)
             .font(font)
             .lineSpacing(4)
             .multilineTextAlignment(.center)
             .foregroundStyle(foregroundStyle)
             .fixedSize(horizontal: false, vertical: true)
             .shadow(color: .black.opacity(0.35), radius: shadowRadius, x: 0, y: 2)
+            .contentTransition(.numericText())
             .task(id: isActive) {
-                guard isActive else {
-                    visibleCount = 0
-                    return
+                guard isActive else { return }
+
+                if delayNanoseconds > 0 {
+                    try? await Task.sleep(nanoseconds: delayNanoseconds)
+                    if Task.isCancelled { return }
                 }
+
                 let localized = LocalizationManager.shared.localizedString(
                     textKey,
                     language: selectedLanguage
                 )
-                fullText = localized
 
-                if !shouldAnimate {
-                    visibleCount = localized.count
-                    onFinished?()
-                    return
+                withAnimation(.easeInOut(duration: 0.35)) {
+                    fullText = localized
                 }
 
-                visibleCount = 0
-
-                if delayNanoseconds > 0 {
-                    try? await Task.sleep(nanoseconds: delayNanoseconds)
+                if playAudioHaptic {
+                    AudioServicesPlaySystemSound(1104)
+                    UISelectionFeedbackGenerator().selectionChanged()
                 }
 
-                let feedback = UISelectionFeedbackGenerator()
-                feedback.prepare()
-
-                for i in 1...localized.count {
-                    if Task.isCancelled { break }
-                    visibleCount = i
-
-                    if playAudioHaptic && i % 2 == 0 {
-                        feedback.selectionChanged()
-                        AudioServicesPlaySystemSound(1104)
-                    }
-
-                    try? await Task.sleep(nanoseconds: speedNanoseconds)
-                }
-
-                if !Task.isCancelled {
-                    onFinished?()
-                }
+                onFinished?()
             }
-    }
-
-    private var displayedText: String {
-        guard !fullText.isEmpty else { return "" }
-        let prefixEnd = fullText.index(fullText.startIndex, offsetBy: min(visibleCount, fullText.count))
-        return String(fullText[..<prefixEnd])
     }
 }
 

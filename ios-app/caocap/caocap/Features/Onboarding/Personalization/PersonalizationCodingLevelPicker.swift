@@ -1,4 +1,5 @@
 import SwiftUI
+import AudioToolbox
 
 enum PersonalizationCodingLevelScale {
     static let thumbRadius: CGFloat = 24
@@ -40,12 +41,22 @@ struct PersonalizationCodingLevelPicker: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 4) {
             Text(selection.title)
                 .font(.system(size: 18, weight: .semibold, design: .rounded))
                 .foregroundStyle(.primary)
                 .contentTransition(.numericText())
-                .animation(.easeInOut(duration: 0.2), value: selection.rawValue)
+                .animation(.easeInOut(duration: 0.25), value: selection)
+
+            Text(selection.subtitle)
+                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .contentTransition(.numericText())
+                .transition(.opacity)
+                .animation(.easeInOut(duration: 0.25), value: selection)
+
+            Spacer().frame(height: 6)
 
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
@@ -182,6 +193,7 @@ struct PersonalizationCodingLevelPicker: View {
     private func select(_ level: PersonalizationCodingLevel) {
         guard level != selection else { return }
         onSelect(level)
+        AudioServicesPlaySystemSound(1104)
         HapticsManager.shared.selectionChanged()
     }
 

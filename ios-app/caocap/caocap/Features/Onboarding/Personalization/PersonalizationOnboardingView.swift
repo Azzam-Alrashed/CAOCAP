@@ -449,37 +449,27 @@ private struct MantraTypewriterView: View {
     let shouldAnimate: Bool
     let onFinished: () -> Void
 
-    @State private var visibleCount: Int = 0
+    @State private var displayedText: String = ""
 
     var body: some View {
-        Text("“\(String(mantraText.prefix(visibleCount)))”")
+        Text("“\(displayedText)”")
             .font(.system(size: 15, weight: .medium, design: .rounded))
             .italic()
             .multilineTextAlignment(.center)
             .foregroundStyle(.primary)
             .lineSpacing(4)
             .fixedSize(horizontal: false, vertical: true)
+            .contentTransition(.numericText())
             .task(id: mantraText) {
-                if !shouldAnimate {
-                    visibleCount = mantraText.count
-                    onFinished()
-                    return
+                guard !mantraText.isEmpty else { return }
+
+                withAnimation(.easeInOut(duration: 0.35)) {
+                    displayedText = mantraText
                 }
 
-                visibleCount = 0
-                let feedback = UISelectionFeedbackGenerator()
-                feedback.prepare()
-
-                for i in 1...mantraText.count {
-                    if Task.isCancelled { break }
-                    visibleCount = i
-
-                    if i % 2 == 0 {
-                        AudioServicesPlaySystemSound(1104)
-                        feedback.selectionChanged()
-                    }
-
-                    try? await Task.sleep(nanoseconds: 35_000_000)
+                if shouldAnimate {
+                    AudioServicesPlaySystemSound(1104)
+                    UISelectionFeedbackGenerator().selectionChanged()
                 }
 
                 onFinished()
