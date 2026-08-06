@@ -15,8 +15,9 @@ struct IntroView: View {
     @State private var isBreathing = false
     @State private var progress: Double = 0.0
     @State private var isPaused = false
+    @State private var animatedIndices: Set<Int> = []
 
-    private let timerDuration: Double = 3.5
+    private let timerDuration: Double = 10.0
 
     var body: some View {
         ZStack {
@@ -35,7 +36,11 @@ struct IntroView: View {
                     ForEach(IntroManifest.steps) { step in
                         IntroPageView(
                             step: step,
-                            isActive: step.id == coordinator.currentIndex
+                            isActive: step.id == coordinator.currentIndex,
+                            shouldAnimate: !animatedIndices.contains(step.id),
+                            onAnimationComplete: {
+                                animatedIndices.insert(step.id)
+                            }
                         )
                         .tag(step.id)
                     }
@@ -189,6 +194,8 @@ private struct IntroBackdrop: View {
 private struct IntroPageView: View {
     let step: IntroStepContent
     let isActive: Bool
+    let shouldAnimate: Bool
+    let onAnimationComplete: () -> Void
 
     @State private var isTitleFinished = false
 
@@ -200,9 +207,10 @@ private struct IntroPageView: View {
                     font: .system(size: titleSize, weight: .black, design: .rounded),
                     foregroundStyle: AnyShapeStyle(.white),
                     shadowRadius: 10,
-                    delayNanoseconds: 0,
-                    speedNanoseconds: 35_000_000,
-                    playAudioHaptic: true,
+                    delayNanoseconds: 1_200_000_000,
+                    speedNanoseconds: 48_000_000,
+                    playAudioHaptic: shouldAnimate,
+                    shouldAnimate: shouldAnimate,
                     isActive: isActive,
                     onFinished: {
                         isTitleFinished = true
@@ -215,9 +223,13 @@ private struct IntroPageView: View {
                     foregroundStyle: AnyShapeStyle(.white.opacity(0.9)),
                     shadowRadius: 8,
                     delayNanoseconds: 120_000_000,
-                    speedNanoseconds: 22_000_000,
-                    playAudioHaptic: true,
-                    isActive: isActive && isTitleFinished
+                    speedNanoseconds: 38_000_000,
+                    playAudioHaptic: shouldAnimate,
+                    shouldAnimate: shouldAnimate,
+                    isActive: isActive && (isTitleFinished || !shouldAnimate),
+                    onFinished: {
+                        onAnimationComplete()
+                    }
                 )
             }
             .frame(maxWidth: min(geometry.size.width - 40, 360), alignment: .center)
@@ -245,6 +257,7 @@ private struct TypewriterText: View {
     let delayNanoseconds: UInt64
     let speedNanoseconds: UInt64
     let playAudioHaptic: Bool
+    let shouldAnimate: Bool
     let isActive: Bool
     let onFinished: (() -> Void)?
 
@@ -260,6 +273,7 @@ private struct TypewriterText: View {
         delayNanoseconds: UInt64 = 0,
         speedNanoseconds: UInt64 = 28_000_000,
         playAudioHaptic: Bool = true,
+        shouldAnimate: Bool = true,
         isActive: Bool,
         onFinished: (() -> Void)? = nil
     ) {
@@ -270,6 +284,7 @@ private struct TypewriterText: View {
         self.delayNanoseconds = delayNanoseconds
         self.speedNanoseconds = speedNanoseconds
         self.playAudioHaptic = playAudioHaptic
+        self.shouldAnimate = shouldAnimate
         self.isActive = isActive
         self.onFinished = onFinished
     }
@@ -292,6 +307,13 @@ private struct TypewriterText: View {
                     language: selectedLanguage
                 )
                 fullText = localized
+
+                if !shouldAnimate {
+                    visibleCount = localized.count
+                    onFinished?()
+                    return
+                }
+
                 visibleCount = 0
 
                 if delayNanoseconds > 0 {
