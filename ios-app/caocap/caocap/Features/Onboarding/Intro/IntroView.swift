@@ -11,9 +11,16 @@ struct IntroView: View {
     @AppStorage(LocalizationManager.languageStorageKey) private var selectedLanguage = "English"
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isBreathing = false
+    @State private var progress: Double = 0.0
+    @State private var isPaused = false
+
+    private let timerDuration: Double = 3.5
 
     var body: some View {
         ZStack {
+            Color.black
+                .ignoresSafeArea()
+
             IntroBackdrop(
                 backgroundImageName: currentStep.backgroundImageName,
                 isBreathing: isBreathing && !reduceMotion
@@ -36,6 +43,23 @@ struct IntroView: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 18)
         }
+        .contentShape(Rectangle())
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in
+                    if !isPaused {
+                        isPaused = true
+                        triggerHaptic(.soft)
+                    }
+                }
+                .onEnded { _ in
+                    isPaused = false
+                    triggerHaptic(.light)
+                }
+        )
+        .onChange(of: coordinator.currentIndex) { _, _ in
+            triggerHaptic(.medium)
+        }
         .environment(\.layoutDirection, .leftToRight)
         .environment(\.locale, LocalizationManager.shared.locale(for: selectedLanguage))
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -45,6 +69,35 @@ struct IntroView: View {
                 isBreathing = true
             }
         }
+        .task(id: coordinator.currentIndex) {
+            progress = 0.0
+            let start = Date()
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 100_000_000)
+                if Task.isCancelled { break }
+                guard !isPaused else { continue }
+
+                let elapsed = Date().timeIntervalSince(start)
+                let current = min(elapsed / timerDuration, 1.0)
+                withAnimation(.linear(duration: 0.1)) {
+                    progress = current
+                }
+
+                if current >= 1.0 {
+                    if !coordinator.isLastPage {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
+                            coordinator.next()
+                        }
+                    }
+                    break
+                }
+            }
+        }
+    }
+
+    private func triggerHaptic(_ style: UIImpactFeedbackGenerator.FeedbackStyle) {
+        let generator = UIImpactFeedbackGenerator(style: style)
+        generator.impactOccurred()
     }
 
     private var currentStep: IntroStepContent {
@@ -57,7 +110,8 @@ struct IntroView: View {
         VStack(spacing: 22) {
             IntroProgressDots(
                 count: IntroManifest.steps.count,
-                currentIndex: coordinator.currentIndex
+                currentIndex: coordinator.currentIndex,
+                currentProgress: progress
             )
 
             HStack(spacing: 12) {
@@ -82,6 +136,10 @@ struct IntroView: View {
                         }
                     }
                 }
+                .shadow(
+                    color: coordinator.isLastPage ? Color.blue.opacity(0.6) : .clear,
+                    radius: coordinator.isLastPage ? 16 : 0
+                )
             }
         }
         .padding(.bottom, 6)
@@ -114,7 +172,7 @@ private struct IntroBackdrop: View {
                 .scaledToFill()
                 .frame(width: geometry.size.width, height: geometry.size.height)
                 .clipped()
-                .scaleEffect(isBreathing ? 1.015 : 1.0)
+                .scaleEffect(isBreathing ? 1.025 : 1.0)
                 .animation(.easeInOut(duration: 2.8).repeatForever(autoreverses: true), value: isBreathing)
         }
         .ignoresSafeArea()
@@ -185,24 +243,40 @@ private struct IntroPageView: View {
     }
 }
 
-/// A row of capsule dots that track the current page.
+/// A row of capsule dots that track the current page and show real-time progress for the active dot.
 private struct IntroProgressDots: View {
     let count: Int
     let currentIndex: Int
+    let currentProgress: Double
 
     var body: some View {
         HStack(spacing: 8) {
             ForEach(0..<count, id: \.self) { index in
-                glassDot(isActive: index == currentIndex)
-                    .animation(.spring(response: 0.3, dampingFraction: 0.84), value: currentIndex)
+                glassDot(
+                    isActive: index == currentIndex,
+                    isCompleted: index < currentIndex,
+                    progress: index == currentIndex ? currentProgress : (index < currentIndex ? 1.0 : 0.0)
+                )
+                .animation(.spring(response: 0.3, dampingFraction: 0.84), value: currentIndex)
             }
         }
         .frame(height: 12)
     }
 
-    private func glassDot(isActive: Bool) -> some View {
-        Capsule()
-            .fill(isActive ? .thinMaterial : .ultraThinMaterial)
+    private func glassDot(isActive: Bool, isCompleted: Bool, progress: Double) -> some View {
+        let dotWidth: CGFloat = isActive ? 32 : 8
+        return GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(.ultraThinMaterial)
+
+                if isCompleted || isActive {
+                    let fillRatio = max(0.0, min(progress, 1.0))
+                    Capsule()
+                        .fill(.white.opacity(0.95))
+                        .frame(width: geo.size.width * CGFloat(fillRatio))
+                }
+            }
             .overlay {
                 Capsule()
                     .stroke(
@@ -210,7 +284,8 @@ private struct IntroProgressDots: View {
                         lineWidth: 1
                     )
             }
-            .frame(width: isActive ? 28 : 8, height: 8)
+        }
+        .frame(width: dotWidth, height: 8)
     }
 }
 
