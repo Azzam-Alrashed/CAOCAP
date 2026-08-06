@@ -3089,13 +3089,13 @@
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "البرمجة هي وقودك الصاروخي. أنت لا تتعلم فقط—أنت تبني مركبة فضائية لاستكشاف المجهول."
+            "value": "رحلتنا البرمجية تبدأ الآن."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Code is your rocket fuel. You're not just learning—you're building a spacecraft to explore the unknown."
+            "value": "Our coding journey begins now."
           }
         }
       }
@@ -3106,13 +3106,13 @@
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "أشعل محركاتك."
+            "value": "المحركات اشتعلت، استعد للإطلاق."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ignite your engine."
+            "value": "Engine ignited, prepare for liftoff."
           }
         }
       }
@@ -3123,13 +3123,13 @@
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "من هنا، تختفي الحدود. كل فكرة تبرمجها تصبح مجرة جديدة تنتظر من يكتشفها."
+            "value": "الكون ملك للمبتكرين."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "From up here, limits disappear. Every idea you code becomes a new galaxy waiting to be explored."
+            "value": "The universe belongs to the builders."
           }
         }
       }
@@ -3140,13 +3140,13 @@
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "تحرر من الجاذبية."
+            "value": "أهلاً بك في المدار يا قائد."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Break free from gravity."
+            "value": "Welcome to orbit, Captain."
           }
         }
       }
@@ -3157,13 +3157,13 @@
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "الكون ملك للمبتكرين. اربط حزامك يا قائد—مهمتك الأولى تبدأ الآن!"
+            "value": "قفزة عظيمة للبشرية."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The universe belongs to the builders. Strap in, commander—your first mission starts now!"
+            "value": "One giant leap for mankind."
           }
         }
       }
@@ -3174,13 +3174,13 @@
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "امتلك الكون."
+            "value": "خطوة صغيرة للإنسان..."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Claim the cosmos."
+            "value": "One small step for man..."
           }
         }
       }
