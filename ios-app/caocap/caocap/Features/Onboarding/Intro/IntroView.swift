@@ -1,4 +1,6 @@
+import AudioToolbox
 import SwiftUI
+import UIKit
 
 /// Full-screen intro tour that wraps an `IntroCoordinator`.
 /// Steps are displayed in a paged `TabView` and the user can navigate forwards,
@@ -183,53 +185,49 @@ private struct IntroBackdrop: View {
     }
 }
 
-/// Page content for a single intro step with title pop and typewriter subtitle effect.
+/// Page content for a single intro step with animated title and message typewriters.
 private struct IntroPageView: View {
     let step: IntroStepContent
     let isActive: Bool
 
-    @State private var titleAppeared = false
+    @State private var isTitleFinished = false
 
     var body: some View {
         GeometryReader { geometry in
             VStack(alignment: .center, spacing: 12) {
-                Text(LocalizedStringKey(stringLiteral: step.titleKey))
-                    .font(.system(size: titleSize, weight: .black, design: .rounded))
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(.white)
-                    .lineLimit(3)
-                    .minimumScaleFactor(0.8)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .shadow(color: .black.opacity(0.4), radius: 10, x: 0, y: 3)
-                    .opacity(titleAppeared ? 1.0 : 0.0)
-                    .offset(y: titleAppeared ? 0 : 16)
-                    .scaleEffect(titleAppeared ? 1.0 : 0.95)
+                TypewriterText(
+                    textKey: step.titleKey,
+                    font: .system(size: titleSize, weight: .black, design: .rounded),
+                    foregroundStyle: AnyShapeStyle(.white),
+                    shadowRadius: 10,
+                    delayNanoseconds: 0,
+                    speedNanoseconds: 35_000_000,
+                    playAudioHaptic: true,
+                    isActive: isActive,
+                    onFinished: {
+                        isTitleFinished = true
+                    }
+                )
 
                 TypewriterText(
                     textKey: step.messageKey,
-                    isActive: isActive
+                    font: .system(size: 17, weight: .medium),
+                    foregroundStyle: AnyShapeStyle(.white.opacity(0.9)),
+                    shadowRadius: 8,
+                    delayNanoseconds: 120_000_000,
+                    speedNanoseconds: 22_000_000,
+                    playAudioHaptic: true,
+                    isActive: isActive && isTitleFinished
                 )
             }
             .frame(maxWidth: min(geometry.size.width - 40, 360), alignment: .center)
             .padding(.top, 16)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
-        .onAppear {
-            animateEntrance()
-        }
         .onChange(of: isActive) { _, active in
-            if active {
-                animateEntrance()
-            } else {
-                titleAppeared = false
+            if !active {
+                isTitleFinished = false
             }
-        }
-    }
-
-    private func animateEntrance() {
-        titleAppeared = false
-        withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) {
-            titleAppeared = true
         }
     }
 
@@ -238,23 +236,52 @@ private struct IntroPageView: View {
     }
 }
 
-/// Character-by-character typewriter subtitle component.
+/// Character-by-character typewriter subtitle component with sound effects & haptics.
 private struct TypewriterText: View {
     let textKey: String
+    let font: Font
+    let foregroundStyle: AnyShapeStyle
+    let shadowRadius: CGFloat
+    let delayNanoseconds: UInt64
+    let speedNanoseconds: UInt64
+    let playAudioHaptic: Bool
     let isActive: Bool
+    let onFinished: (() -> Void)?
 
     @AppStorage(LocalizationManager.languageStorageKey) private var selectedLanguage = "English"
     @State private var visibleCount: Int = 0
     @State private var fullText: String = ""
 
+    init(
+        textKey: String,
+        font: Font,
+        foregroundStyle: AnyShapeStyle = AnyShapeStyle(.white),
+        shadowRadius: CGFloat = 8,
+        delayNanoseconds: UInt64 = 0,
+        speedNanoseconds: UInt64 = 28_000_000,
+        playAudioHaptic: Bool = true,
+        isActive: Bool,
+        onFinished: (() -> Void)? = nil
+    ) {
+        self.textKey = textKey
+        self.font = font
+        self.foregroundStyle = foregroundStyle
+        self.shadowRadius = shadowRadius
+        self.delayNanoseconds = delayNanoseconds
+        self.speedNanoseconds = speedNanoseconds
+        self.playAudioHaptic = playAudioHaptic
+        self.isActive = isActive
+        self.onFinished = onFinished
+    }
+
     var body: some View {
         Text(displayedText)
-            .font(.system(size: 17, weight: .medium))
+            .font(font)
             .lineSpacing(4)
             .multilineTextAlignment(.center)
-            .foregroundStyle(.white.opacity(0.9))
+            .foregroundStyle(foregroundStyle)
             .fixedSize(horizontal: false, vertical: true)
-            .shadow(color: .black.opacity(0.35), radius: 8, x: 0, y: 2)
+            .shadow(color: .black.opacity(0.35), radius: shadowRadius, x: 0, y: 2)
             .task(id: isActive) {
                 guard isActive else {
                     visibleCount = 0
@@ -267,12 +294,27 @@ private struct TypewriterText: View {
                 fullText = localized
                 visibleCount = 0
 
-                try? await Task.sleep(nanoseconds: 180_000_000)
+                if delayNanoseconds > 0 {
+                    try? await Task.sleep(nanoseconds: delayNanoseconds)
+                }
+
+                let feedback = UISelectionFeedbackGenerator()
+                feedback.prepare()
 
                 for i in 1...localized.count {
                     if Task.isCancelled { break }
                     visibleCount = i
-                    try? await Task.sleep(nanoseconds: 22_000_000)
+
+                    if playAudioHaptic && i % 2 == 0 {
+                        feedback.selectionChanged()
+                        AudioServicesPlaySystemSound(1104)
+                    }
+
+                    try? await Task.sleep(nanoseconds: speedNanoseconds)
+                }
+
+                if !Task.isCancelled {
+                    onFinished?()
                 }
             }
     }
