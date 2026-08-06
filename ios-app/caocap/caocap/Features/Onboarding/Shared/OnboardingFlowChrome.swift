@@ -24,10 +24,10 @@ enum OnboardingFlowChromePalette {
     }
 }
 
-/// Shared top bar: CAOCAP wordmark, language toggle, and skip action.
+/// Shared top bar: CAOCAP wordmark, language toggle, and optional skip action.
 struct OnboardingFlowTopBar: View {
     let palette: OnboardingFlowChromePalette
-    let onSkip: () -> Void
+    var onSkip: (() -> Void)? = nil
 
     var body: some View {
         HStack(alignment: .top) {
@@ -41,12 +41,14 @@ struct OnboardingFlowTopBar: View {
             HStack(spacing: 12) {
                 OnboardingLanguageButton(usesLightChrome: false)
 
-                Button(action: onSkip) {
-                    Text(LocalizedStringKey("Skip"))
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(palette.skipForeground)
+                if let onSkip {
+                    Button(action: onSkip) {
+                        Text(LocalizedStringKey("Skip"))
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(palette.skipForeground)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
         }
         .frame(height: 56, alignment: .top)

@@ -30,7 +30,7 @@ struct IntroView: View {
             )
 
             VStack(spacing: 0) {
-                OnboardingFlowTopBar(palette: .introIllustration, onSkip: finishIntro)
+                OnboardingFlowTopBar(palette: .introIllustration)
 
                 TabView(selection: $coordinator.currentIndex) {
                     ForEach(IntroManifest.steps) { step in

@@ -121,12 +121,6 @@ final class PersonalizationOnboardingCoordinator {
         return .finished
     }
 
-    func skip() -> PersonalizationFlowResult {
-        isCompleted = true
-        profileStore.isSurveyCompleted = true
-        return .finished
-    }
-
     func reset() {
         isCompleted = false
         selectedCopilot = nil

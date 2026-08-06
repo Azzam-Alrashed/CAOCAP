@@ -81,9 +81,7 @@ struct PersonalizationOnboardingView: View {
         @ViewBuilder bottomAccessory: () -> BottomAccessory
     ) -> some View {
         ZStack {
-            OnboardingFlowTopBar(palette: .adaptiveSurface) {
-                handle(coordinator.skip())
-            }
+            OnboardingFlowTopBar(palette: .adaptiveSurface)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .padding(.horizontal, 24)
             .padding(.top, 16)
