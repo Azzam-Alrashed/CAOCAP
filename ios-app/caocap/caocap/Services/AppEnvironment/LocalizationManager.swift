@@ -69,10 +69,12 @@ public class LocalizationManager {
     private init() {}
 
     /// The current in-app language resolved from `UserDefaults`.
-    /// Falls back to `"English"` when the stored value is absent or unsupported.
+    /// Automatically resets any saved Arabic preference to "English".
     public var currentLanguage: String {
-        let storedLanguage = UserDefaults.standard.string(forKey: Self.languageStorageKey) ?? "English"
-        return Self.supportedLanguages.contains(storedLanguage) ? storedLanguage : "English"
+        if UserDefaults.standard.string(forKey: Self.languageStorageKey) == "Arabic" {
+            UserDefaults.standard.set("English", forKey: Self.languageStorageKey)
+        }
+        return "English"
     }
 
     private func localeIdentifier(for language: String) -> String {

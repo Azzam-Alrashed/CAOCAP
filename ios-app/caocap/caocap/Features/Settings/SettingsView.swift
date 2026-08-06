@@ -52,7 +52,7 @@ struct SettingsView: View {
                                 
                                 Divider().padding(.leading, 56).opacity(0.3)
                                 
-                                SettingsPickerRow(icon: "globe", title: "Language", selection: $selectedLanguage, options: languages, color: .blue)
+                                SettingsLanguagePickerRow(selection: $selectedLanguage)
                             }
 
                             GemmaModelSettingsSection(
@@ -278,6 +278,46 @@ struct SettingsPickerRow: View {
             }
             .pickerStyle(.menu)
             .tint(color)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+    }
+}
+
+struct SettingsLanguagePickerRow: View {
+    @Binding var selection: String
+    
+    var body: some View {
+        HStack {
+            Label("Language", systemImage: "globe")
+                .font(.system(size: 16, weight: .medium))
+            Spacer()
+            Menu {
+                Button {
+                    selection = "English"
+                } label: {
+                    HStack {
+                        Text("English")
+                        if selection == "English" {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+                
+                Button {} label: {
+                    Text("Arabic (Coming Soon)")
+                        .foregroundStyle(.secondary)
+                }
+                .disabled(true)
+            } label: {
+                HStack(spacing: 4) {
+                    Text("English")
+                        .font(.system(size: 15, weight: .regular))
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.system(size: 11, weight: .medium))
+                }
+                .foregroundStyle(.blue)
+            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)

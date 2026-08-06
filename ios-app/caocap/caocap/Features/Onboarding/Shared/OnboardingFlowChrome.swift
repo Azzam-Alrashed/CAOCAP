@@ -38,17 +38,13 @@ struct OnboardingFlowTopBar: View {
 
             Spacer(minLength: 0)
 
-            HStack(spacing: 12) {
-                OnboardingLanguageButton(usesLightChrome: false)
-
-                if let onSkip {
-                    Button(action: onSkip) {
-                        Text(LocalizedStringKey("Skip"))
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(palette.skipForeground)
-                    }
-                    .buttonStyle(.plain)
+            if let onSkip {
+                Button(action: onSkip) {
+                    Text(LocalizedStringKey("Skip"))
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(palette.skipForeground)
                 }
+                .buttonStyle(.plain)
             }
         }
         .frame(height: 56, alignment: .top)
