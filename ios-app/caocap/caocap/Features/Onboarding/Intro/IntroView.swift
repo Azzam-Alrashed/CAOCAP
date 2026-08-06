@@ -32,21 +32,26 @@ struct IntroView: View {
             VStack(spacing: 0) {
                 OnboardingFlowTopBar(palette: .introIllustration)
 
-                TabView(selection: $coordinator.currentIndex) {
-                    ForEach(IntroManifest.steps) { step in
-                        IntroPageView(
-                            step: step,
-                            isActive: step.id == coordinator.currentIndex,
-                            shouldAnimate: !animatedIndices.contains(step.id),
-                            onAnimationComplete: {
-                                animatedIndices.insert(step.id)
-                            }
-                        )
-                        .tag(step.id)
+                ZStack {
+                    TabView(selection: $coordinator.currentIndex) {
+                        ForEach(IntroManifest.steps) { step in
+                            IntroPageView(
+                                step: step,
+                                isActive: step.id == coordinator.currentIndex,
+                                shouldAnimate: !animatedIndices.contains(step.id),
+                                onAnimationComplete: {
+                                    animatedIndices.insert(step.id)
+                                }
+                            )
+                            .tag(step.id)
+                        }
                     }
+                    .id(selectedLanguage)
+                    .tabViewStyle(.page(indexDisplayMode: .never))
+                    .scrollDisabled(true)
+
+                    storyTapOverlay
                 }
-                .id(selectedLanguage)
-                .tabViewStyle(.page(indexDisplayMode: .never))
 
                 bottomBar
             }
@@ -98,6 +103,13 @@ struct IntroView: View {
                         withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
                             coordinator.next()
                         }
+                    } else {
+                        try? await Task.sleep(nanoseconds: 500_000_000)
+                        if !Task.isCancelled {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
+                                finishIntro()
+                            }
+                        }
                     }
                     break
                 }
@@ -116,43 +128,42 @@ struct IntroView: View {
         ]
     }
 
-    private var bottomBar: some View {
-        VStack(spacing: 22) {
-            IntroProgressDots(
-                count: IntroManifest.steps.count,
-                currentIndex: coordinator.currentIndex,
-                currentProgress: progress
-            )
-
-            HStack(spacing: 12) {
-                OnboardingFlowBackButton(
-                    foregroundOpacity: coordinator.isFirstPage ? 0.28 : 0.88,
-                    isEnabled: !coordinator.isFirstPage
-                ) {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
-                        coordinator.back()
-                    }
-                }
-
-                OnboardingPrimaryButton(
-                    titleKey: currentStep.ctaLabelKey,
-                    isLastStep: coordinator.isLastPage
-                ) {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
-                        if coordinator.isLastPage {
-                            finishIntro()
-                        } else {
-                            coordinator.next()
+    private var storyTapOverlay: some View {
+        GeometryReader { geometry in
+            HStack(spacing: 0) {
+                Color.clear
+                    .contentShape(Rectangle())
+                    .frame(width: geometry.size.width * 0.3)
+                    .onTapGesture {
+                        guard !coordinator.isFirstPage else { return }
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
+                            coordinator.back()
                         }
                     }
-                }
-                .shadow(
-                    color: coordinator.isLastPage ? Color.blue.opacity(0.6) : .clear,
-                    radius: coordinator.isLastPage ? 16 : 0
-                )
+
+                Color.clear
+                    .contentShape(Rectangle())
+                    .frame(width: geometry.size.width * 0.7)
+                    .onTapGesture {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
+                            if coordinator.isLastPage {
+                                finishIntro()
+                            } else {
+                                coordinator.next()
+                            }
+                        }
+                    }
             }
         }
-        .padding(.bottom, 6)
+    }
+
+    private var bottomBar: some View {
+        IntroProgressDots(
+            count: IntroManifest.steps.count,
+            currentIndex: coordinator.currentIndex,
+            currentProgress: progress
+        )
+        .padding(.bottom, 12)
     }
 
     private func finishIntro() {

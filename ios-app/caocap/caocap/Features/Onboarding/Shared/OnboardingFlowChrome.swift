@@ -50,33 +50,3 @@ struct OnboardingFlowTopBar: View {
         .frame(height: 56, alignment: .top)
     }
 }
-
-/// Shared circular back control used in onboarding bottom bars.
-struct OnboardingFlowBackButton: View {
-    let foregroundOpacity: CGFloat
-    var isEnabled: Bool = true
-    var accessibilityLabel: LocalizedStringKey?
-    let action: () -> Void
-
-    var body: some View {
-        let button = Button(action: action) {
-            Image(systemName: "chevron.left")
-                .font(.system(size: 15, weight: .bold))
-                .foregroundStyle(Color(hex: "1E3A5F").opacity(foregroundOpacity))
-                .frame(width: 48, height: 52)
-                .background(Color.white.opacity(0.82), in: Circle())
-                .overlay {
-                    Circle()
-                        .stroke(OnboardingGlassChrome.inactiveStroke, lineWidth: 1)
-                }
-        }
-        .buttonStyle(.plain)
-        .disabled(!isEnabled)
-
-        if let accessibilityLabel {
-            button.accessibilityLabel(Text(accessibilityLabel))
-        } else {
-            button
-        }
-    }
-}

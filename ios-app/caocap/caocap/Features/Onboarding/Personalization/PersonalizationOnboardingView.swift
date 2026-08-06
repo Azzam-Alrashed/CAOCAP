@@ -1,4 +1,5 @@
 import SwiftUI
+import AudioToolbox
 
 struct PersonalizationOnboardingView: View {
     @Bindable var coordinator: PersonalizationOnboardingCoordinator
@@ -8,6 +9,7 @@ struct PersonalizationOnboardingView: View {
     @AppStorage(LocalizationManager.languageStorageKey) private var selectedLanguage = "English"
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var colorScheme
+    @State private var typedPersonas: Set<CopilotPersona> = []
 
     var body: some View {
         ZStack {
@@ -42,16 +44,20 @@ struct PersonalizationOnboardingView: View {
         switch coordinator.currentPage {
         case .copilot:
             standardPage(
+                badgeText: "CO-PILOT SELECTION",
                 titleKey: "personalization.copilot.title",
                 continueTitle: copilotContinueTitle
             ) {
                 copilotOrbitScene
             } bottomAccessory: {
-                EmptyView()
+                copilotMantraCard
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 16)
             }
 
         case .codingLevel:
             standardPage(
+                badgeText: "MISSION PROFILE",
                 titleKey: "personalization.coding_level.title",
                 continueTitle: "Continue"
             ) {
@@ -75,6 +81,7 @@ struct PersonalizationOnboardingView: View {
     }
 
     private func standardPage<Scene: View, BottomAccessory: View>(
+        badgeText: String? = nil,
         titleKey: LocalizedStringKey,
         continueTitle: String,
         @ViewBuilder scene: () -> Scene,
@@ -82,17 +89,46 @@ struct PersonalizationOnboardingView: View {
     ) -> some View {
         ZStack {
             OnboardingFlowTopBar(palette: .adaptiveSurface)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .padding(.horizontal, 24)
-            .padding(.top, 16)
-
-            Text(titleKey)
-                .font(.system(size: 30, weight: .semibold, design: .rounded))
-                .foregroundStyle(.primary)
-                .multilineTextAlignment(.center)
-                .frame(width: 240)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .padding(.top, 140)
+                .padding(.horizontal, 24)
+                .padding(.top, 16)
+
+            VStack(spacing: 8) {
+                if let badgeText {
+                    HStack(spacing: 6) {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(Color(hex: "4DB6FF"))
+
+                        Text(badgeText)
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .tracking(1.8)
+                            .foregroundStyle(Color(hex: "4DB6FF"))
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 6)
+                    .background(
+                        Capsule()
+                            .fill(Color(hex: "4DB6FF").opacity(0.12))
+                            .overlay(
+                                Capsule()
+                                    .stroke(Color(hex: "4DB6FF").opacity(0.5), lineWidth: 1)
+                            )
+                    )
+                    .shadow(color: Color(hex: "4DB6FF").opacity(0.25), radius: 8)
+                }
+
+                Text(titleKey)
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .multilineTextAlignment(.center)
+                    .shadow(color: .black.opacity(0.2), radius: 6, y: 2)
+            }
+            .frame(maxWidth: 340)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .padding(.top, badgeText != nil ? 115 : 140)
 
             orbitPaths
             scene()
@@ -203,6 +239,67 @@ struct PersonalizationOnboardingView: View {
         }
     }
 
+    private var copilotMantraCard: some View {
+        ZStack {
+            if let selected = coordinator.selectedCopilot {
+                VStack(spacing: 8) {
+                    HStack(spacing: 8) {
+                        Image(selected.avatarImageName)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 32, height: 32)
+                            .clipShape(Circle())
+                            .overlay(
+                                Circle()
+                                    .stroke(Color(hex: selected.accentHex).opacity(0.8), lineWidth: 1.5)
+                            )
+                            .shadow(color: Color(hex: selected.accentHex).opacity(0.3), radius: 4)
+
+                        Text(LocalizedStringKey(selected.nameKey))
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color(hex: selected.accentHex))
+                            .textCase(.uppercase)
+                            .tracking(1.2)
+                    }
+
+                    MantraTypewriterView(
+                        mantraText: selected.mantra,
+                        accentHex: selected.accentHex,
+                        shouldAnimate: !typedPersonas.contains(selected),
+                        onFinished: {
+                            typedPersonas.insert(selected)
+                        }
+                    )
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 14)
+                .frame(maxWidth: .infinity)
+                .frame(height: 130)
+                .background(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .stroke(
+                                    LinearGradient(
+                                        colors: [
+                                            Color(hex: selected.accentHex).opacity(0.4),
+                                            Color(hex: selected.accentHex).opacity(0.1)
+                                        ],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 1.5
+                                )
+                        )
+                )
+                .shadow(color: Color(hex: selected.accentHex).opacity(0.2), radius: 12, y: 4)
+                .transition(.scale(scale: 0.95).combined(with: .opacity))
+            }
+        }
+        .animation(.spring(response: 0.35, dampingFraction: 0.78), value: coordinator.selectedCopilot)
+    }
+
     private var starColor: Color {
         guard let selectedCopilot = coordinator.selectedCopilot else {
             return Color(hex: "F59E0B")
@@ -236,7 +333,9 @@ struct PersonalizationOnboardingView: View {
 
         return Button {
             coordinator.toggleCopilot(persona)
-            HapticsManager.shared.selectionChanged()
+            AudioServicesPlaySystemSound(1105)
+            let impact = UIImpactFeedbackGenerator(style: .medium)
+            impact.impactOccurred()
         } label: {
             VStack(spacing: 6) {
                 ZStack {
@@ -341,6 +440,50 @@ struct PersonalizationOnboardingView: View {
             width: ellipseX * cos(rotation) - ellipseY * sin(rotation),
             height: ellipseX * sin(rotation) + ellipseY * cos(rotation)
         )
+    }
+}
+
+private struct MantraTypewriterView: View {
+    let mantraText: String
+    let accentHex: String
+    let shouldAnimate: Bool
+    let onFinished: () -> Void
+
+    @State private var visibleCount: Int = 0
+
+    var body: some View {
+        Text("“\(String(mantraText.prefix(visibleCount)))”")
+            .font(.system(size: 15, weight: .medium, design: .rounded))
+            .italic()
+            .multilineTextAlignment(.center)
+            .foregroundStyle(.primary)
+            .lineSpacing(4)
+            .fixedSize(horizontal: false, vertical: true)
+            .task(id: mantraText) {
+                if !shouldAnimate {
+                    visibleCount = mantraText.count
+                    onFinished()
+                    return
+                }
+
+                visibleCount = 0
+                let feedback = UISelectionFeedbackGenerator()
+                feedback.prepare()
+
+                for i in 1...mantraText.count {
+                    if Task.isCancelled { break }
+                    visibleCount = i
+
+                    if i % 2 == 0 {
+                        AudioServicesPlaySystemSound(1104)
+                        feedback.selectionChanged()
+                    }
+
+                    try? await Task.sleep(nanoseconds: 35_000_000)
+                }
+
+                onFinished()
+            }
     }
 }
 

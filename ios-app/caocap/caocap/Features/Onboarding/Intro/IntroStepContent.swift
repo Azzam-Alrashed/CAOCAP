@@ -63,8 +63,6 @@ struct IntroStepContent: Equatable, Identifiable {
     let backgroundImageName: String?
     /// Copy placement tuned to each background illustration's open areas.
     let textPlacement: IntroIllustrationTextPlacement?
-    /// Localization key for the CTA button label (`Localizable.xcstrings`).
-    let ctaLabelKey: String
 
     var resolvedTextPlacement: IntroIllustrationTextPlacement {
         textPlacement ?? .intro0

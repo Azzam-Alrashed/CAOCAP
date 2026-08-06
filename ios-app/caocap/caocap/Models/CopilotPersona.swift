@@ -41,4 +41,13 @@ enum CopilotPersona: String, Codable, CaseIterable, Equatable, Identifiable {
         case .costar: return "personalization.copilot.costar.tagline"
         }
     }
+
+    var mantra: String {
+        switch self {
+        case .cocaptain:
+            return "Code without fear. Build without limits. Orbit the impossible."
+        case .costar:
+            return "Dream it in your mind. Map it on the canvas. Launch it to the world."
+        }
+    }
 }

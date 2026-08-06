@@ -10,24 +10,21 @@ enum IntroManifest {
             titleKey: "intro.step0.title",
             messageKey: "intro.step0.message",
             backgroundImageName: "intro0",
-            textPlacement: .intro0,
-            ctaLabelKey: "Continue"
+            textPlacement: .intro0
         ),
         IntroStepContent(
             id: 1,
             titleKey: "intro.step1.title",
             messageKey: "intro.step1.message",
             backgroundImageName: "intro1",
-            textPlacement: .intro1,
-            ctaLabelKey: "Continue"
+            textPlacement: .intro1
         ),
         IntroStepContent(
             id: 2,
             titleKey: "intro.step2.title",
             messageKey: "intro.step2.message",
             backgroundImageName: "intro2",
-            textPlacement: .intro2,
-            ctaLabelKey: "Begin your mission"
+            textPlacement: .intro2
         )
     ]
 
