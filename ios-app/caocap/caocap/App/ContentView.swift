@@ -193,6 +193,7 @@ struct ContentView: View {
             },
             canUndo: (session.router.activeStore.undoStackChanged >= 0) && (undoManager?.canUndo ?? false),
             canRedo: (session.router.activeStore.undoStackChanged >= 0) && (undoManager?.canRedo ?? false),
+            copilot: session.personalization.selectedCopilot ?? UserProfileStore().loadSelectedCopilot(),
             onExpand: {
                 if session.onboarding.currentStep == .longPressFAB {
                     session.onboarding.completeCurrentStep()

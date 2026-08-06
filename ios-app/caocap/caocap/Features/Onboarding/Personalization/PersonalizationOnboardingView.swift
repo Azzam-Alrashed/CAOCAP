@@ -57,7 +57,7 @@ struct PersonalizationOnboardingView: View {
 
         case .codingLevel:
             standardPage(
-                badgeText: "MISSION PROFILE",
+                badgeText: "EXPERTISE SELECTION",
                 titleKey: "personalization.coding_level.title",
                 continueTitle: "Continue"
             ) {

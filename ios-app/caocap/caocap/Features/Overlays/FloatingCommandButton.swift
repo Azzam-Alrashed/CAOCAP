@@ -32,6 +32,7 @@ struct FloatingCommandButton: View {
     var onRedo: () -> Void
     var canUndo: Bool = false
     var canRedo: Bool = false
+    var copilot: CopilotPersona = UserProfileStore().loadSelectedCopilot()
     
     // Onboarding lifecycle callbacks
     var onExpand: (() -> Void)? = nil
@@ -107,7 +108,7 @@ struct FloatingCommandButton: View {
                         .fill(.ultraThinMaterial)
                         .overlay(
                             Circle()
-                                .stroke(Color.white.opacity(0.2), lineWidth: 0.5)
+                                .stroke(Color(hex: copilot.accentHex).opacity(0.4), lineWidth: 1.5)
                         )
                         .shadow(
                             color: shadowColor,
@@ -116,9 +117,18 @@ struct FloatingCommandButton: View {
                             y: (isDragging || isExpanded) ? 8 : (isOnboardingHighlighted ? 4 : 5)
                         )
                     
-                    Image(systemName: isExpanded ? "xmark" : "command")
-                        .font(.system(size: 24, weight: .semibold))
-                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                    if isExpanded {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundStyle(.primary)
+                            .rotationEffect(.degrees(90))
+                    } else {
+                        Image(copilot.avatarImageName)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: buttonSize * 0.72, height: buttonSize * 0.72)
+                            .clipShape(Circle())
+                    }
                 }
                 .frame(width: buttonSize, height: buttonSize)
                 .scaleEffect(buttonScale)
