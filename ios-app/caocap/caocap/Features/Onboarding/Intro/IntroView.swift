@@ -31,8 +31,11 @@ struct IntroView: View {
 
                 TabView(selection: $coordinator.currentIndex) {
                     ForEach(IntroManifest.steps) { step in
-                        IntroPageView(step: step)
-                            .tag(step.id)
+                        IntroPageView(
+                            step: step,
+                            isActive: step.id == coordinator.currentIndex
+                        )
+                        .tag(step.id)
                     }
                 }
                 .id(selectedLanguage)
@@ -180,61 +183,64 @@ private struct IntroBackdrop: View {
     }
 }
 
-/// Page content for a single intro step.
-/// Copy is placed in each illustration's open sky band; the middle stays clear for artwork.
+/// Page content for a single intro step with staggered spring text entrance.
 private struct IntroPageView: View {
     let step: IntroStepContent
+    let isActive: Bool
+
+    @State private var titleAppeared = false
+    @State private var messageAppeared = false
 
     var body: some View {
         GeometryReader { geometry in
-            let placement = step.resolvedTextPlacement
-            let textWidth = placement.maxWidthFraction.map { geometry.size.width * $0 } ?? placement.maxWidth
-            let hAlignment: HorizontalAlignment = placement.horizontalAlignment == .center ? .center : .leading
-            let frameAlignment = resolvedFrameAlignment(for: placement)
-            let yOffset = resolvedVerticalOffset(for: placement, in: geometry)
-
-            VStack(alignment: hAlignment, spacing: 10) {
+            VStack(alignment: .center, spacing: 12) {
                 Text(LocalizedStringKey(stringLiteral: step.titleKey))
                     .font(.system(size: titleSize, weight: .black, design: .rounded))
-                    .multilineTextAlignment(placement.horizontalAlignment == .center ? .center : .leading)
+                    .multilineTextAlignment(.center)
                     .foregroundStyle(.white)
                     .lineLimit(3)
                     .minimumScaleFactor(0.8)
                     .fixedSize(horizontal: false, vertical: true)
-                    .shadow(color: .black.opacity(0.35), radius: 8, x: 0, y: 2)
+                    .shadow(color: .black.opacity(0.4), radius: 10, x: 0, y: 3)
+                    .opacity(titleAppeared ? 1.0 : 0.0)
+                    .offset(y: titleAppeared ? 0 : 16)
+                    .scaleEffect(titleAppeared ? 1.0 : 0.95)
 
                 Text(LocalizedStringKey(stringLiteral: step.messageKey))
-                    .font(.system(size: 16, weight: .medium))
+                    .font(.system(size: 17, weight: .medium))
                     .lineSpacing(4)
-                    .multilineTextAlignment(placement.horizontalAlignment == .center ? .center : .leading)
-                    .foregroundStyle(.white.opacity(0.86))
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(.white.opacity(0.9))
                     .fixedSize(horizontal: false, vertical: true)
-                    .shadow(color: .black.opacity(0.28), radius: 6, x: 0, y: 2)
+                    .shadow(color: .black.opacity(0.35), radius: 8, x: 0, y: 2)
+                    .opacity(messageAppeared ? 1.0 : 0.0)
+                    .offset(y: messageAppeared ? 0 : 12)
             }
-            .frame(maxWidth: textWidth, alignment: placement.horizontalAlignment == .center ? .center : .leading)
-            .padding(.top, placement.verticalAlignment == .top ? placement.topInset : 0)
-            .offset(y: yOffset)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: frameAlignment)
+            .frame(maxWidth: min(geometry.size.width - 40, 360), alignment: .center)
+            .padding(.top, 16)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        }
+        .onAppear {
+            animateEntrance()
+        }
+        .onChange(of: isActive) { _, active in
+            if active {
+                animateEntrance()
+            } else {
+                titleAppeared = false
+                messageAppeared = false
+            }
         }
     }
 
-    private func resolvedFrameAlignment(for placement: IntroIllustrationTextPlacement) -> Alignment {
-        let horizontal: HorizontalAlignment = placement.horizontalAlignment == .center ? .center : .leading
-        let vertical: VerticalAlignment = placement.verticalAlignment == .top ? .top : .center
-        return Alignment(horizontal: horizontal, vertical: vertical)
-    }
-
-    private func resolvedVerticalOffset(
-        for placement: IntroIllustrationTextPlacement,
-        in geometry: GeometryProxy
-    ) -> CGFloat {
-        switch placement.verticalAlignment {
-        case .top:
-            return 0
-        case .center:
-            return placement.verticalOffset
-        case .aboveCenter:
-            return -(geometry.size.height * 0.10) + placement.verticalOffset
+    private func animateEntrance() {
+        titleAppeared = false
+        messageAppeared = false
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) {
+            titleAppeared = true
+        }
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.82).delay(0.18)) {
+            messageAppeared = true
         }
     }
 
