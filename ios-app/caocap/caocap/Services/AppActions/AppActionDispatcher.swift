@@ -353,7 +353,24 @@ public final class AppActionDispatcher: AppActionPerforming {
 
     private var handlers: [AppActionID: ([String: String]?) -> String?] = [:]
 
-    public init() {}
+    public init() {
+        refreshCopilotActionTitle()
+    }
+
+    public func refreshCopilotActionTitle() {
+        let copilot = UserProfileStore().loadSelectedCopilot()
+        if let index = availableActions.firstIndex(where: { $0.id == .summonCoCaptain }) {
+            availableActions[index] = AppActionDefinition(
+                id: .summonCoCaptain,
+                title: "Summon \(copilot.displayName)",
+                icon: "sparkles",
+                category: .assistant,
+                isMutating: false,
+                allowsAutonomousExecution: true,
+                canPinToCanvas: true
+            )
+        }
+    }
 
     /// Registers a simple parameter-free handler.
     public func register(_ id: AppActionID, handler: @escaping () -> Void) {

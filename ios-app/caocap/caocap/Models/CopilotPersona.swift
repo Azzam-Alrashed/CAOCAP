@@ -7,6 +7,13 @@ enum CopilotPersona: String, Codable, CaseIterable, Equatable, Identifiable {
 
     var id: String { rawValue }
 
+    var displayName: String {
+        switch self {
+        case .cocaptain: return "CoCaptain"
+        case .costar: return "CoStar"
+        }
+    }
+
     var avatarImageName: String {
         switch self {
         case .cocaptain: return "CopilotAvatarCocaptain"

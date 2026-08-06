@@ -95,20 +95,18 @@ struct CommandPaletteView: View {
                     VStack(spacing: 0) {
                         // Search Bar
                         HStack {
-                            Image(systemName: "sparkles")
-                                .font(.system(size: 20))
-                                .foregroundStyle(
-                                    LinearGradient(
-                                        colors: [.blue, .purple],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
+                            let currentCopilot = UserProfileStore().loadSelectedCopilot()
+                            Image(currentCopilot.avatarImageName)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 22, height: 22)
+                                .clipShape(Circle())
                             
-                            TextField("Ask CoCaptain or type a command...", text: $viewModel.query)
+                            TextField("Ask \(currentCopilot.displayName) or type a command...", text: $viewModel.query)
                                 .textFieldStyle(.plain)
                                 .focused($isFocused)
-                                .font(.system(size: 18, weight: .medium))
+                                .font(.system(size: 15, weight: .medium))
+                                .frame(height: 24)
                                 .submitLabel(.done)
                                 .onSubmit {
                                     viewModel.confirmSelection()
@@ -309,14 +307,16 @@ struct CommandPaletteView: View {
                         
                         // Search Bar Capsule (styled like iOS native search bar)
                         HStack(spacing: 12) {
+                            let currentCopilot = UserProfileStore().loadSelectedCopilot()
                             Image(systemName: "command")
                                 .font(.system(size: 18, weight: .semibold))
                                 .foregroundColor(.secondary)
                             
-                            TextField("Ask CoCaptain or type a command...", text: $viewModel.query)
+                            TextField("Ask \(currentCopilot.displayName) or type a command...", text: $viewModel.query)
                                 .textFieldStyle(.plain)
                                 .focused($isFocused)
-                                .font(.system(size: 17))
+                                .font(.system(size: 15, weight: .medium))
+                                .frame(height: 24)
                                 .submitLabel(.done)
                                 .onSubmit {
                                     viewModel.confirmSelection()
@@ -493,7 +493,10 @@ struct CommandPaletteView: View {
             viewModel.query = ""
         } label: {
             Image(systemName: "xmark.circle.fill")
+                .font(.system(size: 18))
                 .foregroundColor(.secondary)
+                .frame(width: 28, height: 28)
+                .contentShape(Circle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Clear Omnibox query")
@@ -891,6 +894,10 @@ struct CoCaptainPromptRow: View {
     var isBreathing: Bool = false
     let onSelect: () -> Void
 
+    private var currentCopilot: CopilotPersona {
+        UserProfileStore().loadSelectedCopilot()
+    }
+
     private var trimmedPrompt: String {
         prompt.trimmingCharacters(in: .whitespacesAndNewlines)
     }
@@ -898,19 +905,14 @@ struct CoCaptainPromptRow: View {
     var body: some View {
         Button(action: onSelect) {
             HStack(spacing: 12) {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 16))
-                    .frame(width: 24)
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [.blue, .purple],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                Image(currentCopilot.avatarImageName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 22, height: 22)
+                    .clipShape(Circle())
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Ask CoCaptain")
+                    Text("Ask \(currentCopilot.displayName)")
                         .font(.system(size: 16, weight: .medium))
 
                     Text(trimmedPrompt)
@@ -926,16 +928,16 @@ struct CoCaptainPromptRow: View {
                     Image(systemName: "return")
                         .font(.system(size: 12))
                         .opacity(0.8)
-                        .foregroundColor(.blue)
+                        .foregroundColor(Color(hex: currentCopilot.accentHex))
                         .transition(.scale.combined(with: .opacity))
                 }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
             .contentShape(Rectangle())
-            .omniboxRowStyle(isSelected: isSelected)
         }
         .buttonStyle(.plain)
+        .omniboxRowStyle(isSelected: isSelected)
         .onboardingGlow(isActive: isGlowActive, isBreathing: isBreathing)
     }
 }
