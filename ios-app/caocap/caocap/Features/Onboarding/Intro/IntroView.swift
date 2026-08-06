@@ -183,13 +183,12 @@ private struct IntroBackdrop: View {
     }
 }
 
-/// Page content for a single intro step with staggered spring text entrance.
+/// Page content for a single intro step with title pop and typewriter subtitle effect.
 private struct IntroPageView: View {
     let step: IntroStepContent
     let isActive: Bool
 
     @State private var titleAppeared = false
-    @State private var messageAppeared = false
 
     var body: some View {
         GeometryReader { geometry in
@@ -206,15 +205,10 @@ private struct IntroPageView: View {
                     .offset(y: titleAppeared ? 0 : 16)
                     .scaleEffect(titleAppeared ? 1.0 : 0.95)
 
-                Text(LocalizedStringKey(stringLiteral: step.messageKey))
-                    .font(.system(size: 17, weight: .medium))
-                    .lineSpacing(4)
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(.white.opacity(0.9))
-                    .fixedSize(horizontal: false, vertical: true)
-                    .shadow(color: .black.opacity(0.35), radius: 8, x: 0, y: 2)
-                    .opacity(messageAppeared ? 1.0 : 0.0)
-                    .offset(y: messageAppeared ? 0 : 12)
+                TypewriterText(
+                    textKey: step.messageKey,
+                    isActive: isActive
+                )
             }
             .frame(maxWidth: min(geometry.size.width - 40, 360), alignment: .center)
             .padding(.top, 16)
@@ -228,24 +222,65 @@ private struct IntroPageView: View {
                 animateEntrance()
             } else {
                 titleAppeared = false
-                messageAppeared = false
             }
         }
     }
 
     private func animateEntrance() {
         titleAppeared = false
-        messageAppeared = false
         withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) {
             titleAppeared = true
-        }
-        withAnimation(.spring(response: 0.5, dampingFraction: 0.82).delay(0.18)) {
-            messageAppeared = true
         }
     }
 
     private var titleSize: CGFloat {
         UIDevice.current.userInterfaceIdiom == .pad ? 38 : 32
+    }
+}
+
+/// Character-by-character typewriter subtitle component.
+private struct TypewriterText: View {
+    let textKey: String
+    let isActive: Bool
+
+    @AppStorage(LocalizationManager.languageStorageKey) private var selectedLanguage = "English"
+    @State private var visibleCount: Int = 0
+    @State private var fullText: String = ""
+
+    var body: some View {
+        Text(displayedText)
+            .font(.system(size: 17, weight: .medium))
+            .lineSpacing(4)
+            .multilineTextAlignment(.center)
+            .foregroundStyle(.white.opacity(0.9))
+            .fixedSize(horizontal: false, vertical: true)
+            .shadow(color: .black.opacity(0.35), radius: 8, x: 0, y: 2)
+            .task(id: isActive) {
+                guard isActive else {
+                    visibleCount = 0
+                    return
+                }
+                let localized = LocalizationManager.shared.localizedString(
+                    textKey,
+                    language: selectedLanguage
+                )
+                fullText = localized
+                visibleCount = 0
+
+                try? await Task.sleep(nanoseconds: 180_000_000)
+
+                for i in 1...localized.count {
+                    if Task.isCancelled { break }
+                    visibleCount = i
+                    try? await Task.sleep(nanoseconds: 22_000_000)
+                }
+            }
+    }
+
+    private var displayedText: String {
+        guard !fullText.isEmpty else { return "" }
+        let prefixEnd = fullText.index(fullText.startIndex, offsetBy: min(visibleCount, fullText.count))
+        return String(fullText[..<prefixEnd])
     }
 }
 
