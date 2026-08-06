@@ -1,3 +1,4 @@
+import AudioToolbox
 import SpriteKit
 import SwiftUI
 
@@ -9,6 +10,7 @@ struct PersonalizationLaunchScene: View {
     @State private var controller = PersonalizationLaunchController()
     @State private var smokeScene = PersonalizationLaunchSmokeScene()
     @State private var audio = PersonalizationLaunchAudioPlayer()
+    @State private var secondsRemaining: Int = 10
 
     var body: some View {
         GeometryReader { geometry in
@@ -16,13 +18,14 @@ struct PersonalizationLaunchScene: View {
                 launchEnvironment(in: geometry)
 
                 VStack {
-                    Text("Tap to launch your coding journey.")
-                        .font(.system(size: 34, weight: .bold, design: .rounded))
-                        .foregroundStyle(.primary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 32)
-                        .padding(.top, 150)
-                        .opacity(controller.titleOpacity)
+                    if !controller.isLaunching {
+                        Text("\(secondsRemaining)")
+                            .font(.system(size: 84, weight: .black, design: .rounded))
+                            .foregroundStyle(.primary)
+                            .padding(.top, 140)
+                            .contentTransition(.numericText())
+                            .opacity(controller.titleOpacity)
+                    }
 
                     Spacer()
                 }
@@ -37,6 +40,21 @@ struct PersonalizationLaunchScene: View {
             .accessibilityAddTraits(.isButton)
             .accessibilityAction {
                 startLaunch(in: geometry)
+            }
+            .task {
+                secondsRemaining = 10
+                for s in stride(from: 10, through: 1, by: -1) {
+                    if Task.isCancelled || controller.isLaunching { break }
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        secondsRemaining = s
+                    }
+                    AudioServicesPlaySystemSound(1104)
+                    UISelectionFeedbackGenerator().selectionChanged()
+                    try? await Task.sleep(nanoseconds: 1_000_000_000)
+                }
+                if !Task.isCancelled && !controller.isLaunching {
+                    startLaunch(in: geometry)
+                }
             }
         }
         .onChange(of: controller.phase) { _, phase in
