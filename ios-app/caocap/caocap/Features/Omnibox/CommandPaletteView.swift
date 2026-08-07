@@ -238,6 +238,7 @@ struct CommandPaletteView: View {
                         removal: .scale(scale: 0.9).combined(with: .opacity)
                     ))
                     .onAppear {
+                        GlobalFloatingChromeController.makeMainAppWindowKey()
                         isFocused = true
                     }
                 } else {
@@ -376,6 +377,7 @@ struct CommandPaletteView: View {
                         removal: .move(edge: .bottom).combined(with: .opacity)
                     ))
                     .onAppear {
+                        GlobalFloatingChromeController.makeMainAppWindowKey()
                         isFocused = true
                     }
                 }
@@ -388,8 +390,10 @@ struct CommandPaletteView: View {
         }
         .onChange(of: viewModel.isPresented) { oldPresented, newPresented in
             if newPresented {
-                Task {
+                Task { @MainActor in
+                    GlobalFloatingChromeController.makeMainAppWindowKey()
                     try? await Task.sleep(for: .seconds(0.1))
+                    GlobalFloatingChromeController.makeMainAppWindowKey()
                     isFocused = true
                 }
             } else {

@@ -6,8 +6,6 @@ import SwiftUI
 /// FAB + call chrome live in a passthrough `UIWindow` above system sheets.
 struct ContentView: View {
     @State private var session = AppSessionCoordinator()
-    @State private var floatingChrome = GlobalFloatingChromeController()
-    @State private var fabAnchorFrame: CGRect = .null
     @Environment(\.undoManager) private var undoManager
 
     var body: some View {
@@ -45,9 +43,14 @@ struct ContentView: View {
             }
             .onboardingTooltipOverlay(
                 isCommandPalettePresented: session.commandPalette.isPresented,
-                rendersAnchor: { !$0.isCanvasLocal && !$0.isPreviewShellLocal && !$0.isCoCaptainLocal }
+                // FAB tooltips render in the chrome overlay window so they sit above the FAB.
+                rendersAnchor: {
+                    !$0.isCanvasLocal
+                        && !$0.isPreviewShellLocal
+                        && !$0.isCoCaptainLocal
+                        && $0 != .floatingCommandButton
+                }
             )
-            .onboardingExplicitAnchorFrames(fabExplicitAnchorFrames)
             .background(Color.black.ignoresSafeArea())
             .overlay { launchOverlay }
             .overlay { introOverlay }
@@ -75,19 +78,12 @@ struct ContentView: View {
                 undoManager: undoManager
             ))
             .onAppear {
-                floatingChrome.install(session: session) { frame in
-                    fabAnchorFrame = frame
-                }
+                GlobalFloatingChromeController.shared.install(session: session)
             }
             .onDisappear {
-                floatingChrome.uninstall()
+                GlobalFloatingChromeController.shared.uninstall()
             }
         }
-    }
-
-    private var fabExplicitAnchorFrames: [OnboardingTooltipAnchor: CGRect] {
-        guard !fabAnchorFrame.isNull, !fabAnchorFrame.isEmpty else { return [:] }
-        return [.floatingCommandButton: fabAnchorFrame]
     }
 
     @ViewBuilder

@@ -255,7 +255,8 @@ extension View {
 
     func onboardingTooltipOverlay(
         isCommandPalettePresented: Bool = false,
-        rendersAnchor: @escaping (OnboardingTooltipAnchor) -> Bool = { _ in true }
+        rendersAnchor: @escaping (OnboardingTooltipAnchor) -> Bool = { _ in true },
+        onCardFrameChange: ((CGRect) -> Void)? = nil
     ) -> some View {
         overlayPreferenceValue(OnboardingTooltipAnchorPreferenceKey.self) { anchors in
             overlayPreferenceValue(OnboardingExplicitAnchorFramePreferenceKey.self) { explicitFrames in
@@ -263,7 +264,8 @@ extension View {
                     anchors: anchors,
                     explicitFrames: explicitFrames,
                     isCommandPalettePresented: isCommandPalettePresented,
-                    rendersAnchor: rendersAnchor
+                    rendersAnchor: rendersAnchor,
+                    onCardFrameChange: onCardFrameChange
                 )
             }
         }
@@ -274,6 +276,19 @@ extension View {
     /// scroll content inside the CoCaptain sheet.
     func coCaptainOnboardingTooltipOverlay() -> some View {
         modifier(CoCaptainSheetTooltipOverlayModifier())
+    }
+
+    /// Chrome-window FAB tooltips. Avoids `overlayPreferenceValue`, which duplicated the FAB.
+    func fabChromeOnboardingTooltipOverlay(
+        isCommandPalettePresented: Bool,
+        onCardFrameChange: ((CGRect) -> Void)? = nil
+    ) -> some View {
+        modifier(
+            FABChromeOnboardingTooltipOverlayModifier(
+                isCommandPalettePresented: isCommandPalettePresented,
+                onCardFrameChange: onCardFrameChange
+            )
+        )
     }
 }
 
@@ -293,6 +308,30 @@ private struct CoCaptainSheetTooltipOverlayModifier: ViewModifier {
                     explicitFrames: explicitFrames,
                     isCommandPalettePresented: false,
                     rendersAnchor: { $0.isCoCaptainLocal }
+                )
+            }
+    }
+}
+
+/// Same preference pattern as CoCaptain — `overlayPreferenceValue` was drawing a second FAB.
+private struct FABChromeOnboardingTooltipOverlayModifier: ViewModifier {
+    let isCommandPalettePresented: Bool
+    var onCardFrameChange: ((CGRect) -> Void)?
+
+    @State private var layoutAnchors: [OnboardingTooltipAnchor: Anchor<CGRect>] = [:]
+    @State private var explicitFrames: [OnboardingTooltipAnchor: CGRect] = [:]
+
+    func body(content: Content) -> some View {
+        content
+            .onPreferenceChange(OnboardingTooltipAnchorPreferenceKey.self) { layoutAnchors = $0 }
+            .onPreferenceChange(OnboardingExplicitAnchorFramePreferenceKey.self) { explicitFrames = $0 }
+            .overlay {
+                OnboardingTooltipOverlay(
+                    anchors: layoutAnchors,
+                    explicitFrames: explicitFrames,
+                    isCommandPalettePresented: isCommandPalettePresented,
+                    rendersAnchor: { $0 == .floatingCommandButton },
+                    onCardFrameChange: onCardFrameChange
                 )
             }
     }
@@ -400,6 +439,7 @@ private struct OnboardingTooltipOverlay: View {
     let explicitFrames: [OnboardingTooltipAnchor: CGRect]
     let isCommandPalettePresented: Bool
     let rendersAnchor: (OnboardingTooltipAnchor) -> Bool
+    var onCardFrameChange: ((CGRect) -> Void)? = nil
 
     @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
     @State private var cardSize = CGSize(width: 290, height: 180)
@@ -434,20 +474,50 @@ private struct OnboardingTooltipOverlay: View {
                             key: OnboardingTooltipSizePreferenceKey.self,
                             value: cardProxy.size
                         )
+                        .onAppear {
+                            reportCardFrame(center: tooltipCenter, size: cardProxy.size)
+                        }
+                        .onChange(of: tooltipCenter.x) { _, _ in
+                            reportCardFrame(center: tooltipCenter, size: cardSize)
+                        }
+                        .onChange(of: tooltipCenter.y) { _, _ in
+                            reportCardFrame(center: tooltipCenter, size: cardSize)
+                        }
                     }
                 )
                 .onPreferenceChange(OnboardingTooltipSizePreferenceKey.self) { newSize in
                     cardSize = newSize
+                    reportCardFrame(center: tooltipCenter, size: newSize)
                 }
                 .position(tooltipCenter)
                 .transition(.scale(scale: 0.92).combined(with: .opacity))
                 .zIndex(1000)
+                } else {
+                    Color.clear.onAppear { onCardFrameChange?(.null) }
                 }
+            } else {
+                Color.clear.onAppear { onCardFrameChange?(.null) }
             }
         }
         .animation(.spring(response: 0.35, dampingFraction: 0.82), value: onboarding?.currentStep)
         .animation(.spring(response: 0.35, dampingFraction: 0.82), value: onboarding?.showPopover)
         .animation(.spring(response: 0.35, dampingFraction: 0.82), value: isCommandPalettePresented)
+        .onDisappear { onCardFrameChange?(.null) }
+    }
+
+    private func reportCardFrame(center: CGPoint, size: CGSize) {
+        guard size.width > 1, size.height > 1 else {
+            onCardFrameChange?(.null)
+            return
+        }
+        onCardFrameChange?(
+            CGRect(
+                x: center.x - size.width / 2,
+                y: center.y - size.height / 2,
+                width: size.width,
+                height: size.height
+            ).insetBy(dx: -8, dy: -8)
+        )
     }
 
     private func resolvedTargetFrame(
