@@ -152,4 +152,28 @@ struct AppSessionCoordinatorTests {
 
         #expect(scale == 0.8)
     }
+
+    @Test func bootstrapDismissesLaunchAfterReadyMinimumNotFixedTwoPointFiveSeconds() async {
+        let session = AppSessionCoordinator()
+        session.launchMinimumVisibleDuration = .milliseconds(20)
+        session.launchMaximumVisibleDuration = .milliseconds(200)
+        #expect(session.isLaunching)
+
+        session.bootstrap(undoManager: nil)
+
+        try? await Task.sleep(for: .milliseconds(80))
+        #expect(!session.isLaunching)
+    }
+
+    @Test func bootstrapHonorsLaunchMaximumVisibleDuration() async {
+        let session = AppSessionCoordinator()
+        session.launchMinimumVisibleDuration = .seconds(10)
+        session.launchMaximumVisibleDuration = .milliseconds(30)
+        #expect(session.isLaunching)
+
+        session.bootstrap(undoManager: nil)
+
+        try? await Task.sleep(for: .milliseconds(100))
+        #expect(!session.isLaunching)
+    }
 }

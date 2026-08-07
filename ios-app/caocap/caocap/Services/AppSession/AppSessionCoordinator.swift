@@ -42,6 +42,12 @@ final class AppSessionCoordinator {
     /// Briefly highlights a node after fly-to navigation from CoCaptain or the command palette.
     var canvasFocusNodeID: UUID?
     @ObservationIgnored private var canvasFocusClearTask: Task<Void, Never>?
+    /// Matches `LaunchScreenView` entrance length so the brand animation can land.
+    /// Tests may shorten this to avoid sleeping for the full brand dwell.
+    var launchMinimumVisibleDuration: Duration = .milliseconds(1_200)
+    /// Hard cap so splash never blocks interaction longer than the old fixed delay.
+    var launchMaximumVisibleDuration: Duration = .seconds(2.5)
+    @ObservationIgnored private var launchDismissTask: Task<Void, Never>?
 
     var exportURL: URL?
     var showExportSheet = false
@@ -116,16 +122,52 @@ final class AppSessionCoordinator {
         attachUndoManager(undoManager)
         coCaptain.configureProjectSession(store: router.activeStore, dispatcher: actionDispatcher)
 
-        Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .seconds(2.5))
-            guard let self else { return }
-            withAnimation(.easeInOut(duration: 0.5)) {
-                self.isLaunching = false
-            }
-            PerformanceSignposts.endLaunch()
-            if !self.intro.shouldPresent {
-                self.startInteractiveOnboardingIfNeeded()
-            }
+        scheduleLaunchOverlayDismissal()
+    }
+
+    /// Dismisses the launch overlay when the session is ready, after a short brand
+    /// minimum and before a hard maximum — not a fixed cosmetic sleep.
+    private func scheduleLaunchOverlayDismissal() {
+        launchDismissTask?.cancel()
+        launchDismissTask = Task { @MainActor [weak self] in
+            await self?.dismissLaunchOverlayWhenReady()
+        }
+    }
+
+    private func dismissLaunchOverlayWhenReady() async {
+        let clock = ContinuousClock()
+        let started = clock.now
+
+        await waitForLaunchReadiness()
+        guard !Task.isCancelled else { return }
+
+        let readyAt = clock.now
+        let minAt = started + launchMinimumVisibleDuration
+        let maxAt = started + launchMaximumVisibleDuration
+        let dismissAt = min(max(readyAt, minAt), maxAt)
+        let remaining = dismissAt - clock.now
+        if remaining > .zero {
+            try? await Task.sleep(for: remaining)
+        }
+        guard !Task.isCancelled else { return }
+
+        finishLaunchOverlayDismissal()
+    }
+
+    /// Root `ProjectStore` loads synchronously in `AppRouter` before UI appears.
+    /// Yield so SwiftUI can commit the first canvas frame under the overlay.
+    private func waitForLaunchReadiness() async {
+        await Task.yield()
+    }
+
+    private func finishLaunchOverlayDismissal() {
+        guard isLaunching else { return }
+        withAnimation(.easeInOut(duration: 0.5)) {
+            isLaunching = false
+        }
+        PerformanceSignposts.endLaunch()
+        if !intro.shouldPresent {
+            startInteractiveOnboardingIfNeeded()
         }
     }
 
@@ -336,6 +378,8 @@ final class AppSessionCoordinator {
         attachUndoManager(activeUndoManager)
         coCaptain.configureProjectSession(store: router.activeStore, dispatcher: actionDispatcher)
         syncViewportWithActiveStore()
+        launchDismissTask?.cancel()
+        launchDismissTask = nil
         isLaunching = false
         PerformanceSignposts.endLaunch()
     }

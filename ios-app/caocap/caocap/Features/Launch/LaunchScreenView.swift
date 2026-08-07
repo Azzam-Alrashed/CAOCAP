@@ -34,7 +34,8 @@ extension View {
     }
 }
 
-/// The animated launch screen displayed while the app initialises Firebase and local state.
+/// The animated launch screen shown until `AppSessionCoordinator` dismisses it on readiness
+/// (after a short brand minimum matching this view's entrance animation).
 /// Shows the CAOCAP wordmark with a shimmer effect, a slow parallax spatial-sketch background,
 /// a radial blue glow, and a soft haptic bump when the entrance animation settles.
 public struct LaunchScreenView: View {

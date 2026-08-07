@@ -8,7 +8,7 @@
 
 Top bottlenecks (measured + high-confidence static analysis):
 
-1. **P0 — Artificial launch splash (~2.5s) dominates time-to-interactive.** OSSignpost `launch` measured **2919 ms** from `didFinishLaunching` to splash dismiss. App Launch lifecycle already reaches Foreground-Active by ~**2.3 s**; the fixed sleep then delays interaction further.
+1. **P0 — Artificial launch splash (~2.5s) dominated time-to-interactive (fixed).** OSSignpost `launch` measured **2919 ms** from `didFinishLaunching` to splash dismiss. App Launch lifecycle already reaches Foreground-Active by ~**2.3 s**; the fixed sleep then delayed interaction further. Splash now dismisses on readiness after a ~1.2s brand minimum (2.5s max).
 2. **P0 — Per-node live `WKWebView` Mini-App thumbnails** (no culling, no shared process pool, 375×667 scaled to 240). Root canvas has few/no Mini-Apps so launch traces understate this; cost scales with Mini-App count (S3).
 3. **P1 — Canvas gesture redraw path** still pays for `ConnectionLayer` SwiftUI `Canvas`, `.ultraThinMaterial` + dual gradients per node, and a 2000×2000 `SpaceSketchBG` during pan/zoom. Grid is already optimized (CA replicator).
 
@@ -69,7 +69,7 @@ Interactive S3–S9: Profile scheme → Instruments → attach after launch → 
 
 ## Findings
 
-### F1 — Fixed 2.5s splash gates interactivity (P0)
+### F1 — Fixed 2.5s splash gates interactivity (P0) — fixed
 
 **Evidence (S1 Logging):** `launch` interval **2919.856 ms**.  
 **Evidence (S1 App Launch lifecycle):**
@@ -82,7 +82,8 @@ Interactive S3–S9: Profile scheme → Instruments → attach after launch → 
 | Initial frame rendering | 582 ms |
 | Foreground — Active (start) | ~2.30 s |
 
-**Code:** [`AppSessionCoordinator.bootstrap`](../ios-app/caocap/caocap/Services/AppSession/AppSessionCoordinator.swift) sleeps 2.5s then sets `isLaunching = false`.  
+**Code (before):** [`AppSessionCoordinator.bootstrap`](../ios-app/caocap/caocap/Services/AppSession/AppSessionCoordinator.swift) slept 2.5s then set `isLaunching = false`.  
+**Fix:** dismiss on readiness after a ~1.2s brand minimum (matches launch entrance animation), hard-capped at 2.5s — not a fixed cosmetic sleep.  
 **Confidence:** High (measured).  
 **Scenarios:** S1.
 
@@ -144,7 +145,7 @@ Interactive S3–S9: Profile scheme → Instruments → attach after launch → 
 
 | Priority | Fix | Impact | Effort |
 |----------|-----|--------|--------|
-| 1 | Replace fixed 2.5s splash with readiness-based dismiss (first frame + store load complete; cap max wait) | High | Low |
+| 1 | ~~Replace fixed 2.5s splash with readiness-based dismiss~~ **Done** (1.2s brand min, 2.5s max) | High | Low |
 | 2 | Mini-App thumbnails: viewport culling + snapshot/`UIImage` when zoomed out or offscreen; live `WKWebView` only for visible/focused nodes | High | Medium |
 | 3 | Share `WKProcessPool` across `HTMLWebView`s; consider lower content process priority for thumbnails | Medium–High | Low |
 | 4 | During canvas gestures: downgrade node chrome (solid fill instead of material/gradients); optionally freeze connection redraw to end of gesture | Medium | Medium |
@@ -154,9 +155,9 @@ Interactive S3–S9: Profile scheme → Instruments → attach after launch → 
 
 ## Next implementation slice
 
-**Ship readiness-based launch dismiss (fix 1)** and add a small UITest / signpost assertion that `launch` duration drops below ~1.5s on device without the fixed sleep.
+**Mini-App thumbnail strategy (fixes 2–3):** viewport culling / snapshots + shared `WKProcessPool`, validated with an S3 stress project (8–20 Mini-Apps).
 
-Follow immediately with **Mini-App thumbnail strategy (fix 2–3)** once S3 confirms WebView dominance with a multi Mini-App stress project.
+Re-measure `launch` signpost on device after the splash fix; expect roughly brand-minimum (~1.2s) from `didFinishLaunching` to dismiss when store load is already complete.
 
 ## Appendix — instrumentation added
 
