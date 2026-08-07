@@ -13,9 +13,12 @@ struct CopilotCallView: View {
     @State private var statusPulse = false
 
     static let cardSize = CGSize(width: 268, height: 64)
+    static let quotaCardSize = CGSize(width: 300, height: 92)
     private let edgePadding: CGFloat = 16
 
-    private var cardSize: CGSize { Self.cardSize }
+    private var cardSize: CGSize {
+        viewModel.isQuotaExceeded ? Self.quotaCardSize : Self.cardSize
+    }
 
     var body: some View {
         GeometryReader { geometry in
@@ -55,8 +58,16 @@ struct CopilotCallView: View {
                     }
                     reportFrame(at: clamped(position, in: newSize))
                 }
+                .onChange(of: viewModel.isQuotaExceeded) { _, exceeded in
+                    guard exceeded else { return }
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                        position = clamped(position, in: size)
+                    }
+                    reportFrame(at: clamped(position, in: size))
+                }
                 .animation(.spring(response: 0.28, dampingFraction: 0.82), value: viewModel.isMuted)
                 .animation(.easeInOut(duration: 0.25), value: viewModel.connectionState)
+                .animation(.spring(response: 0.32, dampingFraction: 0.84), value: viewModel.isQuotaExceeded)
         }
         .ignoresSafeArea()
         .allowsHitTesting(true)
@@ -86,14 +97,18 @@ struct CopilotCallView: View {
 
                 Text(viewModel.statusText)
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                    .foregroundStyle(viewModel.isQuotaExceeded ? .orange : .secondary)
+                    .lineLimit(viewModel.isQuotaExceeded ? 2 : 1)
                     .contentTransition(.opacity)
             }
 
             Spacer(minLength: 4)
 
-            muteButton
+            if viewModel.isQuotaExceeded {
+                upgradeButton
+            } else {
+                muteButton
+            }
             endButton
         }
         .padding(.horizontal, 10)
@@ -135,6 +150,21 @@ struct CopilotCallView: View {
                 ? LocalizationManager.shared.localizedString("copilot.call.unmute")
                 : LocalizationManager.shared.localizedString("copilot.call.mute")
         )
+    }
+
+    private var upgradeButton: some View {
+        Button {
+            viewModel.upgradeToPro()
+        } label: {
+            Text(LocalizationManager.shared.localizedString("copilot.call.upgrade"))
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 10)
+                .frame(height: 32)
+                .background(Color.orange, in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(LocalizationManager.shared.localizedString("copilot.call.upgrade"))
     }
 
     private var endButton: some View {
@@ -198,12 +228,13 @@ struct CopilotCallView: View {
                 reportFrame(at: next)
             }
             .onEnded { _ in
-                let snapped = softSnap(position, in: size)
+                let snapped = snapToNearestPoint(position, in: size)
                 withAnimation(.spring(response: 0.4, dampingFraction: 0.82)) {
                     isDragging = false
                     position = snapped
                 }
                 reportFrame(at: snapped)
+                triggerHapticFeedback(.rigid)
             }
     }
 
@@ -218,37 +249,48 @@ struct CopilotCallView: View {
         )
     }
 
-    /// Top-center, clear of the bottom-trailing FAB.
-    private func defaultPosition(in size: CGSize) -> CGPoint {
-        CGPoint(
-            x: size.width / 2,
-            y: edgePadding + cardSize.height / 2 + 54
-        )
-    }
-
-    private func clamped(_ point: CGPoint, in size: CGSize) -> CGPoint {
+    /// Same edge/corner dock points as the FAB (3×3 without the screen center).
+    private func snapPoints(in size: CGSize) -> [CGPoint] {
         let minX = edgePadding + cardSize.width / 2
         let maxX = size.width - edgePadding - cardSize.width / 2
         let minY = edgePadding + cardSize.height / 2 + 44
         let maxY = size.height - edgePadding - cardSize.height / 2
+        let centerX = size.width / 2
+        let centerY = size.height / 2
+        return [
+            CGPoint(x: minX, y: minY), CGPoint(x: centerX, y: minY), CGPoint(x: maxX, y: minY),
+            CGPoint(x: minX, y: centerY), CGPoint(x: maxX, y: centerY),
+            CGPoint(x: minX, y: maxY), CGPoint(x: centerX, y: maxY), CGPoint(x: maxX, y: maxY)
+        ]
+    }
+
+    /// Top-center dock, clear of the bottom-trailing FAB.
+    private func defaultPosition(in size: CGSize) -> CGPoint {
+        snapPoints(in: size)[1]
+    }
+
+    private func clamped(_ point: CGPoint, in size: CGSize) -> CGPoint {
+        let points = snapPoints(in: size)
+        let minX = points.map(\.x).min() ?? point.x
+        let maxX = points.map(\.x).max() ?? point.x
+        let minY = points.map(\.y).min() ?? point.y
+        let maxY = points.map(\.y).max() ?? point.y
         return CGPoint(
-            x: min(max(point.x, minX), max(minX, maxX)),
-            y: min(max(point.y, minY), max(minY, maxY))
+            x: min(max(point.x, minX), maxX),
+            y: min(max(point.y, minY), maxY)
         )
     }
 
-    private func softSnap(_ point: CGPoint, in size: CGSize) -> CGPoint {
-        let clampedPoint = clamped(point, in: size)
-        let midX = size.width / 2
-        let snapThreshold: CGFloat = 36
-        var x = clampedPoint.x
-        if abs(x - midX) < snapThreshold {
-            x = midX
-        } else if x < midX * 0.45 {
-            x = edgePadding + cardSize.width / 2
-        } else if x > midX * 1.55 {
-            x = size.width - edgePadding - cardSize.width / 2
-        }
-        return CGPoint(x: x, y: clampedPoint.y)
+    private func snapToNearestPoint(_ point: CGPoint, in size: CGSize) -> CGPoint {
+        let points = snapPoints(in: size)
+        return points.min(by: {
+            hypot($0.x - point.x, $0.y - point.y) < hypot($1.x - point.x, $1.y - point.y)
+        }) ?? points[1]
+    }
+
+    private func triggerHapticFeedback(_ style: UIImpactFeedbackGenerator.FeedbackStyle) {
+        let generator = UIImpactFeedbackGenerator(style: style)
+        generator.prepare()
+        generator.impactOccurred()
     }
 }

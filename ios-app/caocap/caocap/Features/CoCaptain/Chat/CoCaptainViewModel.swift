@@ -1511,7 +1511,7 @@ public final class CoCaptainViewModel {
                 content: .productCTA(
                     CoCaptainProductCTAItem(
                         title: LocalizationManager.shared.localizedString("Free CoCaptain usage reached"),
-                        message: LocalizationManager.shared.localizedString("You've used this month's free CoCaptain help. Pro keeps CoCaptain available whenever you need it."),
+                        message: LocalizationManager.shared.localizedString("You've used this month's free CoCaptain help — chat, voice, and screen-share. Pro removes the monthly cap."),
                         primaryButtonTitle: LocalizationManager.shared.localizedString("View Pro"),
                         actionID: .proSubscription
                     )

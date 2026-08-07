@@ -124,4 +124,22 @@ public class AppRouter {
         projects[fileName] = store
         navigate(to: .project(fileName), animated: true)
     }
+
+    /// In-memory node arrays keyed by canvas file name, including root.
+    /// Prefer these over disk when counting Mini-Apps so unsaved edits count.
+    public func liveNodesByFileName() -> [String: [SpatialNode]] {
+        var map: [String: [SpatialNode]] = [
+            CanvasFileNaming.rootFileName: rootStore.nodes
+        ]
+        for (fileName, store) in projects {
+            map[fileName] = store.nodes
+        }
+        switch currentWorkspace {
+        case .root:
+            break
+        case .project(let fileName):
+            map[fileName] = activeStore.nodes
+        }
+        return map
+    }
 }

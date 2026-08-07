@@ -15,9 +15,24 @@ struct PurchaseView: View {
     @State private var showSuccess = false
 
     let features = [
-        FeatureItem(icon: "sparkles", title: "AI CoCaptain", subtitle: "Project-aware assistance for SRS and code review", color: Color(hex: "A855F7")),
-        FeatureItem(icon: "checklist", title: "Review Bundles", subtitle: "Inspect proposed changes before they touch your work", color: Color(hex: "10B981")),
-        FeatureItem(icon: "square.and.arrow.up", title: "Portable Exports", subtitle: "Share runnable web bundles with project context", color: Color(hex: "F59E0B")),
+        FeatureItem(
+            icon: "sparkles",
+            title: "Unlimited CoCaptain",
+            subtitle: "Chat, voice, and screen-share with no monthly usage caps",
+            color: Color(hex: "A855F7")
+        ),
+        FeatureItem(
+            icon: "square.stack.3d.up.fill",
+            title: "Unlimited Mini-Apps",
+            subtitle: "Create as many Mini-Apps as you need — free is capped at 5",
+            color: Color(hex: "3B82F6")
+        ),
+        FeatureItem(
+            icon: "globe",
+            title: "Publish to the web",
+            subtitle: "Ship mini-apps live with GitHub Pages hosting",
+            color: Color(hex: "10B981")
+        ),
     ]
 
     var body: some View {
@@ -220,13 +235,13 @@ struct PurchaseView: View {
                             )
                         )
                     
-                    Text("Unlimited Creativity")
+                    Text("Build without limits")
                         .font(.system(size: 34, weight: .bold, design: .rounded))
                         .foregroundStyle(.primary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.72)
                     
-                    Text("The ultimate toolkit for spatial designers and vibecoders.")
+                    Text("Unlimited CoCaptain and web publishing for your infinite canvas.")
                         .font(.system(size: 17))
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -402,7 +417,7 @@ struct PurchaseView: View {
                         .font(.system(size: 30, weight: .bold, design: .rounded))
                         .foregroundStyle(.primary)
                     
-                    Text("Thank you for supporting independent spatial tools!")
+                    Text("Thank you for supporting CAOCAP.")
                         .font(.system(size: 16))
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -433,9 +448,9 @@ struct PurchaseView: View {
                     .background(Color.primary.opacity(0.1))
                 
                 VStack(alignment: .leading, spacing: 16) {
-                    BulletRow(icon: "sparkles", text: "AI CoCaptain has no estimated-token caps.")
-                    BulletRow(icon: "checkmark.circle.fill", text: "Portable Exports and HTML bundles are fully enabled.")
-                    BulletRow(icon: "arrow.triangle.2.circlepath", text: "Local live preview compiler compiles instantly.")
+                    BulletRow(icon: "sparkles", text: "Unlimited CoCaptain chat, voice, and screen-share.")
+                    BulletRow(icon: "square.stack.3d.up.fill", text: "Unlimited Mini-Apps across your canvases.")
+                    BulletRow(icon: "globe", text: "Publish mini-apps to the web with GitHub Pages.")
                 }
             }
             .padding(24)

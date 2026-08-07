@@ -331,6 +331,24 @@ public struct CommandIntentResolver {
                 "اختر المساعد",
                 "غير الكوبايلوت"
             ]
+        case .openUsage:
+            return [
+                "usage",
+                "view usage",
+                "open usage",
+                "token usage",
+                "tokens",
+                "quota",
+                "limits",
+                "free tier",
+                "mini app limit",
+                "استخدام",
+                "الاستخدام",
+                "افتح الاستخدام",
+                "عرض الاستخدام",
+                "الحد",
+                "الحصة"
+            ]
         }
     }
 

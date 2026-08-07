@@ -35,6 +35,10 @@ struct FloatingCommandButton: View {
     var tooltipAnchor: OnboardingTooltipAnchor = .floatingCommandButton
     /// When non-null and overlapping the FAB, the button relocates to another snap point.
     var obstacleFrame: CGRect = .null
+    /// Hit-test region for the overlay window (full screen while the radial menu is open).
+    var onInteractiveFrameChange: ((CGRect) -> Void)? = nil
+    /// Compact FAB rect used for onboarding tooltip anchoring in ContentView.
+    var onAnchorFrameChange: ((CGRect) -> Void)? = nil
 
     @State private var isBreathing: Bool = false
     @State private var containerSize: CGSize = .zero
@@ -191,6 +195,7 @@ struct FloatingCommandButton: View {
                     position = initialPosition(in: size)
                 }
                 avoidObstacleIfNeeded(in: size)
+                reportFrames(center: position == .zero ? initialPosition(in: size) : position, in: size)
                 if isOnboardingHighlighted {
                     withAnimation(
                         .easeInOut(duration: 1.8)
@@ -222,6 +227,15 @@ struct FloatingCommandButton: View {
             }
             .onChange(of: obstacleFrame) { _, _ in
                 avoidObstacleIfNeeded(in: containerSize == .zero ? size : containerSize)
+            }
+            .onChange(of: position) { _, _ in
+                reportFrames(center: currentPos, in: size)
+            }
+            .onChange(of: isExpanded) { _, _ in
+                reportFrames(center: currentPos, in: size)
+            }
+            .onChange(of: isDragging) { _, _ in
+                reportFrames(center: currentPos, in: size)
             }
         }
         .ignoresSafeArea()
@@ -367,6 +381,17 @@ struct FloatingCommandButton: View {
         )
     }
 
+    private func reportFrames(center: CGPoint, in size: CGSize) {
+        let anchor = fabFrame(at: center)
+        onAnchorFrameChange?(anchor)
+        if isExpanded {
+            // Allow tap-outside dismissal while the radial menu is open.
+            onInteractiveFrameChange?(CGRect(origin: .zero, size: size))
+        } else {
+            onInteractiveFrameChange?(anchor.insetBy(dx: -10, dy: -10))
+        }
+    }
+
     private func snapPoints(in size: CGSize) -> [CGPoint] {
         let minX = padding + buttonSize / 2
         let maxX = size.width - padding - buttonSize / 2
@@ -385,6 +410,7 @@ struct FloatingCommandButton: View {
         let points = snapPoints(in: size)
         let preferred = points.min(by: { distance(from: $0, to: position) < distance(from: $1, to: position) }) ?? points[7]
         position = bestPoint(near: preferred, in: size) ?? preferred
+        reportFrames(center: position, in: size)
         triggerHapticFeedback(.rigid)
     }
 
@@ -399,6 +425,7 @@ struct FloatingCommandButton: View {
             withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
                 position = next
             }
+            reportFrames(center: next, in: size)
             triggerHapticFeedback(.light)
         }
     }

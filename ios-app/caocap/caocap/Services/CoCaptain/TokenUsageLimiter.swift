@@ -26,7 +26,7 @@ public struct TokenUsageLimitError: LocalizedError, Equatable {
     public let requestedTokens: Int
 
     public var errorDescription: String? {
-        "You've reached this month's free CoCaptain usage. Upgrade to Pro to continue, or try again next month."
+        "You've reached this month's free CoCaptain usage for chat, voice, and screen-share. Upgrade to Pro to continue, or try again next month."
     }
 }
 
@@ -38,8 +38,14 @@ public struct TokenUsageLimitError: LocalizedError, Equatable {
 public final class TokenUsageLimiter {
     public static let shared = TokenUsageLimiter()
 
-    public static let freeMonthlyTokenLimit = 20_000
+    public static let freeMonthlyTokenLimit = 50_000
     public static let minimumResponseTokenReserve = 1_000
+    /// Minimum remaining budget required to start a Gemini Live voice/screen call.
+    public static let liveSessionMinimumReserve = 2_500
+    /// Conservative estimated tokens burned per minute of Live audio.
+    public static let liveAudioTokensPerMinute = 1_200
+    /// Conservative estimated tokens burned per minute of Live screen-share (audio + frames).
+    public static let liveVideoTokensPerMinute = 1_800
 
     private let defaults: UserDefaults
     private let calendar: Calendar
@@ -103,6 +109,26 @@ public final class TokenUsageLimiter {
         return .success(())
     }
 
+    /// Guards starting a Gemini Live voice/screen session against the free-tier monthly cap.
+    ///
+    /// Uses the session context prompt plus `liveSessionMinimumReserve` so a call cannot
+    /// start when the remaining budget is too small for a meaningful Live turn.
+    public func preflightLiveSession(
+        contextPrompt: String,
+        isSubscribed: Bool,
+        limitTokens: Int = TokenUsageLimiter.freeMonthlyTokenLimit,
+        minimumReserveTokens: Int = TokenUsageLimiter.liveSessionMinimumReserve,
+        now: Date = Date()
+    ) -> Result<Void, TokenUsageLimitError> {
+        preflight(
+            prompt: contextPrompt,
+            isSubscribed: isSubscribed,
+            limitTokens: limitTokens,
+            responseReserveTokens: minimumReserveTokens,
+            now: now
+        )
+    }
+
     /// Records token usage after a completed LLM exchange.
     ///
     /// Call this once the full model response has been streamed so both
@@ -120,6 +146,78 @@ public final class TokenUsageLimiter {
         let usage = estimateTokens(in: prompt) + estimateTokens(in: response)
         let usedTokens = defaults.integer(forKey: usedTokensStorageKey)
         defaults.set(usedTokens + usage, forKey: usedTokensStorageKey)
+    }
+
+    /// Records estimated usage for a completed Gemini Live call.
+    ///
+    /// Combines context + transcripts with a duration-based surcharge so audio/video
+    /// sessions that produce little transcript text still consume free-tier budget.
+    public func recordLiveSession(
+        contextPrompt: String,
+        inputTranscript: String,
+        outputTranscript: String,
+        duration: TimeInterval,
+        includesScreenShare: Bool,
+        isSubscribed: Bool,
+        now: Date = Date()
+    ) {
+        guard !isSubscribed else { return }
+
+        resetIfNeeded(now: now)
+        let usage = estimateLiveSessionTokens(
+            contextPrompt: contextPrompt,
+            inputTranscript: inputTranscript,
+            outputTranscript: outputTranscript,
+            duration: duration,
+            includesScreenShare: includesScreenShare
+        )
+        let usedTokens = defaults.integer(forKey: usedTokensStorageKey)
+        defaults.set(usedTokens + usage, forKey: usedTokensStorageKey)
+    }
+
+    /// Returns whether a free-tier Live session should end because projected usage
+    /// would exhaust the monthly budget (or the budget is already empty).
+    public func shouldEndLiveSession(
+        contextPrompt: String,
+        inputTranscript: String,
+        outputTranscript: String,
+        duration: TimeInterval,
+        includesScreenShare: Bool,
+        isSubscribed: Bool,
+        limitTokens: Int = TokenUsageLimiter.freeMonthlyTokenLimit,
+        now: Date = Date()
+    ) -> Bool {
+        guard !isSubscribed else { return false }
+        let current = status(limitTokens: limitTokens, now: now)
+        if current.remainingTokens <= 0 { return true }
+        let projected = estimateLiveSessionTokens(
+            contextPrompt: contextPrompt,
+            inputTranscript: inputTranscript,
+            outputTranscript: outputTranscript,
+            duration: duration,
+            includesScreenShare: includesScreenShare
+        )
+        return current.usedTokens + projected > limitTokens
+    }
+
+    /// Estimates tokens for a Live call from transcripts plus a per-minute audio/video surcharge.
+    public func estimateLiveSessionTokens(
+        contextPrompt: String,
+        inputTranscript: String,
+        outputTranscript: String,
+        duration: TimeInterval,
+        includesScreenShare: Bool
+    ) -> Int {
+        let transcriptUsage =
+            estimateTokens(in: contextPrompt)
+            + estimateTokens(in: inputTranscript)
+            + estimateTokens(in: outputTranscript)
+        let perMinute = includesScreenShare
+            ? TokenUsageLimiter.liveVideoTokensPerMinute
+            : TokenUsageLimiter.liveAudioTokensPerMinute
+        let minutes = max(duration, 15) / 60.0
+        let durationUsage = Int(ceil(minutes * Double(perMinute)))
+        return transcriptUsage + durationUsage
     }
 
     /// Resets the usage counter for the given date's period and writes the new period key.

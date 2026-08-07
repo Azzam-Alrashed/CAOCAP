@@ -71,6 +71,89 @@ struct TokenUsageLimiterTests {
         #expect(status.remainingTokens == 10)
     }
 
+    @Test func liveSessionPreflightBlocksWhenReserveExceedsRemainingBudget() throws {
+        let defaults = try makeDefaults()
+        let limiter = TokenUsageLimiter(defaults: defaults, calendar: makeCalendar())
+        let now = makeDate(year: 2026, month: 5, day: 24)
+
+        limiter.record(
+            prompt: String(repeating: "a", count: 40),
+            response: "",
+            isSubscribed: false,
+            now: now
+        )
+
+        let result = limiter.preflightLiveSession(
+            contextPrompt: "hello",
+            isSubscribed: false,
+            limitTokens: 20,
+            minimumReserveTokens: 15,
+            now: now
+        )
+
+        guard case .failure = result else {
+            Issue.record("Expected Live session preflight to block when reserve exceeds budget.")
+            return
+        }
+    }
+
+    @Test func liveSessionRecordsTranscriptAndDurationUsage() throws {
+        let defaults = try makeDefaults()
+        let limiter = TokenUsageLimiter(defaults: defaults, calendar: makeCalendar())
+        let now = makeDate(year: 2026, month: 5, day: 24)
+
+        limiter.recordLiveSession(
+            contextPrompt: String(repeating: "c", count: 8),
+            inputTranscript: String(repeating: "i", count: 8),
+            outputTranscript: String(repeating: "o", count: 8),
+            duration: 60,
+            includesScreenShare: false,
+            isSubscribed: false,
+            now: now
+        )
+
+        // 2+2+2 transcript tokens + 1_200 audio tokens/minute
+        #expect(limiter.status(limitTokens: 50_000, now: now).usedTokens == 1_206)
+    }
+
+    @Test func liveSessionShouldEndWhenProjectedUsageExceedsLimit() throws {
+        let defaults = try makeDefaults()
+        let limiter = TokenUsageLimiter(defaults: defaults, calendar: makeCalendar())
+        let now = makeDate(year: 2026, month: 5, day: 24)
+
+        limiter.record(
+            prompt: String(repeating: "a", count: 40),
+            response: "",
+            isSubscribed: false,
+            now: now
+        )
+
+        let shouldEnd = limiter.shouldEndLiveSession(
+            contextPrompt: "ctx",
+            inputTranscript: "",
+            outputTranscript: "",
+            duration: 60,
+            includesScreenShare: true,
+            isSubscribed: false,
+            limitTokens: 20,
+            now: now
+        )
+
+        #expect(shouldEnd)
+        #expect(
+            limiter.shouldEndLiveSession(
+                contextPrompt: "ctx",
+                inputTranscript: "",
+                outputTranscript: "",
+                duration: 60,
+                includesScreenShare: true,
+                isSubscribed: true,
+                limitTokens: 20,
+                now: now
+            ) == false
+        )
+    }
+
     private func makeDefaults() throws -> UserDefaults {
         let suiteName = "TokenUsageLimiterTests-\(UUID().uuidString)"
         guard let defaults = UserDefaults(suiteName: suiteName) else {

@@ -1915,7 +1915,7 @@ struct CoCaptainAgentTests {
     @MainActor
     @Test func tokenLimitErrorAppendsProUpgradeReviewItem() async throws {
         let dispatcher = TestActionDispatcher()
-        let error = TokenUsageLimitError(limitTokens: 20_000, usedTokens: 20_000, requestedTokens: 1_000)
+        let error = TokenUsageLimitError(limitTokens: 50_000, usedTokens: 50_000, requestedTokens: 1_000)
         let coordinator = CoCaptainAgentCoordinator(llmClient: ThrowingLLMClient(error: error))
         let vm = CoCaptainViewModel(agentCoordinator: coordinator)
         vm.actionDispatcher = dispatcher

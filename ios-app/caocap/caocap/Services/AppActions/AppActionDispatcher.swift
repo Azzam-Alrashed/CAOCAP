@@ -41,6 +41,7 @@ public enum AppActionID: String, CaseIterable, Identifiable, Codable, Hashable {
     case openWhatsApp = "open_whatsapp"
     case openAppIcon = "open_app_icon"
     case changeCopilot = "change_copilot"
+    case openUsage = "open_usage"
 
     public var id: String { rawValue }
 
@@ -393,6 +394,14 @@ public final class AppActionDispatcher: AppActionPerforming {
             category: .assistant,
             isMutating: false,
             allowsAutonomousExecution: false
+        ),
+        AppActionDefinition(
+            id: .openUsage,
+            title: "View Usage",
+            icon: "gauge.with.dots.needle.67percent",
+            category: .assistant,
+            isMutating: false,
+            allowsAutonomousExecution: true
         )
     ]
 

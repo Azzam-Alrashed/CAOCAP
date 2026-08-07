@@ -24,6 +24,7 @@ struct CopilotInteractionModeTests {
         #expect(ids.contains(.summonCopilotVideo))
         #expect(ids.contains(.summonCoCaptain))
         #expect(ids.contains(.changeCopilot))
+        #expect(ids.contains(.openUsage))
     }
 
     @Test func intentResolverMatchesUndoRedo() {
@@ -35,5 +36,8 @@ struct CopilotInteractionModeTests {
         #expect(resolver.resolve("screen share", availableActions: dispatcher.availableActions) == .summonCopilotVideo)
         #expect(resolver.resolve("change copilot", availableActions: dispatcher.availableActions) == .changeCopilot)
         #expect(resolver.resolve("switch copilot", availableActions: dispatcher.availableActions) == .changeCopilot)
+        #expect(resolver.resolve("usage", availableActions: dispatcher.availableActions) == .openUsage)
+        #expect(resolver.resolve("view usage", availableActions: dispatcher.availableActions) == .openUsage)
+        #expect(resolver.resolve("token usage", availableActions: dispatcher.availableActions) == .openUsage)
     }
 }

@@ -11,6 +11,7 @@ final class CopilotCallViewModel {
     let liveService = GeminiLiveSessionService()
 
     var onDismiss: (() -> Void)?
+    var onUpgrade: (() -> Void)?
 
     init(
         mode: CopilotInteractionMode,
@@ -28,6 +29,10 @@ final class CopilotCallViewModel {
 
     var isMuted: Bool {
         liveService.isMuted
+    }
+
+    var isQuotaExceeded: Bool {
+        liveService.isQuotaExceeded
     }
 
     var inputTranscript: String {
@@ -72,6 +77,14 @@ final class CopilotCallViewModel {
     func endCall() {
         Task {
             await liveService.stop()
+            onDismiss?()
+        }
+    }
+
+    func upgradeToPro() {
+        Task {
+            await liveService.stop()
+            onUpgrade?()
             onDismiss?()
         }
     }

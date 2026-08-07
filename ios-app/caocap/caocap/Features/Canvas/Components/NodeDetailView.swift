@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Opens a canvas node. Mini-App nodes enter a large-sheet running preview with
-/// Mini-App tools behind the floating command button.
+/// Mini-App tools available through the shared omnibox.
 struct NodeDetailView: View {
     /// The canvas node whose detail is being shown. Used as the initial value;
     /// the live version is always read from `store.nodes`.
@@ -64,7 +64,7 @@ private enum MiniAppTool: String, Identifiable {
 }
 
 /// Large-sheet shell that hosts the live Mini-App HTML preview and surfaces all
-/// Mini-App tools through the shared omnibox and floating command button.
+/// Mini-App tools through the shared omnibox (opened via the global FAB above sheets).
 private struct MiniAppPreviewShell: View {
     let node: SpatialNode
     let store: ProjectStore
@@ -72,7 +72,6 @@ private struct MiniAppPreviewShell: View {
     var onFlyToNode: ((UUID) -> Void)? = nil
 
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.undoManager) private var undoManager
     @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
     /// Drives which tool sheet is currently presented.
     @State private var activeTool: MiniAppTool?
@@ -107,18 +106,10 @@ private struct MiniAppPreviewShell: View {
             if let commandPalette {
                 CommandPaletteView(viewModel: commandPalette)
             }
-
-            FloatingCommandButton(
-                onTap: openOmnibox,
-                onSelectMode: { _ in openOmnibox() },
-                isOnboardingHighlighted: onboarding?.showPopover == true
-                    && onboarding?.currentStep == .runOrganizeNodes,
-                tooltipAnchor: .miniAppPreviewFAB
-            )
         }
         .onboardingTooltipOverlay(
             isCommandPalettePresented: commandPalette?.isPresented ?? false,
-            rendersAnchor: { $0 == .miniAppPreviewArea || $0 == .miniAppPreviewFAB }
+            rendersAnchor: { $0 == .miniAppPreviewArea }
         )
         .onChange(of: onboarding?.currentStep) { _, step in
             guard step == .openMiniAppCodeTool else { return }
@@ -165,11 +156,6 @@ private struct MiniAppPreviewShell: View {
                 }
             }
         }
-    }
-
-    private func openOmnibox() {
-        commandPalette?.nodes = store.nodes
-        commandPalette?.setPresented(true)
     }
 
     private func handlePreviewToolSelection(_ tool: MiniAppPreviewTool) {

@@ -3,9 +3,11 @@ import SwiftUI
 /// Root view that composes the active workspace canvas, global overlays, and session sheets.
 ///
 /// Session orchestration lives in `AppSessionCoordinator`; this view wires UI only.
+/// FAB + call chrome live in a passthrough `UIWindow` above system sheets.
 struct ContentView: View {
     @State private var session = AppSessionCoordinator()
-    @State private var copilotCallChromeFrame: CGRect = .null
+    @State private var floatingChrome = GlobalFloatingChromeController()
+    @State private var fabAnchorFrame: CGRect = .null
     @Environment(\.undoManager) private var undoManager
 
     var body: some View {
@@ -20,18 +22,6 @@ struct ContentView: View {
                         onSignInTapped: { session.showingSignIn = true },
                         onCheckpointsTapped: { session.showingSnapshotBrowser = true }
                     )
-                }
-
-                floatingCommandButtonView
-                    .environment(\.layoutDirection, .leftToRight)
-
-                if session.showingCopilotCall, let callViewModel = session.copilotCallViewModel {
-                    CopilotCallView(
-                        viewModel: callViewModel,
-                        onFrameChange: { copilotCallChromeFrame = $0 }
-                    )
-                        .zIndex(60)
-                        .transition(.opacity)
                 }
 
                 if session.commandPalette.miniAppPreviewContext == nil {
@@ -57,6 +47,7 @@ struct ContentView: View {
                 isCommandPalettePresented: session.commandPalette.isPresented,
                 rendersAnchor: { !$0.isCanvasLocal && !$0.isPreviewShellLocal && !$0.isCoCaptainLocal }
             )
+            .onboardingExplicitAnchorFrames(fabExplicitAnchorFrames)
             .background(Color.black.ignoresSafeArea())
             .overlay { launchOverlay }
             .overlay { introOverlay }
@@ -83,7 +74,20 @@ struct ContentView: View {
                 geometry: geometry,
                 undoManager: undoManager
             ))
+            .onAppear {
+                floatingChrome.install(session: session) { frame in
+                    fabAnchorFrame = frame
+                }
+            }
+            .onDisappear {
+                floatingChrome.uninstall()
+            }
         }
+    }
+
+    private var fabExplicitAnchorFrames: [OnboardingTooltipAnchor: CGRect] {
+        guard !fabAnchorFrame.isNull, !fabAnchorFrame.isEmpty else { return [:] }
+        return [.floatingCommandButton: fabAnchorFrame]
     }
 
     @ViewBuilder
@@ -173,47 +177,6 @@ struct ContentView: View {
             AppUpdatePromptView(update: availableUpdate, onUpdate: {})
                 .zIndex(90)
         }
-    }
-
-    private var floatingCommandButtonView: some View {
-        FloatingCommandButton(
-            onTap: {
-                session.commandPalette.setPresented(true)
-            },
-            onSelectMode: { mode in
-                switch mode {
-                case .chat:
-                    _ = session.actionDispatcher.perform(.summonCoCaptain, source: .user)
-                case .voice:
-                    _ = session.actionDispatcher.perform(.summonCopilotVoice, source: .user)
-                case .video:
-                    _ = session.actionDispatcher.perform(.summonCopilotVideo, source: .user)
-                }
-            },
-            copilot: session.selectedCopilot,
-            onExpand: {
-                if session.onboarding.currentStep == .longPressFAB {
-                    session.onboarding.completeCurrentStep()
-                }
-            },
-            onDragSummon: {
-                if session.onboarding.currentStep == .longPressFAB {
-                    session.onboarding.completeCurrentStep()
-                }
-            },
-            isOnboardingHighlighted: session.onboarding.showPopover && (
-                session.onboarding.currentStep == .tapFAB
-                || session.onboarding.currentStep == .longPressFAB
-                || session.onboarding.currentStep == .runOrganizeNodes
-                || (session.onboarding.currentStep == .undoCanvasEdit && !session.commandPalette.isPresented)
-                || (session.onboarding.currentStep == .redoCanvasEdit && !session.commandPalette.isPresented)
-                || (session.onboarding.currentStep == .searchFlyToNode && !session.commandPalette.isPresented)
-                || (session.onboarding.currentStep == .returnToRoot && !session.commandPalette.isPresented)
-                || (session.onboarding.currentStep == .typeGoBackInOmnibox && !session.commandPalette.isPresented)
-                || (session.onboarding.currentStep == .tapGoBackAction && !session.commandPalette.isPresented)
-            ),
-            obstacleFrame: session.showingCopilotCall ? copilotCallChromeFrame : .null
-        )
     }
 }
 

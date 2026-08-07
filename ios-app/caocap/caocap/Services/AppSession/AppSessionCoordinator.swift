@@ -16,6 +16,8 @@ final class AppSessionCoordinator {
 
     var showingFileImporter = false
     var showingPurchaseSheet = false
+    var showingMiniAppLimitAlert = false
+    var showingUsage = false
     var showingSignIn = false
     var showingSettings = false
     var showingSnapshotBrowser = false
@@ -531,7 +533,7 @@ final class AppSessionCoordinator {
         }
         commandPalette.onCreateNode = { [weak self] type in
             guard let self else { return }
-            self.router.activeStore.addNode(type: type)
+            self.createNode(type: type)
             self.commandPalette.nodes = self.router.activeStore.nodes
         }
         commandPalette.onFlyToNode = { [weak self] nodeId in
@@ -656,10 +658,10 @@ final class AppSessionCoordinator {
             }
         }
         actionDispatcher.register(.createNode) { [weak self] in
-            self?.router.activeStore.addNode(type: .miniApp)
+            self?.createNode(type: .miniApp)
         }
         actionDispatcher.register(.createFirebaseNode) { [weak self] in
-            self?.router.activeStore.addNode(type: .miniApp)
+            self?.createNode(type: .miniApp)
         }
         actionDispatcher.register(.summonCoCaptain) { [weak self] in
             guard let self else { return }
@@ -713,6 +715,9 @@ final class AppSessionCoordinator {
         }
         actionDispatcher.register(.openSettings) { [weak self] in
             self?.showingSettings = true
+        }
+        actionDispatcher.register(.openUsage) { [weak self] in
+            self?.showingUsage = true
         }
         actionDispatcher.register(.openProfile) { [weak self] in
             self?.showingProfile = true
@@ -803,9 +808,20 @@ final class AppSessionCoordinator {
                 try? await Task.sleep(for: .seconds(0.3))
                 self?.showingPurchaseSheet = true
             }
+        } else if showingUsage {
+            showingUsage = false
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(0.3))
+                self?.showingPurchaseSheet = true
+            }
         } else {
             showingPurchaseSheet = true
         }
+    }
+
+    /// Opens the purchase sheet, dismissing any covering sheet first when needed.
+    func requestPurchaseSheet() {
+        presentPurchaseSheet()
     }
 
     private func moveNode(arguments args: [String: String]?) {
@@ -827,7 +843,49 @@ final class AppSessionCoordinator {
         guard let args,
               let idString = args["nodeId"], let uuid = UUID(uuidString: idString),
               let typeStr = args["type"], let type = NodeType(rawValue: typeStr) else { return }
+
+        if type == .miniApp,
+           let existing = router.activeStore.nodes.first(where: { $0.id == uuid }),
+           existing.type != .miniApp,
+           !canCreateMiniApp() {
+            presentMiniAppLimitReached()
+            return
+        }
+
         router.activeStore.updateNodeType(id: uuid, type: type)
+    }
+
+    private func createNode(type: NodeType) {
+        if type == .miniApp, !canCreateMiniApp() {
+            presentMiniAppLimitReached()
+            return
+        }
+        router.activeStore.addNode(type: type)
+    }
+
+    private func canCreateMiniApp() -> Bool {
+        let subscriptionManager = SubscriptionManager.shared
+        let limiter = MiniAppCreationLimiter()
+        let count = userMiniAppCount()
+        if case .requiresPro = limiter.gate(
+            isSubscribed: subscriptionManager.isSubscribed,
+            miniAppCount: count
+        ) {
+            return false
+        }
+        return true
+    }
+
+    func userMiniAppCount() -> Int {
+        MiniAppCreationLimiter().countUserMiniApps(
+            persistence: ProjectPersistenceService(),
+            liveNodesByFileName: router.liveNodesByFileName()
+        )
+    }
+
+    private func presentMiniAppLimitReached() {
+        HapticsManager.shared.notification(.warning)
+        showingMiniAppLimitAlert = true
     }
 
     func focusCanvasNode(_ nodeId: UUID) {
@@ -898,6 +956,9 @@ final class AppSessionCoordinator {
         )
         viewModel.onDismiss = { [weak self] in
             self?.dismissCopilotCall()
+        }
+        viewModel.onUpgrade = { [weak self] in
+            self?.presentPurchaseSheet()
         }
         copilotCallViewModel = viewModel
         activeCopilotCallMode = mode

@@ -20,14 +20,24 @@ final class GeminiLiveSessionService {
     private(set) var inputTranscript: String = ""
     private(set) var outputTranscript: String = ""
     private(set) var isMuted = false
+    /// True when the free-tier monthly CoCaptain budget blocked or ended the call.
+    private(set) var isQuotaExceeded = false
 
     private let logger = Logger(subsystem: "CAOCAP", category: "GeminiLive")
     private let audioEngine = CopilotCallAudioEngine()
     private let screenCapture = ScreenCaptureController()
+    private let tokenUsageLimiter = TokenUsageLimiter.shared
+    private let subscriptionManager = SubscriptionManager.shared
 
     private var liveSession: LiveSession?
     private var receiveTask: Task<Void, Never>?
+    private var quotaWatchTask: Task<Void, Never>?
     private var mode: CopilotInteractionMode = .voice
+    private var sessionContextPrompt = ""
+    private var accumulatedInputTranscript = ""
+    private var accumulatedOutputTranscript = ""
+    private var sessionStartedAt: Date?
+    private var didRecordUsage = false
 
     static let liveModelName = "gemini-2.5-flash-native-audio-preview-12-2025"
 
@@ -36,11 +46,16 @@ final class GeminiLiveSessionService {
         persona: CopilotPersona,
         projectContext: String?
     ) async {
-        await stop()
+        await stop(recordUsage: false)
         self.mode = mode
         connectionState = .connecting
+        isQuotaExceeded = false
         inputTranscript = ""
         outputTranscript = ""
+        accumulatedInputTranscript = ""
+        accumulatedOutputTranscript = ""
+        didRecordUsage = false
+        sessionStartedAt = nil
 
         do {
             guard await requestMicrophoneAuthorization() else {
@@ -51,6 +66,18 @@ final class GeminiLiveSessionService {
             }
 
             let systemText = Self.systemInstruction(persona: persona, projectContext: projectContext, mode: mode)
+            sessionContextPrompt = systemText
+
+            await subscriptionManager.refreshEntitlements()
+            if case .failure(let error) = tokenUsageLimiter.preflightLiveSession(
+                contextPrompt: systemText,
+                isSubscribed: subscriptionManager.isSubscribed
+            ) {
+                isQuotaExceeded = true
+                connectionState = .failed(error.localizedDescription)
+                return
+            }
+
             let liveModel = FirebaseAI.firebaseAI(backend: .googleAI()).liveModel(
                 modelName: Self.liveModelName,
                 generationConfig: LiveGenerationConfig(
@@ -64,6 +91,7 @@ final class GeminiLiveSessionService {
 
             let session = try await liveModel.connect()
             liveSession = session
+            sessionStartedAt = Date()
 
             audioEngine.onPCMChunk = { [weak self] data in
                 Task { @MainActor in
@@ -93,6 +121,9 @@ final class GeminiLiveSessionService {
             receiveTask = Task { [weak self] in
                 await self?.consumeResponses(from: session)
             }
+            quotaWatchTask = Task { [weak self] in
+                await self?.watchFreeTierQuota()
+            }
 
             await session.sendTextRealtime(
                 LocalizationManager.shared.localizedString(
@@ -103,7 +134,7 @@ final class GeminiLiveSessionService {
         } catch {
             logger.error("Live connect failed: \(error.localizedDescription, privacy: .public)")
             connectionState = .failed(error.localizedDescription)
-            await stop()
+            await stop(recordUsage: false)
         }
     }
 
@@ -113,6 +144,12 @@ final class GeminiLiveSessionService {
     }
 
     func stop() async {
+        await stop(recordUsage: true)
+    }
+
+    private func stop(recordUsage: Bool) async {
+        quotaWatchTask?.cancel()
+        quotaWatchTask = nil
         receiveTask?.cancel()
         receiveTask = nil
         screenCapture.stop()
@@ -121,6 +158,11 @@ final class GeminiLiveSessionService {
             await liveSession.close()
         }
         liveSession = nil
+
+        if recordUsage {
+            recordLiveUsageIfNeeded()
+        }
+
         if case .failed = connectionState {
             // keep failure message
         } else if connectionState != .idle {
@@ -139,9 +181,11 @@ final class GeminiLiveSessionService {
                     }
                     if let input = content.inputAudioTranscription?.text, !input.isEmpty {
                         inputTranscript = input
+                        appendUniqueTranscript(&accumulatedInputTranscript, input)
                     }
                     if let output = content.outputAudioTranscription?.text, !output.isEmpty {
                         outputTranscript = output
+                        appendUniqueTranscript(&accumulatedOutputTranscript, output)
                     }
                     content.modelTurn?.parts.forEach { part in
                         if let inline = part as? InlineDataPart,
@@ -160,6 +204,64 @@ final class GeminiLiveSessionService {
                 logger.error("Live receive failed: \(error.localizedDescription, privacy: .public)")
                 connectionState = .failed(error.localizedDescription)
             }
+        }
+    }
+
+    private func watchFreeTierQuota() async {
+        while !Task.isCancelled {
+            try? await Task.sleep(for: .seconds(15))
+            guard !Task.isCancelled else { break }
+            guard case .connected = connectionState else { break }
+
+            await subscriptionManager.refreshEntitlements()
+            let duration = sessionStartedAt.map { Date().timeIntervalSince($0) } ?? 0
+            if tokenUsageLimiter.shouldEndLiveSession(
+                contextPrompt: sessionContextPrompt,
+                inputTranscript: accumulatedInputTranscript,
+                outputTranscript: accumulatedOutputTranscript,
+                duration: duration,
+                includesScreenShare: mode == .video,
+                isSubscribed: subscriptionManager.isSubscribed
+            ) {
+                isQuotaExceeded = true
+                connectionState = .failed(
+                    TokenUsageLimitError(
+                        limitTokens: TokenUsageLimiter.freeMonthlyTokenLimit,
+                        usedTokens: tokenUsageLimiter.status().usedTokens,
+                        requestedTokens: 0
+                    ).localizedDescription
+                )
+                await stop(recordUsage: true)
+                break
+            }
+        }
+    }
+
+    private func recordLiveUsageIfNeeded() {
+        guard !didRecordUsage else { return }
+        guard let startedAt = sessionStartedAt else { return }
+        didRecordUsage = true
+
+        let duration = Date().timeIntervalSince(startedAt)
+        tokenUsageLimiter.recordLiveSession(
+            contextPrompt: sessionContextPrompt,
+            inputTranscript: accumulatedInputTranscript,
+            outputTranscript: accumulatedOutputTranscript,
+            duration: duration,
+            includesScreenShare: mode == .video,
+            isSubscribed: subscriptionManager.isSubscribed
+        )
+    }
+
+    private func appendUniqueTranscript(_ store: inout String, _ snippet: String) {
+        let trimmed = snippet.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        if store.isEmpty {
+            store = trimmed
+        } else if !store.contains(trimmed) {
+            store += "\n" + trimmed
+        } else if trimmed.count > store.count {
+            store = trimmed
         }
     }
 

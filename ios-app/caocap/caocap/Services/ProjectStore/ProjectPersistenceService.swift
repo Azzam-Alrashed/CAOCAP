@@ -108,6 +108,24 @@ public struct ProjectPersistenceService: Sendable {
         FileManager.default.fileExists(atPath: fileURL(for: fileName).path)
     }
 
+    /// Lists top-level project/canvas JSON file names in the workspace directory.
+    /// Does not include checkpoint snapshots under `snapshots/`.
+    public func listProjectFileNames() -> [String] {
+        let directory = projectDirectory()
+        guard let urls = try? FileManager.default.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles]
+        ) else {
+            return []
+        }
+
+        return urls
+            .filter { $0.pathExtension.lowercased() == "json" }
+            .map(\.lastPathComponent)
+            .sorted()
+    }
+
     /// Loads and fully decodes a project snapshot from disk.
     /// - Throws: `ProjectPersistenceError.unsupportedSchemaVersion` if the file's
     ///   schema version does not match `currentSchemaVersion`.

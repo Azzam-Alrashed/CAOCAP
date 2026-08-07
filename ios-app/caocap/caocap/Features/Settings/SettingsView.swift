@@ -4,6 +4,8 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
 
     @Binding var selectedCopilot: CopilotPersona
+    var miniAppCount: Int = 0
+    var onUpgrade: (() -> Void)? = nil
     var onRestartPersonalization: () -> Void = {}
     var onRestartOnboarding: () -> Void = {}
     var onRestartTutorial: () -> Void = {}
@@ -63,6 +65,11 @@ struct SettingsView: View {
                                         .padding(.bottom, 14)
                                 }
                             }
+
+                            FreeTierUsageView(
+                                miniAppCount: miniAppCount,
+                                onUpgrade: onUpgrade
+                            )
 
                             // MARK: - Interface
                             SettingsSection("Interface") {
