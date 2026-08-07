@@ -105,46 +105,48 @@ public class ProjectStore {
     
     /// Loads the project data from disk. If no file is found, initializes with default nodes.
     public func load(initialNodes: [SpatialNode]? = nil, initialViewportScale: CGFloat = 1.0) {
-        if !persistence.projectExists(fileName: fileName) {
-            logger.info("No saved project found for \(self.fileName). Initializing with defaults.")
-            self.nodes = initialNodes ?? []
-            self.viewportScale = initialViewportScale
-            
-            // Ensure Mini-App previews are compiled immediately for new projects.
+        PerformanceSignposts.measure(PerformanceSignposts.Name.projectLoad) {
+            if !persistence.projectExists(fileName: fileName) {
+                logger.info("No saved project found for \(self.fileName). Initializing with defaults.")
+                self.nodes = initialNodes ?? []
+                self.viewportScale = initialViewportScale
+
+                // Ensure Mini-App previews are compiled immediately for new projects.
+                compileLivePreviewsAndEvaluateChallenges(nodes: &nodes)
+
+                // Only perform an initial save for permanent project files.
+                if !self.fileName.contains("onboarding") {
+                    requestSave(showIndicator: false)
+                }
+                return
+            }
+
+            do {
+                let snapshot = try persistence.load(fileName: fileName)
+                unsupportedProjectMessage = nil
+                apply(snapshot: snapshot)
+                logger.info("Successfully loaded project (v\(snapshot.schemaVersion)) from disk.")
+            } catch ProjectPersistenceError.unsupportedSchemaVersion(let version, let current) {
+                if let version {
+                    logger.error("Project schema version \(version) is not supported (expected \(current)). Using defaults without overwriting file.")
+                    unsupportedProjectMessage = "This project was created with an older CAOCAP format and cannot be opened in this version."
+                } else {
+                    logger.error("Project is missing schema version (expected \(current)). Using defaults without overwriting file.")
+                    unsupportedProjectMessage = "This project is missing format information and cannot be opened in this version."
+                }
+                self.nodes = initialNodes ?? []
+            } catch {
+                logger.error("Failed to load project: \(error.localizedDescription)")
+                unsupportedProjectMessage = "This project could not be opened. Create a fresh Mini-App canvas to continue."
+                self.nodes = initialNodes ?? []
+            }
+
+            // Ensure Mini-App previews are synced with embedded code on startup.
             compileLivePreviewsAndEvaluateChallenges(nodes: &nodes)
-            
-            // Only perform an initial save for permanent project files.
-            if !self.fileName.contains("onboarding") {
-                requestSave(showIndicator: false)
-            }
-            return
+
+            // Load history
+            checkpointManager.loadHistory(for: fileName)
         }
-        
-        do {
-            let snapshot = try persistence.load(fileName: fileName)
-            unsupportedProjectMessage = nil
-            apply(snapshot: snapshot)
-            logger.info("Successfully loaded project (v\(snapshot.schemaVersion)) from disk.")
-        } catch ProjectPersistenceError.unsupportedSchemaVersion(let version, let current) {
-            if let version {
-                logger.error("Project schema version \(version) is not supported (expected \(current)). Using defaults without overwriting file.")
-                unsupportedProjectMessage = "This project was created with an older CAOCAP format and cannot be opened in this version."
-            } else {
-                logger.error("Project is missing schema version (expected \(current)). Using defaults without overwriting file.")
-                unsupportedProjectMessage = "This project is missing format information and cannot be opened in this version."
-            }
-            self.nodes = initialNodes ?? []
-        } catch {
-            logger.error("Failed to load project: \(error.localizedDescription)")
-            unsupportedProjectMessage = "This project could not be opened. Create a fresh Mini-App canvas to continue."
-            self.nodes = initialNodes ?? []
-        }
-        
-        // Ensure Mini-App previews are synced with embedded code on startup.
-        compileLivePreviewsAndEvaluateChallenges(nodes: &nodes)
-        
-        // Load history
-        checkpointManager.loadHistory(for: fileName)
     }
     
     /// Persists a snapshot of the current project state using a temporary file

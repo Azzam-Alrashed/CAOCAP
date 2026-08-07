@@ -20,6 +20,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
+        PerformanceSignposts.beginLaunch()
         AppConfiguration.shared.configure(authManager: authManager)
         AppIconService.applySavedIcon()
         return true

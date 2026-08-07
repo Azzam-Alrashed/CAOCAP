@@ -106,6 +106,7 @@ struct InfiniteCanvasView: View {
                                 viewport.handleDragEnded()
                                 persistViewportIfNeeded()
                                 completeOnboardingPanIfNeeded()
+                                PerformanceSignposts.event(PerformanceSignposts.Name.canvasGesture)
                             }
                     )
                 
@@ -212,6 +213,7 @@ struct InfiniteCanvasView: View {
                         currentScale = viewport.scale
                         persistViewportIfNeeded()
                         completeOnboardingPinchIfNeeded()
+                        PerformanceSignposts.event(PerformanceSignposts.Name.canvasGesture)
                         DispatchQueue.main.async {
                             isPinchingCanvas = false
                         }
@@ -375,6 +377,7 @@ struct InfiniteCanvasView: View {
         nodeDragOffsets[node.id] = nil
         isDraggingNode = false
         HapticsManager.shared.selectionChanged()
+        PerformanceSignposts.event(PerformanceSignposts.Name.canvasGesture)
     }
     
     /// Resolves the color of the infinite canvas background grid.

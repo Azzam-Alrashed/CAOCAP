@@ -76,6 +76,9 @@ final class ScreenCaptureController {
         guard now.timeIntervalSince(lastFrameSentAt) >= minimumFrameInterval else { return }
         guard let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
 
+        let encodeState = PerformanceSignposts.begin(PerformanceSignposts.Name.screenCaptureEncode)
+        defer { PerformanceSignposts.end(PerformanceSignposts.Name.screenCaptureEncode, encodeState) }
+
         let ciImage = CIImage(cvPixelBuffer: imageBuffer)
         let extent = ciImage.extent
         guard extent.width > 1, extent.height > 1 else { return }

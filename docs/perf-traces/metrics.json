@@ -1,0 +1,64 @@
+{
+  "device": {
+    "name": "Azzam Rar",
+    "model": "iPhone 12",
+    "os": "26.5 (23F77)",
+    "udid": "00008101-000C09213C47001E"
+  },
+  "build": {
+    "configuration": "Debug",
+    "bundleId": "com.Ficruty.caocap",
+    "recordedAt": "2026-08-07T14:59:37+03:00"
+  },
+  "scenarios": {
+    "S1_app_launch": {
+      "template": "App Launch",
+      "trace": "S1-app-launch-device.trace",
+      "lifecycle_ms": {
+        "processCreation": 395.60,
+        "systemInterfaceInit": 722.62,
+        "staticRuntimeInit": 58.21,
+        "uikitInit": 79.90,
+        "didFinishLaunchingWithOptions": 162.52,
+        "sceneWillConnectTo": 62.64,
+        "initialFrameRendering": 581.96,
+        "timeToForegroundActiveApprox": 2295
+      },
+      "notes": "Foreground-Active begins ~2.30s after process start. Artificial 2.5s splash still runs after first frame."
+    },
+    "S1_logging_signposts": {
+      "template": "Logging",
+      "trace": "S1-logging-signposts.trace",
+      "signposts_ms": {
+        "launch": 2919.856,
+        "projectLoad_root_1": 2.748,
+        "livePreviewCompile_1": 0.336,
+        "projectLoad_root_2": 1.023,
+        "livePreviewCompile_2": 0.006
+      },
+      "notes": "launch interval spans didFinishLaunching → isLaunching=false (~2.92s). Root projectLoad/compile are negligible."
+    },
+    "S2_canvas_idle": {
+      "template": "Time Profiler",
+      "trace": "S2-canvas-idle-device.trace",
+      "duration_s": 20,
+      "potential_hangs": 0,
+      "lifecycle_ms": {
+        "processCreation": 1810,
+        "didFinishLaunchingWithOptions": 38.41,
+        "initialFrameRendering": 331.41,
+        "timeToForegroundActiveApprox": 2361
+      },
+      "notes": "Warmer second run: didFinishLaunching ~38ms. No potential-hangs rows. Interactive pan/zoom not driven in this capture."
+    },
+    "S1_allocations": {
+      "template": "Allocations",
+      "trace": "S1-allocations-device.trace",
+      "notes": "Captured with dyld overlap warning; open in Instruments for heap growth during launch."
+    },
+    "S3_S9": {
+      "status": "runbook_pending_interactive",
+      "reason": "Require manual canvas gestures, multi Mini-App stress project, CoCaptain stream, and Copilot Live on device."
+    }
+  }
+}

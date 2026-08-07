@@ -458,6 +458,9 @@ public final class CoCaptainAgentCoordinator {
             )
         }
 
+        let streamState = PerformanceSignposts.begin(PerformanceSignposts.Name.agentStream)
+        defer { PerformanceSignposts.end(PerformanceSignposts.Name.agentStream, streamState) }
+
         for try await event in stream {
             try Task.checkCancellation()
             switch event {

@@ -122,6 +122,7 @@ final class AppSessionCoordinator {
             withAnimation(.easeInOut(duration: 0.5)) {
                 self.isLaunching = false
             }
+            PerformanceSignposts.endLaunch()
             if !self.intro.shouldPresent {
                 self.startInteractiveOnboardingIfNeeded()
             }
@@ -336,6 +337,7 @@ final class AppSessionCoordinator {
         coCaptain.configureProjectSession(store: router.activeStore, dispatcher: actionDispatcher)
         syncViewportWithActiveStore()
         isLaunching = false
+        PerformanceSignposts.endLaunch()
     }
 
     func updateNodeSizes(_ sizes: [UUID: CGSize]) {

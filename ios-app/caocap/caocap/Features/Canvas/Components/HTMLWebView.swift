@@ -44,24 +44,26 @@ struct HTMLWebView: UIViewRepresentable {
     /// - The view is made transparent so Mini-App HTML can use its own background.
     /// - Scroll is disabled because the node thumbnail must not be scrollable.
     func makeUIView(context: Context) -> WKWebView {
-        let configuration = WKWebViewConfiguration()
-        configuration.allowsInlineMediaPlayback = true
-        
-        let webView = WKWebView(frame: .zero, configuration: configuration)
-        webView.isOpaque = false
-        webView.backgroundColor = .clear
-        webView.scrollView.isScrollEnabled = false
-        webView.scrollView.backgroundColor = .clear
+        PerformanceSignposts.measure(PerformanceSignposts.Name.webViewMake) {
+            let configuration = WKWebViewConfiguration()
+            configuration.allowsInlineMediaPlayback = true
 
-        context.coordinator.onUserInteraction = onUserInteraction
-        let tapRecognizer = UITapGestureRecognizer(
-            target: context.coordinator,
-            action: #selector(Coordinator.handleWebViewTap)
-        )
-        tapRecognizer.delegate = context.coordinator
-        webView.addGestureRecognizer(tapRecognizer)
+            let webView = WKWebView(frame: .zero, configuration: configuration)
+            webView.isOpaque = false
+            webView.backgroundColor = .clear
+            webView.scrollView.isScrollEnabled = false
+            webView.scrollView.backgroundColor = .clear
 
-        return webView
+            context.coordinator.onUserInteraction = onUserInteraction
+            let tapRecognizer = UITapGestureRecognizer(
+                target: context.coordinator,
+                action: #selector(Coordinator.handleWebViewTap)
+            )
+            tapRecognizer.delegate = context.coordinator
+            webView.addGestureRecognizer(tapRecognizer)
+
+            return webView
+        }
     }
     
     /// Reloads the HTML string whenever `htmlContent` changes.
@@ -70,6 +72,8 @@ struct HTMLWebView: UIViewRepresentable {
     func updateUIView(_ uiView: WKWebView, context: Context) {
         context.coordinator.onUserInteraction = onUserInteraction
         guard context.coordinator.shouldLoad(htmlContent) else { return }
-        uiView.loadHTMLString(htmlContent, baseURL: nil)
+        PerformanceSignposts.measure(PerformanceSignposts.Name.webViewLoad) {
+            uiView.loadHTMLString(htmlContent, baseURL: nil)
+        }
     }
 }

@@ -35,6 +35,7 @@ public final class ProjectSaveController {
         let log = logger
         
         Task(priority: .background) {
+            let saveState = PerformanceSignposts.begin(PerformanceSignposts.Name.save)
             let didSave: Bool
             do {
                 try await writer.save(snapshot, fileName: fileName)
@@ -44,7 +45,8 @@ public final class ProjectSaveController {
                 didSave = false
                 log.error("Failed to save project: \(error.localizedDescription)")
             }
-            
+            PerformanceSignposts.end(PerformanceSignposts.Name.save, saveState)
+
             await MainActor.run { [weak self] in
                 guard let self else { return }
                 if didSave {

@@ -1,0 +1,8 @@
+Starting recording with the Allocations template. Launching process: caocap.app. Time limit: 12.0 s
+Ctrl-C to stop the recording
+Reached specified time limit, ending recording...
+Timeline modification failed -- dylibs overlap by 0x148000:
+    0x10433c000-0x104484000 [0x148000] (0-410194116077) /usr/lib/dyld
+    0x10433c000-0x104484000 [0x148000] (0-9223372036854775807) /usr/lib/dyld
+Recording completed. Saving output file...
+Output file saved as: S1-allocations-device.trace
