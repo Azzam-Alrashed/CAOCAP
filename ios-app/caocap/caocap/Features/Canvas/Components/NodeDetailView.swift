@@ -110,17 +110,7 @@ private struct MiniAppPreviewShell: View {
 
             FloatingCommandButton(
                 onTap: openOmnibox,
-                onUndo: {
-                    undoManager?.undo()
-                    store.undoStackChanged += 1
-                },
-                onSummonCoCaptain: openOmnibox,
-                onRedo: {
-                    undoManager?.redo()
-                    store.undoStackChanged += 1
-                },
-                canUndo: undoManager?.canUndo ?? false,
-                canRedo: undoManager?.canRedo ?? false,
+                onSelectMode: { _ in openOmnibox() },
                 isOnboardingHighlighted: onboarding?.showPopover == true
                     && onboarding?.currentStep == .runOrganizeNodes,
                 tooltipAnchor: .miniAppPreviewFAB

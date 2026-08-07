@@ -24,6 +24,12 @@ struct ContentView: View {
                 floatingCommandButtonView
                     .environment(\.layoutDirection, .leftToRight)
 
+                if session.showingCopilotCall, let callViewModel = session.copilotCallViewModel {
+                    CopilotCallView(viewModel: callViewModel)
+                        .zIndex(60)
+                        .transition(.opacity)
+                }
+
                 if session.commandPalette.miniAppPreviewContext == nil {
                     CommandPaletteView(viewModel: session.commandPalette)
                 }
@@ -36,16 +42,10 @@ struct ContentView: View {
                         _ = session.actionDispatcher.perform(.summonCoCaptain, source: .user)
                     },
                     onUndo: {
-                        session.performUndo(undoManager: undoManager)
-                        if session.onboarding.currentStep == .undoCanvasEdit {
-                            session.onboarding.completeCurrentStep()
-                        }
+                        _ = session.actionDispatcher.perform(.undo, source: .user)
                     },
                     onRedo: {
-                        session.performRedo(undoManager: undoManager)
-                        if session.onboarding.currentStep == .redoCanvasEdit {
-                            session.onboarding.completeCurrentStep()
-                        }
+                        _ = session.actionDispatcher.perform(.redo, source: .user)
                     }
                 )
             }
@@ -176,23 +176,16 @@ struct ContentView: View {
             onTap: {
                 session.commandPalette.setPresented(true)
             },
-            onUndo: {
-                session.performUndo(undoManager: undoManager)
-                if session.onboarding.currentStep == .undoCanvasEdit {
-                    session.onboarding.completeCurrentStep()
+            onSelectMode: { mode in
+                switch mode {
+                case .chat:
+                    _ = session.actionDispatcher.perform(.summonCoCaptain, source: .user)
+                case .voice:
+                    _ = session.actionDispatcher.perform(.summonCopilotVoice, source: .user)
+                case .video:
+                    _ = session.actionDispatcher.perform(.summonCopilotVideo, source: .user)
                 }
             },
-            onSummonCoCaptain: {
-                _ = session.actionDispatcher.perform(.summonCoCaptain, source: .user)
-            },
-            onRedo: {
-                session.performRedo(undoManager: undoManager)
-                if session.onboarding.currentStep == .redoCanvasEdit {
-                    session.onboarding.completeCurrentStep()
-                }
-            },
-            canUndo: (session.router.activeStore.undoStackChanged >= 0) && (undoManager?.canUndo ?? false),
-            canRedo: (session.router.activeStore.undoStackChanged >= 0) && (undoManager?.canRedo ?? false),
             copilot: session.personalization.selectedCopilot ?? UserProfileStore().loadSelectedCopilot(),
             onExpand: {
                 if session.onboarding.currentStep == .longPressFAB {
@@ -208,9 +201,8 @@ struct ContentView: View {
                 session.onboarding.currentStep == .tapFAB
                 || session.onboarding.currentStep == .longPressFAB
                 || session.onboarding.currentStep == .runOrganizeNodes
-                || session.onboarding.currentStep == .undoCanvasEdit
-                || session.onboarding.currentStep == .redoCanvasEdit
-                || session.onboarding.currentStep == .redoCanvasEdit
+                || (session.onboarding.currentStep == .undoCanvasEdit && !session.commandPalette.isPresented)
+                || (session.onboarding.currentStep == .redoCanvasEdit && !session.commandPalette.isPresented)
                 || (session.onboarding.currentStep == .searchFlyToNode && !session.commandPalette.isPresented)
                 || (session.onboarding.currentStep == .returnToRoot && !session.commandPalette.isPresented)
                 || (session.onboarding.currentStep == .typeGoBackInOmnibox && !session.commandPalette.isPresented)

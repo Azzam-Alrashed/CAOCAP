@@ -881,6 +881,10 @@ private struct AppActionOnboardingAnchor: ViewModifier {
         switch actionID {
         case .organizeNodes:
             content.onboardingTooltipAnchor(.omniboxOrganizeRow)
+        case .undo:
+            content.onboardingTooltipAnchor(.omniboxUndoRow)
+        case .redo:
+            content.onboardingTooltipAnchor(.omniboxRedoRow)
         default:
             content
         }

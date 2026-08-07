@@ -92,6 +92,42 @@ public struct CommandIntentResolver {
                 "افتح مساعد الذكاء الاصطناعي",
                 "استدع المساعد"
             ]
+        case .summonCopilotVoice:
+            return [
+                "voice call",
+                "call copilot",
+                "voice copilot",
+                "start voice call",
+                "مكالمة صوتية",
+                "اتصل بالمساعد",
+                "صوت المساعد"
+            ]
+        case .summonCopilotVideo:
+            return [
+                "screen share",
+                "share screen",
+                "video call",
+                "screen share with copilot",
+                "مشاركة الشاشة",
+                "شارك الشاشة",
+                "مكالمة فيديو"
+            ]
+        case .undo:
+            return [
+                "undo",
+                "undo last",
+                "تراجع",
+                "تراجع عن اخر تغيير",
+                "الغاء اخر تغيير"
+            ]
+        case .redo:
+            return [
+                "redo",
+                "redo last",
+                "اعادة",
+                "اعد",
+                "اعد اخر تغيير"
+            ]
         case .openFile:
             return [
                 "open file",

@@ -5,56 +5,45 @@ import SwiftUI
 ///
 /// **Interaction modes:**
 /// - **Tap** – opens the command palette.
-/// - **Long-press** – expands a radial quick-action menu (undo / CoCaptain / redo).
+/// - **Long-press** – expands a radial menu to choose Chat / Voice / Video with the copilot.
 /// - **Drag** – repositions the button; on release it snaps to the nearest grid point.
 /// - **Drag while expanded** – gestures toward a bubble to highlight and select it.
 struct FloatingCommandButton: View {
     @State private var position: CGPoint = .zero
-    @State private var startPosition: CGPoint = .zero 
+    @State private var startPosition: CGPoint = .zero
     @State private var isDragging: Bool = false
-    @State private var isExpanded: Bool = false 
+    @State private var isExpanded: Bool = false
     @State private var activeAction: CommandAction? = nil
-    
+
     enum CommandAction {
-        /// Undo the last canvas change.
-        case undo
-        /// Open CoCaptain (via the quick-action bubble or the drag-summon path).
-        case summon
-        /// Redo the last undone canvas change.
-        case redo
+        case voice
+        case chat
+        case video
     }
-    
+
     @Environment(\.colorScheme) var colorScheme
-    
+
     var onTap: () -> Void
-    var onUndo: () -> Void
-    var onSummonCoCaptain: () -> Void
-    var onRedo: () -> Void
-    var canUndo: Bool = false
-    var canRedo: Bool = false
+    var onSelectMode: (CopilotInteractionMode) -> Void
     var copilot: CopilotPersona = UserProfileStore().loadSelectedCopilot()
-    
+
     // Onboarding lifecycle callbacks
     var onExpand: (() -> Void)? = nil
     var onDragSummon: (() -> Void)? = nil
-    
+
     var isOnboardingHighlighted: Bool = false
     var tooltipAnchor: OnboardingTooltipAnchor = .floatingCommandButton
-    
-    // Onboarding breathing animation state
+
     @State private var isBreathing: Bool = false
-    
-    // Padding from screen edges
+
     private let padding: CGFloat = 35
     private let buttonSize: CGFloat = 64
-    private let bubbleSize: CGFloat = 48
-    
+
     var body: some View {
         GeometryReader { geometry in
             let size = geometry.size
             let currentPos = position == .zero ? initialPosition(in: size) : position
-            
-            // Breathing calculations for scale and glow
+
             let buttonScale: CGFloat = {
                 if isDragging {
                     return 1.15
@@ -66,7 +55,7 @@ struct FloatingCommandButton: View {
                     return 1.0
                 }
             }()
-            
+
             let shadowRadius: CGFloat = {
                 if isDragging || isExpanded {
                     return 15
@@ -76,7 +65,7 @@ struct FloatingCommandButton: View {
                     return 10
                 }
             }()
-            
+
             let shadowColor: Color = {
                 if isDragging || isExpanded {
                     return Color.black.opacity(0.35)
@@ -86,11 +75,10 @@ struct FloatingCommandButton: View {
                     return Color.black.opacity(0.2)
                 }
             }()
-            
+
             ZStack {
-                // Layer -1: Dismissal Layer (Only active when expanded)
                 if isExpanded {
-                    Color.black.opacity(0.01) // Nearly invisible but catches taps
+                    Color.black.opacity(0.01)
                         .ignoresSafeArea()
                         .onTapGesture {
                             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
@@ -98,11 +86,9 @@ struct FloatingCommandButton: View {
                             }
                         }
                 }
-                
-                // Layer 0: Quick Action Bubbles (Always in hierarchy for animation)
+
                 quickActionBubbles(around: currentPos, in: size)
-                
-                // Layer 1: The Main Button
+
                 ZStack {
                     Circle()
                         .fill(.ultraThinMaterial)
@@ -116,7 +102,7 @@ struct FloatingCommandButton: View {
                             x: 0,
                             y: (isDragging || isExpanded) ? 8 : (isOnboardingHighlighted ? 4 : 5)
                         )
-                    
+
                     if isExpanded {
                         Image(systemName: "xmark")
                             .font(.system(size: 22, weight: .bold))
@@ -149,13 +135,13 @@ struct FloatingCommandButton: View {
                     DragGesture(minimumDistance: 0, coordinateSpace: .named("floatingLayer"))
                         .onChanged { value in
                             if isExpanded {
-                                // Selection Mode
                                 updateActiveAction(at: value.location, center: currentPos, size: size)
                             } else {
-                                // Movement Mode (with threshold)
                                 let dragThreshold: CGFloat = 10
-                                let dragDistance = sqrt(pow(value.translation.width, 2) + pow(value.translation.height, 2))
-                                
+                                let dragDistance = sqrt(
+                                    pow(value.translation.width, 2) + pow(value.translation.height, 2)
+                                )
+
                                 if dragDistance > dragThreshold {
                                     if !isDragging {
                                         startPosition = currentPos
@@ -164,7 +150,7 @@ struct FloatingCommandButton: View {
                                         }
                                         triggerHapticFeedback(.light)
                                     }
-                                    
+
                                     position = CGPoint(
                                         x: startPosition.x + value.translation.width,
                                         y: startPosition.y + value.translation.height
@@ -172,7 +158,7 @@ struct FloatingCommandButton: View {
                                 }
                             }
                         }
-                        .onEnded { value in
+                        .onEnded { _ in
                             if isExpanded {
                                 if let action = activeAction {
                                     executeAction(action)
@@ -187,8 +173,6 @@ struct FloatingCommandButton: View {
                                     snapToNearestPoint(in: size)
                                 }
                             } else {
-                                // This is a tap!
-                                // Long press takes 0.25s, so a fast tap should trigger here
                                 triggerHapticFeedback(.medium)
                                 onTap()
                             }
@@ -224,7 +208,7 @@ struct FloatingCommandButton: View {
                     }
                 }
             }
-            .onChange(of: geometry.size) { oldSize, newSize in
+            .onChange(of: geometry.size) { _, newSize in
                 withAnimation(.spring()) {
                     snapToNearestPoint(in: newSize)
                 }
@@ -232,168 +216,161 @@ struct FloatingCommandButton: View {
         }
         .ignoresSafeArea()
     }
-    
-    /// Renders the three radial quick-action bubbles, each offset from the button center
-    /// in a direction pointing towards the screen centre so they never overlap the edge.
+
     @ViewBuilder
     private func quickActionBubbles(around pos: CGPoint, in size: CGSize) -> some View {
         let direction = sproutDirection(for: pos, in: size)
-        let distance: CGFloat = 75 
-        let angle: CGFloat = 45 
-        
+        let distance: CGFloat = 75
+        let angle: CGFloat = 45
+
         ZStack {
-            // 1. Center: CoCaptain
+            // Center: Chat
             QuickActionBubble(
-                icon: "sparkles", 
-                color: .blue, 
-                isExpanded: isExpanded, 
-                isHighlighted: activeAction == .summon,
-                size: 48, 
+                icon: CopilotInteractionMode.chat.systemImageName,
+                color: .blue,
+                isExpanded: isExpanded,
+                isHighlighted: activeAction == .chat,
+                size: 48,
                 delay: 0.05
             ) {
                 triggerHapticFeedback(.medium)
                 withAnimation(.spring()) { isExpanded = false }
-                onSummonCoCaptain()
+                onSelectMode(.chat)
             }
-            .offset(x: isExpanded ? direction.x * distance : 0, 
-                    y: isExpanded ? direction.y * distance : 0)
-            
-            // 2. Left: Undo
+            .offset(
+                x: isExpanded ? direction.x * distance : 0,
+                y: isExpanded ? direction.y * distance : 0
+            )
+
+            // Left: Voice
             QuickActionBubble(
-                icon: "arrow.uturn.backward", 
-                color: .secondary, 
-                isExpanded: isExpanded, 
-                isEnabled: canUndo, 
-                isHighlighted: activeAction == .undo,
-                size: 40, 
+                icon: CopilotInteractionMode.voice.systemImageName,
+                color: .secondary,
+                isExpanded: isExpanded,
+                isHighlighted: activeAction == .voice,
+                size: 40,
                 delay: 0.0
             ) {
                 triggerHapticFeedback(.medium)
                 withAnimation(.spring()) { isExpanded = false }
-                onUndo()
+                onSelectMode(.voice)
             }
-            .offset(x: isExpanded ? direction.rotated(by: -angle).x * distance : 0, 
-                    y: isExpanded ? direction.rotated(by: -angle).y * distance : 0)
-            
-            // 3. Right: Redo
+            .offset(
+                x: isExpanded ? direction.rotated(by: -angle).x * distance : 0,
+                y: isExpanded ? direction.rotated(by: -angle).y * distance : 0
+            )
+
+            // Right: Video (screen share)
             QuickActionBubble(
-                icon: "arrow.uturn.forward", 
-                color: .secondary, 
-                isExpanded: isExpanded, 
-                isEnabled: canRedo, 
-                isHighlighted: activeAction == .redo,
-                size: 40, 
+                icon: CopilotInteractionMode.video.systemImageName,
+                color: .secondary,
+                isExpanded: isExpanded,
+                isHighlighted: activeAction == .video,
+                size: 40,
                 delay: 0.1
             ) {
                 triggerHapticFeedback(.medium)
                 withAnimation(.spring()) { isExpanded = false }
-                onRedo()
+                onSelectMode(.video)
             }
-            .offset(x: isExpanded ? direction.rotated(by: angle).x * distance : 0, 
-                    y: isExpanded ? direction.rotated(by: angle).y * distance : 0)
+            .offset(
+                x: isExpanded ? direction.rotated(by: angle).x * distance : 0,
+                y: isExpanded ? direction.rotated(by: angle).y * distance : 0
+            )
         }
         .position(pos)
     }
-    
-    /// Hit-tests the drag location against each bubble's world position and sets
-    /// `activeAction` accordingly, firing a light haptic on each transition.
+
     private func updateActiveAction(at location: CGPoint, center: CGPoint, size: CGSize) {
         let direction = sproutDirection(for: center, in: size)
         let distance: CGFloat = 75
         let angle: CGFloat = 45
-        let threshold: CGFloat = 40 // Selection "hit zone" radius
-        
-        let undoPos = CGPoint(
+        let threshold: CGFloat = 40
+
+        let voicePos = CGPoint(
             x: center.x + direction.rotated(by: -angle).x * distance,
             y: center.y + direction.rotated(by: -angle).y * distance
         )
-        let summonPos = CGPoint(
+        let chatPos = CGPoint(
             x: center.x + direction.x * distance,
             y: center.y + direction.y * distance
         )
-        let redoPos = CGPoint(
+        let videoPos = CGPoint(
             x: center.x + direction.rotated(by: angle).x * distance,
             y: center.y + direction.rotated(by: angle).y * distance
         )
-        
-        let dUndo = sqrt(pow(location.x - undoPos.x, 2) + pow(location.y - undoPos.y, 2))
-        let dSummon = sqrt(pow(location.x - summonPos.x, 2) + pow(location.y - summonPos.y, 2))
-        let dRedo = sqrt(pow(location.x - redoPos.x, 2) + pow(location.y - redoPos.y, 2))
-        
+
+        let dVoice = hypot(location.x - voicePos.x, location.y - voicePos.y)
+        let dChat = hypot(location.x - chatPos.x, location.y - chatPos.y)
+        let dVideo = hypot(location.x - videoPos.x, location.y - videoPos.y)
+
         let previousAction = activeAction
-        
-        if dUndo < threshold && canUndo {
-            activeAction = .undo
-        } else if dSummon < threshold {
-            activeAction = .summon
-        } else if dRedo < threshold && canRedo {
-            activeAction = .redo
+
+        if dVoice < threshold {
+            activeAction = .voice
+        } else if dChat < threshold {
+            activeAction = .chat
+        } else if dVideo < threshold {
+            activeAction = .video
         } else {
             activeAction = nil
         }
-        
+
         if activeAction != previousAction && activeAction != nil {
             triggerHapticFeedback(.light)
         }
     }
-    
+
     private func executeAction(_ action: CommandAction) {
         triggerHapticFeedback(.medium)
         switch action {
-        case .undo: onUndo()
-        case .summon:
-            onSummonCoCaptain()
+        case .voice:
+            onSelectMode(.voice)
+        case .chat:
+            onSelectMode(.chat)
             onDragSummon?()
-        case .redo: onRedo()
+        case .video:
+            onSelectMode(.video)
         }
     }
-    
-    /// Computes the unit vector from the button's current position toward the screen
-    /// centre. Bubbles sprout in this direction so they always face inward.
+
     private func sproutDirection(for pos: CGPoint, in size: CGSize) -> CGPoint {
-        let centerX = size.width / 2
-        let centerY = size.height / 2
-        
-        // Point towards the center of the screen
-        let dx = centerX - pos.x
-        let dy = centerY - pos.y
-        let len = sqrt(dx*dx + dy*dy)
-        
-        return len > 0 ? CGPoint(x: dx/len, y: dy/len) : CGPoint(x: 0, y: -1)
+        let dx = size.width / 2 - pos.x
+        let dy = size.height / 2 - pos.y
+        let len = sqrt(dx * dx + dy * dy)
+        return len > 0 ? CGPoint(x: dx / len, y: dy / len) : CGPoint(x: 0, y: -1)
     }
-    
+
     private func initialPosition(in size: CGSize) -> CGPoint {
         CGPoint(
-            x: size.width - padding - buttonSize/2,
-            y: size.height - padding - buttonSize/2
+            x: size.width - padding - buttonSize / 2,
+            y: size.height - padding - buttonSize / 2
         )
     }
-    
-    /// Snaps the button position to the nearest point in a fixed 3×3 grid of
-    /// edge/corner/midpoint anchors, providing predictable docking behaviour.
+
     private func snapToNearestPoint(in size: CGSize) {
-        let minX = padding + buttonSize/2
-        let maxX = size.width - padding - buttonSize/2
-        let minY = 60 + buttonSize/2
-        let maxY = size.height - padding - buttonSize/2
-        
+        let minX = padding + buttonSize / 2
+        let maxX = size.width - padding - buttonSize / 2
+        let minY = 60 + buttonSize / 2
+        let maxY = size.height - padding - buttonSize / 2
+
         let centerX = size.width / 2
         let centerY = size.height / 2
-        
+
         let points: [CGPoint] = [
             CGPoint(x: minX, y: minY), CGPoint(x: centerX, y: minY), CGPoint(x: maxX, y: minY),
             CGPoint(x: minX, y: centerY), CGPoint(x: maxX, y: centerY),
             CGPoint(x: minX, y: maxY), CGPoint(x: centerX, y: maxY), CGPoint(x: maxX, y: maxY)
         ]
-        
+
         position = points.min(by: { distance(from: $0, to: position) < distance(from: $1, to: position) }) ?? points[7]
         triggerHapticFeedback(.rigid)
     }
-    
+
     private func distance(from: CGPoint, to: CGPoint) -> CGFloat {
-        sqrt(pow(from.x - to.x, 2) + pow(from.y - to.y, 2))
+        hypot(from.x - to.x, from.y - to.y)
     }
-    
+
     private func triggerHapticFeedback(_ style: UIImpactFeedbackGenerator.FeedbackStyle) {
         let generator = UIImpactFeedbackGenerator(style: style)
         generator.prepare()
@@ -401,9 +378,6 @@ struct FloatingCommandButton: View {
     }
 }
 
-/// A single bubble in the radial quick-action menu expanded from the FAB.
-/// Scales from near-zero to full size when `isExpanded` becomes `true`,
-/// and highlights with a coloured ring and a 1.25× scale when the user drags over it.
 struct QuickActionBubble: View {
     let icon: String
     let color: Color
@@ -413,16 +387,16 @@ struct QuickActionBubble: View {
     var size: CGFloat = 48
     let delay: Double
     let action: () -> Void
-    
+
     var body: some View {
         ZStack {
             Circle()
                 .fill(.ultraThinMaterial)
                 .overlay(Circle().stroke(isHighlighted ? color : color.opacity(isEnabled ? 0.3 : 0.1), lineWidth: isHighlighted ? 2 : 1))
                 .shadow(color: color.opacity(isHighlighted ? 0.5 : (isEnabled ? 0.2 : 0)), radius: isHighlighted ? 12 : 8)
-            
+
             Image(systemName: icon)
-                .font(.system(size: size * 0.375, weight: .bold)) 
+                .font(.system(size: size * 0.375, weight: .bold))
                 .foregroundColor(color)
                 .opacity(isEnabled ? 1.0 : 0.3)
         }
@@ -441,8 +415,6 @@ struct QuickActionBubble: View {
 }
 
 extension CGPoint {
-    /// Rotates this point (treated as a 2-D unit vector) by the given number of degrees.
-    /// Used to spread quick-action bubbles at ±45° from the main sprout direction.
     func rotated(by degrees: CGFloat) -> CGPoint {
         let radians = degrees * .pi / 180
         let sinTheta = sin(radians)

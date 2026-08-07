@@ -134,6 +134,10 @@ enum OnboardingTooltipAnchor: Hashable {
     case omniboxBackToCanvasRow
     /// Anchored to the Organize Nodes action row in the omnibox.
     case omniboxOrganizeRow
+    /// Anchored to the Undo action row in the omnibox.
+    case omniboxUndoRow
+    /// Anchored to the Redo action row in the omnibox.
+    case omniboxRedoRow
     /// Anchored to the Apply button on a CoCaptain review card.
     case coCaptainReviewApply
     /// Anchored to the Guides section in Help.
@@ -363,6 +367,12 @@ extension OnboardingCoordinator.Step {
         }
         if self == .runOrganizeNodes, isCommandPalettePresented {
             return .omniboxOrganizeRow
+        }
+        if self == .undoCanvasEdit, isCommandPalettePresented {
+            return .omniboxUndoRow
+        }
+        if self == .redoCanvasEdit, isCommandPalettePresented {
+            return .omniboxRedoRow
         }
         return tooltipAnchor
     }

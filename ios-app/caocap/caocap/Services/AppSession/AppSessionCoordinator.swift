@@ -25,6 +25,9 @@ final class AppSessionCoordinator {
     var showingHelp = false
     var showingAppIconPicker = false
     var showConfetti = false
+    var showingCopilotCall = false
+    var activeCopilotCallMode: CopilotInteractionMode = .voice
+    @ObservationIgnored var copilotCallViewModel: CopilotCallViewModel?
 
     var currentScale: CGFloat = 1.0
     var isLaunching = true
@@ -651,6 +654,26 @@ final class AppSessionCoordinator {
             self.coCaptain.configureProjectSession(store: self.router.activeStore, dispatcher: self.actionDispatcher)
             self.presentCoCaptain()
         }
+        actionDispatcher.register(.summonCopilotVoice) { [weak self] in
+            self?.presentCopilotCall(mode: .voice)
+        }
+        actionDispatcher.register(.summonCopilotVideo) { [weak self] in
+            self?.presentCopilotCall(mode: .video)
+        }
+        actionDispatcher.register(.undo) { [weak self] in
+            guard let self else { return }
+            self.performUndo(undoManager: self.activeUndoManager)
+            if self.onboarding.currentStep == .undoCanvasEdit {
+                self.onboarding.completeCurrentStep()
+            }
+        }
+        actionDispatcher.register(.redo) { [weak self] in
+            guard let self else { return }
+            self.performRedo(undoManager: self.activeUndoManager)
+            if self.onboarding.currentStep == .redoCanvasEdit {
+                self.onboarding.completeCurrentStep()
+            }
+        }
         actionDispatcher.register(.openFile) { [weak self] in
             self?.showingFileImporter = true
         }
@@ -842,6 +865,57 @@ final class AppSessionCoordinator {
     private func presentCoCaptain() {
         prepareCoCaptainPresentation()
         coCaptain.setPresented(true)
+    }
+
+    func presentCopilotCall(mode: CopilotInteractionMode) {
+        if coCaptain.isPresented {
+            coCaptain.setPresented(false)
+        }
+        commandPalette.setPresented(false)
+
+        let persona = personalization.selectedCopilot ?? UserProfileStore().loadSelectedCopilot()
+        let context = copilotCallProjectContext()
+        let viewModel = CopilotCallViewModel(
+            mode: mode,
+            persona: persona,
+            projectContext: context
+        )
+        viewModel.onDismiss = { [weak self] in
+            self?.dismissCopilotCall()
+        }
+        copilotCallViewModel = viewModel
+        activeCopilotCallMode = mode
+        showingCopilotCall = true
+    }
+
+    func dismissCopilotCall() {
+        showingCopilotCall = false
+        let viewModel = copilotCallViewModel
+        copilotCallViewModel = nil
+        Task {
+            await viewModel?.liveService.stop()
+        }
+    }
+
+    private func copilotCallProjectContext() -> String {
+        let store = router.activeStore
+        let workspaceLabel: String
+        switch router.currentWorkspace {
+        case .root:
+            workspaceLabel = "root"
+        case .project(let fileName):
+            workspaceLabel = fileName
+        }
+        let nodeSummary = store.nodes
+            .prefix(12)
+            .map { "- \($0.title) (\($0.type.rawValue))" }
+            .joined(separator: "\n")
+        return """
+        Workspace: \(workspaceLabel)
+        Node count: \(store.nodes.count)
+        Nodes:
+        \(nodeSummary)
+        """
     }
 
     private func beginInitialCoCaptainOnboardingWaitIfNeeded() {

@@ -16,6 +16,10 @@ public enum AppActionID: String, CaseIterable, Identifiable, Codable, Hashable {
     case createNode = "create_node"
     case createFirebaseNode = "create_firebase_node"
     case summonCoCaptain = "summon_cocaptain"
+    case summonCopilotVoice = "summon_copilot_voice"
+    case summonCopilotVideo = "summon_copilot_video"
+    case undo = "undo"
+    case redo = "redo"
     case openFile = "open_file"
     case toggleGrid = "toggle_grid"
     case shareCanvas = "share_canvas"
@@ -180,6 +184,38 @@ public final class AppActionDispatcher: AppActionPerforming {
             isMutating: false,
             allowsAutonomousExecution: true,
             canPinToCanvas: true
+        ),
+        AppActionDefinition(
+            id: .summonCopilotVoice,
+            title: "Voice Call Copilot",
+            icon: "mic.fill",
+            category: .assistant,
+            isMutating: false,
+            allowsAutonomousExecution: false
+        ),
+        AppActionDefinition(
+            id: .summonCopilotVideo,
+            title: "Screen Share with Copilot",
+            icon: "rectangle.dashed.badge.record",
+            category: .assistant,
+            isMutating: false,
+            allowsAutonomousExecution: false
+        ),
+        AppActionDefinition(
+            id: .undo,
+            title: "Undo",
+            icon: "arrow.uturn.backward",
+            category: .project,
+            isMutating: true,
+            allowsAutonomousExecution: true
+        ),
+        AppActionDefinition(
+            id: .redo,
+            title: "Redo",
+            icon: "arrow.uturn.forward",
+            category: .project,
+            isMutating: true,
+            allowsAutonomousExecution: true
         ),
         AppActionDefinition(
             id: .openFile,
