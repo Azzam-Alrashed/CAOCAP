@@ -3,6 +3,7 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
 
+    @Binding var selectedCopilot: CopilotPersona
     var onRestartPersonalization: () -> Void = {}
     var onRestartOnboarding: () -> Void = {}
     var onRestartTutorial: () -> Void = {}
@@ -46,6 +47,23 @@ struct SettingsView: View {
                     VStack(spacing: 32) {
                         
                         VStack(spacing: 24) {
+                            // MARK: - Copilot
+                            SettingsSection(LocalizedStringKey("settings.copilot.title")) {
+                                VStack(alignment: .leading, spacing: 12) {
+                                    Text(LocalizedStringKey("settings.copilot.subtitle"))
+                                        .font(.system(size: 13))
+                                        .foregroundStyle(.secondary)
+                                        .padding(.horizontal, 16)
+                                        .padding(.top, 14)
+
+                                    CopilotPersonaPicker(selection: selectedCopilot) { persona in
+                                        selectedCopilot = persona
+                                    }
+                                        .padding(.horizontal, 12)
+                                        .padding(.bottom, 14)
+                                }
+                            }
+
                             // MARK: - Interface
                             SettingsSection("Interface") {
                                 SettingsPickerRow(icon: "paintbrush.fill", title: "Theme", selection: $selectedTheme, options: themes, color: .purple)
@@ -115,7 +133,7 @@ struct SettingsView: View {
                                 SettingsRow(
                                     icon: "person.crop.circle.badge.questionmark",
                                     title: "Replay Personalization",
-                                    subtitle: "Choose your co-pilot and update your mission profile",
+                                    subtitle: "Replay the full co-pilot and mission survey",
                                     color: .indigo,
                                     action: {
                                         onRestartPersonalization()
@@ -325,5 +343,6 @@ struct SettingsLanguagePickerRow: View {
 }
 
 #Preview {
-    SettingsView()
+    @Previewable @State var selectedCopilot: CopilotPersona = .cocaptain
+    SettingsView(selectedCopilot: $selectedCopilot)
 }

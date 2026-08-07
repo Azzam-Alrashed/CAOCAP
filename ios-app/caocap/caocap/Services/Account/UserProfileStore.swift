@@ -30,6 +30,14 @@ final class UserProfileStore {
         loadAnswers()?.selectedCopilot ?? .cocaptain
     }
 
+    /// Updates only the selected copilot while preserving other survey answers.
+    /// Creates a minimal answers record when none exists yet.
+    func saveSelectedCopilot(_ persona: CopilotPersona) {
+        var answers = loadAnswers() ?? PersonalizationSurveyAnswers(selectedCopilot: persona)
+        answers.selectedCopilot = persona
+        saveAnswers(answers)
+    }
+
     func resetSurvey() {
         isSurveyCompleted = false
         defaults.removeObject(forKey: Self.answersKey)

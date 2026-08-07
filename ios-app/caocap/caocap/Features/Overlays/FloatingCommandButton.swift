@@ -33,11 +33,15 @@ struct FloatingCommandButton: View {
 
     var isOnboardingHighlighted: Bool = false
     var tooltipAnchor: OnboardingTooltipAnchor = .floatingCommandButton
+    /// When non-null and overlapping the FAB, the button relocates to another snap point.
+    var obstacleFrame: CGRect = .null
 
     @State private var isBreathing: Bool = false
+    @State private var containerSize: CGSize = .zero
 
     private let padding: CGFloat = 35
     private let buttonSize: CGFloat = 64
+    private let avoidancePadding: CGFloat = 12
 
     var body: some View {
         GeometryReader { geometry in
@@ -182,9 +186,11 @@ struct FloatingCommandButton: View {
             }
             .coordinateSpace(name: "floatingLayer")
             .onAppear {
+                containerSize = size
                 if position == .zero {
                     position = initialPosition(in: size)
                 }
+                avoidObstacleIfNeeded(in: size)
                 if isOnboardingHighlighted {
                     withAnimation(
                         .easeInOut(duration: 1.8)
@@ -209,9 +215,13 @@ struct FloatingCommandButton: View {
                 }
             }
             .onChange(of: geometry.size) { _, newSize in
+                containerSize = newSize
                 withAnimation(.spring()) {
                     snapToNearestPoint(in: newSize)
                 }
+            }
+            .onChange(of: obstacleFrame) { _, _ in
+                avoidObstacleIfNeeded(in: containerSize == .zero ? size : containerSize)
             }
         }
         .ignoresSafeArea()
@@ -348,23 +358,60 @@ struct FloatingCommandButton: View {
         )
     }
 
-    private func snapToNearestPoint(in size: CGSize) {
+    private func fabFrame(at center: CGPoint) -> CGRect {
+        CGRect(
+            x: center.x - buttonSize / 2,
+            y: center.y - buttonSize / 2,
+            width: buttonSize,
+            height: buttonSize
+        )
+    }
+
+    private func snapPoints(in size: CGSize) -> [CGPoint] {
         let minX = padding + buttonSize / 2
         let maxX = size.width - padding - buttonSize / 2
         let minY = 60 + buttonSize / 2
         let maxY = size.height - padding - buttonSize / 2
-
         let centerX = size.width / 2
         let centerY = size.height / 2
-
-        let points: [CGPoint] = [
+        return [
             CGPoint(x: minX, y: minY), CGPoint(x: centerX, y: minY), CGPoint(x: maxX, y: minY),
             CGPoint(x: minX, y: centerY), CGPoint(x: maxX, y: centerY),
             CGPoint(x: minX, y: maxY), CGPoint(x: centerX, y: maxY), CGPoint(x: maxX, y: maxY)
         ]
+    }
 
-        position = points.min(by: { distance(from: $0, to: position) < distance(from: $1, to: position) }) ?? points[7]
+    private func snapToNearestPoint(in size: CGSize) {
+        let points = snapPoints(in: size)
+        let preferred = points.min(by: { distance(from: $0, to: position) < distance(from: $1, to: position) }) ?? points[7]
+        position = bestPoint(near: preferred, in: size) ?? preferred
         triggerHapticFeedback(.rigid)
+    }
+
+    private func avoidObstacleIfNeeded(in size: CGSize) {
+        guard size.width > 1, size.height > 1 else { return }
+        guard !obstacleFrame.isNull, !obstacleFrame.isEmpty else { return }
+        let current = position == .zero ? initialPosition(in: size) : position
+        let inflatedObstacle = obstacleFrame.insetBy(dx: -avoidancePadding, dy: -avoidancePadding)
+        guard fabFrame(at: current).intersects(inflatedObstacle) else { return }
+
+        if let next = bestPoint(near: current, in: size) {
+            withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
+                position = next
+            }
+            triggerHapticFeedback(.light)
+        }
+    }
+
+    /// Picks the closest snap point that does not intersect the obstacle frame.
+    private func bestPoint(near target: CGPoint, in size: CGSize) -> CGPoint? {
+        let inflatedObstacle = obstacleFrame.isNull
+            ? CGRect.null
+            : obstacleFrame.insetBy(dx: -avoidancePadding, dy: -avoidancePadding)
+        let candidates = snapPoints(in: size)
+            .filter { !fabFrame(at: $0).intersects(inflatedObstacle) }
+            .sorted { distance(from: $0, to: target) < distance(from: $1, to: target) }
+        return candidates.first
     }
 
     private func distance(from: CGPoint, to: CGPoint) -> CGFloat {

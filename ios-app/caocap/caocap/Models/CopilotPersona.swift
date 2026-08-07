@@ -57,4 +57,13 @@ enum CopilotPersona: String, Codable, CaseIterable, Equatable, Identifiable {
             return "Dream it in your mind. Map it on the canvas. Launch it to the world."
         }
     }
+
+    /// Gemini Live prebuilt voice name for spoken replies.
+    /// CoCaptain uses a male voice; CoStar uses a female voice.
+    var liveVoiceName: String {
+        switch self {
+        case .cocaptain: return "Charon"
+        case .costar: return "Kore"
+        }
+    }
 }

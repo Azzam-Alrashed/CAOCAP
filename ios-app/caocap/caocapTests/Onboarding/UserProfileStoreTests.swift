@@ -35,6 +35,37 @@ struct UserProfileStoreTests {
         #expect(store.loadSelectedCopilot() == .cocaptain)
     }
 
+    @Test func saveSelectedCopilotUpdatesExistingAnswers() {
+        let defaults = UserDefaults(suiteName: "UserProfileStoreTests.saveSelected")!
+        defaults.removePersistentDomain(forName: "UserProfileStoreTests.saveSelected")
+        let store = UserProfileStore(defaults: defaults)
+
+        store.saveAnswers(
+            PersonalizationSurveyAnswers(
+                selections: ["coding_level": "experienced"],
+                selectedCopilot: .cocaptain
+            )
+        )
+        store.isSurveyCompleted = true
+
+        store.saveSelectedCopilot(.costar)
+
+        #expect(store.isSurveyCompleted)
+        #expect(store.loadSelectedCopilot() == .costar)
+        #expect(store.loadAnswers()?.selections["coding_level"] == "experienced")
+    }
+
+    @Test func saveSelectedCopilotCreatesAnswersWhenMissing() {
+        let defaults = UserDefaults(suiteName: "UserProfileStoreTests.createSelected")!
+        defaults.removePersistentDomain(forName: "UserProfileStoreTests.createSelected")
+        let store = UserProfileStore(defaults: defaults)
+
+        store.saveSelectedCopilot(.costar)
+
+        #expect(store.loadSelectedCopilot() == .costar)
+        #expect(store.loadAnswers()?.selectedCopilot == .costar)
+    }
+
     @Test func resetSurveyClearsCompletionAndAnswers() {
         let defaults = UserDefaults(suiteName: "UserProfileStoreTests.reset")!
         defaults.removePersistentDomain(forName: "UserProfileStoreTests.reset")

@@ -24,6 +24,10 @@ struct AppSheetsModifier: ViewModifier {
             }
             .sheet(isPresented: $session.showingSettings) {
                 SettingsView(
+                    selectedCopilot: Binding(
+                        get: { session.selectedCopilot },
+                        set: { session.updateSelectedCopilot($0) }
+                    ),
                     onRestartPersonalization: {
                         session.restartPersonalization()
                     },
@@ -92,6 +96,14 @@ struct AppSheetsModifier: ViewModifier {
                 AppIconPickerView()
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
+            }
+            .sheet(isPresented: $session.showingCopilotPicker) {
+                CopilotPersonaPickerSheet(
+                    selection: session.selectedCopilot,
+                    onSelect: { session.updateSelectedCopilot($0) }
+                )
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
             }
     }
 

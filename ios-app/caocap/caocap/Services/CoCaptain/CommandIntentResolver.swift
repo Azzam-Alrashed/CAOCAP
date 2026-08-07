@@ -317,6 +317,20 @@ public struct CommandIntentResolver {
                 "غير ايقونة التطبيق",
                 "تغيير ايقونة التطبيق"
             ]
+        case .changeCopilot:
+            return [
+                "change copilot",
+                "switch copilot",
+                "choose copilot",
+                "change co pilot",
+                "switch co pilot",
+                "change cocaptain",
+                "switch costar",
+                "غير المساعد",
+                "تبديل المساعد",
+                "اختر المساعد",
+                "غير الكوبايلوت"
+            ]
         }
     }
 

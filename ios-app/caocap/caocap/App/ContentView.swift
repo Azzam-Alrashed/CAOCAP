@@ -5,6 +5,7 @@ import SwiftUI
 /// Session orchestration lives in `AppSessionCoordinator`; this view wires UI only.
 struct ContentView: View {
     @State private var session = AppSessionCoordinator()
+    @State private var copilotCallChromeFrame: CGRect = .null
     @Environment(\.undoManager) private var undoManager
 
     var body: some View {
@@ -25,7 +26,10 @@ struct ContentView: View {
                     .environment(\.layoutDirection, .leftToRight)
 
                 if session.showingCopilotCall, let callViewModel = session.copilotCallViewModel {
-                    CopilotCallView(viewModel: callViewModel)
+                    CopilotCallView(
+                        viewModel: callViewModel,
+                        onFrameChange: { copilotCallChromeFrame = $0 }
+                    )
                         .zIndex(60)
                         .transition(.opacity)
                 }
@@ -186,7 +190,7 @@ struct ContentView: View {
                     _ = session.actionDispatcher.perform(.summonCopilotVideo, source: .user)
                 }
             },
-            copilot: session.personalization.selectedCopilot ?? UserProfileStore().loadSelectedCopilot(),
+            copilot: session.selectedCopilot,
             onExpand: {
                 if session.onboarding.currentStep == .longPressFAB {
                     session.onboarding.completeCurrentStep()
@@ -207,7 +211,8 @@ struct ContentView: View {
                 || (session.onboarding.currentStep == .returnToRoot && !session.commandPalette.isPresented)
                 || (session.onboarding.currentStep == .typeGoBackInOmnibox && !session.commandPalette.isPresented)
                 || (session.onboarding.currentStep == .tapGoBackAction && !session.commandPalette.isPresented)
-            )
+            ),
+            obstacleFrame: session.showingCopilotCall ? copilotCallChromeFrame : .null
         )
     }
 }

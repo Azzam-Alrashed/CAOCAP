@@ -55,6 +55,7 @@ final class GeminiLiveSessionService {
                 modelName: Self.liveModelName,
                 generationConfig: LiveGenerationConfig(
                     responseModalities: [.audio],
+                    speech: SpeechConfig(voiceName: persona.liveVoiceName),
                     inputAudioTranscription: AudioTranscriptionConfig(),
                     outputAudioTranscription: AudioTranscriptionConfig()
                 ),

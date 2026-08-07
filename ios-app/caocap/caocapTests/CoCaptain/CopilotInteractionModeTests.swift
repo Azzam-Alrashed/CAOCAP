@@ -10,6 +10,11 @@ struct CopilotInteractionModeTests {
         #expect(CopilotInteractionMode.video.systemImageName == "rectangle.dashed.badge.record")
     }
 
+    @Test func personasUseGenderedLiveVoices() {
+        #expect(CopilotPersona.cocaptain.liveVoiceName == "Charon")
+        #expect(CopilotPersona.costar.liveVoiceName == "Kore")
+    }
+
     @Test func dispatcherIncludesUndoRedoAndCallActions() {
         let dispatcher = AppActionDispatcher()
         let ids = Set(dispatcher.availableActions.map(\.id))
@@ -18,6 +23,7 @@ struct CopilotInteractionModeTests {
         #expect(ids.contains(.summonCopilotVoice))
         #expect(ids.contains(.summonCopilotVideo))
         #expect(ids.contains(.summonCoCaptain))
+        #expect(ids.contains(.changeCopilot))
     }
 
     @Test func intentResolverMatchesUndoRedo() {
@@ -27,5 +33,7 @@ struct CopilotInteractionModeTests {
         #expect(resolver.resolve("redo", availableActions: dispatcher.availableActions) == .redo)
         #expect(resolver.resolve("voice call", availableActions: dispatcher.availableActions) == .summonCopilotVoice)
         #expect(resolver.resolve("screen share", availableActions: dispatcher.availableActions) == .summonCopilotVideo)
+        #expect(resolver.resolve("change copilot", availableActions: dispatcher.availableActions) == .changeCopilot)
+        #expect(resolver.resolve("switch copilot", availableActions: dispatcher.availableActions) == .changeCopilot)
     }
 }

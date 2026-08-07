@@ -26,7 +26,9 @@ final class AppSessionCoordinator {
     var showingAppIconPicker = false
     var showConfetti = false
     var showingCopilotCall = false
+    var showingCopilotPicker = false
     var activeCopilotCallMode: CopilotInteractionMode = .voice
+    var selectedCopilot: CopilotPersona = UserProfileStore().loadSelectedCopilot()
     @ObservationIgnored var copilotCallViewModel: CopilotCallViewModel?
 
     var currentScale: CGFloat = 1.0
@@ -103,8 +105,10 @@ final class AppSessionCoordinator {
 
     func bootstrap(undoManager: UndoManager?) {
         activeUndoManager = undoManager
+        selectedCopilot = UserProfileStore().loadSelectedCopilot()
         bindCommandPalette()
         configureActionsIfNeeded()
+        actionDispatcher.refreshCopilotActionTitle()
         wireGamification()
         syncViewportWithActiveStore()
         attachUndoManager(undoManager)
@@ -144,7 +148,15 @@ final class AppSessionCoordinator {
 
     /// Called when the personalization survey finishes or is skipped.
     func finishPersonalizationFlow() {
+        selectedCopilot = UserProfileStore().loadSelectedCopilot()
+        actionDispatcher.refreshCopilotActionTitle()
         onboarding.startIfNeeded()
+    }
+
+    func updateSelectedCopilot(_ persona: CopilotPersona) {
+        UserProfileStore().saveSelectedCopilot(persona)
+        selectedCopilot = persona
+        actionDispatcher.refreshCopilotActionTitle()
     }
 
     /// Re-opens the intro tour while personalization remains in progress.
@@ -725,6 +737,10 @@ final class AppSessionCoordinator {
         actionDispatcher.register(.openAppIcon) { [weak self] in
             self?.showingAppIconPicker = true
         }
+        actionDispatcher.register(.changeCopilot) { [weak self] in
+            self?.commandPalette.setPresented(false)
+            self?.showingCopilotPicker = true
+        }
         actionDispatcher.register(.openSnapshotBrowser) { [weak self] in
             self?.showingSnapshotBrowser = true
         }
@@ -873,7 +889,7 @@ final class AppSessionCoordinator {
         }
         commandPalette.setPresented(false)
 
-        let persona = personalization.selectedCopilot ?? UserProfileStore().loadSelectedCopilot()
+        let persona = selectedCopilot
         let context = copilotCallProjectContext()
         let viewModel = CopilotCallViewModel(
             mode: mode,

@@ -40,6 +40,7 @@ public enum AppActionID: String, CaseIterable, Identifiable, Codable, Hashable {
     case openDaily = "open_daily"
     case openWhatsApp = "open_whatsapp"
     case openAppIcon = "open_app_icon"
+    case changeCopilot = "change_copilot"
 
     public var id: String { rawValue }
 
@@ -384,6 +385,14 @@ public final class AppActionDispatcher: AppActionPerforming {
             isMutating: false,
             allowsAutonomousExecution: false,
             canPinToCanvas: true
+        ),
+        AppActionDefinition(
+            id: .changeCopilot,
+            title: "Change Copilot",
+            icon: "person.crop.circle.badge.questionmark",
+            category: .assistant,
+            isMutating: false,
+            allowsAutonomousExecution: false
         )
     ]
 
