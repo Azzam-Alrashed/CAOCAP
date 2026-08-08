@@ -18,6 +18,7 @@ struct SettingsView: View {
     @AppStorage("grid_opacity") private var gridOpacity: Double = 0.1
     @AppStorage("connection_style") private var connectionStyle = "Dashed"
     @AppStorage("spatial_glow_enabled") private var spatialGlowEnabled = true
+    @AppStorage("omnibox.showOptionsWhenEmpty") private var showOmniboxOptionsWhenEmpty = true
     @AppStorage("cocaptain.modelName") private var modelName = CoCaptainModelSelectionPolicy.cloudModelName
 
     @State private var localModelManager = LocalGemmaModelManager.shared
@@ -71,23 +72,23 @@ struct SettingsView: View {
                                 onUpgrade: onUpgrade
                             )
 
-                            // MARK: - Interface
-                            SettingsSection("Interface") {
+                            GemmaModelSettingsSection(
+                                modelName: $modelName,
+                                localModelManager: localModelManager,
+                                eligibility: .current
+                            )
+
+                            // MARK: - Appearance
+                            SettingsSection("Appearance") {
                                 SettingsPickerRow(icon: "paintbrush.fill", title: "Theme", selection: $selectedTheme, options: themes, color: .purple)
                                 
                                 Divider().padding(.leading, 56).opacity(0.3)
                                 
                                 SettingsLanguagePickerRow(selection: $selectedLanguage)
                             }
-
-                            GemmaModelSettingsSection(
-                                modelName: $modelName,
-                                localModelManager: localModelManager,
-                                eligibility: .current
-                            )
                             
-                            // MARK: - Canvas & Graphics
-                            SettingsSection("Canvas & Graphics") {
+                            // MARK: - Look & Feel
+                            SettingsSection("Look & Feel") {
                                 VStack(alignment: .leading, spacing: 12) {
                                     HStack {
                                         Label("Grid Visibility", systemImage: "grid")
@@ -116,10 +117,19 @@ struct SettingsView: View {
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 14)
                                 .tint(.orange)
-                            }
-                            
-                            // MARK: - Haptics
-                            SettingsSection("Haptics") {
+
+                                Divider().padding(.leading, 56).opacity(0.3)
+
+                                Toggle(isOn: $showOmniboxOptionsWhenEmpty) {
+                                    Label("Show Options Immediately", systemImage: "list.bullet.rectangle")
+                                        .font(.system(size: 16, weight: .medium))
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 14)
+                                .tint(.orange)
+
+                                Divider().padding(.leading, 56).opacity(0.3)
+
                                 Toggle(isOn: $hapticsEnabled) {
                                     Label("Tactile Feedback", systemImage: "sensor.touch.fill")
                                         .font(.system(size: 16, weight: .medium))

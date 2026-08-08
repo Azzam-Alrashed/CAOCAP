@@ -64,6 +64,10 @@ Automatic agent calls are blocked when an action is mutating or not marked auton
 
 Preserve this boundary when adding commands.
 
+## Options Visibility
+
+In search (capsule) mode, the results card defaults to listing available options as soon as the omnibox opens. Users can turn this off in **Settings → Look & Feel → Show Options Immediately**, so options only appear after typing starts. Mini-App preview tools always remain visible when present. Persistence key: `omnibox.showOptionsWhenEmpty` (`@AppStorage`, default `true`).
+
 ## Editing Guidance
 
 - Add new actions to `AppActionID`, `availableActions`, `configure(...)`, and the dispatcher `switch`.
@@ -77,6 +81,8 @@ Preserve this boundary when adding commands.
 
 ## Verification Checklist
 
+- Open the palette and confirm options appear immediately by default (empty query).
+- In Settings → Look & Feel, turn off **Show Options Immediately** and confirm options only appear after typing.
 - Open the palette and confirm the search field focuses automatically.
 - Type partial localized and canonical action names and confirm filtering works.
 - Move selection up/down and confirm it wraps correctly.

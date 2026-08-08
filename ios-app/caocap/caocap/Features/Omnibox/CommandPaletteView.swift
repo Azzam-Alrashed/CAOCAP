@@ -9,6 +9,9 @@ struct CommandPaletteView: View {
     
     @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
     @AppStorage("app.dictationLocale") private var dictationLocaleRawValue = DictationLocaleOption.auto.rawValue
+    /// When `true` (default), the results card lists options as soon as the omnibox opens.
+    /// When `false`, options appear only after the user starts typing.
+    @AppStorage("omnibox.showOptionsWhenEmpty") private var showOptionsWhenEmpty = true
     @State private var dictation = DictationController()
     @State private var isBreathing: Bool = false
     
@@ -246,14 +249,15 @@ struct CommandPaletteView: View {
                     VStack(spacing: 8) {
                         Spacer()
                         
-                        // Floating Results Card (Only shown if query is not empty and results exist)
+                        // Floating Results Card — default: show options immediately; Settings can require typing first.
                         let hasPreviewTools = viewModel.previewToolCount > 0
                         let hasResults = !viewModel.filteredActions.isEmpty
                             || !viewModel.nodeResults.isEmpty
                             || !viewModel.nodeCreationResults.isEmpty
                             || viewModel.canSubmitPrompt
                         let trimmedQuery = viewModel.query.trimmingCharacters(in: .whitespacesAndNewlines)
-                        let showCard = hasPreviewTools || (hasResults && !trimmedQuery.isEmpty)
+                        let showCard = hasPreviewTools
+                            || (hasResults && (showOptionsWhenEmpty || !trimmedQuery.isEmpty))
                         
                         if showCard {
                             VStack(spacing: 0) {
