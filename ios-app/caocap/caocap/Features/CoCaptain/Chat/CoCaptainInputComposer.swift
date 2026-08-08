@@ -22,7 +22,6 @@ struct CoCaptainInputComposer: View {
     let onApplySuggestion: (ProjectSuggestion) -> Void
     let onDismissSuggestion: (ProjectSuggestion) -> Void
     
-    @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage("app.dictationLocale") private var dictationLocaleRawValue = DictationLocaleOption.auto.rawValue
     @State private var localModelManager = LocalGemmaModelManager.shared
@@ -59,12 +58,6 @@ struct CoCaptainInputComposer: View {
         text.reduce(0) { partial, character in
             character.isNewline ? partial + 1 : partial
         }
-    }
-
-    private var isChatOnboardingActive: Bool {
-        guard let onboarding else { return false }
-        return (onboarding.currentStep == .chatCoCaptain || onboarding.currentStep == .chatCoCaptainGameEdit)
-            && onboarding.showPopover
     }
 
     /// Resolves the current user-selected or automatic dictation locale.
@@ -273,15 +266,13 @@ struct CoCaptainInputComposer: View {
                 style: .continuous
             )
                 .stroke(
-                    isChatOnboardingActive || isFocused
-                        ? Color.accentColor.opacity(isChatOnboardingActive ? 0.55 : 0.35)
+                    isFocused
+                        ? Color.accentColor.opacity(0.35)
                         : CoCaptainChatStyle.subtleStroke,
-                    lineWidth: isChatOnboardingActive || isFocused ? 1.5 : 1
+                    lineWidth: isFocused ? 1.5 : 1
                 )
         )
-        .onboardingTooltipAnchor(.coCaptainInput)
         .animation(.easeInOut(duration: 0.2), value: isFocused)
-        .animation(.easeInOut(duration: 0.2), value: isChatOnboardingActive)
         .animation(.easeInOut(duration: 0.2), value: chatMode)
         .animation(.easeInOut(duration: 0.2), value: mentions)
         .animation(.easeInOut(duration: 0.2), value: attachments)

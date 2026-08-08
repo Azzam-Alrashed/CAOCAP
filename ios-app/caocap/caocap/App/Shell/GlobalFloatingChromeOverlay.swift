@@ -161,28 +161,7 @@ struct GlobalFloatingChromeView: View {
                         }
                     },
                     copilot: session.selectedCopilot,
-                    onExpand: {
-                        if session.onboarding.currentStep == .longPressFAB {
-                            session.onboarding.completeCurrentStep()
-                        }
-                    },
-                    onDragSummon: {
-                        if session.onboarding.currentStep == .longPressFAB {
-                            session.onboarding.completeCurrentStep()
-                        }
-                    },
-                    isOnboardingHighlighted: session.onboarding.showPopover && (
-                        session.onboarding.currentStep == .tapFAB
-                        || session.onboarding.currentStep == .longPressFAB
-                        || session.onboarding.currentStep == .runOrganizeNodes
-                        || (session.onboarding.currentStep == .undoCanvasEdit && !session.commandPalette.isPresented)
-                        || (session.onboarding.currentStep == .redoCanvasEdit && !session.commandPalette.isPresented)
-                        || (session.onboarding.currentStep == .searchFlyToNode && !session.commandPalette.isPresented)
-                        || (session.onboarding.currentStep == .returnToRoot && !session.commandPalette.isPresented)
-                        || (session.onboarding.currentStep == .typeGoBackInOmnibox && !session.commandPalette.isPresented)
-                        || (session.onboarding.currentStep == .tapGoBackAction && !session.commandPalette.isPresented)
-                        || (session.onboarding.currentStep == .openHelpCenter && !session.commandPalette.isPresented)
-                    ),
+                    isOnboardingHighlighted: false,
                     obstacleFrame: session.showingCopilotCall ? callChromeFrame : .null,
                     onInteractiveFrameChange: { frame in
                         fabInteractiveFrame = frame

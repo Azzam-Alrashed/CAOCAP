@@ -70,13 +70,7 @@ public class CommandPaletteViewModel {
             // so that pressing Enter (which can re-trigger didSet with the
             // same value) doesn't clobber the arrow-key selection.
             guard query != oldValue else { return }
-            if prefersGoBackSelection {
-                selectGoBackActionIfAvailable()
-            } else if prefersPromptSubmission {
-                selectPromptRowIfAvailable()
-            } else {
-                selectedIndex = 0
-            }
+            selectedIndex = 0
         }
     }
     public var isPresented: Bool = false
@@ -89,25 +83,6 @@ public class CommandPaletteViewModel {
     public var mode: CommandPaletteMode = .search
     /// When set, the palette renders Mini-App preview tool rows and hides the canvas overlay copy.
     public var miniAppPreviewContext: MiniAppPreviewPaletteContext?
-    /// When `true` the palette automatically moves the selection to the CoCaptain prompt row
-    /// instead of the first command, letting the user hit Return to send a message immediately.
-    public var prefersPromptSubmission: Bool = false {
-        didSet {
-            guard prefersPromptSubmission != oldValue else { return }
-            if prefersPromptSubmission {
-                selectPromptRowIfAvailable()
-            }
-        }
-    }
-    /// When `true` the palette keeps the Go Back action row selected so Return executes it.
-    public var prefersGoBackSelection: Bool = false {
-        didSet {
-            guard prefersGoBackSelection != oldValue else { return }
-            if prefersGoBackSelection {
-                selectGoBackActionIfAvailable()
-            }
-        }
-    }
     
     /// Filters against localized and canonical titles so command search works
     /// in the UI language while still matching stable English action names.

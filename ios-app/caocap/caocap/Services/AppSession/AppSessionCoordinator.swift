@@ -61,7 +61,6 @@ final class AppSessionCoordinator {
     var coCaptainDetent: PresentationDetent = .medium
     var coCaptainStartsLarge = false
     var coCaptainAllowsMediumDetent = true
-    private var onboardingInitialCoCaptainSuccessBaseline: Int?
 
     private var actionsConfigured = false
     @ObservationIgnored private var activeUndoManager: UndoManager?
@@ -313,7 +312,6 @@ final class AppSessionCoordinator {
         viewport = ViewportState()
         currentScale = 1
         nodeSizes = [:]
-        onboardingInitialCoCaptainSuccessBaseline = nil
         actionsConfigured = false
 
         bindCommandPalette()
@@ -369,28 +367,6 @@ final class AppSessionCoordinator {
     func handleCommandPalettePresentationChange(isPresented: Bool) {
         if isPresented {
             commandPalette.nodes = router.activeStore.nodes
-            if onboarding.currentStep == .tapFAB || onboarding.currentStep == .returnToRoot
-                || onboarding.currentStep == .runOrganizeNodes {
-                onboarding.completeCurrentStep()
-            }
-        } else if onboarding.currentStep == .typeCoCaptainPrompt
-                    || onboarding.currentStep == .submitCoCaptainPrompt
-                    || onboarding.currentStep == .typeGoBackInOmnibox
-                    || onboarding.currentStep == .tapGoBackAction
-                    || onboarding.currentStep == .openHelpCenter {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                if (self.onboarding.currentStep == .typeCoCaptainPrompt || self.onboarding.currentStep == .submitCoCaptainPrompt),
-                   !self.coCaptain.isPresented {
-                    self.onboarding.moveToStep(.typeCoCaptainPrompt)
-                } else if (self.onboarding.currentStep == .typeGoBackInOmnibox
-                            || self.onboarding.currentStep == .tapGoBackAction),
-                          !self.commandPalette.isPresented {
-                    self.onboarding.moveToStep(.returnToRoot)
-                } else if self.onboarding.currentStep == .openHelpCenter,
-                          !self.showingHelp {
-                    self.onboarding.moveToStep(.tapFAB)
-                }
-            }
         }
     }
 
@@ -399,36 +375,6 @@ final class AppSessionCoordinator {
             Task {
                 await SubscriptionManager.shared.refreshEntitlements()
             }
-            if onboarding.currentStep == .submitCoCaptainPrompt {
-                onboarding.hidePopoverForCurrentStep()
-            }
-        } else {
-            onboardingInitialCoCaptainSuccessBaseline = nil
-            if onboarding.currentStep == .dismissCoCaptain {
-                onboarding.completeCurrentStep()
-            } else if onboarding.currentStep == .submitCoCaptainPrompt {
-                onboarding.moveToStep(.typeCoCaptainPrompt)
-            } else if onboarding.currentStep == .chatCoCaptain
-                        || onboarding.currentStep == .applyCoCaptainChange {
-                if coCaptainHasPendingOnboardingReview {
-                    onboarding.moveToStep(.applyCoCaptainChange)
-                } else {
-                    onboarding.moveToStep(.chatCoCaptain)
-                }
-            } else if onboarding.currentStep == .chatCoCaptainGameEdit
-                        || onboarding.currentStep == .reviewCoCaptainChange {
-                onboarding.moveToStep(.chatCoCaptainGameEdit)
-            }
-        }
-    }
-
-    func handleCoCaptainSuccessCountChange() {
-        advanceInitialCoCaptainOnboardingIfReady()
-    }
-
-    func handleHelpGuidesShownForOnboarding() {
-        if onboarding.currentStep == .browseHelpGuides {
-            onboarding.completeCurrentStep()
         }
     }
 
@@ -518,16 +464,6 @@ final class AppSessionCoordinator {
         }
         coCaptain.onFlyToNode = { [weak self] nodeId in
             self?.focusCanvasNode(nodeId)
-        }
-        coCaptain.onReviewItemApplied = { [weak self] _, _ in
-            self?.handleOnboardingReviewApplied()
-        }
-        coCaptain.onOnboardingReviewFallback = { [weak self] in
-            let lessonID = self?.onboarding.activeLessonID?.rawValue ?? OnboardingLessonID.canvasBasics.rawValue
-            AnalyticsService.shared.logEvent(
-                OnboardingAnalytics.cocaptainReviewFallback,
-                parameters: [OnboardingAnalytics.lessonID: lessonID]
-            )
         }
         commandPalette.onSubmitPrompt = { [weak self] prompt in
             self?.submitCoCaptainPrompt(prompt)
@@ -626,9 +562,6 @@ final class AppSessionCoordinator {
         actionDispatcher.register(.goBack) { [weak self] in
             guard let self else { return }
             self.router.goBack()
-            if self.onboarding.currentStep == .tapGoBackAction {
-                self.onboarding.completeCurrentStep()
-            }
         }
         actionDispatcher.register(.createNode) { [weak self] in
             self?.createNode(type: .miniApp)
@@ -650,16 +583,10 @@ final class AppSessionCoordinator {
         actionDispatcher.register(.undo) { [weak self] in
             guard let self else { return }
             self.performUndo(undoManager: self.activeUndoManager)
-            if self.onboarding.currentStep == .undoCanvasEdit {
-                self.onboarding.completeCurrentStep()
-            }
         }
         actionDispatcher.register(.redo) { [weak self] in
             guard let self else { return }
             self.performRedo(undoManager: self.activeUndoManager)
-            if self.onboarding.currentStep == .redoCanvasEdit {
-                self.onboarding.completeCurrentStep()
-            }
         }
         actionDispatcher.register(.openFile) { [weak self] in
             self?.showingFileImporter = true
@@ -708,9 +635,6 @@ final class AppSessionCoordinator {
         }
         actionDispatcher.register(.help) { [weak self] in
             self?.showingHelp = true
-            if self?.onboarding.currentStep == .openHelpCenter {
-                self?.onboarding.completeCurrentStep()
-            }
         }
         actionDispatcher.register(.openAppIcon) { [weak self] in
             self?.showingAppIconPicker = true
@@ -736,9 +660,6 @@ final class AppSessionCoordinator {
             self.router.activeStore.organizeNodes()
             withAnimation(.spring(response: 0.8, dampingFraction: 0.85)) {
                 self.viewport.fitTo(nodes: self.router.activeStore.nodes, containerSize: self.containerSize)
-            }
-            if self.onboarding.currentStep == .runOrganizeNodes {
-                self.onboarding.completeCurrentStep()
             }
         }
         actionDispatcher.register(.toggleHUD) { [weak self] in
@@ -877,11 +798,6 @@ final class AppSessionCoordinator {
                 self.canvasFocusNodeID = nil
             }
         }
-
-        if onboarding.currentStep == .searchFlyToNode,
-           nodeId == RootCanvasProvider.helloWorldMiniAppNodeID {
-            onboarding.completeCurrentStep()
-        }
     }
 
     private func submitCoCaptainPrompt(_ prompt: String) {
@@ -889,26 +805,14 @@ final class AppSessionCoordinator {
             return
         }
         coCaptain.configureProjectSession(store: router.activeStore, dispatcher: actionDispatcher)
-        let purpose: CoCaptainTurnPurpose =
-            onboarding.currentStep == .submitCoCaptainPrompt ? .onboardingWelcome : .standard
-        beginInitialCoCaptainOnboardingWaitIfNeeded()
         presentCoCaptain()
-        coCaptain.sendMessage(prompt, purpose: purpose)
-        advanceInitialCoCaptainOnboardingIfReady()
-    }
-
-    private var shouldOpenCoCaptainLargeForOnboarding: Bool {
-        UIDevice.current.userInterfaceIdiom == .phone &&
-            (onboarding.currentStep == .submitCoCaptainPrompt
-             || onboarding.currentStep == .chatCoCaptain
-             || onboarding.currentStep == .chatCoCaptainGameEdit)
+        coCaptain.sendMessage(prompt, purpose: .standard)
     }
 
     private func prepareCoCaptainPresentation() {
-        let startsLarge = shouldOpenCoCaptainLargeForOnboarding
-        coCaptainStartsLarge = startsLarge
-        coCaptainAllowsMediumDetent = !startsLarge
-        coCaptainDetent = startsLarge ? .large : .medium
+        coCaptainStartsLarge = false
+        coCaptainAllowsMediumDetent = true
+        coCaptainDetent = .medium
     }
 
     private func presentCoCaptain() {
@@ -968,45 +872,5 @@ final class AppSessionCoordinator {
         Nodes:
         \(nodeSummary)
         """
-    }
-
-    private func beginInitialCoCaptainOnboardingWaitIfNeeded() {
-        guard onboarding.currentStep == .submitCoCaptainPrompt else { return }
-        onboardingInitialCoCaptainSuccessBaseline = coCaptain.successfulAssistantResponseCount
-        onboarding.hidePopoverForCurrentStep()
-    }
-
-    private func handleOnboardingReviewApplied() {
-        guard onboarding.currentStep == .applyCoCaptainChange,
-              !coCaptainHasPendingOnboardingReview else {
-            return
-        }
-
-        let lessonID = onboarding.activeLessonID?.rawValue ?? OnboardingLessonID.canvasBasics.rawValue
-        AnalyticsService.shared.logEvent(
-            OnboardingAnalytics.cocaptainReviewApplied,
-            parameters: [OnboardingAnalytics.lessonID: lessonID]
-        )
-
-        coCaptain.setPresented(false)
-        onboarding.completeCurrentStep()
-    }
-
-    private var coCaptainHasPendingOnboardingReview: Bool {
-        coCaptain.items.contains { item in
-            guard case .reviewBundle(let bundle) = item.content else { return false }
-            return bundle.items.contains { $0.status.isUnresolved }
-        }
-    }
-
-    private func advanceInitialCoCaptainOnboardingIfReady() {
-        guard let baseline = onboardingInitialCoCaptainSuccessBaseline,
-              onboarding.currentStep == .submitCoCaptainPrompt,
-              coCaptain.successfulAssistantResponseCount > baseline else {
-            return
-        }
-
-        onboardingInitialCoCaptainSuccessBaseline = nil
-        onboarding.completeCurrentStep()
     }
 }

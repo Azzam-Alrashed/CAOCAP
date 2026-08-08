@@ -7,52 +7,12 @@ struct CommandPaletteView: View {
     @FocusState private var isFocused: Bool
     @Environment(\.colorScheme) var colorScheme
     
-    @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
     @AppStorage("app.dictationLocale") private var dictationLocaleRawValue = DictationLocaleOption.auto.rawValue
     /// When `true` (default), the results card lists options as soon as the omnibox opens.
     /// When `false`, options appear only after the user starts typing.
     @AppStorage("omnibox.showOptionsWhenEmpty") private var showOptionsWhenEmpty = true
     @State private var dictation = DictationController()
-    @State private var isBreathing: Bool = false
     
-    private var isShowPopoverActive: Bool {
-        guard let onboarding else { return false }
-        return onboarding.showPopover && (
-            onboarding.currentStep == .typeCoCaptainPrompt ||
-            onboarding.currentStep == .submitCoCaptainPrompt ||
-            onboarding.currentStep == .tapGoBackAction ||
-            onboarding.currentStep == .openHelpCenter
-        )
-    }
-    
-    private var isSearchBarGlowActive: Bool {
-        guard let onboarding else { return false }
-        return (onboarding.currentStep == .typeCoCaptainPrompt
-            || onboarding.currentStep == .typeGoBackInOmnibox)
-            && onboarding.showPopover
-    }
-
-    private var isCoCaptainRowOnboardingActive: Bool {
-        guard let onboarding else { return false }
-        return onboarding.currentStep == .submitCoCaptainPrompt &&
-            onboarding.showPopover &&
-            viewModel.canSubmitPrompt
-    }
-
-    private var isGoBackRowOnboardingActive: Bool {
-        guard let onboarding else { return false }
-        return onboarding.currentStep == .tapGoBackAction &&
-            onboarding.showPopover &&
-            viewModel.showsGoBackAction
-    }
-
-    private var isHelpRowOnboardingActive: Bool {
-        guard let onboarding else { return false }
-        return onboarding.currentStep == .openHelpCenter &&
-            onboarding.showPopover &&
-            viewModel.showsHelpAction
-    }
-
     private var dictationLocaleOption: DictationLocaleOption {
         DictationLocaleOption(rawValue: dictationLocaleRawValue) ?? .auto
     }
@@ -137,8 +97,6 @@ struct CommandPaletteView: View {
                             RoundedRectangle(cornerRadius: 12)
                                 .fill(colorScheme == .dark ? Color.white.opacity(0.05) : Color.black.opacity(0.03))
                         )
-                        .onboardingGlow(isActive: isSearchBarGlowActive, isBreathing: isBreathing)
-                        .onboardingTooltipAnchor(.omniboxSearchField)
 
                         dictationErrorView
                         
@@ -169,24 +127,12 @@ struct CommandPaletteView: View {
                                                         onPin: action.canPinToCanvas ? { viewModel.pinAction(action) } : nil
                                                     )
                                                     .id(action.id.rawValue)
-                                                    .background {
-                                                        if action.id == .goBack,
-                                                           onboarding?.currentStep == .tapGoBackAction {
-                                                            Color.clear
-                                                                .onboardingTooltipAnchor(.commandPaletteGoBack)
-                                                        }
-                                                    }
                                                 }
                                             }
                                         }
                                     } else {
                                         OmniboxSearchResultsView(
-                                            viewModel: viewModel,
-                                            isCoCaptainRowOnboardingActive: isCoCaptainRowOnboardingActive,
-                                            isGoBackRowOnboardingActive: isGoBackRowOnboardingActive,
-                                            isHelpRowOnboardingActive: isHelpRowOnboardingActive,
-                                            isBreathing: isBreathing,
-                                            promptRowAnchor: .omniboxPromptRow
+                                            viewModel: viewModel
                                         )
                                     }
                                 }
@@ -265,15 +211,10 @@ struct CommandPaletteView: View {
                                     ScrollView {
                                         LazyVStack(spacing: 4) {
                                             OmniboxSearchResultsView(
-                                                viewModel: viewModel,
-                                                isCoCaptainRowOnboardingActive: isCoCaptainRowOnboardingActive,
-                                                isGoBackRowOnboardingActive: isGoBackRowOnboardingActive,
-                                                isHelpRowOnboardingActive: isHelpRowOnboardingActive,
-                                                isBreathing: isBreathing,
-                                                promptRowAnchor: .omniboxPromptRow
+                                                viewModel: viewModel
                                             )
                                         }
-                                        .padding(.top, (isCoCaptainRowOnboardingActive || isGoBackRowOnboardingActive) ? 20 : 12)
+                                        .padding(.top, 12)
                                         .padding(.bottom, 8)
                                     }
                                     .frame(maxHeight: 250)
@@ -346,7 +287,7 @@ struct CommandPaletteView: View {
                         }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)
-                        .background(.ultraThinMaterial)
+                        .background(.ultraThinMaterial                        )
                         .clipShape(Capsule())
                         .overlay(
                             Capsule()
@@ -362,14 +303,6 @@ struct CommandPaletteView: View {
                                     lineWidth: 1
                                 )
                         )
-                        .onboardingGlow(
-                            isActive: isSearchBarGlowActive,
-                            isBreathing: isBreathing,
-                            inactiveShadowColor: Color.black.opacity(0.3),
-                            inactiveShadowRadius: 15,
-                            inactiveShadowY: 5
-                        )
-                        .onboardingTooltipAnchor(.omniboxSearchField)
 
                         dictationErrorView
                     }
@@ -404,95 +337,9 @@ struct CommandPaletteView: View {
                 dictation.stop()
             }
         }
-        .onAppear {
-            viewModel.prefersPromptSubmission = onboarding?.currentStep == .submitCoCaptainPrompt
-            viewModel.prefersGoBackSelection = onboarding?.currentStep == .tapGoBackAction
-            if isShowPopoverActive {
-                withAnimation(
-                    .easeInOut(duration: 1.8)
-                        .repeatForever(autoreverses: true)
-                ) {
-                    isBreathing = true
-                }
-            }
-        }
-        .onChange(of: isShowPopoverActive) { _, newValue in
-            if newValue {
-                withAnimation(
-                    .easeInOut(duration: 1.8)
-                        .repeatForever(autoreverses: true)
-                ) {
-                    isBreathing = true
-                }
-            } else {
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    isBreathing = false
-                }
-            }
-        }
-        .onChange(of: viewModel.query) { _, _ in
-            viewModel.prefersPromptSubmission = onboarding?.currentStep == .submitCoCaptainPrompt
-            viewModel.prefersGoBackSelection = onboarding?.currentStep == .tapGoBackAction
-        }
-        .onChange(of: viewModel.canSubmitPrompt) { _, canSubmitPrompt in
-            if canSubmitPrompt {
-                if onboarding?.currentStep == .typeCoCaptainPrompt {
-                    viewModel.selectPromptRowIfAvailable()
-                    onboarding?.completeCurrentStep()
-                } else if onboarding?.currentStep == .submitCoCaptainPrompt {
-                    viewModel.selectPromptRowIfAvailable()
-                }
-            } else {
-                if viewModel.isPresented && onboarding?.currentStep == .submitCoCaptainPrompt {
-                    onboarding?.moveToStep(.typeCoCaptainPrompt)
-                }
-            }
-        }
-        .onChange(of: viewModel.showsGoBackAction) { _, showsGoBackAction in
-            if showsGoBackAction {
-                if onboarding?.currentStep == .typeGoBackInOmnibox {
-                    viewModel.selectGoBackActionIfAvailable()
-                    onboarding?.completeCurrentStep()
-                } else if onboarding?.currentStep == .tapGoBackAction {
-                    viewModel.selectGoBackActionIfAvailable()
-                }
-            } else {
-                if viewModel.isPresented && onboarding?.currentStep == .tapGoBackAction {
-                    onboarding?.moveToStep(.typeGoBackInOmnibox)
-                }
-            }
-        }
-        .onChange(of: viewModel.showsHelpAction) { _, showsHelpAction in
-            if showsHelpAction {
-                if onboarding?.currentStep == .openHelpCenter {
-                    viewModel.selectHelpActionIfAvailable()
-                }
-            } else if viewModel.isPresented && onboarding?.currentStep == .openHelpCenter {
-                onboarding?.moveToStep(.tapFAB)
-            }
-        }
-        .onChange(of: onboarding?.currentStep) { _, step in
-            viewModel.prefersPromptSubmission = step == .submitCoCaptainPrompt
-            viewModel.prefersGoBackSelection = step == .tapGoBackAction
-            if step == .openMiniAppCodeTool {
-                viewModel.selectPreviewCodeToolIfAvailable()
-            } else if step == .returnFromMiniAppPreview {
-                viewModel.selectPreviewBackToCanvasToolIfAvailable()
-            } else if step == .typeGoBackInOmnibox {
-                viewModel.query = ""
-            } else if step == .tapGoBackAction {
-                viewModel.selectGoBackActionIfAvailable()
-            } else if step == .openHelpCenter {
-                viewModel.selectHelpActionIfAvailable()
-            }
-        }
         .onDisappear {
             dictation.stop()
         }
-        .onboardingTooltipOverlay(
-            isCommandPalettePresented: viewModel.isPresented,
-            rendersAnchor: { $0.isPreviewOmniboxLocal }
-        )
     }
 
     /// A button that clears the current query text in the Omnibox.
@@ -628,11 +475,6 @@ extension View {
 
 private struct OmniboxSearchResultsView: View {
     @Bindable var viewModel: CommandPaletteViewModel
-    let isCoCaptainRowOnboardingActive: Bool
-    let isGoBackRowOnboardingActive: Bool
-    let isHelpRowOnboardingActive: Bool
-    let isBreathing: Bool
-    let promptRowAnchor: OnboardingTooltipAnchor
 
     var body: some View {
         let actions = viewModel.filteredActions
@@ -649,7 +491,6 @@ private struct OmniboxSearchResultsView: View {
                 ) {
                     viewModel.selectPreviewTool(tool)
                 }
-                .modifier(MiniAppPreviewToolOnboardingAnchor(tool: tool))
                 .id("preview-tool-\(tool.id)")
             }
         }
@@ -693,35 +534,21 @@ private struct OmniboxSearchResultsView: View {
         if viewModel.canSubmitPrompt {
             CoCaptainPromptRow(
                 prompt: viewModel.query,
-                isSelected: viewModel.selectedIndex == viewModel.promptSelectionIndex,
-                isGlowActive: isCoCaptainRowOnboardingActive,
-                isBreathing: isBreathing
+                isSelected: viewModel.selectedIndex == viewModel.promptSelectionIndex
             ) {
                 viewModel.submitPromptIfNeeded()
             }
-            .onboardingTooltipAnchor(promptRowAnchor)
             .id("cocaptain-prompt")
         }
     }
 
     private func actionRow(_ action: AppActionDefinition, at index: Int) -> some View {
-        let isGoBackOnboardingRow = action.id == .goBack && isGoBackRowOnboardingActive
-        let isHelpOnboardingRow = action.id == .help && isHelpRowOnboardingActive
-        return AppActionRow(
+        AppActionRow(
             item: action,
             isSelected: viewModel.selectionIndex(forActionAt: index) == viewModel.selectedIndex,
             onSelect: { viewModel.executeAction(action) },
             onPin: action.canPinToCanvas ? { viewModel.pinAction(action) } : nil
         )
-        .modifier(AppActionOnboardingAnchor(actionID: action.id))
-        .onboardingGlow(isActive: isGoBackOnboardingRow || isHelpOnboardingRow, isBreathing: isBreathing)
-        .background {
-            if isGoBackOnboardingRow {
-                Color.clear.onboardingTooltipAnchor(.commandPaletteGoBack)
-            } else if isHelpOnboardingRow {
-                Color.clear.onboardingTooltipAnchor(.commandPaletteHelp)
-            }
-        }
         .id(action.id.rawValue)
     }
 
@@ -809,28 +636,6 @@ private struct MiniAppPreviewToolRow: View {
     }
 }
 
-private struct MiniAppPreviewToolOnboardingAnchor: ViewModifier {
-    @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
-    let tool: MiniAppPreviewTool
-
-    func body(content: Content) -> some View {
-        switch tool {
-        case .code:
-            content.onboardingExplicitAnchorFrame(
-                .omniboxMiniAppCodeRow,
-                isEnabled: onboarding?.currentStep == .openMiniAppCodeTool && onboarding?.showPopover == true
-            )
-        case .backToCanvas:
-            content.onboardingExplicitAnchorFrame(
-                .omniboxBackToCanvasRow,
-                isEnabled: onboarding?.currentStep == .returnFromMiniAppPreview && onboarding?.showPopover == true
-            )
-        default:
-            content
-        }
-    }
-}
-
 struct AppActionRow: View {
     let item: AppActionDefinition
     let isSelected: Bool
@@ -882,28 +687,9 @@ struct AppActionRow: View {
     }
 }
 
-private struct AppActionOnboardingAnchor: ViewModifier {
-    let actionID: AppActionID
-
-    func body(content: Content) -> some View {
-        switch actionID {
-        case .organizeNodes:
-            content.onboardingTooltipAnchor(.omniboxOrganizeRow)
-        case .undo:
-            content.onboardingTooltipAnchor(.omniboxUndoRow)
-        case .redo:
-            content.onboardingTooltipAnchor(.omniboxRedoRow)
-        default:
-            content
-        }
-    }
-}
-
 struct CoCaptainPromptRow: View {
     let prompt: String
     let isSelected: Bool
-    var isGlowActive: Bool = false
-    var isBreathing: Bool = false
     let onSelect: () -> Void
 
     private var currentCopilot: CopilotPersona {
@@ -950,25 +736,6 @@ struct CoCaptainPromptRow: View {
         }
         .buttonStyle(.plain)
         .omniboxRowStyle(isSelected: isSelected)
-        .onboardingGlow(isActive: isGlowActive, isBreathing: isBreathing)
-    }
-}
-
-private extension View {
-    func onboardingGlow(
-        isActive: Bool,
-        isBreathing: Bool,
-        inactiveShadowColor: Color = .clear,
-        inactiveShadowRadius: CGFloat = 0,
-        inactiveShadowY: CGFloat = 0
-    ) -> some View {
-        scaleEffect(isActive ? (isBreathing ? 1.04 : 1.0) : 1.0)
-            .shadow(
-                color: isActive ? Color(hex: "0066FF").opacity(isBreathing ? 0.8 : 0.4) : inactiveShadowColor,
-                radius: isActive ? (isBreathing ? 24 : 10) : inactiveShadowRadius,
-                x: 0,
-                y: isActive ? (isBreathing ? 4 : 5) : inactiveShadowY
-            )
     }
 }
 

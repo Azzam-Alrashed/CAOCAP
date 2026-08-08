@@ -6,23 +6,17 @@ struct ReviewBundleView: View {
     let bundle: ReviewBundleItem
     let viewModel: CoCaptainViewModel
     let bundleID: UUID
-    var isOnboardingReviewAnchorActive: Bool = false
-    var isOnboardingApplyAnchorActive: Bool = false
     @State private var isExpanded: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(
         bundle: ReviewBundleItem,
         viewModel: CoCaptainViewModel,
-        bundleID: UUID,
-        isOnboardingReviewAnchorActive: Bool = false,
-        isOnboardingApplyAnchorActive: Bool = false
+        bundleID: UUID
     ) {
         self.bundle = bundle
         self.viewModel = viewModel
         self.bundleID = bundleID
-        self.isOnboardingReviewAnchorActive = isOnboardingReviewAnchorActive
-        self.isOnboardingApplyAnchorActive = isOnboardingApplyAnchorActive
         _isExpanded = State(
             initialValue: bundle.items.contains { $0.status.isUnresolved }
         )
@@ -81,8 +75,7 @@ struct ReviewBundleView: View {
                                 itemID: item.id,
                                 candidateID: candidateID
                             )
-                        },
-                        isOnboardingReviewAnchorActive: isOnboardingReviewAnchorActive
+                        }
                     )
                 }
 
@@ -104,11 +97,6 @@ struct ReviewBundleView: View {
                         .controlSize(.small)
                         .frame(minHeight: CoCaptainChatStyle.minimumHitSize)
                         .disabled(!hasApprovableItems)
-                        .background {
-                            if isOnboardingApplyAnchorActive, hasApprovableItems {
-                                Color.clear.onboardingTooltipAnchor(.coCaptainReviewApply)
-                            }
-                        }
                     }
                     .padding(.top, 2)
                     .transition(
@@ -173,7 +161,6 @@ struct ReviewCardView: View {
     let onReject: () -> Void
     var onFlyTo: (() -> Void)? = nil
     var onPickCandidate: ((UUID) -> Void)? = nil
-    var isOnboardingReviewAnchorActive: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: CoCaptainChatStyle.standardSpacing) {
@@ -290,11 +277,6 @@ struct ReviewCardView: View {
             .buttonStyle(.borderedProminent)
             .disabled(item.status != .pending)
             .frame(minHeight: CoCaptainChatStyle.minimumHitSize)
-            .background {
-                if isOnboardingReviewAnchorActive, item.status == .pending {
-                    Color.clear.onboardingTooltipAnchor(.coCaptainReviewApply)
-                }
-            }
         }
     }
 

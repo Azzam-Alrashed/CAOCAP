@@ -88,16 +88,15 @@ public final class CoCaptainViewModel {
     public var conversationSearchQuery = ""
     public var composerDraftRequest: CoCaptainComposerDraft?
     /// The cumulative number of completed assistant turns/responses. This increments whenever a model
-    /// streaming task, execution result, or local command finishes. Used to synchronize onboarding prompts.
+    /// streaming task, execution result, or local command finishes.
     public private(set) var completedAssistantResponseCount: Int = 0
     /// The cumulative number of assistant turns that produced a usable response.
     /// Errors remain completed turns but do not advance this counter.
     public private(set) var successfulAssistantResponseCount: Int = 0
-    /// The most recent terminal outcome, including the purpose of the exact turn
-    /// that completed. Onboarding observes this instead of global counters.
+    /// Invoked when a review item is applied from the timeline.
     public var onReviewItemApplied: ((UUID, UUID) -> Void)?
-    public var onOnboardingReviewFallback: (() -> Void)?
 
+    /// The most recent terminal outcome, including the purpose of the exact turn that completed.
     public private(set) var lastTurnCompletion: CoCaptainTurnCompletion?
     public var isAwaitingFirstResponse: Bool {
         guard isThinking,
@@ -513,17 +512,6 @@ public final class CoCaptainViewModel {
                     result.reviewDraft != nil ||
                     result.clarifyingQuestion != nil
 
-                if purpose.isConversationalTurn, !hasUsableResponse {
-                    updateMessage(id: aiMessageID, text: onboardingRetryMessage(for: purpose))
-                    markAssistantResponseCompleted(
-                        turnID: turnID,
-                        purpose: purpose,
-                        successful: false
-                    )
-                    synchronizeActiveConversation()
-                    return
-                }
-
                 // Finalize the streamed bubble as the preamble (or remove if still empty).
                 let finalizedProse = result.preamble.isEmpty ? result.visibleText : result.preamble
                 if finalizedProse.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -552,9 +540,6 @@ public final class CoCaptainViewModel {
                     progressPhase = .preparingChanges
                     appendReviewRecord(record)
                     presentedReviewBundle = true
-                } else if purpose == .onboardingGuidedEdit {
-                    presentOnboardingReviewFallback(turnID: turnID, replacingMessageID: aiMessageID)
-                    return
                 }
 
                 if let question = result.clarifyingQuestion {
@@ -588,11 +573,6 @@ public final class CoCaptainViewModel {
                     return
                 }
 
-                if purpose == .onboardingGuidedEdit {
-                    presentOnboardingReviewFallback(turnID: turnID, replacingMessageID: aiMessageID)
-                    return
-                }
-
                 if let limitError = error as? TokenUsageLimitError {
                     removeEmptyMessage(id: aiMessageID)
                     appendError(
@@ -603,14 +583,6 @@ public final class CoCaptainViewModel {
                         isRecoverable: false
                     )
                     appendLimitReachedCTA()
-                } else if purpose.isConversationalTurn {
-                    removeEmptyMessage(id: aiMessageID)
-                    appendError(
-                        kind: .model,
-                        title: LocalizationManager.shared.localizedString("CoCaptain couldn't finish"),
-                        message: onboardingRetryMessage(for: purpose),
-                        sourceMessageID: userItem.id
-                    )
                 } else {
                     removeEmptyMessage(id: aiMessageID)
                     appendError(
@@ -1132,54 +1104,6 @@ public final class CoCaptainViewModel {
         )
     }
 
-    private func presentOnboardingReviewFallback(
-        turnID: UUID,
-        replacingMessageID: UUID
-    ) {
-        removeEmptyMessage(id: replacingMessageID)
-
-        guard case .node(let nodeID) = scope,
-              let store,
-              let node = store.nodes.first(where: { $0.id == nodeID }),
-              let baseText = node.miniApp?.codeText else {
-            markAssistantResponseCompleted(
-                turnID: turnID,
-                purpose: .onboardingGuidedEdit,
-                successful: false
-            )
-            return
-        }
-
-        appendAssistantMessage(
-            LocalizationManager.shared.localizedString(
-                "onboarding.guidedEdit.fallback.message"
-            )
-        )
-        let draft = OnboardingCoCaptainReviewFixture.makeDraft(
-            nodeID: nodeID,
-            baseText: baseText
-        )
-        guard let record = stageReviewDraft(draft) else {
-            markAssistantResponseCompleted(
-                turnID: turnID,
-                purpose: .onboardingGuidedEdit,
-                successful: false
-            )
-            return
-        }
-        appendReviewRecord(record)
-        onOnboardingReviewFallback?()
-        requestScrollToBottom()
-        markAssistantResponseCompleted(
-            turnID: turnID,
-            purpose: .onboardingGuidedEdit,
-            successful: true,
-            presentedReviewBundle: true
-        )
-        turnState = .awaitingReview
-        synchronizeActiveConversation()
-    }
-
     private func userFacingModelErrorMessage(from error: Error) -> String {
         if let localized = (error as? LocalizedError)?.errorDescription?
             .trimmingCharacters(in: .whitespacesAndNewlines),
@@ -1453,27 +1377,6 @@ public final class CoCaptainViewModel {
             )
         }
         activeReviewSession().restoreProjectRecords(records)
-    }
-
-    private func onboardingRetryMessage(for purpose: CoCaptainTurnPurpose) -> String {
-        switch purpose {
-        case .onboardingWelcome:
-            return LocalizationManager.shared.localizedString(
-                "I couldn't finish your welcome. Please try sending your message again."
-            )
-        case .onboardingBuildHandoff:
-            return LocalizationManager.shared.localizedString(
-                "I couldn't finish preparing our next step. Please try sending your idea again."
-            )
-        case .onboardingGuidedEdit:
-            return LocalizationManager.shared.localizedString(
-                "I couldn't prepare that change. Please try asking again."
-            )
-        case .standard:
-            return LocalizationManager.shared.localizedString(
-                "Sorry, I couldn't finish that response. Please try again."
-            )
-        }
     }
 
     private var lastMessage: ChatBubbleItem? {

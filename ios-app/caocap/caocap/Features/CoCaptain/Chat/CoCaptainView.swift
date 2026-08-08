@@ -11,7 +11,6 @@ struct CoCaptainView: View {
     @FocusState private var isFocused: Bool
     @AppStorage(CoCaptainChatMode.storageKey) private var chatModeRawValue = CoCaptainChatMode.agent.rawValue
     
-    @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     private var chatModeBinding: Binding<CoCaptainChatMode> {
@@ -134,7 +133,6 @@ struct CoCaptainView: View {
                             isFocused = false
                             viewModel.setPresented(false)
                         }
-                        .onboardingTooltipAnchor(.coCaptainDoneButton)
                     }
                 }
             }
@@ -143,26 +141,13 @@ struct CoCaptainView: View {
             CoCaptainConversationListView(viewModel: viewModel)
                 .presentationDetents([.medium, .large])
         }
-        .coCaptainOnboardingTooltipOverlay()
-        .onChange(of: text) { oldValue, newValue in
-            hideChatOnboardingWhenTypingChanges(from: oldValue, to: newValue)
-        }
         .onChange(of: isFocused) { _, isFocused in
             if isFocused {
                 onRequestExpandedPresentation?()
             }
         }
-        .onChange(of: viewModel.lastTurnCompletion) { _, completion in
-            advanceOnboardingAfterGuidedEdit(completion)
-        }
-        .onChange(of: onboarding?.currentStep) { _, step in
-            if step == .chatCoCaptain {
-                hideChatOnboardingIfTextIsPresent()
-            }
-        }
         .onAppear {
             syncChatModeFromStorage()
-            hideChatOnboardingIfTextIsPresent()
         }
         .onChange(of: chatModeRawValue) { _, _ in
             syncChatModeFromStorage()
@@ -212,70 +197,17 @@ struct CoCaptainView: View {
         guard (!prompt.isEmpty || !attachments.isEmpty), !viewModel.isThinking else { return }
         let submittedPrompt = prompt.isEmpty ? "Review the attached files." : prompt
 
-        beginChatOnboardingResponseWaitIfNeeded()
         guard viewModel.sendMessage(
             submittedPrompt,
             mentions: mentions,
             attachments: attachments,
-            purpose: currentTurnPurpose
+            purpose: .standard
         ) else { return }
         HapticsManager.shared.trigger(.soft)
         text = ""
         mentions = []
         attachments = []
         isFocused = false
-    }
-
-    /// Gives each onboarding conversation turn its explicit UX objective.
-    private var currentTurnPurpose: CoCaptainTurnPurpose {
-        switch onboarding?.currentStep {
-        case .some(.submitCoCaptainPrompt):
-            return .onboardingWelcome
-        case .some(.chatCoCaptain), .some(.chatCoCaptainGameEdit):
-            return .onboardingGuidedEdit
-        default:
-            return .standard
-        }
-    }
-
-    /// Hides the onboarding tooltip if the user begins typing a message in the text field.
-    private func hideChatOnboardingWhenTypingChanges(from oldValue: String, to newValue: String) {
-        guard onboarding?.currentStep == .chatCoCaptain || onboarding?.currentStep == .chatCoCaptainGameEdit else { return }
-
-        let wasEmpty = oldValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        let isTyping = !newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        if wasEmpty && isTyping {
-            onboarding?.hidePopoverForCurrentStep()
-        }
-    }
-
-    /// Hides the onboarding tooltip if there is already text present in the chat input composer when appearing.
-    private func hideChatOnboardingIfTextIsPresent() {
-        guard onboarding?.currentStep == .chatCoCaptain || onboarding?.currentStep == .chatCoCaptainGameEdit,
-              !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            return
-        }
-
-        onboarding?.hidePopoverForCurrentStep()
-    }
-
-    /// Hides the chat instruction while the user's idea handoff is in progress.
-    private func beginChatOnboardingResponseWaitIfNeeded() {
-        guard onboarding?.currentStep == .chatCoCaptain || onboarding?.currentStep == .chatCoCaptainGameEdit else { return }
-
-        onboarding?.hidePopoverForCurrentStep()
-    }
-
-    /// Advances to the review step once the guided onboarding edit produces a review bundle.
-    private func advanceOnboardingAfterGuidedEdit(
-        _ completion: CoCaptainTurnCompletion?
-    ) {
-        guard onboarding?.currentStep == .chatCoCaptain || onboarding?.currentStep == .chatCoCaptainGameEdit,
-              completion?.shouldAdvanceToOnboardingReview == true else {
-            return
-        }
-
-        onboarding?.completeCurrentStep()
     }
 }
 

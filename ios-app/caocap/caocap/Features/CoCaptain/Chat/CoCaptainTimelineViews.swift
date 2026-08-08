@@ -5,17 +5,6 @@ import SwiftUI
 struct TimelineItemView: View {
     let item: CoCaptainTimelineItem
     let viewModel: CoCaptainViewModel
-    @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
-
-    private var isOnboardingReviewAnchorActive: Bool {
-        guard let onboarding else { return false }
-        return onboarding.showPopover && onboarding.currentStep == .reviewCoCaptainChange
-    }
-
-    private var isOnboardingApplyAnchorActive: Bool {
-        guard let onboarding else { return false }
-        return onboarding.showPopover && onboarding.currentStep == .applyCoCaptainChange
-    }
 
     var body: some View {
         Group {
@@ -32,9 +21,7 @@ struct TimelineItemView: View {
                 ReviewBundleView(
                     bundle: bundle,
                     viewModel: viewModel,
-                    bundleID: item.id,
-                    isOnboardingReviewAnchorActive: isOnboardingReviewAnchorActive,
-                    isOnboardingApplyAnchorActive: isOnboardingApplyAnchorActive
+                    bundleID: item.id
                 )
             case .clarifyingQuestion(let questionItem):
                 ClarifyingQuestionCardView(item: questionItem) { option in

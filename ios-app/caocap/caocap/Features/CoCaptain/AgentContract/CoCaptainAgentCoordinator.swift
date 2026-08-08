@@ -225,7 +225,6 @@ public final class CoCaptainAgentCoordinator {
         } catch is CancellationError {
             throw CancellationError()
         } catch {
-            guard purpose != .onboardingBuildHandoff else { throw error }
             // Fallback: if the structured+context prompt fails (often with opaque
             // `GenerateContentError error 0`), retry with a minimal prompt so chat stays usable.
             let fallbackResult = try await runOnce(

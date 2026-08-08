@@ -98,8 +98,7 @@ struct AppSheetsModifier: ViewModifier {
                 HelpView(
                     completedLessonIDs: session.onboarding.completedLessonIDs,
                     onRestartTutorial: { session.restartTutorialFromHelp() },
-                    onStartLesson: { session.startLessonFromHelp($0) },
-                    onHelpGuidesShown: { session.handleHelpGuidesShownForOnboarding() }
+                    onStartLesson: { session.startLessonFromHelp($0) }
                 )
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)

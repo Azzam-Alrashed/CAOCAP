@@ -32,9 +32,6 @@ struct AppSessionLifecycle: ViewModifier {
             .onChange(of: session.coCaptain.isPresented) { _, isPresented in
                 session.handleCoCaptainPresentationChange(isPresented: isPresented)
             }
-            .onChange(of: session.coCaptain.successfulAssistantResponseCount) {
-                session.handleCoCaptainSuccessCountChange()
-            }
             .onReceive(NotificationCenter.default.publisher(for: .NSUndoManagerDidUndoChange)) { _ in
                 session.handleUndoStackChanged()
             }

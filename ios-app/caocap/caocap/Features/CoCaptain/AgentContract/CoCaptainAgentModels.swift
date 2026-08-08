@@ -2,73 +2,14 @@ import Foundation
 
 /// Describes the conversational objective for a CoCaptain turn.
 ///
-/// Most turns use the standard agent behavior. The onboarding welcome keeps
-/// the response model-generated while giving the first interaction a focused
-/// UX outcome.
+/// Turns use the standard agent behavior; chat mode selects Ask / Plan / Agent posture.
 public enum CoCaptainTurnPurpose: String, Hashable, Codable {
     case standard
-    case onboardingWelcome
-    case onboardingBuildHandoff
-    case onboardingGuidedEdit
 
-    var promptInstructions: String? {
-        switch self {
-        case .standard:
-            return nil
-        case .onboardingWelcome:
-            return """
-            Onboarding welcome objective:
-            - This is the user's first CoCaptain interaction during onboarding.
-            - Respond naturally to the user's greeting in 40 to 80 words.
-            - Briefly explain that CoCaptain helps them build a working app while helping them understand the important decisions.
-            - End with exactly one easy question asking what they would like to make.
-            - You may include at most two short example ideas to make answering easier.
-            - Match the language used by the user.
-            - Do not mention nodes, SRS, patches, XML, Firebase, internal tools, or implementation details.
-            - Do not request app actions, propose edits, or emit a `cocaptain_actions` block.
-            - Do not claim the canvas contains anything that is not present in the supplied context.
-            """
-        case .onboardingBuildHandoff:
-            return """
-            Onboarding build handoff objective:
-            - Treat the user's message as their initial direction for what they want to build.
-            - In 20 to 50 words, briefly reflect their idea without inventing details.
-            - Confirm that you are ready to begin and end with a natural transition back to the canvas to build it.
-            - Match the language used by the user.
-            - Do not ask a question or request more information.
-            - Do not mention onboarding, internal tools, nodes, SRS, patches, XML, or Firebase.
-            - Do not request app actions, propose edits, invoke tools, or emit a `cocaptain_actions` block.
-            """
-        case .onboardingGuidedEdit:
-            return """
-            Onboarding guided edit objective:
-            - The user is editing the active demo mini-app during onboarding (for example the Tutorial Hello World mini-app or XO).
-            - Prefer exactly one small visible CODE change, such as renaming the headline/title or adjusting headline styling.
-            - For small existing mini-apps, use `replace_all` with the full updated single-file HTML document.
-            - When renaming the Tutorial headline, update the `<h1>` text from `Hello World!` to the requested title.
-            - Keep the change visible in the live preview and easy for a beginner to understand.
-            - Do not modify SRS, Firebase, or any node other than the currently active mini-app.
-            - Match the language used by the user when summarizing the change.
-            """
-        }
-    }
+    var promptInstructions: String? { nil }
 
     /// Default execution posture for this purpose before chat-mode is applied.
-    /// Onboarding purposes override the mode picker; standard defaults to Agent.
-    var executionPolicy: CoCaptainTurnExecutionPolicy {
-        switch self {
-        case .standard:
-            return .agent
-        case .onboardingGuidedEdit:
-            return .agentic
-        case .onboardingWelcome, .onboardingBuildHandoff:
-            return .conversational
-        }
-    }
-
-    var isConversationalTurn: Bool {
-        executionPolicy.kind == .conversational
-    }
+    var executionPolicy: CoCaptainTurnExecutionPolicy { .agent }
 }
 
 /// User-selected CoCaptain chat mode (Cursor-style Agent / Ask / Plan).
@@ -200,7 +141,7 @@ public enum CoCaptainChatMode: String, Hashable, CaseIterable, Identifiable, Cod
     }
 }
 
-/// Merges onboarding purpose with chat mode to select execution behavior.
+/// Merges turn purpose with chat mode to select execution behavior.
 public struct CoCaptainTurnPlan: Equatable {
     public let purpose: CoCaptainTurnPurpose
     public let mode: CoCaptainChatMode
@@ -210,28 +151,14 @@ public struct CoCaptainTurnPlan: Equatable {
         self.mode = mode
     }
 
-    /// Onboarding purposes override the mode picker. Standard turns follow mode.
+    /// Standard turns follow the chat-mode picker.
     var effectivePolicy: CoCaptainTurnExecutionPolicy {
-        switch purpose {
-        case .onboardingWelcome, .onboardingBuildHandoff:
-            return .conversational
-        case .onboardingGuidedEdit:
-            return .agentic
-        case .standard:
-            return mode.executionPolicy
-        }
+        mode.executionPolicy
     }
 
     /// Canvas context richness for this turn.
     var contextDetailLevel: ProjectContextBuilder.DetailLevel {
-        switch purpose {
-        case .onboardingGuidedEdit:
-            return .implementation
-        case .onboardingWelcome, .onboardingBuildHandoff:
-            return .product
-        case .standard:
-            return mode.contextDetailLevel
-        }
+        mode.contextDetailLevel
     }
 
     /// Connection-fallback footers apply when the turn expected canvas work capability.
@@ -247,15 +174,12 @@ public struct CoCaptainTurnPlan: Equatable {
 /// stay aligned in one place.
 struct CoCaptainTurnExecutionPolicy: Equatable {
     enum Kind: Equatable {
-        case conversational
         /// Standard Agent mode: tools available, pure chat allowed, retry on invalid structure.
         case agent
         /// Ask mode: prose only (no tools / staging).
         case ask
         /// Plan mode: outline-only prose (no tools / staging).
         case plan
-        /// Onboarding guided-edit: tools available and executable work required.
-        case agentic
     }
 
     let kind: Kind
@@ -291,23 +215,6 @@ struct CoCaptainTurnExecutionPolicy: Equatable {
         executesActions: false,
         allowsAgenticRetry: false
     )
-
-    /// Onboarding guided edit: must produce reviewable work.
-    static let agentic = CoCaptainTurnExecutionPolicy(
-        kind: .agentic,
-        expectsStructuredResponse: true,
-        enforcesExecutableWork: true,
-        executesActions: true,
-        allowsAgenticRetry: true
-    )
-
-    static let conversational = CoCaptainTurnExecutionPolicy(
-        kind: .conversational,
-        expectsStructuredResponse: false,
-        enforcesExecutableWork: false,
-        executesActions: false,
-        allowsAgenticRetry: false
-    )
 }
 
 /// The terminal outcome of one specific CoCaptain turn.
@@ -330,14 +237,6 @@ public struct CoCaptainTurnCompletion: Equatable {
         self.purpose = purpose
         self.succeeded = succeeded
         self.presentedReviewBundle = presentedReviewBundle
-    }
-
-    var shouldAdvanceToCanvasDismissal: Bool {
-        purpose == .onboardingBuildHandoff && succeeded
-    }
-
-    var shouldAdvanceToOnboardingReview: Bool {
-        purpose == .onboardingGuidedEdit && succeeded && presentedReviewBundle
     }
 }
 

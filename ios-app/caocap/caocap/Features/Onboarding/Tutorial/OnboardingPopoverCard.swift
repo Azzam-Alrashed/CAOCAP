@@ -98,91 +98,24 @@ struct UnifiedBubbleWithArrowShape: Shape {
 }
 
 enum OnboardingTooltipAnchor: Hashable {
-    /// Anchored to the Tutorial portal on the root canvas (legacy lessons).
-    case tutorialNode
     /// Anchored to the Hello World mini-app node on the root canvas.
     case demoGameNode
     /// Anchored to the floating command button (FAB) at the bottom of the canvas.
     case floatingCommandButton
-    /// Anchored to the omnibox search text field.
-    case omniboxSearchField
-    /// Anchored to the "Ask CoCaptain" prompt row inside the omnibox.
-    case omniboxPromptRow
-    /// Anchored to the CoCaptain chat input field.
-    case coCaptainInput
-    /// Anchored to the CoCaptain panel's Done/dismiss button.
-    case coCaptainDoneButton
-    /// Anchored to the Go Back row in the command palette navigation section.
-    case commandPaletteGoBack
-    /// Anchored to the Help row in the command palette.
-    case commandPaletteHelp
-    /// Anchored to the main canvas gesture area used for pan, pinch, and fit-all steps.
-    case canvasGestureArea
-    /// Anchored to the zoom percentage pill in the canvas HUD.
-    case canvasHUDZoom
-    /// Anchored to the practice Mini-App node on the Tutorial canvas.
-    case practiceCanvasNode
-    /// Anchored to the live Mini-App HTML preview area.
-    case miniAppPreviewArea
-    /// Anchored to the floating command button inside the Mini-App preview shell.
-    case miniAppPreviewFAB
-    /// Anchored to the Code row in the preview omnibox tool list.
-    case omniboxMiniAppCodeRow
-    /// Anchored to the save/close control in the code editor.
-    case miniAppCodeEditorSave
-    /// Anchored to the Back to Canvas row in the preview omnibox.
-    case omniboxBackToCanvasRow
-    /// Anchored to the Organize Nodes action row in the omnibox.
-    case omniboxOrganizeRow
-    /// Anchored to the Undo action row in the omnibox.
-    case omniboxUndoRow
-    /// Anchored to the Redo action row in the omnibox.
-    case omniboxRedoRow
-    /// Anchored to the Apply button on a CoCaptain review card.
-    case coCaptainReviewApply
-    /// Anchored to the Guides section in Help.
-    case helpGuidesSection
 
     /// Whether this anchor is registered inside the canvas view hierarchy.
     var isCanvasLocal: Bool {
-        switch self {
-        case .tutorialNode, .demoGameNode, .practiceCanvasNode, .canvasGestureArea:
-            return true
-        default:
-            return false
-        }
+        self == .demoGameNode
     }
 
     /// Whether this anchor is owned by the Mini-App preview shell or its tool sheets.
-    var isPreviewShellLocal: Bool {
-        switch self {
-        case .miniAppPreviewArea, .miniAppPreviewFAB, .omniboxMiniAppCodeRow,
-             .omniboxBackToCanvasRow, .miniAppCodeEditorSave:
-            return true
-        default:
-            return false
-        }
-    }
+    var isPreviewShellLocal: Bool { false }
 
     /// Whether this anchor is rendered inside the preview omnibox list.
-    var isPreviewOmniboxLocal: Bool {
-        switch self {
-        case .omniboxMiniAppCodeRow, .omniboxBackToCanvasRow:
-            return true
-        default:
-            return false
-        }
-    }
+    var isPreviewOmniboxLocal: Bool { false }
 
     /// Whether this anchor lives inside the CoCaptain sheet.
-    var isCoCaptainLocal: Bool {
-        switch self {
-        case .coCaptainInput, .coCaptainDoneButton, .coCaptainReviewApply:
-            return true
-        default:
-            return false
-        }
-    }
+    var isCoCaptainLocal: Bool { false }
 }
 
 /// Collects layout anchors for each named onboarding target so the tooltip overlay
@@ -340,91 +273,19 @@ private struct FABChromeOnboardingTooltipOverlayModifier: ViewModifier {
 extension OnboardingCoordinator.Step {
     var tooltipAnchor: OnboardingTooltipAnchor {
         switch self {
-        case .openTutorial:
-            return .tutorialNode
         case .openPortal:
             return .demoGameNode
-        case .tapFAB, .longPressFAB, .searchFlyToNode, .returnToRoot, .typeGoBackInOmnibox:
-            return .floatingCommandButton
-        case .tapGoBackAction:
-            return .commandPaletteGoBack
-        case .openHelpCenter:
-            return .floatingCommandButton
-        case .browseHelpGuides:
-            return .helpGuidesSection
-        case .typeCoCaptainPrompt:
-            return .omniboxSearchField
-        case .submitCoCaptainPrompt:
-            return .omniboxPromptRow
-        case .chatCoCaptain:
-            return .coCaptainInput
-        case .chatCoCaptainGameEdit:
-            return .coCaptainInput
-        case .reviewCoCaptainChange, .applyCoCaptainChange:
-            return .coCaptainReviewApply
-        case .dismissCoCaptain:
-            return .coCaptainDoneButton
-        case .panCanvas, .fitAllNodes:
-            return .canvasGestureArea
-        case .pinchZoom:
-            return .canvasHUDZoom
-        case .tapMiniAppNode, .dragCanvasNode:
-            return .practiceCanvasNode
-        case .interactMiniAppPreview:
-            return .miniAppPreviewArea
-        case .openMiniAppCodeTool:
-            return .omniboxMiniAppCodeRow
-        case .saveMiniAppCodeEdit:
-            return .miniAppCodeEditorSave
-        case .returnFromMiniAppPreview:
-            return .omniboxBackToCanvasRow
-        case .runOrganizeNodes:
-            return .omniboxOrganizeRow
-        case .undoCanvasEdit, .redoCanvasEdit:
-            return .floatingCommandButton
         }
     }
 
     func resolvedTooltipAnchor(isCommandPalettePresented: Bool) -> OnboardingTooltipAnchor {
-        if self == .searchFlyToNode, isCommandPalettePresented {
-            return .omniboxSearchField
-        }
-        if self == .typeGoBackInOmnibox, isCommandPalettePresented {
-            return .omniboxSearchField
-        }
-        if self == .tapGoBackAction, isCommandPalettePresented {
-            return .commandPaletteGoBack
-        }
-        if self == .openHelpCenter, isCommandPalettePresented {
-            return .commandPaletteHelp
-        }
-        if self == .openMiniAppCodeTool, isCommandPalettePresented {
-            return .omniboxMiniAppCodeRow
-        }
-        if self == .returnFromMiniAppPreview, isCommandPalettePresented {
-            return .omniboxBackToCanvasRow
-        }
-        if self == .runOrganizeNodes, isCommandPalettePresented {
-            return .omniboxOrganizeRow
-        }
-        if self == .undoCanvasEdit, isCommandPalettePresented {
-            return .omniboxUndoRow
-        }
-        if self == .redoCanvasEdit, isCommandPalettePresented {
-            return .omniboxRedoRow
-        }
+        _ = isCommandPalettePresented
         return tooltipAnchor
     }
 
     var tooltipArrowPlacement: UnifiedBubbleWithArrowShape.ArrowPlacement {
         switch self {
-        case .dismissCoCaptain, .pinchZoom, .reviewCoCaptainChange:
-            return .top
-        case .openTutorial, .tapFAB, .typeCoCaptainPrompt, .submitCoCaptainPrompt, .chatCoCaptain,
-             .longPressFAB, .returnToRoot, .typeGoBackInOmnibox, .tapGoBackAction, .panCanvas, .fitAllNodes, .searchFlyToNode, .openPortal,
-             .tapMiniAppNode, .interactMiniAppPreview, .openMiniAppCodeTool, .openHelpCenter, .browseHelpGuides, .chatCoCaptainGameEdit,
-             .saveMiniAppCodeEdit, .returnFromMiniAppPreview, .dragCanvasNode,
-             .runOrganizeNodes, .undoCanvasEdit, .redoCanvasEdit, .applyCoCaptainChange:
+        case .openPortal:
             return .bottom
         }
     }

@@ -604,7 +604,7 @@ public final class LLMService {
 
             // Agent mode always gets implementation-level Firebase guidance when
             // structured tools are on. Ask/Plan modes never reach this block.
-            let firebasePersistenceInstructions = chatMode == .agent || purpose == .onboardingGuidedEdit
+            let firebasePersistenceInstructions = chatMode == .agent
                 ? """
                 - For Firebase/Firestore persistence, edit the Mini-App **code section** (inline JavaScript): use `window.__caocapFirestore` (and optional `window.__caocapFirestoreDefaultPath`) as described in canvas context; use compat-style `collection`/`doc`/`set`/`add`/`update` calls after null-checks.
                 """
@@ -717,9 +717,7 @@ public final class LLMService {
             parts.append(purposeInstructions)
         }
 
-        // Onboarding purposes already encode conversational posture; only append
-        // Ask instructions for standard turns so they do not fight onboarding copy.
-        if purpose == .standard, let modeInstructions = chatMode.promptInstructions {
+        if let modeInstructions = chatMode.promptInstructions {
             parts.append(modeInstructions)
         }
 

@@ -8,65 +8,9 @@ import Observation
 public class OnboardingCoordinator {
     // MARK: - Step Definition
 
-    public enum Step: Int, CaseIterable {
-        /// Legacy: open the Tutorial portal (unused by current main lessons).
-        case openTutorial = 0
-        /// User must tap the floating command button (FAB) to open the command palette.
-        case tapFAB
-        /// User must type any text in the omnibox search field.
-        case typeCoCaptainPrompt
-        /// User must send the typed text to CoCaptain via the prompt row or Return key.
-        case submitCoCaptainPrompt
-        /// User must ask CoCaptain for a small guided change to the Hello World app.
-        case chatCoCaptain
-        /// User must dismiss the CoCaptain panel by tapping Done or dragging it down.
-        case dismissCoCaptain
-        /// User must long-press the FAB to reveal the quick-action radial menu.
-        case longPressFAB
-        /// User must open the omnibox from a subcanvas to begin navigation practice.
-        case returnToRoot
-        /// User must type "go back" in the omnibox search field.
-        case typeGoBackInOmnibox
-        /// User must tap the Go Back action row or press return to navigate up.
-        case tapGoBackAction
-        /// User must search for and fly to Hello World via the command palette.
-        case searchFlyToNode
+    public enum Step: String, CaseIterable {
         /// User must tap the Hello World mini-app on the root canvas to open fullscreen.
         case openPortal
-        /// User must ask CoCaptain for a small guided Hello World edit.
-        case chatCoCaptainGameEdit
-        /// User must review the pending CoCaptain change card.
-        case reviewCoCaptainChange
-        /// User must tap Apply on the CoCaptain review card.
-        case applyCoCaptainChange
-        /// User must open Help from the command palette.
-        case openHelpCenter
-        /// User must browse Help guides to discover additional lessons.
-        case browseHelpGuides
-        /// User must tap the seeded Hello World Mini-App on the Tutorial canvas.
-        case tapMiniAppNode
-        /// User must interact with the live Mini-App preview.
-        case interactMiniAppPreview
-        /// User must open the Code tool from the preview omnibox.
-        case openMiniAppCodeTool
-        /// User must save a code edit from the code editor.
-        case saveMiniAppCodeEdit
-        /// User must return to the canvas from the Mini-App preview.
-        case returnFromMiniAppPreview
-        /// User must drag the canvas background to pan around the workspace.
-        case panCanvas
-        /// User must pinch the canvas to zoom in or out.
-        case pinchZoom
-        /// User must double-tap empty canvas space to fit all nodes in view.
-        case fitAllNodes
-        /// User must drag the practice node to a new position.
-        case dragCanvasNode
-        /// User must run Organize Nodes from the omnibox.
-        case runOrganizeNodes
-        /// User must undo the last canvas edit.
-        case undoCanvasEdit
-        /// User must redo the last undone edit.
-        case redoCanvasEdit
 
         var titleKey: String {
             OnboardingManifest.content(for: self).titleKey
@@ -85,16 +29,11 @@ public class OnboardingCoordinator {
             return OnboardingLessonsManifest.stepLabel(for: self, in: lessonID)
         }
 
+        /// Blocks Omnibox → CoCaptain prompt submission while the canvas lesson is active.
         var blocksCoCaptainPrompt: Bool {
             switch self {
-            case .returnToRoot, .typeGoBackInOmnibox, .tapGoBackAction, .panCanvas, .pinchZoom, .fitAllNodes,
-                 .searchFlyToNode, .openPortal, .tapMiniAppNode, .interactMiniAppPreview, .openMiniAppCodeTool,
-                 .saveMiniAppCodeEdit, .returnFromMiniAppPreview, .openHelpCenter, .browseHelpGuides,
-                 .dragCanvasNode, .runOrganizeNodes,
-                 .undoCanvasEdit, .redoCanvasEdit, .reviewCoCaptainChange, .applyCoCaptainChange:
+            case .openPortal:
                 return true
-            default:
-                return false
             }
         }
     }
@@ -109,12 +48,6 @@ public class OnboardingCoordinator {
 
     /// Whether to show the popover for the current step.
     public var showPopover: Bool = false
-
-    /// Baseline viewport offset captured when a pan/pinch navigation step begins.
-    public var gestureStepBaselineOffset: CGSize = .zero
-
-    /// Baseline viewport scale captured when a pinch navigation step begins.
-    public var gestureStepBaselineScale: CGFloat = 1.0
 
     /// Delay before showing the first popover (lets launch screen dismiss first).
     private let initialDelay: TimeInterval = 1.5
@@ -208,44 +141,6 @@ public class OnboardingCoordinator {
         schedulePopover(after: initialDelay)
     }
 
-    func captureGestureBaseline(offset: CGSize, scale: CGFloat) {
-        gestureStepBaselineOffset = offset
-        gestureStepBaselineScale = scale
-    }
-
-    private func scheduleReviewStepHandoff() {
-        popoverTask?.cancel()
-        popoverTask = Task { @MainActor in
-            try? await Task.sleep(for: .seconds(interStepDelay))
-            guard !Task.isCancelled else { return }
-            showPopover = true
-            try? await Task.sleep(for: .seconds(2.5))
-            guard !Task.isCancelled else { return }
-            guard currentStep == .reviewCoCaptainChange else { return }
-            let lessonID = activeLessonID?.rawValue ?? OnboardingLessonID.canvasBasics.rawValue
-            analytics.logEvent(
-                OnboardingAnalytics.cocaptainReviewShown,
-                parameters: [OnboardingAnalytics.lessonID: lessonID]
-            )
-            advancePastReviewStep()
-        }
-    }
-
-    /// Moves from the review step to apply when apply is not the next step in the active lesson.
-    private func advancePastReviewStep() {
-        guard let lessonID = activeLessonID else { return }
-        let lesson = OnboardingLessonsManifest.lesson(for: lessonID)
-        showPopover = false
-        logStepCompleted(.reviewCoCaptainChange, lessonID: lessonID)
-
-        if let next = OnboardingLessonsManifest.nextStep(after: .reviewCoCaptainChange, in: lesson) {
-            currentStep = next
-        } else {
-            currentStep = .applyCoCaptainChange
-        }
-        schedulePopover(after: interStepDelay)
-    }
-
     private func schedulePopover(after delay: TimeInterval) {
         popoverTask?.cancel()
         popoverTask = Task { @MainActor in
@@ -266,16 +161,7 @@ public class OnboardingCoordinator {
 
         if let next = OnboardingLessonsManifest.nextStep(after: step, in: lesson) {
             currentStep = next
-            if next == .reviewCoCaptainChange {
-                scheduleReviewStepHandoff()
-            } else {
-                schedulePopover(after: interStepDelay)
-            }
-            return
-        }
-
-        if step == .reviewCoCaptainChange {
-            advancePastReviewStep()
+            schedulePopover(after: interStepDelay)
             return
         }
 
@@ -295,14 +181,6 @@ public class OnboardingCoordinator {
             activeLessonID = nil
             currentStep = nil
         }
-    }
-
-    /// Move directly to a specific step (e.g. when resetting back to Step 1).
-    public func moveToStep(_ step: Step) {
-        showPopover = false
-        activeLessonID = OnboardingLessonsManifest.lesson(containing: step)?.id
-        currentStep = step
-        schedulePopover(after: interStepDelay)
     }
 
     /// Hide the active popover without advancing the onboarding step.
@@ -346,6 +224,7 @@ public class OnboardingCoordinator {
         UserDefaults.standard.removeObject(forKey: Self.legacyCompletedKey)
         UserDefaults.standard.removeObject(forKey: Self.legacyV5CompletedKey)
         UserDefaults.standard.removeObject(forKey: Self.legacyCanvasNavigationLessonKey)
+        UserDefaults.standard.removeObject(forKey: Self.legacyCanvasNavigationLessonIDKey)
         for lessonID in OnboardingLessonID.allCases {
             UserDefaults.standard.removeObject(forKey: Self.lessonCompletionKey(for: lessonID))
         }
@@ -398,7 +277,7 @@ public class OnboardingCoordinator {
             OnboardingAnalytics.stepCompleted,
             parameters: [
                 OnboardingAnalytics.lessonID: lessonID.rawValue,
-                OnboardingAnalytics.stepID: String(step.rawValue)
+                OnboardingAnalytics.stepID: step.rawValue
             ]
         )
     }

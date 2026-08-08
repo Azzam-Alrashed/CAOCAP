@@ -26,9 +26,6 @@ enum OnboardingAnalytics {
     static let lessonCompleted = "onboarding_lesson_completed"
     static let lessonSkipped = "onboarding_lesson_skipped"
     static let stepCompleted = "onboarding_step_completed"
-    static let cocaptainReviewShown = "onboarding_cocaptain_review_shown"
-    static let cocaptainReviewApplied = "onboarding_cocaptain_review_applied"
-    static let cocaptainReviewFallback = "onboarding_cocaptain_review_fallback"
 
     static let lessonID = "lesson_id"
     static let stepID = "step_id"

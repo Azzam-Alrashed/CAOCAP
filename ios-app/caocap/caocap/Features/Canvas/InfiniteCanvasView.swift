@@ -104,7 +104,6 @@ struct InfiniteCanvasView: View {
                                 viewport.handleDragTranslation(value.translation)
                                 viewport.handleDragEnded()
                                 persistViewportIfNeeded()
-                                completeOnboardingPanIfNeeded()
                                 PerformanceSignposts.event(PerformanceSignposts.Name.canvasGesture)
                             }
                     )
@@ -172,9 +171,6 @@ struct InfiniteCanvasView: View {
                     viewport.fitTo(nodes: store.nodes, containerSize: geometry.size)
                 }
                 HapticsManager.shared.trigger(.medium)
-                if onboarding?.currentStep == .fitAllNodes {
-                    onboarding?.completeCurrentStep()
-                }
             }
             .gesture(
                 TrackpadPanGesture(
@@ -188,7 +184,6 @@ struct InfiniteCanvasView: View {
                         viewport.handleDragEnded()
                         trackpadPanTranslation = .zero
                         persistViewportIfNeeded()
-                        completeOnboardingPanIfNeeded()
                     }
                 )
             )
@@ -211,7 +206,6 @@ struct InfiniteCanvasView: View {
                         viewport.handleMagnificationEnded()
                         currentScale = viewport.scale
                         persistViewportIfNeeded()
-                        completeOnboardingPinchIfNeeded()
                         PerformanceSignposts.event(PerformanceSignposts.Name.canvasGesture)
                         DispatchQueue.main.async {
                             isPinchingCanvas = false
@@ -251,65 +245,19 @@ struct InfiniteCanvasView: View {
         }
         .onChange(of: presentedMiniApp?.id) { _, nodeID in
             guard let nodeID else { return }
-            if nodeID == TutorialCanvasProvider.miniAppNodeID,
-               onboarding?.currentStep == .tapMiniAppNode {
-                onboarding?.completeCurrentStep()
-            } else if nodeID == RootCanvasProvider.helloWorldMiniAppNodeID,
-                      onboarding?.currentStep == .openPortal {
+            if nodeID == RootCanvasProvider.helloWorldMiniAppNodeID,
+               onboarding?.currentStep == .openPortal {
                 onHelloWorldOpenedForOnboarding?()
             }
-        }
-        .onChange(of: onboarding?.showPopover ?? false) { _, showPopover in
-            guard showPopover == true,
-                  let onboarding,
-                  let step = onboarding.currentStep,
-                  step == .panCanvas || step == .pinchZoom else { return }
-            onboarding.captureGestureBaseline(offset: viewport.offset, scale: viewport.scale)
-        }
-    }
-    
-    private func completeOnboardingPanIfNeeded() {
-        guard let onboarding, onboarding.currentStep == .panCanvas else { return }
-        if OnboardingNavigationGestureThresholds.didMeetPanThreshold(
-            from: onboarding.gestureStepBaselineOffset,
-            to: viewport.offset
-        ) {
-            onboarding.completeCurrentStep()
-        }
-    }
-
-    private func completeOnboardingPinchIfNeeded() {
-        guard let onboarding, onboarding.currentStep == .pinchZoom else { return }
-        if OnboardingNavigationGestureThresholds.didMeetPinchThreshold(
-            from: onboarding.gestureStepBaselineScale,
-            to: viewport.scale
-        ) {
-            onboarding.completeCurrentStep()
-        }
-    }
-
-    private func completeOnboardingDragIfNeeded(translation: CGSize) {
-        guard let onboarding, onboarding.currentStep == .dragCanvasNode else { return }
-        let distance = hypot(translation.width, translation.height)
-        if distance >= OnboardingNavigationGestureThresholds.minimumPanDistance {
-            onboarding.completeCurrentStep()
         }
     }
 
     private func canvasExplicitAnchorFrames(canvasSize: CGSize) -> [OnboardingTooltipAnchor: CGRect] {
-        var frames: [OnboardingTooltipAnchor: CGRect] = [
-            .canvasGestureArea: CGRect(origin: .zero, size: canvasSize)
-        ]
+        var frames: [OnboardingTooltipAnchor: CGRect] = [:]
 
         if onboarding?.currentStep == .openPortal,
            let frame = screenFrame(for: RootCanvasProvider.helloWorldMiniAppNodeID, canvasSize: canvasSize) {
             frames[.demoGameNode] = frame
-        }
-
-        if let step = onboarding?.currentStep,
-           step == .tapMiniAppNode || step == .dragCanvasNode,
-           let frame = screenFrame(for: TutorialCanvasProvider.miniAppNodeID, canvasSize: canvasSize) {
-            frames[.practiceCanvasNode] = frame
         }
 
         return frames
@@ -367,8 +315,6 @@ struct InfiniteCanvasView: View {
             position: finalPosition,
             persist: true
         )
-
-        completeOnboardingDragIfNeeded(translation: canvasTranslation)
 
         nodeDragOffsets[node.id] = nil
         isDraggingNode = false

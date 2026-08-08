@@ -11,7 +11,6 @@ struct CodeEditorView: View {
     /// The project store used to persist code and theme changes.
     let store: ProjectStore
     @Environment(\.dismiss) var dismiss
-    @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
     /// Local draft of the code. Initialised from the node's current code text so
     /// the user can discard changes simply by swiping the sheet away (no save
     /// happens until the close button is tapped).
@@ -57,9 +56,6 @@ struct CodeEditorView: View {
                 
                 Button(action: {
                     store.updateMiniAppCode(id: node.id, text: text, persist: true)
-                    if onboarding?.currentStep == .saveMiniAppCodeEdit {
-                        onboarding?.completeCurrentStep()
-                    }
                     dismiss()
                 }) {
                     Image(systemName: "xmark")
@@ -68,7 +64,6 @@ struct CodeEditorView: View {
                         .padding(8)
                         .background(Circle().fill(Color.white.opacity(0.1)))
                 }
-                .onboardingTooltipAnchor(.miniAppCodeEditorSave)
                 .padding(.trailing, 16)
             }
             .frame(height: 48)
@@ -80,7 +75,6 @@ struct CodeEditorView: View {
         }
         .background(Color(red: 0.12, green: 0.12, blue: 0.12).ignoresSafeArea())
         .environment(\.layoutDirection, .leftToRight)
-        .onboardingTooltipOverlay()
     }
     
     /// Returns the appropriate file extension for the node's programming language.

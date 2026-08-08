@@ -72,7 +72,6 @@ private struct MiniAppPreviewShell: View {
     var onFlyToNode: ((UUID) -> Void)? = nil
 
     @Environment(\.dismiss) private var dismiss
-    @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
     /// Drives which tool sheet is currently presented.
     @State private var activeTool: MiniAppTool?
     @State private var showingPublish = false
@@ -88,16 +87,8 @@ private struct MiniAppPreviewShell: View {
             Color(uiColor: .systemBackground).ignoresSafeArea()
 
             if let html = currentNode.miniApp?.compiledHTML {
-                HTMLWebView(
-                    htmlContent: html,
-                    onUserInteraction: {
-                        if onboarding?.currentStep == .interactMiniAppPreview {
-                            onboarding?.completeCurrentStep()
-                        }
-                    }
-                )
+                HTMLWebView(htmlContent: html)
                     .ignoresSafeArea()
-                    .onboardingTooltipAnchor(.miniAppPreviewArea)
             } else {
                 Text("No preview to display.")
                     .foregroundStyle(.secondary)
@@ -106,14 +97,6 @@ private struct MiniAppPreviewShell: View {
             if let commandPalette {
                 CommandPaletteView(viewModel: commandPalette)
             }
-        }
-        .onboardingTooltipOverlay(
-            isCommandPalettePresented: commandPalette?.isPresented ?? false,
-            rendersAnchor: { $0 == .miniAppPreviewArea }
-        )
-        .onChange(of: onboarding?.currentStep) { _, step in
-            guard step == .openMiniAppCodeTool else { return }
-            commandPalette?.setPresented(true)
         }
         .onAppear {
             guard let commandPalette else { return }
@@ -163,16 +146,10 @@ private struct MiniAppPreviewShell: View {
         case .publish:
             showingPublish = true
         case .backToCanvas:
-            if onboarding?.currentStep == .returnFromMiniAppPreview {
-                onboarding?.completeCurrentStep()
-            }
             dismiss()
         default:
             if let miniAppTool = MiniAppTool(tool) {
                 activeTool = miniAppTool
-                if miniAppTool == .code, onboarding?.currentStep == .openMiniAppCodeTool {
-                    onboarding?.completeCurrentStep()
-                }
             }
         }
     }

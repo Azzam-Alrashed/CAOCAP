@@ -4,83 +4,19 @@ import Testing
 @testable import caocap
 
 struct CoCaptainAgentTests {
-    @Test func onboardingWelcomePurposeDefinesFocusedPromptInstructions() {
-        let instructions = CoCaptainTurnPurpose.onboardingWelcome.promptInstructions
-
+    @Test func standardPurposeHasNoPromptInstructions() {
         #expect(CoCaptainTurnPurpose.standard.promptInstructions == nil)
-        #expect(instructions?.contains("40 to 80 words") == true)
-        #expect(instructions?.contains("exactly one easy question") == true)
-        #expect(instructions?.contains("at most two short example ideas") == true)
-        #expect(instructions?.contains("Do not request app actions") == true)
-        #expect(instructions?.contains("Match the language used by the user") == true)
-    }
-
-    @Test func onboardingBuildHandoffPurposeDefinesFocusedPromptInstructions() {
-        let instructions = CoCaptainTurnPurpose.onboardingBuildHandoff.promptInstructions
-
-        #expect(instructions?.contains("initial direction for what they want to build") == true)
-        #expect(instructions?.contains("20 to 50 words") == true)
-        #expect(instructions?.contains("transition back to the canvas") == true)
-        #expect(instructions?.contains("Do not ask a question") == true)
-        #expect(instructions?.contains("Do not request app actions") == true)
-        #expect(instructions?.contains("invoke tools") == true)
-        #expect(instructions?.contains("emit a `cocaptain_actions` block") == true)
-        #expect(instructions?.contains("Match the language used by the user") == true)
-    }
-
-    @Test func turnCompletionShouldAdvanceToCanvasDismissalOnlyForSuccessfulHandoff() {
-        let handoffSuccess = CoCaptainTurnCompletion(
-            turnID: UUID(),
-            purpose: .onboardingBuildHandoff,
-            succeeded: true
-        )
-        let handoffFailure = CoCaptainTurnCompletion(
-            turnID: UUID(),
-            purpose: .onboardingBuildHandoff,
-            succeeded: false
-        )
-        let welcomeSuccess = CoCaptainTurnCompletion(
-            turnID: UUID(),
-            purpose: .onboardingWelcome,
-            succeeded: true
-        )
-        let standardSuccess = CoCaptainTurnCompletion(
-            turnID: UUID(),
-            purpose: .standard,
-            succeeded: true
-        )
-
-        #expect(handoffSuccess.shouldAdvanceToCanvasDismissal)
-        #expect(!handoffFailure.shouldAdvanceToCanvasDismissal)
-        #expect(!welcomeSuccess.shouldAdvanceToCanvasDismissal)
-        #expect(!standardSuccess.shouldAdvanceToCanvasDismissal)
-    }
-
-    @Test func turnExecutionPolicyMapsPurposesToExpectedModes() {
         #expect(CoCaptainTurnPurpose.standard.executionPolicy == .agent)
-        #expect(CoCaptainTurnPurpose.onboardingWelcome.executionPolicy == .conversational)
-        #expect(CoCaptainTurnPurpose.onboardingBuildHandoff.executionPolicy == .conversational)
-        #expect(CoCaptainTurnPurpose.onboardingGuidedEdit.executionPolicy == .agentic)
-        #expect(!CoCaptainTurnPurpose.standard.isConversationalTurn)
-        #expect(CoCaptainTurnPurpose.onboardingWelcome.isConversationalTurn)
-        #expect(CoCaptainTurnPurpose.onboardingBuildHandoff.isConversationalTurn)
-        #expect(!CoCaptainTurnPurpose.onboardingGuidedEdit.isConversationalTurn)
     }
 
-    @Test func turnPlanMapsModeAndPurposeToEffectivePolicy() {
+    @Test func turnPlanMapsModeToEffectivePolicy() {
         let agent = CoCaptainTurnPlan(purpose: .standard, mode: .agent)
         let ask = CoCaptainTurnPlan(purpose: .standard, mode: .ask)
         let plan = CoCaptainTurnPlan(purpose: .standard, mode: .plan)
-        let welcome = CoCaptainTurnPlan(purpose: .onboardingWelcome, mode: .agent)
-        let handoff = CoCaptainTurnPlan(purpose: .onboardingBuildHandoff, mode: .agent)
-        let guided = CoCaptainTurnPlan(purpose: .onboardingGuidedEdit, mode: .ask)
 
         #expect(agent.effectivePolicy == .agent)
         #expect(ask.effectivePolicy == .ask)
         #expect(plan.effectivePolicy == .plan)
-        #expect(welcome.effectivePolicy == .conversational)
-        #expect(handoff.effectivePolicy == .conversational)
-        #expect(guided.effectivePolicy == .agentic)
         #expect(CoCaptainTurnExecutionPolicy.agent.expectsStructuredResponse)
         #expect(CoCaptainTurnExecutionPolicy.agent.enforcesExecutableWork == false)
         #expect(CoCaptainTurnExecutionPolicy.agent.allowsAgenticRetry)
@@ -93,12 +29,9 @@ struct CoCaptainAgentTests {
         #expect(CoCaptainTurnExecutionPolicy.plan.executesActions == false)
         #expect(CoCaptainTurnExecutionPolicy.plan.enforcesExecutableWork == false)
         #expect(CoCaptainTurnExecutionPolicy.plan.allowsAgenticRetry == false)
-        #expect(CoCaptainTurnExecutionPolicy.agentic.enforcesExecutableWork)
         #expect(agent.requiresDegradedConnectionNotice)
         #expect(!ask.requiresDegradedConnectionNotice)
         #expect(!plan.requiresDegradedConnectionNotice)
-        #expect(!welcome.requiresDegradedConnectionNotice)
-        #expect(guided.requiresDegradedConnectionNotice)
         #expect(agent.contextDetailLevel == .implementation)
         #expect(ask.contextDetailLevel == .product)
         #expect(plan.contextDetailLevel == .product)
@@ -508,7 +441,7 @@ struct CoCaptainAgentTests {
     }
 
     @MainActor
-    @Test func commandPaletteKeepsPromptSelectedDuringOnboardingTyping() {
+    @Test func commandPaletteKeepsPromptSelectedAfterReselect() {
         let viewModel = CommandPaletteViewModel()
         viewModel.actions = TestActionDispatcher().availableActions
         viewModel.nodes = [
@@ -517,8 +450,8 @@ struct CoCaptainAgentTests {
 
         viewModel.query = "h"
         viewModel.selectPromptRowIfAvailable()
-        viewModel.prefersPromptSubmission = true
         viewModel.query = "hi"
+        viewModel.selectPromptRowIfAvailable()
 
         var submittedPrompt: String?
         var flownNodeID: UUID?
@@ -1073,9 +1006,9 @@ struct CoCaptainAgentTests {
     }
 
     @MainActor
-    @Test func coordinatorForwardsOnboardingWelcomePurpose() async throws {
+    @Test func coordinatorForwardsStandardPurpose() async throws {
         let llm = TestLLMClient(
-            response: "Welcome! What would you like to make?"
+            response: "Here is how I can help."
         )
         let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
 
@@ -1083,41 +1016,26 @@ struct CoCaptainAgentTests {
             userMessage: "hi",
             store: makeStore(),
             dispatcher: nil,
-            purpose: .onboardingWelcome
+            purpose: .standard
         ) { _ in }
 
-        #expect(llm.receivedPurposes == [.onboardingWelcome])
+        #expect(llm.receivedPurposes == [.standard])
     }
 
     @MainActor
-    @Test func coordinatorForwardsOnboardingBuildHandoffPurpose() async throws {
+    @Test func askModeDoesNotAgenticRetryForMakeKeyword() async throws {
         let llm = TestLLMClient(
-            response: "Great idea. Let's head back to the canvas and start building."
+            response: "A Pac-Man game sounds fun. Let's start building."
         )
         let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
-
-        _ = try await coordinator.run(
-            userMessage: "a todo app",
-            store: makeStore(),
-            dispatcher: nil,
-            purpose: .onboardingBuildHandoff
-        ) { _ in }
-
-        #expect(llm.receivedPurposes == [.onboardingBuildHandoff])
-    }
-
-    @MainActor
-    @Test func conversationalBuildHandoffDoesNotAgenticRetryForMakeKeyword() async throws {
-        let llm = TestLLMClient(
-            response: "A Pac-Man game sounds fun. Let's head back to the canvas and start building."
-        )
-        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
+        let turnPlan = CoCaptainTurnPlan(purpose: .standard, mode: .ask)
 
         let result = try await coordinator.run(
             userMessage: "I wanna make a pacman game",
             store: makeStore(),
             dispatcher: nil,
-            purpose: .onboardingBuildHandoff
+            purpose: .standard,
+            turnPlan: turnPlan
         ) { _ in }
 
         #expect(llm.receivedMessages.count == 1)
@@ -1130,7 +1048,7 @@ struct CoCaptainAgentTests {
     }
 
     @MainActor
-    @Test func conversationalTurnIgnoresStructuredPayloadFromModel() async throws {
+    @Test func askModeIgnoresStructuredPayloadFromModel() async throws {
         let dispatcher = TestActionDispatcher()
         let llm = TestLLMClient(
             response: """
@@ -1149,12 +1067,14 @@ struct CoCaptainAgentTests {
             """
         )
         let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
+        let turnPlan = CoCaptainTurnPlan(purpose: .standard, mode: .ask)
 
         let result = try await coordinator.run(
             userMessage: "I wanna make a pacman game",
             store: makeStore(),
             dispatcher: dispatcher,
-            purpose: .onboardingBuildHandoff
+            purpose: .standard,
+            turnPlan: turnPlan
         ) { _ in }
 
         #expect(llm.receivedMessages.count == 1)
@@ -2258,99 +2178,7 @@ struct CoCaptainAgentTests {
     }
 
     @MainActor
-    @Test func cancelledOnboardingBuildHandoffRecordsFailedCompletion() async throws {
-        let coordinator = CoCaptainAgentCoordinator(llmClient: ThrowingLLMClient(error: CancellationError()))
-        let vm = CoCaptainViewModel(agentCoordinator: coordinator)
-
-        vm.sendMessage("I wanna make a pacman game", purpose: .onboardingBuildHandoff)
-
-        for _ in 0..<20 where vm.isThinking {
-            try await Task.sleep(for: .milliseconds(10))
-        }
-
-        #expect(!vm.isThinking)
-        #expect(vm.completedAssistantResponseCount == 0)
-        #expect(vm.successfulAssistantResponseCount == 0)
-        #expect(vm.lastTurnCompletion?.purpose == .onboardingBuildHandoff)
-        #expect(vm.lastTurnCompletion?.succeeded == false)
-        #expect(vm.lastTurnCompletion?.shouldAdvanceToCanvasDismissal == false)
-    }
-
-    @MainActor
-    @Test func successfulOnboardingBuildHandoffRecordsTurnCompletion() async throws {
-        let llm = TestLLMClient(
-            response: "A todo app sounds great. Let's head back to the canvas and start building."
-        )
-        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
-        let vm = CoCaptainViewModel(agentCoordinator: coordinator)
-
-        vm.sendMessage("I wanna make a pacman game", purpose: .onboardingBuildHandoff)
-
-        for _ in 0..<20 where vm.isThinking {
-            try await Task.sleep(for: .milliseconds(10))
-        }
-
-        #expect(!vm.isThinking)
-        #expect(vm.lastTurnCompletion?.purpose == .onboardingBuildHandoff)
-        #expect(vm.lastTurnCompletion?.succeeded == true)
-        #expect(vm.lastTurnCompletion?.shouldAdvanceToCanvasDismissal == true)
-        #expect(llm.receivedPurposes == [.onboardingBuildHandoff])
-    }
-
-    @MainActor
-    @Test func failedOnboardingBuildHandoffShowsRetryMessageAndFailedCompletion() async throws {
-        let llm = TestLLMClient(response: "")
-        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
-        let vm = CoCaptainViewModel(agentCoordinator: coordinator)
-
-        vm.sendMessage("I wanna make a pacman game", purpose: .onboardingBuildHandoff)
-
-        for _ in 0..<20 where vm.isThinking {
-            try await Task.sleep(for: .milliseconds(10))
-        }
-
-        #expect(vm.lastTurnCompletion?.purpose == .onboardingBuildHandoff)
-        #expect(vm.lastTurnCompletion?.succeeded == false)
-        #expect(vm.lastTurnCompletion?.shouldAdvanceToCanvasDismissal == false)
-        #expect(vm.successfulAssistantResponseCount == 0)
-        #expect(vm.items.contains { item in
-            guard case .message(let bubble) = item.content else { return false }
-            return bubble.text.contains("Please try sending your idea again.")
-        })
-    }
-
-    @MainActor
-    @Test func failedOnboardingBuildHandoffCanRetryWithoutCountingFailureAsSuccess() async throws {
-        let llm = FailingThenSucceedingLLMClient(failureCount: 1)
-        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
-        let vm = CoCaptainViewModel(agentCoordinator: coordinator)
-
-        vm.sendMessage("I wanna make a pacman game", purpose: .onboardingBuildHandoff)
-
-        for _ in 0..<20 where vm.isThinking {
-            try await Task.sleep(for: .milliseconds(10))
-        }
-
-        #expect(vm.completedAssistantResponseCount == 1)
-        #expect(vm.successfulAssistantResponseCount == 0)
-        #expect(vm.lastTurnCompletion?.succeeded == false)
-
-        vm.sendMessage("a todo app again", purpose: .onboardingBuildHandoff)
-
-        for _ in 0..<20 where vm.isThinking {
-            try await Task.sleep(for: .milliseconds(10))
-        }
-
-        #expect(vm.completedAssistantResponseCount == 2)
-        #expect(vm.successfulAssistantResponseCount == 1)
-        #expect(vm.lastTurnCompletion?.purpose == .onboardingBuildHandoff)
-        #expect(vm.lastTurnCompletion?.succeeded == true)
-        #expect(vm.lastTurnCompletion?.shouldAdvanceToCanvasDismissal == true)
-        #expect(llm.receivedPurposes.allSatisfy { $0 == .onboardingBuildHandoff })
-    }
-
-    @MainActor
-    @Test func standardTurnCompletionDoesNotAdvanceToCanvasDismissal() async throws {
+    @Test func standardTurnRecordsSuccessfulCompletion() async throws {
         let llm = TestLLMClient(response: "Here is how I can help.")
         let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
         let vm = CoCaptainViewModel(agentCoordinator: coordinator)
@@ -2363,16 +2191,16 @@ struct CoCaptainAgentTests {
 
         #expect(vm.lastTurnCompletion?.purpose == .standard)
         #expect(vm.lastTurnCompletion?.succeeded == true)
-        #expect(vm.lastTurnCompletion?.shouldAdvanceToCanvasDismissal == false)
+        #expect(vm.lastTurnCompletion?.presentedReviewBundle == false)
     }
 
     @MainActor
-    @Test func failedOnboardingWelcomeCanRetryWithoutCountingFailureAsSuccess() async throws {
-        let llm = FailingThenSucceedingLLMClient(failureCount: 2)
+    @Test func failedStandardTurnCanRetryWithoutCountingFailureAsSuccess() async throws {
+        let llm = FailingThenSucceedingLLMClient(failureCount: 1)
         let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
         let vm = CoCaptainViewModel(agentCoordinator: coordinator)
 
-        vm.sendMessage("hi", purpose: .onboardingWelcome)
+        vm.sendMessage("help me", purpose: .standard)
 
         for _ in 0..<20 where vm.isThinking {
             try await Task.sleep(for: .milliseconds(10))
@@ -2380,12 +2208,9 @@ struct CoCaptainAgentTests {
 
         #expect(vm.completedAssistantResponseCount == 1)
         #expect(vm.successfulAssistantResponseCount == 0)
-        #expect(vm.items.contains { item in
-            guard case .message(let bubble) = item.content else { return false }
-            return bubble.text.contains("Please try sending your message again.")
-        })
+        #expect(vm.lastTurnCompletion?.succeeded == false)
 
-        vm.sendMessage("hi again", purpose: .onboardingWelcome)
+        vm.sendMessage("help me again", purpose: .standard)
 
         for _ in 0..<20 where vm.isThinking {
             try await Task.sleep(for: .milliseconds(10))
@@ -2393,7 +2218,9 @@ struct CoCaptainAgentTests {
 
         #expect(vm.completedAssistantResponseCount == 2)
         #expect(vm.successfulAssistantResponseCount == 1)
-        #expect(llm.receivedPurposes.allSatisfy { $0 == .onboardingWelcome })
+        #expect(vm.lastTurnCompletion?.purpose == .standard)
+        #expect(vm.lastTurnCompletion?.succeeded == true)
+        #expect(llm.receivedPurposes.allSatisfy { $0 == .standard })
     }
 
     @Test func parserExtractsActionAttributesFromXML() throws {
@@ -2834,41 +2661,7 @@ struct CoCaptainAgentTests {
     }
 
     @MainActor
-    @Test func onboardingGuidedEditChatOnlyResponseTriggersRetry() async throws {
-        let llm = TestLLMClient(
-            responses: [
-                "I can describe the landing page in chat.",
-                """
-                <cocaptain_actions>
-                  <assistant_message>Updated heading.</assistant_message>
-                  <node_edits>
-                    <node_edit role="miniApp" section="code" summary="Update heading">
-                      <operation type="replace_all">
-                        <content><![CDATA[<h1>Retry</h1>]]></content>
-                      </operation>
-                    </node_edit>
-                  </node_edits>
-                </cocaptain_actions>
-                """
-            ]
-        )
-        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
-        let turnPlan = CoCaptainTurnPlan(purpose: .onboardingGuidedEdit, mode: .agent)
-
-        _ = try await coordinator.run(
-            userMessage: "rename the title to Hello CAOCAP",
-            store: makeStore(),
-            dispatcher: TestActionDispatcher(),
-            purpose: .onboardingGuidedEdit,
-            turnPlan: turnPlan
-        ) { _ in }
-
-        #expect(llm.receivedMessages.count == 2)
-        #expect(llm.receivedMessages[1].contains("cocaptain_actions"))
-    }
-
-    @MainActor
-    @Test func onboardingWelcomeStaysConversational() async throws {
+    @Test func askModeStaysProseOnlyWhenModelEmitsActions() async throws {
         let llm = TestLLMClient(
             response: """
             Welcome! I help you build apps.
@@ -2885,13 +2678,13 @@ struct CoCaptainAgentTests {
             """
         )
         let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
-        let turnPlan = CoCaptainTurnPlan(purpose: .onboardingWelcome, mode: .agent)
+        let turnPlan = CoCaptainTurnPlan(purpose: .standard, mode: .ask)
 
         let result = try await coordinator.run(
             userMessage: "hi",
             store: makeStore(),
             dispatcher: TestActionDispatcher(),
-            purpose: .onboardingWelcome,
+            purpose: .standard,
             turnPlan: turnPlan
         ) { _ in }
 
