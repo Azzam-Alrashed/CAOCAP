@@ -45,7 +45,6 @@ struct NodeAgentChatView: View {
                 mentions: $mentions,
                 attachments: $attachments,
                 isFocused: $isFocused,
-                store: store,
                 allowsContextPinning: false,
                 pinnableNodes: [],
                 isThinking: viewModel.isThinking,

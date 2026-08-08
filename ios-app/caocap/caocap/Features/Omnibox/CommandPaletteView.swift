@@ -10,7 +10,7 @@ struct CommandPaletteView: View {
     @AppStorage("app.dictationLocale") private var dictationLocaleRawValue = DictationLocaleOption.auto.rawValue
     /// When `true` (default), the results card lists options as soon as the omnibox opens.
     /// When `false`, options appear only after the user starts typing.
-    @AppStorage("omnibox.showOptionsWhenEmpty") private var showOptionsWhenEmpty = true
+    @AppStorage("omnibox.showOptionsWhenEmpty") private var showOptionsWhenEmpty = false
     @State private var dictation = DictationController()
     
     private var dictationLocaleOption: DictationLocaleOption {

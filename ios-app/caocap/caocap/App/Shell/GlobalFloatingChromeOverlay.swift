@@ -155,11 +155,16 @@ struct GlobalFloatingChromeView: View {
 
         ZStack {
             if shouldShowChrome(session) {
+                let hideChromeForCoCaptain = session.coCaptain.isPresented
+
                 FloatingCommandButton(
                     onTap: {
-                        // Ensure the main app window owns keyboard focus before the Omnibox focuses.
                         GlobalFloatingChromeController.makeMainAppWindowKey()
-                        session.commandPalette.setPresented(true)
+                        session.handleFloatingCommandButtonTap()
+                    },
+                    onSearch: {
+                        GlobalFloatingChromeController.makeMainAppWindowKey()
+                        session.handleFloatingCommandSearch()
                     },
                     onSelectMode: { mode in
                         switch mode {
@@ -182,6 +187,9 @@ struct GlobalFloatingChromeView: View {
                         fabAnchorFrame = frame
                     }
                 )
+                .opacity(hideChromeForCoCaptain ? 0 : 1)
+                .allowsHitTesting(!hideChromeForCoCaptain)
+                .animation(.easeInOut(duration: 0.22), value: hideChromeForCoCaptain)
                 .environment(\.layoutDirection, .leftToRight)
                 .environment(session.onboarding)
 
@@ -193,6 +201,9 @@ struct GlobalFloatingChromeView: View {
                             publishInteractiveFrames(session: session)
                         }
                     )
+                    .opacity(hideChromeForCoCaptain ? 0 : 1)
+                    .allowsHitTesting(!hideChromeForCoCaptain)
+                    .animation(.easeInOut(duration: 0.22), value: hideChromeForCoCaptain)
                     .transition(.opacity)
                 }
             }
@@ -233,6 +244,9 @@ struct GlobalFloatingChromeView: View {
                 callChromeFrame = .null
                 publishInteractiveFrames(session: session)
             }
+        }
+        .onChange(of: session.coCaptain.isPresented) { _, _ in
+            publishInteractiveFrames(session: session)
         }
         .onChange(of: session.commandPalette.isPresented) { _, _ in
             publishInteractiveFrames(session: session)
@@ -304,6 +318,11 @@ struct GlobalFloatingChromeView: View {
 
     private func publishInteractiveFrames(session: AppSessionCoordinator) {
         guard shouldShowChrome(session) else {
+            bridge.onInteractiveFramesChange([])
+            return
+        }
+        // While CoCaptain is up, FAB + call chrome are visually/interactively hidden.
+        if session.coCaptain.isPresented {
             bridge.onInteractiveFramesChange([])
             return
         }

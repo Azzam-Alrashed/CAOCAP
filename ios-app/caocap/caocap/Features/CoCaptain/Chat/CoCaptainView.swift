@@ -40,7 +40,6 @@ struct CoCaptainView: View {
                     mentions: $mentions,
                     attachments: $attachments,
                     isFocused: $isFocused,
-                    store: viewModel.store,
                     allowsContextPinning: true,
                     pinnableNodes: viewModel.pinnableContextNodes,
                     isThinking: viewModel.isThinking,

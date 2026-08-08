@@ -18,7 +18,7 @@ struct SettingsView: View {
     @AppStorage("grid_opacity") private var gridOpacity: Double = 0.1
     @AppStorage("connection_style") private var connectionStyle = "Dashed"
     @AppStorage("spatial_glow_enabled") private var spatialGlowEnabled = true
-    @AppStorage("omnibox.showOptionsWhenEmpty") private var showOmniboxOptionsWhenEmpty = true
+    @AppStorage("omnibox.showOptionsWhenEmpty") private var showOmniboxOptionsWhenEmpty = false
     @AppStorage("cocaptain.modelName") private var modelName = CoCaptainModelSelectionPolicy.cloudModelName
 
     @State private var localModelManager = LocalGemmaModelManager.shared

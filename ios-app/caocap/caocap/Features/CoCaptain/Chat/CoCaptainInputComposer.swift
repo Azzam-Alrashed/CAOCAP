@@ -8,7 +8,6 @@ struct CoCaptainInputComposer: View {
     @Binding var mentions: [CoCaptainNodeMention]
     @Binding var attachments: [CoCaptainAttachment]
     @FocusState.Binding var isFocused: Bool
-    let store: ProjectStore?
     /// When false (node-scoped chat), inline cross-node @ suggestions are disabled.
     let allowsContextPinning: Bool
     let pinnableNodes: [SpatialNode]
@@ -33,7 +32,6 @@ struct CoCaptainInputComposer: View {
     @State private var attachmentError: String?
     @State private var isImportingAttachments = false
     @State private var lastAttachmentSource: AttachmentSource?
-    @State private var isContextDetailsPresented = false
 
     private enum AttachmentSource {
         case photos
@@ -228,9 +226,6 @@ struct CoCaptainInputComposer: View {
     /// Adaptive composer that expands only when the draft needs more context.
     private var composerCapsule: some View {
         VStack(alignment: .leading, spacing: CoCaptainChatStyle.smallSpacing) {
-            if let store {
-                contextSummaryButton(store: store)
-            }
             if !mentions.isEmpty { draftContextChips }
             if !attachments.isEmpty { attachmentPreview }
             if isImportingAttachments {
@@ -247,8 +242,7 @@ struct CoCaptainInputComposer: View {
             attachmentErrorBanner
             dictationErrorBanner
             if !mentionSuggestions.isEmpty { mentionSuggestionList }
-            composerTextField
-            composerActionRow
+            composerInputRow
         }
         .padding(.horizontal, CoCaptainChatStyle.standardSpacing)
         .padding(.top, CoCaptainChatStyle.standardSpacing)
@@ -278,6 +272,22 @@ struct CoCaptainInputComposer: View {
         .animation(.easeInOut(duration: 0.2), value: attachments)
     }
 
+    private var composerInputRow: some View {
+        HStack(alignment: .bottom, spacing: CoCaptainChatStyle.compactSpacing) {
+            attachmentMenu
+            composerTextField
+            sendButton
+            Button(action: onSend) {
+                EmptyView()
+            }
+            .keyboardShortcut(.return, modifiers: .command)
+            .frame(width: 0, height: 0)
+            .opacity(0)
+            .disabled(!canSend)
+            .accessibilityHidden(true)
+        }
+    }
+
     private var composerTextField: some View {
         TextField(chatMode.composerPlaceholder, text: $text, axis: .vertical)
             .lineLimit(Self.composerLineLimit)
@@ -300,39 +310,38 @@ struct CoCaptainInputComposer: View {
             .animation(.easeInOut(duration: 0.15), value: composerNewlineCount)
     }
 
-    private var composerActionRow: some View {
-        HStack(spacing: CoCaptainChatStyle.compactSpacing) {
-            attachmentMenu
-            chatModePicker
-            Spacer(minLength: CoCaptainChatStyle.compactSpacing)
-            sendButton
-            Button(action: onSend) {
-                EmptyView()
-            }
-            .keyboardShortcut(.return, modifiers: .command)
-            .frame(width: 0, height: 0)
-            .opacity(0)
-            .disabled(!canSend)
-            .accessibilityHidden(true)
-        }
-    }
-
     private var attachmentMenu: some View {
         Menu {
-            Button {
-                lastAttachmentSource = .photos
-                attachmentError = nil
-                isPhotoPickerPresented = true
-            } label: {
-                Label("Photos", systemImage: "photo.on.rectangle")
+            Section {
+                ForEach(CoCaptainChatMode.allCases) { mode in
+                    Button {
+                        chatMode = mode
+                        HapticsManager.shared.selectionChanged()
+                    } label: {
+                        Label(
+                            mode.displayName,
+                            systemImage: mode == chatMode ? "checkmark" : mode.systemImageName
+                        )
+                    }
+                }
             }
 
-            Button {
-                lastAttachmentSource = .files
-                attachmentError = nil
-                isFileImporterPresented = true
-            } label: {
-                Label("Files", systemImage: "doc")
+            Section {
+                Button {
+                    lastAttachmentSource = .photos
+                    attachmentError = nil
+                    isPhotoPickerPresented = true
+                } label: {
+                    Label("Photos", systemImage: "photo.on.rectangle")
+                }
+
+                Button {
+                    lastAttachmentSource = .files
+                    attachmentError = nil
+                    isFileImporterPresented = true
+                } label: {
+                    Label("Files", systemImage: "doc")
+                }
             }
         } label: {
             Image(systemName: "plus")
@@ -354,53 +363,10 @@ struct CoCaptainInputComposer: View {
         .accessibilityLabel(
             LocalizationManager.shared.localizedString("Add attachment")
         )
+        .accessibilityValue(chatMode.displayName)
         .disabled(
             isThinking || isConversationArchiveLoading || isImportingAttachments
         )
-        .simultaneousGesture(
-            TapGesture().onEnded {
-                isFocused = false
-            }
-        )
-    }
-
-    /// Compact Agent/Ask/Plan control on the composer toolbar.
-    private var chatModePicker: some View {
-        Menu {
-            ForEach(CoCaptainChatMode.allCases) { mode in
-                Button {
-                    chatMode = mode
-                    HapticsManager.shared.selectionChanged()
-                } label: {
-                    Label(
-                        "\(mode.displayName) — \(mode.explanation)",
-                        systemImage: mode == chatMode ? "checkmark" : mode.systemImageName
-                    )
-                }
-            }
-        } label: {
-            HStack(spacing: 4) {
-                Image(systemName: chatMode.systemImageName)
-                    .font(.system(size: 11, weight: .semibold))
-                Text(chatMode.displayName)
-                    .font(.system(size: 12, weight: .semibold))
-                Image(systemName: "chevron.up.chevron.down")
-                    .font(.system(size: 8, weight: .semibold))
-            }
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
-            .frame(minHeight: CoCaptainChatStyle.minimumHitSize)
-            .background(
-                Capsule(style: .continuous)
-                    .fill(CoCaptainChatStyle.raisedFill)
-            )
-        }
-        .accessibilityLabel(
-            LocalizationManager.shared.localizedString("cocaptain.composer.modeAccessibility")
-        )
-        .accessibilityValue(chatMode.displayName)
-        .disabled(isThinking)
         .simultaneousGesture(
             TapGesture().onEnded {
                 isFocused = false
@@ -416,101 +382,6 @@ struct CoCaptainInputComposer: View {
         let query = text[text.index(after: atIndex)...]
         guard !query.contains(where: { $0.isWhitespace || $0.isNewline }) else { return nil }
         return String(query)
-    }
-
-    private func contextSummaryButton(store: ProjectStore) -> some View {
-        Button {
-            isContextDetailsPresented.toggle()
-        } label: {
-            HStack(spacing: 6) {
-                Label(contextSummary(store: store), systemImage: "scope")
-                    .lineLimit(1)
-                Spacer(minLength: 4)
-                Label(modelRouteLabel, systemImage: modelRouteIcon)
-                    .lineLimit(1)
-                Image(systemName: "info.circle")
-                    .foregroundStyle(.tertiary)
-                    .accessibilityHidden(true)
-            }
-            .font(.caption.weight(.medium))
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, 10)
-            .frame(minHeight: CoCaptainChatStyle.compactControlSize)
-            .background(CoCaptainChatStyle.subtleFill, in: Capsule())
-        }
-        .buttonStyle(.plain)
-        .popover(isPresented: $isContextDetailsPresented) {
-            contextDetails(store: store)
-                .presentationCompactAdaptation(.popover)
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(
-            LocalizationManager.shared.localizedString("CoCaptain context")
-        )
-    }
-
-    private func contextSummary(store: ProjectStore) -> String {
-        if !mentions.isEmpty {
-            return LocalizationManager.shared.localizedString(
-                "%lld pinned",
-                arguments: [Int64(mentions.count)]
-            )
-        }
-        if !allowsContextPinning {
-            return LocalizationManager.shared.localizedString("Focused node")
-        }
-        return LocalizationManager.shared.localizedProjectName(
-            store.projectName,
-            fileName: store.fileName
-        )
-    }
-
-    private func contextDetails(store: ProjectStore) -> some View {
-        VStack(alignment: .leading, spacing: CoCaptainChatStyle.standardSpacing) {
-            Label(
-                LocalizationManager.shared.localizedString("CoCaptain context"),
-                systemImage: "scope"
-            )
-            .font(.headline)
-
-            Text(
-                LocalizationManager.shared.localizedString(
-                    "CoCaptain can read the current canvas and the nodes you pin for this message."
-                )
-            )
-            .font(.subheadline)
-            .foregroundStyle(.secondary)
-            .fixedSize(horizontal: false, vertical: true)
-
-            Divider()
-
-            Label(
-                LocalizationManager.shared.localizedString(
-                    "context.nodeCount",
-                    arguments: [Int64(store.nodes.count)]
-                ),
-                systemImage: "square.grid.2x2"
-            )
-            Label(modelRouteLabel, systemImage: modelRouteIcon)
-
-            Text(routeDisclosure)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(CoCaptainChatStyle.sectionSpacing)
-        .frame(idealWidth: 300)
-    }
-
-    private var routeDisclosure: String {
-        if isOnDeviceRoute {
-            return LocalizationManager.shared.localizedString(
-                "On-device processing keeps this request on your device."
-            )
-        }
-        return LocalizationManager.shared.localizedString(
-            "Cloud processing sends the selected canvas context and attachments to Gemini."
-        )
     }
 
     private var draftContextChips: some View {
@@ -544,41 +415,6 @@ struct CoCaptainInputComposer: View {
                 }
             }
         }
-    }
-
-    private var modelRouteLabel: String {
-        let connectivity = NetworkConnectivityMonitor.shared.currentStatus
-        if connectivity == .disconnected {
-            return localModelManager.isLocalModelCached
-                ? LocalizationManager.shared.localizedString("On-device · Offline")
-                : LocalizationManager.shared.localizedString("Offline")
-        }
-
-        return usesLocalModelRoute
-            ? LocalizationManager.shared.localizedString("On-device")
-            : LocalizationManager.shared.localizedString("Gemini cloud")
-    }
-
-    private var modelRouteIcon: String {
-        let connectivity = NetworkConnectivityMonitor.shared.currentStatus
-        if connectivity == .disconnected && !localModelManager.isLocalModelCached {
-            return "wifi.slash"
-        }
-        return usesLocalModelRoute || connectivity == .disconnected ? "cpu" : "cloud"
-    }
-
-    private var usesLocalModelRoute: Bool {
-        let requested = UserDefaults.standard.string(forKey: "cocaptain.modelName")
-        return CoCaptainModelSelectionPolicy.resolvedModelName(requested)
-            == CoCaptainModelSelectionPolicy.localModelName
-    }
-
-    private var isOnDeviceRoute: Bool {
-        usesLocalModelRoute
-            || (
-                NetworkConnectivityMonitor.shared.currentStatus == .disconnected
-                    && localModelManager.isLocalModelCached
-            )
     }
 
     private var mentionSuggestions: [SpatialNode] {

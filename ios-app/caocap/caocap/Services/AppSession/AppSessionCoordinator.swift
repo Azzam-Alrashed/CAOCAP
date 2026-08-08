@@ -31,6 +31,8 @@ final class AppSessionCoordinator {
     var showTutorialGraduationBanner = false
     var showingCopilotCall = false
     var showingCopilotPicker = false
+    /// Mission Control mid sheet opened by FAB tap.
+    var showingMissionControl = false
     var activeCopilotCallMode: CopilotInteractionMode = .voice
     var selectedCopilot: CopilotPersona = UserProfileStore().loadSelectedCopilot()
     @ObservationIgnored var copilotCallViewModel: CopilotCallViewModel?
@@ -58,9 +60,8 @@ final class AppSessionCoordinator {
     var personalization = PersonalizationOnboardingCoordinator()
     var onboarding = OnboardingCoordinator()
 
-    var coCaptainDetent: PresentationDetent = .medium
-    var coCaptainStartsLarge = false
-    var coCaptainAllowsMediumDetent = true
+    var coCaptainDetent: PresentationDetent = .large
+    var coCaptainAllowsMediumDetent = false
 
     private var actionsConfigured = false
     @ObservationIgnored private var activeUndoManager: UndoManager?
@@ -378,17 +379,90 @@ final class AppSessionCoordinator {
         }
     }
 
-    func handleCoCaptainSheetAppeared() {
-        guard coCaptainStartsLarge else { return }
-        Task { @MainActor in
-            await Task.yield()
-            self.coCaptainAllowsMediumDetent = true
-        }
+    func requestCoCaptainExpandedPresentation() {
+        coCaptainAllowsMediumDetent = false
+        coCaptainDetent = .large
     }
 
-    func requestCoCaptainExpandedPresentation() {
-        coCaptainAllowsMediumDetent = true
-        coCaptainDetent = .large
+    /// Dismisses session sheets that cover the canvas. Returns true if anything closed.
+    @discardableResult
+    func dismissPresentedSheets() -> Bool {
+        var dismissed = false
+
+        if showingMissionControl {
+            showingMissionControl = false
+            dismissed = true
+        }
+        if coCaptain.isPresented {
+            coCaptain.setPresented(false)
+            dismissed = true
+        }
+        if commandPalette.isPresented {
+            commandPalette.setPresented(false)
+            dismissed = true
+        }
+        if showingSignIn {
+            showingSignIn = false
+            dismissed = true
+        }
+        if showingPurchaseSheet {
+            showingPurchaseSheet = false
+            dismissed = true
+        }
+        if showingSettings {
+            showingSettings = false
+            dismissed = true
+        }
+        if showingUsage {
+            showingUsage = false
+            dismissed = true
+        }
+        if showingSnapshotBrowser {
+            showingSnapshotBrowser = false
+            dismissed = true
+        }
+        if showingProfile {
+            showingProfile = false
+            dismissed = true
+        }
+        if showingActivity {
+            showingActivity = false
+            dismissed = true
+        }
+        if showingDaily {
+            showingDaily = false
+            dismissed = true
+        }
+        if showingHelp {
+            showingHelp = false
+            dismissed = true
+        }
+        if showingAppIconPicker {
+            showingAppIconPicker = false
+            dismissed = true
+        }
+        if showingCopilotPicker {
+            showingCopilotPicker = false
+            dismissed = true
+        }
+        if showExportSheet {
+            showExportSheet = false
+            dismissed = true
+        }
+
+        return dismissed
+    }
+
+    /// FAB tap: dismiss any open sheet, otherwise open Mission Control.
+    func handleFloatingCommandButtonTap() {
+        if dismissPresentedSheets() { return }
+        showingMissionControl = true
+    }
+
+    /// Long-press Search: clear covering sheets, then open the omnibox.
+    func handleFloatingCommandSearch() {
+        _ = dismissPresentedSheets()
+        commandPalette.setPresented(true)
     }
 
     // MARK: - File Import
@@ -810,9 +884,8 @@ final class AppSessionCoordinator {
     }
 
     private func prepareCoCaptainPresentation() {
-        coCaptainStartsLarge = false
-        coCaptainAllowsMediumDetent = true
-        coCaptainDetent = .medium
+        coCaptainAllowsMediumDetent = false
+        coCaptainDetent = .large
     }
 
     private func presentCoCaptain() {

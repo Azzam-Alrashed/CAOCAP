@@ -4,7 +4,7 @@ import SwiftUI
 /// bottom-trailing corner of the canvas and snaps to a 3×3 edge grid on release.
 ///
 /// **Interaction modes:**
-/// - **Tap** – opens the command palette.
+/// - **Tap** – opens Mission Control (or dismisses an open sheet).
 /// - **Long-press** – expands a radial menu to choose Search / Chat / Video with the copilot.
 /// - **Drag** – repositions the button; on release it snaps to the nearest grid point.
 /// - **Drag while expanded** – gestures toward a bubble to highlight and select it.
@@ -24,6 +24,8 @@ struct FloatingCommandButton: View {
     @Environment(\.colorScheme) var colorScheme
 
     var onTap: () -> Void
+    /// Opens the command palette / omnibox (radial Search bubble).
+    var onSearch: () -> Void
     var onSelectMode: (CopilotInteractionMode) -> Void
     var copilot: CopilotPersona = UserProfileStore().loadSelectedCopilot()
 
@@ -277,7 +279,7 @@ struct FloatingCommandButton: View {
             ) {
                 triggerHapticFeedback(.medium)
                 withAnimation(.spring()) { isExpanded = false }
-                onTap()
+                onSearch()
             }
             .offset(
                 x: isExpanded ? direction.rotated(by: -angle).x * distance : 0,
@@ -349,7 +351,7 @@ struct FloatingCommandButton: View {
         triggerHapticFeedback(.medium)
         switch action {
         case .search:
-            onTap()
+            onSearch()
         case .chat:
             onSelectMode(.chat)
             onDragSummon?()
