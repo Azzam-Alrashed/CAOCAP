@@ -329,8 +329,10 @@ public final class LLMService {
 
                         guard !functionResponses.isEmpty else { break }
                         toolResponseRounds += 1
+                        // gemini-3.x / Firebase AI Logic reject role "function".
+                        // Match GenerativeModelSession: send FunctionResponsePart as "user".
                         nextToolResponseMessage = [
-                            ModelContent(role: "function", parts: functionResponses)
+                            ModelContent(role: "user", parts: functionResponses)
                         ]
                     } while true
 
