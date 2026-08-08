@@ -177,7 +177,6 @@ struct GlobalFloatingChromeView: View {
                         }
                     },
                     copilot: session.selectedCopilot,
-                    isOnboardingHighlighted: false,
                     obstacleFrame: session.showingCopilotCall ? callChromeFrame : .null,
                     onInteractiveFrameChange: { frame in
                         fabInteractiveFrame = frame

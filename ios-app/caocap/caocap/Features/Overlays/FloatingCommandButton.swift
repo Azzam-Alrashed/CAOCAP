@@ -30,11 +30,6 @@ struct FloatingCommandButton: View {
     var onSelectMode: (CopilotInteractionMode) -> Void
     var copilot: CopilotPersona = UserProfileStore().loadSelectedCopilot()
 
-    // Onboarding lifecycle callbacks
-    var onExpand: (() -> Void)? = nil
-    var onDragSummon: (() -> Void)? = nil
-
-    var isOnboardingHighlighted: Bool = false
     var tooltipAnchor: OnboardingTooltipAnchor = .floatingCommandButton
     /// When non-null and overlapping the FAB, the button relocates to another snap point.
     var obstacleFrame: CGRect = .null
@@ -43,7 +38,6 @@ struct FloatingCommandButton: View {
     /// Compact FAB rect used for onboarding tooltip anchoring in ContentView.
     var onAnchorFrameChange: ((CGRect) -> Void)? = nil
 
-    @State private var isBreathing: Bool = false
     @State private var containerSize: CGSize = .zero
 
     private let padding: CGFloat = 35
@@ -60,32 +54,16 @@ struct FloatingCommandButton: View {
                     return 1.15
                 } else if isExpanded {
                     return 0.9
-                } else if isOnboardingHighlighted {
-                    return isBreathing ? 1.04 : 1.0
                 } else {
                     return 1.0
                 }
             }()
 
-            let shadowRadius: CGFloat = {
-                if isDragging || isExpanded {
-                    return 15
-                } else if isOnboardingHighlighted {
-                    return isBreathing ? 24 : 10
-                } else {
-                    return 10
-                }
-            }()
+            let shadowRadius: CGFloat = (isDragging || isExpanded) ? 15 : 10
 
-            let shadowColor: Color = {
-                if isDragging || isExpanded {
-                    return Color.black.opacity(0.35)
-                } else if isOnboardingHighlighted {
-                    return Color(hex: "0066FF").opacity(isBreathing ? 0.8 : 0.4)
-                } else {
-                    return Color.black.opacity(0.2)
-                }
-            }()
+            let shadowColor: Color = (isDragging || isExpanded)
+                ? Color.black.opacity(0.35)
+                : Color.black.opacity(0.2)
 
             ZStack {
                 if isExpanded {
@@ -111,7 +89,7 @@ struct FloatingCommandButton: View {
                             color: shadowColor,
                             radius: shadowRadius,
                             x: 0,
-                            y: (isDragging || isExpanded) ? 8 : (isOnboardingHighlighted ? 4 : 5)
+                            y: (isDragging || isExpanded) ? 8 : 5
                         )
 
                     if isExpanded {
@@ -138,7 +116,6 @@ struct FloatingCommandButton: View {
                                 withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
                                     isExpanded = true
                                 }
-                                onExpand?()
                             }
                         }
                 )
@@ -199,28 +176,6 @@ struct FloatingCommandButton: View {
                 }
                 avoidObstacleIfNeeded(in: size)
                 reportFrames(center: position == .zero ? initialPosition(in: size) : position, in: size)
-                if isOnboardingHighlighted {
-                    withAnimation(
-                        .easeInOut(duration: 1.8)
-                            .repeatForever(autoreverses: true)
-                    ) {
-                        isBreathing = true
-                    }
-                }
-            }
-            .onChange(of: isOnboardingHighlighted) { _, newValue in
-                if newValue {
-                    withAnimation(
-                        .easeInOut(duration: 1.8)
-                            .repeatForever(autoreverses: true)
-                    ) {
-                        isBreathing = true
-                    }
-                } else {
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        isBreathing = false
-                    }
-                }
             }
             .onChange(of: geometry.size) { _, newSize in
                 containerSize = newSize
@@ -356,7 +311,6 @@ struct FloatingCommandButton: View {
             onUndo()
         case .chat:
             onSelectMode(.chat)
-            onDragSummon?()
         case .video:
             onSelectMode(.video)
         }
