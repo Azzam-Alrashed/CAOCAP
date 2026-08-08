@@ -10,11 +10,10 @@ struct OnboardingManifestTests {
         #expect(Set(manifestSteps).count == OnboardingCoordinator.Step.allCases.count)
     }
 
-    @Test func lessonsCoverEveryStepOnceWithNineOrFewerStepsEach() {
+    @Test func lessonsKeepUniqueScopedStepsWithNineOrFewerEach() {
         let lessonSteps = OnboardingLessonsManifest.lessons.flatMap(\.steps)
 
-        #expect(Set(lessonSteps) == Set(OnboardingCoordinator.Step.allCases))
-        #expect(lessonSteps.count == OnboardingCoordinator.Step.allCases.count)
+        #expect(Set(lessonSteps).count == lessonSteps.count)
 
         for lesson in OnboardingLessonsManifest.lessons {
             #expect(lesson.steps.count <= OnboardingLessonsManifest.maxStepsPerLesson)
@@ -22,100 +21,38 @@ struct OnboardingManifestTests {
     }
 
     @Test func lessonsDriveScopedProgressionAndLabels() {
-        #expect(OnboardingLessonsManifest.lessons.count == 5)
-        #expect(OnboardingLessonsManifest.mainLessonIDs == [.canvasBasics, .omniboxNavigation, .miniAppPreview])
-        #expect(OnboardingLessonsManifest.optionalLessonIDs == [.coCaptainChat, .moveAndOrganize])
+        #expect(OnboardingLessonsManifest.lessons.count == 1)
+        #expect(OnboardingLessonsManifest.mainLessonIDs == [.canvasBasics])
+        #expect(OnboardingLessonsManifest.lessons.map(\.id) == OnboardingLessonsManifest.mainLessonIDs)
 
         #expect(OnboardingLessonsManifest.lesson(for: .canvasBasics).steps == [
-            .openTutorial,
-            .tapFAB,
-            .typeCoCaptainPrompt,
-            .submitCoCaptainPrompt,
-            .chatCoCaptain,
-            .applyCoCaptainChange,
-            .tapGoBackAction
-        ])
-        #expect(OnboardingLessonsManifest.lesson(for: .omniboxNavigation).steps == [
-            .searchFlyToNode,
-            .openPortal,
-            .chatCoCaptainGameEdit,
-            .reviewCoCaptainChange
-        ])
-        #expect(OnboardingLessonsManifest.lesson(for: .miniAppPreview).steps == [
-            .openHelpCenter,
-            .browseHelpGuides
-        ])
-        #expect(OnboardingLessonsManifest.lesson(for: .coCaptainChat).steps == [
-            .returnToRoot,
-            .longPressFAB,
-            .dismissCoCaptain,
-            .tapMiniAppNode,
-            .interactMiniAppPreview,
-            .openMiniAppCodeTool,
-            .saveMiniAppCodeEdit,
-            .returnFromMiniAppPreview
-        ])
-        #expect(OnboardingLessonsManifest.lesson(for: .moveAndOrganize).steps == [
-            .typeGoBackInOmnibox,
-            .panCanvas,
-            .pinchZoom,
-            .fitAllNodes,
-            .dragCanvasNode,
-            .runOrganizeNodes,
-            .undoCanvasEdit,
-            .redoCanvasEdit
+            .openPortal
         ])
 
-        #expect(OnboardingLessonsManifest.nextStep(after: .openTutorial, in: OnboardingLessonsManifest.lesson(for: .canvasBasics)) == .tapFAB)
-        #expect(OnboardingLessonsManifest.nextStep(after: .tapFAB, in: OnboardingLessonsManifest.lesson(for: .canvasBasics)) == .typeCoCaptainPrompt)
-        #expect(OnboardingLessonsManifest.nextStep(after: .tapGoBackAction, in: OnboardingLessonsManifest.lesson(for: .canvasBasics)) == nil)
-        #expect(OnboardingLessonsManifest.nextStep(after: .searchFlyToNode, in: OnboardingLessonsManifest.lesson(for: .omniboxNavigation)) == .openPortal)
-        #expect(OnboardingLessonsManifest.nextStep(after: .reviewCoCaptainChange, in: OnboardingLessonsManifest.lesson(for: .omniboxNavigation)) == nil)
-        #expect(OnboardingLessonsManifest.nextMainLesson(after: .canvasBasics) == .omniboxNavigation)
-        #expect(OnboardingLessonsManifest.nextMainLesson(after: .miniAppPreview) == nil)
+        #expect(OnboardingLessonsManifest.nextStep(after: .openPortal, in: OnboardingLessonsManifest.lesson(for: .canvasBasics)) == nil)
+        #expect(OnboardingLessonsManifest.nextMainLesson(after: .canvasBasics) == nil)
 
         #expect(
             OnboardingLessonsManifest.stepLabel(
-                for: .openTutorial,
+                for: .openPortal,
                 in: .canvasBasics,
                 language: "English"
-            ) == "1 of 7"
-        )
-        #expect(
-            OnboardingLessonsManifest.stepLabel(
-                for: .tapGoBackAction,
-                in: .canvasBasics,
-                language: "English"
-            ) == "7 of 7"
-        )
-        #expect(
-            OnboardingLessonsManifest.stepLabel(
-                for: .searchFlyToNode,
-                in: .omniboxNavigation,
-                language: "English"
-            ) == "1 of 4"
-        )
-        #expect(
-            OnboardingLessonsManifest.stepLabel(
-                for: .dragCanvasNode,
-                in: .moveAndOrganize,
-                language: "English"
-            ) == "5 of 8"
+            ) == "1 of 1"
         )
     }
 
     @Test func catalogResolvesArabicCanvasOnboardingCopy() {
         let title = LocalizationManager.shared.localizedString(
-            "onboarding.openTutorial.title",
+            "onboarding.lesson.canvasBasics.title",
             language: "Arabic"
         )
-        #expect(title == "ادخل إلى البرنامج التعليمي")
+        #expect(title == "افتح تطبيقك المصغّر")
 
         let message = LocalizationManager.shared.localizedString(
-            "onboarding.tapFAB.message",
+            "onboarding.openPortal.message",
             language: "Arabic"
         )
-        #expect(message.contains("لوحة الأوامر"))
+        #expect(message.contains("Hello World"))
     }
 
     @Test func manifestContentIsReadyForPopoverPresentation() {
@@ -196,13 +133,13 @@ struct OnboardingManifestTests {
     @MainActor
     @Test func hidingPopoverDoesNotAdvanceCurrentStep() {
         let onboarding = makeResetOnboardingCoordinator()
-        onboarding.currentStep = .chatCoCaptain
-        onboarding.activeLessonID = .coCaptainChat
+        onboarding.currentStep = .openPortal
+        onboarding.activeLessonID = .canvasBasics
         onboarding.showPopover = true
 
         onboarding.hidePopoverForCurrentStep()
 
-        #expect(onboarding.currentStep == .chatCoCaptain)
+        #expect(onboarding.currentStep == .openPortal)
         #expect(!onboarding.showPopover)
     }
 
@@ -225,13 +162,15 @@ struct OnboardingManifestTests {
             onboarding.completeCurrentStep()
         }
 
-        #expect(onboarding.currentStep == .applyCoCaptainChange)
+        // openPortal is the only lesson step; completing chat finishes the lesson.
+        #expect(onboarding.isLessonCompleted(.canvasBasics))
+        #expect(onboarding.currentStep == nil)
     }
 
     @MainActor
     @Test func reviewHandoffAdvancesToApplyWhenApplyIsOutsideLesson() {
         let onboarding = makeResetOnboardingCoordinator()
-        onboarding.startLesson(.omniboxNavigation, advancesThroughLessons: false)
+        onboarding.startLesson(.canvasBasics, advancesThroughLessons: false)
         onboarding.currentStep = .reviewCoCaptainChange
         onboarding.showPopover = true
 
@@ -244,7 +183,7 @@ struct OnboardingManifestTests {
     @Test func failedGuidedEditCompletionDoesNotAdvanceFromChatStep() {
         let onboarding = makeResetOnboardingCoordinator()
         onboarding.currentStep = .chatCoCaptainGameEdit
-        onboarding.activeLessonID = .omniboxNavigation
+        onboarding.activeLessonID = .canvasBasics
 
         let completion = CoCaptainTurnCompletion(
             turnID: UUID(),
@@ -265,28 +204,28 @@ struct OnboardingManifestTests {
     @Test func standaloneLessonCompletionDoesNotAutoStartNextLesson() {
         let onboarding = makeResetOnboardingCoordinator()
         onboarding.startLesson(.canvasBasics, advancesThroughLessons: false)
-        onboarding.currentStep = .tapGoBackAction
+        onboarding.currentStep = .openPortal
 
         onboarding.completeCurrentStep()
 
         #expect(onboarding.isLessonCompleted(.canvasBasics))
         #expect(onboarding.currentStep == nil)
         #expect(onboarding.activeLessonID == nil)
-        #expect(!onboarding.isLessonCompleted(.omniboxNavigation))
+        #expect(onboarding.isCompleted)
     }
 
     @MainActor
-    @Test func firstRunLessonCompletionAdvancesToNextLesson() {
+    @Test func firstRunLessonCompletionMarksOnboardingComplete() {
         let onboarding = makeResetOnboardingCoordinator()
         onboarding.startLesson(.canvasBasics, advancesThroughLessons: true)
-        onboarding.currentStep = .tapGoBackAction
+        onboarding.currentStep = .openPortal
         onboarding.showPopover = true
 
         onboarding.completeCurrentStep()
 
         #expect(onboarding.isLessonCompleted(.canvasBasics))
-        #expect(onboarding.activeLessonID == .omniboxNavigation)
-        #expect(onboarding.currentStep == .searchFlyToNode)
+        #expect(onboarding.isCompleted)
+        #expect(onboarding.currentStep == nil)
     }
 
     @MainActor
@@ -295,37 +234,31 @@ struct OnboardingManifestTests {
         var startedLesson: OnboardingLessonID?
         onboarding.onLessonWillStart = { startedLesson = $0 }
 
-        onboarding.startLesson(.omniboxNavigation, advancesThroughLessons: false)
+        onboarding.startLesson(.canvasBasics, advancesThroughLessons: false)
 
-        #expect(startedLesson == .omniboxNavigation)
-        #expect(onboarding.currentStep == .searchFlyToNode)
+        #expect(startedLesson == .canvasBasics)
+        #expect(onboarding.currentStep == .openPortal)
     }
 
     @MainActor
-    @Test func skipMarksOnlyActiveMainLessonComplete() {
+    @Test func skipMarksActiveMainLessonComplete() {
         let onboarding = makeResetOnboardingCoordinator()
         onboarding.startLesson(.canvasBasics, advancesThroughLessons: true)
         onboarding.skip()
 
         #expect(onboarding.isLessonCompleted(.canvasBasics))
-        #expect(!onboarding.isLessonCompleted(.omniboxNavigation))
-        #expect(onboarding.activeLessonID == .omniboxNavigation)
+        #expect(onboarding.isCompleted)
+        #expect(onboarding.activeLessonID == nil)
     }
 
     @MainActor
-    @Test func completingMainLessonsMarksOnboardingCompleteWithoutOptionalLessons() {
+    @Test func completingMainLessonsMarksOnboardingComplete() {
         let onboarding = makeResetOnboardingCoordinator()
         onboarding.startLesson(.canvasBasics, advancesThroughLessons: true)
-        onboarding.currentStep = .tapGoBackAction
-        onboarding.completeCurrentStep()
-        onboarding.currentStep = .applyCoCaptainChange
-        onboarding.completeCurrentStep()
-        onboarding.currentStep = .browseHelpGuides
+        onboarding.currentStep = .openPortal
         onboarding.completeCurrentStep()
 
         #expect(onboarding.isCompleted)
-        #expect(!onboarding.isLessonCompleted(.coCaptainChat))
-        #expect(!onboarding.isLessonCompleted(.moveAndOrganize))
     }
 
     @Test func tutorialCanvasProviderSeedsPracticeMiniApp() {
@@ -338,6 +271,7 @@ struct OnboardingManifestTests {
         #expect(OnboardingCoordinator.Step.tapMiniAppNode.blocksCoCaptainPrompt)
         #expect(OnboardingCoordinator.Step.dragCanvasNode.blocksCoCaptainPrompt)
         #expect(OnboardingCoordinator.Step.runOrganizeNodes.blocksCoCaptainPrompt)
+        #expect(OnboardingCoordinator.Step.openPortal.blocksCoCaptainPrompt)
         #expect(!OnboardingCoordinator.Step.chatCoCaptain.blocksCoCaptainPrompt)
     }
 

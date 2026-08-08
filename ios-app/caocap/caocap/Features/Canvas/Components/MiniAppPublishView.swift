@@ -14,7 +14,6 @@ struct MiniAppPublishView: View {
     @State private var showPaywall = false
     @State private var showSignIn = false
     @State private var showHomeScreenSteps = false
-    @State private var showConfetti = false
     @State private var heroScale: CGFloat = 0.92
 
     private var currentNode: SpatialNode {
@@ -84,11 +83,6 @@ struct MiniAppPublishView: View {
                     .padding(.horizontal, 24)
                     .containerRelativeFrame(.horizontal)
                 }
-
-                if showConfetti {
-                    PublishConfettiView()
-                        .transition(.opacity)
-                }
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -113,9 +107,7 @@ struct MiniAppPublishView: View {
         .onChange(of: coordinator.stage) { _, newStage in
             if case .finished = newStage {
                 HapticsManager.shared.notification(.success)
-                showConfetti = true
-            } else {
-                showConfetti = false
+                GlobalFloatingChromeController.shared.presentConfetti()
             }
             heroScale = 1
         }
@@ -284,7 +276,6 @@ struct MiniAppPublishView: View {
 
             if currentNode.miniApp?.publishURL != nil {
                 Button("Publish Again") {
-                    showConfetti = false
                     coordinator.reset()
                 }
                 .font(.footnote.weight(.medium))

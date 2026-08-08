@@ -9,7 +9,7 @@ public class OnboardingCoordinator {
     // MARK: - Step Definition
 
     public enum Step: Int, CaseIterable {
-        /// User must open the Tutorial portal on the root canvas.
+        /// Legacy: open the Tutorial portal (unused by current main lessons).
         case openTutorial = 0
         /// User must tap the floating command button (FAB) to open the command palette.
         case tapFAB
@@ -29,11 +29,11 @@ public class OnboardingCoordinator {
         case typeGoBackInOmnibox
         /// User must tap the Go Back action row or press return to navigate up.
         case tapGoBackAction
-        /// User must search for and fly to Pac-Man or XO via the command palette.
+        /// User must search for and fly to Hello World via the command palette.
         case searchFlyToNode
-        /// User must tap a demo-game portal node to open its linked subcanvas.
+        /// User must tap the Hello World mini-app on the root canvas to open fullscreen.
         case openPortal
-        /// User must ask CoCaptain for a small guided change on a demo game canvas.
+        /// User must ask CoCaptain for a small guided Hello World edit.
         case chatCoCaptainGameEdit
         /// User must review the pending CoCaptain change card.
         case reviewCoCaptainChange
@@ -222,7 +222,7 @@ public class OnboardingCoordinator {
             try? await Task.sleep(for: .seconds(2.5))
             guard !Task.isCancelled else { return }
             guard currentStep == .reviewCoCaptainChange else { return }
-            let lessonID = activeLessonID?.rawValue ?? OnboardingLessonID.omniboxNavigation.rawValue
+            let lessonID = activeLessonID?.rawValue ?? OnboardingLessonID.canvasBasics.rawValue
             analytics.logEvent(
                 OnboardingAnalytics.cocaptainReviewShown,
                 parameters: [OnboardingAnalytics.lessonID: lessonID]
@@ -421,15 +421,11 @@ public class OnboardingCoordinator {
             defaults.set(true, forKey: Self.completedKey)
         }
 
-        if defaults.bool(forKey: Self.legacyCanvasNavigationLessonKey),
-           !defaults.bool(forKey: Self.lessonCompletionKey(for: .omniboxNavigation)) {
-            defaults.set(true, forKey: Self.lessonCompletionKey(for: .omniboxNavigation))
+        if defaults.bool(forKey: Self.legacyCanvasNavigationLessonKey) {
             defaults.removeObject(forKey: Self.legacyCanvasNavigationLessonKey)
         }
 
-        if defaults.bool(forKey: Self.legacyCanvasNavigationLessonIDKey),
-           !defaults.bool(forKey: Self.lessonCompletionKey(for: .omniboxNavigation)) {
-            defaults.set(true, forKey: Self.lessonCompletionKey(for: .omniboxNavigation))
+        if defaults.bool(forKey: Self.legacyCanvasNavigationLessonIDKey) {
             defaults.removeObject(forKey: Self.legacyCanvasNavigationLessonIDKey)
         }
     }

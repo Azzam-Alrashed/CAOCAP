@@ -4,7 +4,7 @@ First-run onboarding in CAOCAP is a three-phase funnel:
 
 1. **Intro** (`Intro/`) — motivational full-bleed story screens (`intro_completed_v1`).
 2. **Personalization** (`Personalization/`) — temporary placeholder preserving the handoff to the upcoming redesigned flow.
-3. **Interactive tutorial** (`Tutorial/`) — short **main tutorial** (3 required lessons) plus optional advanced lessons for replay.
+3. **Interactive tutorial** (`Tutorial/`) — one short gesture lesson on the root canvas.
 
 ## Folder layout
 
@@ -22,26 +22,16 @@ The placeholder keeps the existing completion key and session handoff so it can 
 
 | Lesson | Steps | Outcome |
 |---|---|---|
-| **Canvas basics** | 7 | Tutorial entry + FAB + CoCaptain welcome + apply + go back |
-| **Omnibox navigation** | 4 | Fly to Pac-Man/XO, open a game portal, request a CoCaptain edit, review |
-| **Help & Docs** | 2 | Open Help and discover where to continue tutorials/docs |
+| **Open your mini-app** | 1 | Tap Hello World on root to enter fullscreen preview |
 
-First-run completion is based on these three main lessons only (`OnboardingLessonsManifest.mainLessonIDs`).
+First-run completion is based on this single main lesson (`OnboardingLessonsManifest.mainLessonIDs`).
 
-## Optional lessons (replay)
-
-The following remain available from Help → **Interactive lessons**:
-
-- **Mini-App Preview** (`coCaptainChat` lesson ID) — Hello World preview/code loop
-- **Move & Organize** (`moveAndOrganize`) — pan/zoom/fit, drag, organize, undo/redo
-
-Skipping still marks only the active lesson complete.
+Replay remains available from Help → **Interactive lessons** and **Restart interactive tutorial**.
 
 ## Coordination notes
 
-- `OnboardingLessonsManifest.mainLessonIDs` controls first-run completion.
-- `OnboardingLessonsManifest.optionalLessonIDs` is the replay-only catalogue and drives Help lesson workspace prep in `AppSessionCoordinator`.
-- `AppSessionCoordinator` prepares workspace context per lesson and handles onboarding completion events from command palette, CoCaptain review/apply, and Help guides.
+- `OnboardingLessonsManifest.mainLessonIDs` controls first-run completion and the Help lessons list.
+- `AppSessionCoordinator` prepares workspace context per lesson and completes the open step when Hello World goes fullscreen.
 - `onTutorialCompleted` still drives confetti/graduation moment.
 
 ## Analytics
@@ -61,4 +51,3 @@ Interactive tutorial events continue through `OnboardingAnalytics`:
 - `PersonalizationOnboardingCoordinator.reset()` clears placeholder completion and any legacy stored answers.
 - Settings → **Replay Personalization** calls `AppSessionCoordinator.restartPersonalization()`.
 - Settings → **Restart Onboarding** resets intro, personalization, and tutorial.
-- Playtest script: `docs/onboarding-first-session-playtest.md`

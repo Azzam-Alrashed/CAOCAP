@@ -1,9 +1,7 @@
 import Foundation
 
 enum HelpTutorialAction: Hashable {
-    case openTutorialCanvas
     case restartInteractiveTutorial
-    case openXOCanvas
 }
 
 struct HelpTutorialItem: Identifiable, Hashable {
@@ -34,25 +32,11 @@ enum HelpManifest {
 
     static let tutorials: [HelpTutorialItem] = [
         HelpTutorialItem(
-            id: .openTutorialCanvas,
-            titleKey: "help.tutorial.openCanvas.title",
-            subtitleKey: "help.tutorial.openCanvas.subtitle",
-            icon: "graduationcap.fill",
-            colorName: "green"
-        ),
-        HelpTutorialItem(
             id: .restartInteractiveTutorial,
             titleKey: "help.tutorial.restart.title",
             subtitleKey: "help.tutorial.restart.subtitle",
             icon: "arrow.counterclockwise",
             colorName: "blue"
-        ),
-        HelpTutorialItem(
-            id: .openXOCanvas,
-            titleKey: "help.tutorial.xo.title",
-            subtitleKey: "help.tutorial.xo.subtitle",
-            icon: "square.grid.3x3.fill",
-            colorName: "secondary"
         )
     ]
 
@@ -119,6 +103,17 @@ enum HelpManifest {
             bodyParagraphKeys: [
                 "help.article.omnibox.body1",
                 "help.article.omnibox.body2"
+            ]
+        ),
+        HelpArticle(
+            id: "videoCall",
+            titleKey: "help.article.videoCall.title",
+            subtitleKey: "help.article.videoCall.subtitle",
+            icon: "video.fill",
+            bodyParagraphKeys: [
+                "help.article.videoCall.body1",
+                "help.article.videoCall.body2",
+                "help.article.videoCall.body3"
             ]
         )
     ]

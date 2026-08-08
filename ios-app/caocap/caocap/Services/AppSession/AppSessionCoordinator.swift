@@ -27,6 +27,8 @@ final class AppSessionCoordinator {
     var showingHelp = false
     var showingAppIconPicker = false
     var showConfetti = false
+    /// Graduation copy shown with tutorial-completion confetti only.
+    var showTutorialGraduationBanner = false
     var showingCopilotCall = false
     var showingCopilotPicker = false
     var activeCopilotCallMode: CopilotInteractionMode = .voice
@@ -236,11 +238,6 @@ final class AppSessionCoordinator {
         onboarding.startIfNeeded()
     }
 
-    func openTutorialFromHelp() {
-        showingHelp = false
-        handleSubCanvasNavigation(fileName: RootCanvasProvider.tutorialFileName)
-    }
-
     func restartTutorialFromHelp() {
         showingHelp = false
         restartTutorial()
@@ -253,72 +250,31 @@ final class AppSessionCoordinator {
     }
 
     func prepareWorkspace(for lessonID: OnboardingLessonID) {
-        if OnboardingLessonsManifest.optionalLessonIDs.contains(lessonID) {
-            prepareTutorialLessonWorkspace()
-            return
-        }
-
         switch lessonID {
         case .canvasBasics:
+            commandPalette.setPresented(false)
+            coCaptain.setPresented(false)
             router.navigate(to: .root, addToStack: false, animated: false)
             syncViewportWithActiveStore()
-        case .omniboxNavigation:
-            prepareOmniboxNavigationWorkspace()
-        case .miniAppPreview:
-            prepareHelpDiscoveryLessonWorkspace()
-        case .coCaptainChat, .moveAndOrganize:
-            // Exhaustiveness fallback; optional lessons are handled above.
-            prepareTutorialLessonWorkspace()
+            commandPalette.nodes = router.activeStore.nodes
         }
-    }
-
-    private func prepareOmniboxNavigationWorkspace() {
-        commandPalette.setPresented(false)
-        coCaptain.setPresented(false)
-        router.navigate(to: .root, addToStack: false, animated: false)
-        syncViewportWithActiveStore()
-        commandPalette.nodes = router.activeStore.nodes
-    }
-
-    private func prepareCoCaptainLessonWorkspace() {
-        prepareTutorialLessonWorkspace()
-        coCaptain.configureNodeSession(
-            store: router.activeStore,
-            nodeID: TutorialCanvasProvider.miniAppNodeID,
-            dispatcher: actionDispatcher
-        )
-        presentCoCaptain()
-    }
-
-    private func prepareHelpDiscoveryLessonWorkspace() {
-        commandPalette.setPresented(false)
-        coCaptain.setPresented(false)
-        router.navigate(to: .root, addToStack: false, animated: false)
-        syncViewportWithActiveStore()
-        commandPalette.nodes = router.activeStore.nodes
     }
 
     private func celebrateTutorialGraduation() {
         HapticsManager.shared.notification(.success)
+        presentConfetti(showGraduationBanner: true)
+    }
+
+    /// Plays confetti in the top chrome window so it sits above sheets and chrome.
+    func presentConfetti(duration: TimeInterval = 2.5, showGraduationBanner: Bool = false) {
+        showTutorialGraduationBanner = showGraduationBanner
         showConfetti = true
         Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .seconds(2.5))
-            self?.showConfetti = false
+            try? await Task.sleep(for: .seconds(duration))
+            guard let self else { return }
+            self.showConfetti = false
+            self.showTutorialGraduationBanner = false
         }
-    }
-
-    func openDemoCanvasFromHelp(fileName: String) {
-        showingHelp = false
-        handleSubCanvasNavigation(fileName: fileName)
-    }
-
-    private func prepareTutorialLessonWorkspace() {
-        commandPalette.setPresented(false)
-        coCaptain.setPresented(false)
-        router.navigateToSubCanvas(fileName: RootCanvasProvider.tutorialFileName)
-        router.activeStore.ensureNodeExists(TutorialCanvasProvider.practiceMiniAppNode)
-        syncViewportWithActiveStore()
-        commandPalette.nodes = router.activeStore.nodes
     }
 
     func eraseEverything(authManager: AuthenticationManager) async throws {
@@ -400,20 +356,12 @@ final class AppSessionCoordinator {
 
     func handleSubCanvasNavigation(fileName: String) {
         router.navigateToSubCanvas(fileName: fileName)
-        if fileName == RootCanvasProvider.tutorialFileName {
-            if onboarding.currentStep == .openTutorial {
-                onboarding.completeCurrentStep()
-            }
-            return
-        }
+    }
 
-        if onboarding.currentStep == .openPortal &&
-            (fileName == RootCanvasProvider.pacManFileName || fileName == RootCanvasProvider.xoFileName) {
-            onboarding.completeCurrentStep()
-            if onboarding.currentStep == .chatCoCaptainGameEdit {
-                presentCoCaptain()
-            }
-        }
+    /// Completes the open-Hello-World onboarding step when the mini-app goes fullscreen.
+    func handleHelloWorldOpenedForOnboarding() {
+        guard onboarding.currentStep == .openPortal else { return }
+        onboarding.completeCurrentStep()
     }
 
     // MARK: - Onboarding + CoCaptain Presentation
@@ -437,11 +385,7 @@ final class AppSessionCoordinator {
                 } else if (self.onboarding.currentStep == .typeGoBackInOmnibox
                             || self.onboarding.currentStep == .tapGoBackAction),
                           !self.commandPalette.isPresented {
-                    if self.onboarding.activeLessonID == .canvasBasics {
-                        self.onboarding.moveToStep(.tapGoBackAction)
-                    } else {
-                        self.onboarding.moveToStep(.returnToRoot)
-                    }
+                    self.onboarding.moveToStep(.returnToRoot)
                 } else if self.onboarding.currentStep == .openHelpCenter,
                           !self.showingHelp {
                     self.onboarding.moveToStep(.tapFAB)
@@ -579,7 +523,7 @@ final class AppSessionCoordinator {
             self?.handleOnboardingReviewApplied()
         }
         coCaptain.onOnboardingReviewFallback = { [weak self] in
-            let lessonID = self?.onboarding.activeLessonID?.rawValue ?? OnboardingLessonID.omniboxNavigation.rawValue
+            let lessonID = self?.onboarding.activeLessonID?.rawValue ?? OnboardingLessonID.canvasBasics.rawValue
             AnalyticsService.shared.logEvent(
                 OnboardingAnalytics.cocaptainReviewFallback,
                 parameters: [OnboardingAnalytics.lessonID: lessonID]
@@ -660,11 +604,7 @@ final class AppSessionCoordinator {
 
     private func celebrateChallengeCompletion() {
         HapticsManager.shared.notification(.success)
-        showConfetti = true
-        Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .seconds(2.5))
-            self?.showConfetti = false
-        }
+        presentConfetti()
     }
 
     func ensureActionsConfigured() {
@@ -959,7 +899,9 @@ final class AppSessionCoordinator {
 
     private var shouldOpenCoCaptainLargeForOnboarding: Bool {
         UIDevice.current.userInterfaceIdiom == .phone &&
-            (onboarding.currentStep == .submitCoCaptainPrompt || onboarding.currentStep == .chatCoCaptain)
+            (onboarding.currentStep == .submitCoCaptainPrompt
+             || onboarding.currentStep == .chatCoCaptain
+             || onboarding.currentStep == .chatCoCaptainGameEdit)
     }
 
     private func prepareCoCaptainPresentation() {
@@ -1040,27 +982,13 @@ final class AppSessionCoordinator {
             return
         }
 
-        let lessonID = onboarding.activeLessonID?.rawValue ?? OnboardingLessonID.omniboxNavigation.rawValue
+        let lessonID = onboarding.activeLessonID?.rawValue ?? OnboardingLessonID.canvasBasics.rawValue
         AnalyticsService.shared.logEvent(
             OnboardingAnalytics.cocaptainReviewApplied,
             parameters: [OnboardingAnalytics.lessonID: lessonID]
         )
 
         coCaptain.setPresented(false)
-
-        if onboarding.activeLessonID == .canvasBasics {
-            celebrateChallengeCompletion()
-            Task { @MainActor [weak self] in
-                try? await Task.sleep(for: .seconds(2.5))
-                guard let self,
-                      self.onboarding.currentStep == .applyCoCaptainChange else {
-                    return
-                }
-                self.onboarding.completeCurrentStep()
-            }
-            return
-        }
-
         onboarding.completeCurrentStep()
     }
 

@@ -82,6 +82,11 @@ final class GlobalFloatingChromeController {
         removeOrphanedChromeWindows(keeping: nil)
     }
 
+    /// Plays confetti above all app UI via the chrome overlay window.
+    func presentConfetti(duration: TimeInterval = 2.5, showGraduationBanner: Bool = false) {
+        bridge.session?.presentConfetti(duration: duration, showGraduationBanner: showGraduationBanner)
+    }
+
     /// Returns keyboard/first-responder ownership to the primary app window.
     /// Needed after interactions that may have briefly key'd a different window.
     static func makeMainAppWindowKey() {
@@ -114,7 +119,7 @@ final class GlobalFloatingChromeController {
     }
 }
 
-/// FAB + optional call chrome rendered in the overlay window above sheets.
+/// FAB, call chrome, and confetti rendered in the overlay window above sheets.
 struct GlobalFloatingChromeView: View {
     @Bindable var bridge: GlobalFloatingChromeBridge
 
@@ -201,6 +206,12 @@ struct GlobalFloatingChromeView: View {
                     .transition(.opacity)
                 }
             }
+
+            if session.showConfetti {
+                confettiOverlay(showGraduationBanner: session.showTutorialGraduationBanner)
+                    .transition(.opacity)
+                    .zIndex(1_000)
+            }
         }
         // Explicit FAB frame — `anchorPreference` is unreliable with `.position()` placement.
         .onboardingExplicitAnchorFrames(fabExplicitAnchorFrames)
@@ -240,6 +251,22 @@ struct GlobalFloatingChromeView: View {
         .onChange(of: session.personalization.shouldPresent) { _, _ in
             refreshChromeVisibility(session: session)
         }
+    }
+
+    @ViewBuilder
+    private func confettiOverlay(showGraduationBanner: Bool) -> some View {
+        ZStack {
+            ConfettiCelebrationView()
+            if showGraduationBanner {
+                VStack {
+                    Spacer()
+                    TutorialGraduationBanner()
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 48)
+                }
+            }
+        }
+        .allowsHitTesting(false)
     }
 
     private var fabExplicitAnchorFrames: [OnboardingTooltipAnchor: CGRect] {

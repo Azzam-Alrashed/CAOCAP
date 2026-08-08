@@ -1,12 +1,9 @@
 import SwiftUI
 
-/// Identifies one interactive tutorial lesson shown in Help and during first-run onboarding.
+/// Identifies the interactive tutorial lesson shown in Help and during first-run onboarding.
 public enum OnboardingLessonID: String, CaseIterable, Hashable {
+    /// Single first-run lesson: open the Hello World mini-app fullscreen.
     case canvasBasics
-    case omniboxNavigation
-    case miniAppPreview
-    case coCaptainChat
-    case moveAndOrganize
 }
 
 /// A grouped tutorial lesson with at most nine gesture-driven steps.
@@ -27,13 +24,7 @@ struct OnboardingLesson: Identifiable, Hashable {
 enum OnboardingLessonsManifest {
     static let maxStepsPerLesson = 9
     static let mainLessonIDs: [OnboardingLessonID] = [
-        .canvasBasics,
-        .omniboxNavigation,
-        .miniAppPreview
-    ]
-    static let optionalLessonIDs: [OnboardingLessonID] = [
-        .coCaptainChat,
-        .moveAndOrganize
+        .canvasBasics
     ]
 
     static let lessons: [OnboardingLesson] = [
@@ -41,74 +32,10 @@ enum OnboardingLessonsManifest {
             id: .canvasBasics,
             titleKey: "onboarding.lesson.canvasBasics.title",
             subtitleKey: "onboarding.lesson.canvasBasics.subtitle",
-            icon: "graduationcap.fill",
+            icon: "rectangle.portrait.on.rectangle.portrait.fill",
             accentHex: "00B894",
             steps: [
-                .openTutorial,
-                .tapFAB,
-                .typeCoCaptainPrompt,
-                .submitCoCaptainPrompt,
-                .chatCoCaptain,
-                .applyCoCaptainChange,
-                .tapGoBackAction
-            ]
-        ),
-        OnboardingLesson(
-            id: .omniboxNavigation,
-            titleKey: "onboarding.lesson.omniboxNavigation.title",
-            subtitleKey: "onboarding.lesson.omniboxNavigation.subtitle",
-            icon: "command",
-            accentHex: "F39C12",
-            steps: [
-                .searchFlyToNode,
-                .openPortal,
-                .chatCoCaptainGameEdit,
-                .reviewCoCaptainChange
-            ]
-        ),
-        OnboardingLesson(
-            id: .miniAppPreview,
-            titleKey: "onboarding.lesson.miniAppPreview.title",
-            subtitleKey: "onboarding.lesson.miniAppPreview.subtitle",
-            icon: "book.fill",
-            accentHex: "E84393",
-            steps: [
-                .openHelpCenter,
-                .browseHelpGuides
-            ]
-        ),
-        OnboardingLesson(
-            id: .coCaptainChat,
-            titleKey: "onboarding.lesson.coCaptainChat.title",
-            subtitleKey: "onboarding.lesson.coCaptainChat.subtitle",
-            icon: "sparkles",
-            accentHex: "6C5CE7",
-            steps: [
-                .returnToRoot,
-                .longPressFAB,
-                .dismissCoCaptain,
-                .tapMiniAppNode,
-                .interactMiniAppPreview,
-                .openMiniAppCodeTool,
-                .saveMiniAppCodeEdit,
-                .returnFromMiniAppPreview
-            ]
-        ),
-        OnboardingLesson(
-            id: .moveAndOrganize,
-            titleKey: "onboarding.lesson.moveAndOrganize.title",
-            subtitleKey: "onboarding.lesson.moveAndOrganize.subtitle",
-            icon: "arrow.up.and.down.and.arrow.left.and.right",
-            accentHex: "74B9FF",
-            steps: [
-                .typeGoBackInOmnibox,
-                .panCanvas,
-                .pinchZoom,
-                .fitAllNodes,
-                .dragCanvasNode,
-                .runOrganizeNodes,
-                .undoCanvasEdit,
-                .redoCanvasEdit
+                .openPortal
             ]
         )
     ]

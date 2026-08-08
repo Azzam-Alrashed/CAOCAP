@@ -97,10 +97,8 @@ struct AppSheetsModifier: ViewModifier {
             .sheet(isPresented: $session.showingHelp) {
                 HelpView(
                     completedLessonIDs: session.onboarding.completedLessonIDs,
-                    onOpenTutorial: { session.openTutorialFromHelp() },
                     onRestartTutorial: { session.restartTutorialFromHelp() },
                     onStartLesson: { session.startLessonFromHelp($0) },
-                    onOpenDemoCanvas: { session.openDemoCanvasFromHelp(fileName: $0) },
                     onHelpGuidesShown: { session.handleHelpGuidesShownForOnboarding() }
                 )
                 .presentationDetents([.large])

@@ -28,6 +28,8 @@ struct InfiniteCanvasView: View {
     var onNavigateToSubCanvas: ((String) -> Void)? = nil
     var onRecoverUnsupportedProject: (() -> Void)? = nil
     var onFlyToNode: ((UUID) -> Void)? = nil
+    /// Called when Hello World opens during the omnibox onboarding open step.
+    var onHelloWorldOpenedForOnboarding: (() -> Void)? = nil
     
     init(
         store: ProjectStore,
@@ -38,7 +40,8 @@ struct InfiniteCanvasView: View {
         onNodeAction: ((NodeAction) -> Void)? = nil,
         onNavigateToSubCanvas: ((String) -> Void)? = nil,
         onRecoverUnsupportedProject: (() -> Void)? = nil,
-        onFlyToNode: ((UUID) -> Void)? = nil
+        onFlyToNode: ((UUID) -> Void)? = nil,
+        onHelloWorldOpenedForOnboarding: (() -> Void)? = nil
     ) {
         self.store = store
         self._viewport = viewport
@@ -49,6 +52,7 @@ struct InfiniteCanvasView: View {
         self.onNavigateToSubCanvas = onNavigateToSubCanvas
         self.onRecoverUnsupportedProject = onRecoverUnsupportedProject
         self.onFlyToNode = onFlyToNode
+        self.onHelloWorldOpenedForOnboarding = onHelloWorldOpenedForOnboarding
     }
     
     // Drag offsets stay local until the drag ends so links and nodes can track
@@ -79,10 +83,6 @@ struct InfiniteCanvasView: View {
             width: viewport.offset.width + panTranslation.width + trackpadPanTranslation.width,
             height: viewport.offset.height + panTranslation.height + trackpadPanTranslation.height
         )
-    }
-
-    private var shouldAnchorTutorialNode: Bool {
-        onboarding?.currentStep == .openTutorial
     }
     
     var body: some View {
@@ -256,7 +256,7 @@ struct InfiniteCanvasView: View {
                 onboarding?.completeCurrentStep()
             } else if nodeID == RootCanvasProvider.helloWorldMiniAppNodeID,
                       onboarding?.currentStep == .openPortal {
-                onboarding?.completeCurrentStep()
+                onHelloWorldOpenedForOnboarding?()
             }
         }
         .onChange(of: onboarding?.showPopover ?? false) { _, showPopover in
@@ -300,11 +300,6 @@ struct InfiniteCanvasView: View {
         var frames: [OnboardingTooltipAnchor: CGRect] = [
             .canvasGestureArea: CGRect(origin: .zero, size: canvasSize)
         ]
-
-        if shouldAnchorTutorialNode,
-           let frame = screenFrame(for: RootCanvasProvider.tutorialNodeID, canvasSize: canvasSize) {
-            frames[.tutorialNode] = frame
-        }
 
         if onboarding?.currentStep == .openPortal,
            let frame = screenFrame(for: RootCanvasProvider.helloWorldMiniAppNodeID, canvasSize: canvasSize) {

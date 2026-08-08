@@ -7,10 +7,8 @@ struct HelpView: View {
     @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
 
     var completedLessonIDs: Set<OnboardingLessonID> = []
-    var onOpenTutorial: () -> Void = {}
     var onRestartTutorial: () -> Void = {}
     var onStartLesson: (OnboardingLessonID) -> Void = { _ in }
-    var onOpenDemoCanvas: (String) -> Void = { _ in }
     var onHelpGuidesShown: () -> Void = {}
 
     var body: some View {
@@ -209,21 +207,15 @@ struct HelpView: View {
         dismiss()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
             switch action {
-            case .openTutorialCanvas:
-                onOpenTutorial()
             case .restartInteractiveTutorial:
                 onRestartTutorial()
-            case .openXOCanvas:
-                onOpenDemoCanvas(RootCanvasProvider.xoFileName)
             }
         }
     }
 
     private func color(for name: String) -> Color {
         switch name {
-        case "green": return .green
         case "blue": return .blue
-        case "purple": return .purple
         case "secondary": return .secondary
         default: return .indigo
         }

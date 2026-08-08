@@ -3,7 +3,7 @@ import SwiftUI
 /// Root view that composes the active workspace canvas, global overlays, and session sheets.
 ///
 /// Session orchestration lives in `AppSessionCoordinator`; this view wires UI only.
-/// FAB + call chrome live in a passthrough `UIWindow` above system sheets.
+/// FAB, call chrome, and confetti live in a passthrough `UIWindow` above system sheets.
 struct ContentView: View {
     @State private var session = AppSessionCoordinator()
     @Environment(\.undoManager) private var undoManager
@@ -56,21 +56,6 @@ struct ContentView: View {
             .overlay { introOverlay }
             .overlay { personalizationOverlay }
             .overlay { updatePromptOverlay }
-            .overlay {
-                if session.showConfetti {
-                    ZStack {
-                        ConfettiCelebrationView()
-                        VStack {
-                            Spacer()
-                            TutorialGraduationBanner()
-                                .padding(.horizontal, 24)
-                                .padding(.bottom, 48)
-                        }
-                    }
-                    .zIndex(95)
-                    .transition(.opacity)
-                }
-            }
             .modifier(AppSheetsModifier(session: session))
             .modifier(AppSessionLifecycle(
                 session: session,
@@ -104,7 +89,10 @@ struct ContentView: View {
                 onRecoverUnsupportedProject: {
                     session.router.createFreshMiniAppCanvas()
                 },
-                onFlyToNode: { session.focusCanvasNode($0) }
+                onFlyToNode: { session.focusCanvasNode($0) },
+                onHelloWorldOpenedForOnboarding: {
+                    session.handleHelloWorldOpenedForOnboarding()
+                }
             )
         case .project(let fileName):
             WorkspaceCanvasView(
@@ -121,7 +109,10 @@ struct ContentView: View {
                 onRecoverUnsupportedProject: {
                     session.router.createFreshMiniAppCanvas()
                 },
-                onFlyToNode: { session.focusCanvasNode($0) }
+                onFlyToNode: { session.focusCanvasNode($0) },
+                onHelloWorldOpenedForOnboarding: {
+                    session.handleHelloWorldOpenedForOnboarding()
+                }
             )
         }
     }
