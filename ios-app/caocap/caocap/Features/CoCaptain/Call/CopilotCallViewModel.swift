@@ -31,6 +31,14 @@ final class CopilotCallViewModel {
         liveService.isMuted
     }
 
+    var isScreenSharing: Bool {
+        liveService.isScreenSharing
+    }
+
+    var showsScreenShareControl: Bool {
+        mode == .video
+    }
+
     var isQuotaExceeded: Bool {
         liveService.isQuotaExceeded
     }
@@ -51,7 +59,7 @@ final class CopilotCallViewModel {
             return LocalizationManager.shared.localizedString("copilot.call.status.connecting")
         case .connected:
             return LocalizationManager.shared.localizedString(
-                mode == .video ? "copilot.call.status.sharing" : "copilot.call.status.connected"
+                isScreenSharing ? "copilot.call.status.sharing" : "copilot.call.status.connected"
             )
         case .ended:
             return LocalizationManager.shared.localizedString("copilot.call.status.ended")
@@ -72,6 +80,10 @@ final class CopilotCallViewModel {
 
     func toggleMute() {
         liveService.setMuted(!liveService.isMuted)
+    }
+
+    func toggleScreenShare() {
+        liveService.setScreenSharing(!liveService.isScreenSharing)
     }
 
     func endCall() {

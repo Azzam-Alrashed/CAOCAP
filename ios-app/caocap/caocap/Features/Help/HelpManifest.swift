@@ -3,7 +3,6 @@ import Foundation
 enum HelpTutorialAction: Hashable {
     case openTutorialCanvas
     case restartInteractiveTutorial
-    case openPacManCanvas
     case openXOCanvas
 }
 
@@ -47,13 +46,6 @@ enum HelpManifest {
             subtitleKey: "help.tutorial.restart.subtitle",
             icon: "arrow.counterclockwise",
             colorName: "blue"
-        ),
-        HelpTutorialItem(
-            id: .openPacManCanvas,
-            titleKey: "help.tutorial.pacman.title",
-            subtitleKey: "help.tutorial.pacman.subtitle",
-            icon: "gamecontroller.fill",
-            colorName: "purple"
         ),
         HelpTutorialItem(
             id: .openXOCanvas,

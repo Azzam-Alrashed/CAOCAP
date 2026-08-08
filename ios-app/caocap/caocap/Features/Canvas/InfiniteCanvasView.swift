@@ -82,8 +82,7 @@ struct InfiniteCanvasView: View {
     }
 
     private var shouldAnchorTutorialNode: Bool {
-        guard let step = onboarding?.currentStep else { return false }
-        return step == .openTutorial || step == .openPortal
+        onboarding?.currentStep == .openTutorial
     }
     
     var body: some View {
@@ -251,9 +250,14 @@ struct InfiniteCanvasView: View {
             currentScale = viewport.scale
         }
         .onChange(of: presentedMiniApp?.id) { _, nodeID in
-            guard nodeID == TutorialCanvasProvider.miniAppNodeID,
-                  onboarding?.currentStep == .tapMiniAppNode else { return }
-            onboarding?.completeCurrentStep()
+            guard let nodeID else { return }
+            if nodeID == TutorialCanvasProvider.miniAppNodeID,
+               onboarding?.currentStep == .tapMiniAppNode {
+                onboarding?.completeCurrentStep()
+            } else if nodeID == RootCanvasProvider.helloWorldMiniAppNodeID,
+                      onboarding?.currentStep == .openPortal {
+                onboarding?.completeCurrentStep()
+            }
         }
         .onChange(of: onboarding?.showPopover ?? false) { _, showPopover in
             guard showPopover == true,
@@ -302,12 +306,9 @@ struct InfiniteCanvasView: View {
             frames[.tutorialNode] = frame
         }
 
-        if onboarding?.currentStep == .openPortal {
-            if let frame = screenFrame(for: RootCanvasProvider.pacManNodeID, canvasSize: canvasSize) {
-                frames[.demoGameNode] = frame
-            } else if let frame = screenFrame(for: RootCanvasProvider.xoNodeID, canvasSize: canvasSize) {
-                frames[.demoGameNode] = frame
-            }
+        if onboarding?.currentStep == .openPortal,
+           let frame = screenFrame(for: RootCanvasProvider.helloWorldMiniAppNodeID, canvasSize: canvasSize) {
+            frames[.demoGameNode] = frame
         }
 
         if let step = onboarding?.currentStep,

@@ -18,6 +18,7 @@ enum CuratedRootCanvasMigration {
     static let appIconNodeCompleteKey = "curatedRootCanvas_v12_app_icon_node_complete"
     static let profileAppIconLayoutCompleteKey = "curatedRootCanvas_v13_profile_app_icon_layout_complete"
     static let whatsAppTopRightLayoutCompleteKey = "curatedRootCanvas_v14_whatsapp_top_right_layout_complete"
+    static let pacManOnlyRootCompleteKey = "curatedRootCanvas_v15_pacman_only_complete"
     private static let logger = Logger(subsystem: "com.caocap.app", category: "CuratedRootCanvasMigration")
 
     static func runIfNeeded(
@@ -32,11 +33,6 @@ enum CuratedRootCanvasMigration {
                     persistence: persistence
                 )
                 try seedIfMissing(
-                    PacManCanvasProvider.snapshot,
-                    fileName: RootCanvasProvider.pacManFileName,
-                    persistence: persistence
-                )
-                try seedIfMissing(
                     XOCanvasProvider.snapshot,
                     fileName: RootCanvasProvider.xoFileName,
                     persistence: persistence
@@ -45,10 +41,16 @@ enum CuratedRootCanvasMigration {
                 // This release intentionally replaces the old home workspace once.
                 try persistence.save(RootCanvasProvider.snapshot, fileName: CanvasFileNaming.rootFileName)
                 defaults.set(true, forKey: migrationCompleteKey)
+                markLegacyLayoutMigrationsComplete(defaults: defaults)
+                defaults.set(true, forKey: pacManOnlyRootCompleteKey)
                 logger.info("Installed the curated root canvas.")
             } catch {
                 logger.error("Failed to install the curated root canvas: \(error.localizedDescription)")
             }
+        }
+
+        if isPacManOnlyRoot(persistence: persistence) {
+            markLegacyLayoutMigrationsComplete(defaults: defaults)
         }
 
         if !defaults.bool(forKey: verticalLayoutCompleteKey) {
@@ -180,6 +182,16 @@ enum CuratedRootCanvasMigration {
                 logger.error("Failed to reposition the root WhatsApp node: \(error.localizedDescription)")
             }
         }
+
+        if !defaults.bool(forKey: pacManOnlyRootCompleteKey) {
+            do {
+                try refreshPacManOnlyRoot(persistence: persistence)
+                defaults.set(true, forKey: pacManOnlyRootCompleteKey)
+                logger.info("Replaced the curated root canvas with the Hello World Mini-App.")
+            } catch {
+                logger.error("Failed to install the Hello World launch root canvas: \(error.localizedDescription)")
+            }
+        }
     }
 
     private static func refreshVerticalRootLayout(persistence: ProjectPersistenceService) throws {
@@ -187,8 +199,6 @@ enum CuratedRootCanvasMigration {
         guard persistence.projectExists(fileName: rootFileName) else { return }
 
         let snapshot = try persistence.load(fileName: rootFileName)
-        let legacyNodes = RootCanvasProvider.nodes.filter { $0.id != RootCanvasProvider.activityNodeID }
-        let curatedIDs = Set(legacyNodes.map(\.id))
         let constellationPositions: [UUID: CGPoint] = [
             RootCanvasProvider.tutorialNodeID: .zero,
             RootCanvasProvider.proNodeID: CGPoint(x: 0, y: -300),
@@ -196,14 +206,15 @@ enum CuratedRootCanvasMigration {
             RootCanvasProvider.pacManNodeID: CGPoint(x: 250, y: -150),
             RootCanvasProvider.settingsNodeID: CGPoint(x: -250, y: 150)
         ]
+        let constellationIDs = Set(constellationPositions.keys)
         let isLegacyConstellation =
-            Set(snapshot.nodes.map(\.id)) == curatedIDs &&
+            Set(snapshot.nodes.map(\.id)) == constellationIDs &&
             snapshot.nodes.allSatisfy { constellationPositions[$0.id] == $0.position }
         guard isLegacyConstellation else { return }
 
         let positionsByID = Dictionary(
-            uniqueKeysWithValues: legacyNodes.enumerated().map { index, node in
-                (node.id, RootCanvasProvider.verticalColumnPosition(index: index, count: legacyNodes.count))
+            uniqueKeysWithValues: snapshot.nodes.enumerated().map { index, node in
+                (node.id, RootCanvasProvider.verticalColumnPosition(index: index, count: snapshot.nodes.count))
             }
         )
         let updatedNodes = snapshot.nodes.map { node -> SpatialNode in
@@ -232,13 +243,13 @@ enum CuratedRootCanvasMigration {
 
         let snapshot = try persistence.load(fileName: rootFileName)
         guard !snapshot.nodes.contains(where: { $0.id == RootCanvasProvider.activityNodeID }),
-              let activityNode = RootCanvasProvider.nodes.first(where: {
+              let activityNode = RootCanvasProvider.legacyCuratedNodes.first(where: {
                   $0.id == RootCanvasProvider.activityNodeID
               }) else {
             return
         }
 
-        let legacyNodes = RootCanvasProvider.nodes.filter { $0.id != RootCanvasProvider.activityNodeID }
+        let legacyNodes = RootCanvasProvider.legacyCuratedNodes.filter { $0.id != RootCanvasProvider.activityNodeID }
         let legacyPositions = Dictionary(
             uniqueKeysWithValues: legacyNodes.enumerated().map { index, node in
                 (node.id, RootCanvasProvider.verticalColumnPosition(index: index, count: legacyNodes.count))
@@ -252,7 +263,7 @@ enum CuratedRootCanvasMigration {
         var updatedNodes = snapshot.nodes
         if hasCanonicalPositions {
             let newPositions = Dictionary(
-                uniqueKeysWithValues: RootCanvasProvider.nodes.map { ($0.id, $0.position) }
+                uniqueKeysWithValues: RootCanvasProvider.legacyCuratedNodes.map { ($0.id, $0.position) }
             )
             updatedNodes = updatedNodes.map { node in
                 var updated = node
@@ -298,7 +309,7 @@ enum CuratedRootCanvasMigration {
         }
         guard hasPreviousLayout else { return }
 
-        let canonicalByID = Dictionary(uniqueKeysWithValues: RootCanvasProvider.nodes.map { ($0.id, $0) })
+        let canonicalByID = Dictionary(uniqueKeysWithValues: RootCanvasProvider.legacyCuratedNodes.map { ($0.id, $0) })
         let updatedNodes = snapshot.nodes.map { node -> SpatialNode in
             guard let canonical = canonicalByID[node.id] else { return node }
             var updated = node
@@ -306,7 +317,7 @@ enum CuratedRootCanvasMigration {
             updated.theme = canonical.theme
             return updated
         }
-        let orderedNodes = RootCanvasProvider.nodes.compactMap { canonical in
+        let orderedNodes = RootCanvasProvider.legacyCuratedNodes.compactMap { canonical in
             updatedNodes.first(where: { $0.id == canonical.id })
         }
 
@@ -341,12 +352,14 @@ enum CuratedRootCanvasMigration {
     }
 
     private static func launchLayoutNodeIDs() -> [UUID] {
-        RootCanvasProvider.nodes
-            .filter {
-                $0.id != RootCanvasProvider.dailyNodeID &&
-                    $0.id != RootCanvasProvider.xoNodeID
-            }
-            .map(\.id)
+        [
+            RootCanvasProvider.proNodeID,
+            RootCanvasProvider.settingsNodeID,
+            RootCanvasProvider.profileNodeID,
+            RootCanvasProvider.activityNodeID,
+            RootCanvasProvider.tutorialNodeID,
+            RootCanvasProvider.pacManNodeID
+        ]
     }
 
     private static func installDailyNode(persistence: ProjectPersistenceService) throws {
@@ -362,7 +375,7 @@ enum CuratedRootCanvasMigration {
         guard Set(snapshot.nodes.map(\.id)) == launchIDs else { return }
 
         let launchNodes = launchLayoutNodeIDs().compactMap { id in
-            RootCanvasProvider.nodes.first(where: { $0.id == id })
+            RootCanvasProvider.legacyCuratedNodes.first(where: { $0.id == id })
         }
         let constellationPositions: [UUID: CGPoint] = Dictionary(
             uniqueKeysWithValues: launchNodes.compactMap { node -> (UUID, CGPoint)? in
@@ -385,7 +398,7 @@ enum CuratedRootCanvasMigration {
         }
         guard hasLaunchPositions else { return }
 
-        let orderedNodes = RootCanvasProvider.nodes.map { canonical -> SpatialNode in
+        let orderedNodes = RootCanvasProvider.legacyCuratedNodes.map { canonical -> SpatialNode in
             if let existing = snapshot.nodes.first(where: { $0.id == canonical.id }) {
                 var updated = existing
                 updated.position = canonical.position
@@ -409,11 +422,12 @@ enum CuratedRootCanvasMigration {
 
     private static func preGridRootNodeIDs() -> Set<UUID> {
         Set(
-            RootCanvasProvider.nodes
+            RootCanvasProvider.legacyCuratedNodes
                 .filter {
                     $0.id != RootCanvasProvider.xoNodeID &&
                         $0.id != RootCanvasProvider.whatsAppNodeID &&
-                        $0.id != RootCanvasProvider.helpNodeID
+                        $0.id != RootCanvasProvider.helpNodeID &&
+                        $0.id != RootCanvasProvider.appIconNodeID
                 }
                 .map(\.id)
         )
@@ -428,7 +442,12 @@ enum CuratedRootCanvasMigration {
         let preGridIDs = preGridRootNodeIDs()
         guard Set(snapshot.nodes.map(\.id)) == preGridIDs else { return }
 
-        let preGridNodes = RootCanvasProvider.nodes.filter { $0.id != RootCanvasProvider.xoNodeID }
+        let preGridNodes = RootCanvasProvider.legacyCuratedNodes.filter {
+            $0.id != RootCanvasProvider.xoNodeID &&
+                $0.id != RootCanvasProvider.whatsAppNodeID &&
+                $0.id != RootCanvasProvider.helpNodeID &&
+                $0.id != RootCanvasProvider.appIconNodeID
+        }
         let verticalPositions = Dictionary(
             uniqueKeysWithValues: preGridNodes.enumerated().map { index, node in
                 (node.id, RootCanvasProvider.verticalColumnPosition(index: index, count: preGridNodes.count))
@@ -485,7 +504,7 @@ enum CuratedRootCanvasMigration {
         }
         guard hasConstellationLayout else { return }
 
-        let orderedNodes = RootCanvasProvider.nodes.map { canonical -> SpatialNode in
+        let orderedNodes = RootCanvasProvider.legacyCuratedNodes.map { canonical -> SpatialNode in
             if let existing = snapshot.nodes.first(where: { $0.id == canonical.id }) {
                 var updated = existing
                 updated.position = canonical.position
@@ -514,14 +533,14 @@ enum CuratedRootCanvasMigration {
 
         let snapshot = try persistence.load(fileName: rootFileName)
         let canonicalIDs = Set(
-            RootCanvasProvider.nodes
+            RootCanvasProvider.legacyCuratedNodes
                 .filter { $0.id != RootCanvasProvider.whatsAppNodeID }
                 .map(\.id)
         )
         guard Set(snapshot.nodes.map(\.id)) == canonicalIDs else { return }
 
         let gridPositions: [UUID: CGPoint] = Dictionary(
-            uniqueKeysWithValues: RootCanvasProvider.nodes
+            uniqueKeysWithValues: RootCanvasProvider.legacyCuratedNodes
                 .filter { $0.id != RootCanvasProvider.whatsAppNodeID }
                 .map { ($0.id, $0.position) }
         )
@@ -555,21 +574,21 @@ enum CuratedRootCanvasMigration {
         }
 
         let gridNodeIDs = Set(
-            RootCanvasProvider.nodes
+            RootCanvasProvider.legacyCuratedNodes
                 .filter { $0.id != RootCanvasProvider.whatsAppNodeID }
                 .map(\.id)
         )
         guard Set(snapshot.nodes.map(\.id)) == gridNodeIDs else { return }
 
         let gridPositions: [UUID: CGPoint] = Dictionary(
-            uniqueKeysWithValues: RootCanvasProvider.nodes
+            uniqueKeysWithValues: RootCanvasProvider.legacyCuratedNodes
                 .filter { $0.id != RootCanvasProvider.whatsAppNodeID }
                 .map { ($0.id, $0.position) }
         )
         let hasGridLayout = snapshot.nodes.allSatisfy { gridPositions[$0.id] == $0.position }
         guard hasGridLayout else { return }
 
-        guard let whatsAppNode = RootCanvasProvider.nodes.first(where: {
+        guard let whatsAppNode = RootCanvasProvider.legacyCuratedNodes.first(where: {
             $0.id == RootCanvasProvider.whatsAppNodeID
         }) else {
             return
@@ -602,21 +621,21 @@ enum CuratedRootCanvasMigration {
         }
 
         let preHelpIDs = Set(
-            RootCanvasProvider.nodes
+            RootCanvasProvider.legacyCuratedNodes
                 .filter { $0.id != RootCanvasProvider.helpNodeID }
                 .map(\.id)
         )
         guard Set(snapshot.nodes.map(\.id)) == preHelpIDs else { return }
 
         let canonicalPositions: [UUID: CGPoint] = Dictionary(
-            uniqueKeysWithValues: RootCanvasProvider.nodes
+            uniqueKeysWithValues: RootCanvasProvider.legacyCuratedNodes
                 .filter { $0.id != RootCanvasProvider.helpNodeID }
                 .map { ($0.id, $0.position) }
         )
         let hasCanonicalLayout = snapshot.nodes.allSatisfy { canonicalPositions[$0.id] == $0.position }
         guard hasCanonicalLayout else { return }
 
-        guard let helpNode = RootCanvasProvider.nodes.first(where: {
+        guard let helpNode = RootCanvasProvider.legacyCuratedNodes.first(where: {
             $0.id == RootCanvasProvider.helpNodeID
         }) else {
             return
@@ -649,21 +668,21 @@ enum CuratedRootCanvasMigration {
         }
 
         let preAppIconIDs = Set(
-            RootCanvasProvider.nodes
+            RootCanvasProvider.legacyCuratedNodes
                 .filter { $0.id != RootCanvasProvider.appIconNodeID }
                 .map(\.id)
         )
         guard Set(snapshot.nodes.map(\.id)) == preAppIconIDs else { return }
 
         let canonicalPositions: [UUID: CGPoint] = Dictionary(
-            uniqueKeysWithValues: RootCanvasProvider.nodes
+            uniqueKeysWithValues: RootCanvasProvider.legacyCuratedNodes
                 .filter { $0.id != RootCanvasProvider.appIconNodeID }
                 .map { ($0.id, $0.position) }
         )
         let hasCanonicalLayout = snapshot.nodes.allSatisfy { canonicalPositions[$0.id] == $0.position }
         guard hasCanonicalLayout else { return }
 
-        guard let appIconNode = RootCanvasProvider.nodes.first(where: {
+        guard let appIconNode = RootCanvasProvider.legacyCuratedNodes.first(where: {
             $0.id == RootCanvasProvider.appIconNodeID
         }) else {
             return
@@ -691,7 +710,7 @@ enum CuratedRootCanvasMigration {
         guard persistence.projectExists(fileName: rootFileName) else { return }
 
         let snapshot = try persistence.load(fileName: rootFileName)
-        let canonicalByID = Dictionary(uniqueKeysWithValues: RootCanvasProvider.nodes.map { ($0.id, $0) })
+        let canonicalByID = Dictionary(uniqueKeysWithValues: RootCanvasProvider.legacyCuratedNodes.map { ($0.id, $0) })
         let canonicalIDs = Set(canonicalByID.keys)
         guard Set(snapshot.nodes.map(\.id)) == canonicalIDs else { return }
 
@@ -705,7 +724,7 @@ enum CuratedRootCanvasMigration {
         }
 
         let unmovedNodeIDs = Set(
-            RootCanvasProvider.nodes
+            RootCanvasProvider.legacyCuratedNodes
                 .filter {
                     $0.id != RootCanvasProvider.profileNodeID &&
                         $0.id != RootCanvasProvider.appIconNodeID
@@ -713,7 +732,7 @@ enum CuratedRootCanvasMigration {
                 .map(\.id)
         )
         let canonicalPositions: [UUID: CGPoint] = Dictionary(
-            uniqueKeysWithValues: RootCanvasProvider.nodes
+            uniqueKeysWithValues: RootCanvasProvider.legacyCuratedNodes
                 .filter { unmovedNodeIDs.contains($0.id) }
                 .map { ($0.id, $0.position) }
         )
@@ -782,12 +801,12 @@ enum CuratedRootCanvasMigration {
         guard persistence.projectExists(fileName: rootFileName) else { return }
 
         let snapshot = try persistence.load(fileName: rootFileName)
-        let canonicalByID = Dictionary(uniqueKeysWithValues: RootCanvasProvider.nodes.map { ($0.id, $0) })
+        let canonicalByID = Dictionary(uniqueKeysWithValues: RootCanvasProvider.legacyCuratedNodes.map { ($0.id, $0) })
         let canonicalIDs = Set(canonicalByID.keys)
         guard Set(snapshot.nodes.map(\.id)).isSubset(of: canonicalIDs) else { return }
 
         let gridNodeIDs = Set(
-            RootCanvasProvider.nodes
+            RootCanvasProvider.legacyCuratedNodes
                 .filter {
                     $0.id != RootCanvasProvider.whatsAppNodeID &&
                         $0.id != RootCanvasProvider.profileNodeID &&
@@ -796,7 +815,7 @@ enum CuratedRootCanvasMigration {
                 .map(\.id)
         )
         let gridPositions: [UUID: CGPoint] = Dictionary(
-            uniqueKeysWithValues: RootCanvasProvider.nodes
+            uniqueKeysWithValues: RootCanvasProvider.legacyCuratedNodes
                 .filter { gridNodeIDs.contains($0.id) }
                 .map { ($0.id, $0.position) }
         )
@@ -832,6 +851,69 @@ enum CuratedRootCanvasMigration {
             ),
             fileName: rootFileName
         )
+    }
+
+    /// Replaces a curated-only root with the single centered Hello World Mini-App.
+    /// Skips roots that contain any user-created (non-curated) node ids.
+    private static func refreshPacManOnlyRoot(persistence: ProjectPersistenceService) throws {
+        let rootFileName = CanvasFileNaming.rootFileName
+        guard persistence.projectExists(fileName: rootFileName) else { return }
+
+        let snapshot = try persistence.load(fileName: rootFileName)
+        let curatedIDs = RootCanvasProvider.legacyCuratedNodeIDs
+        let launchMiniAppIDs = Set(RootCanvasProvider.nodes.map(\.id))
+
+        // Already on the Hello World launch template.
+        if Set(snapshot.nodes.map(\.id)) == launchMiniAppIDs,
+           snapshot.nodes == RootCanvasProvider.nodes,
+           snapshot.viewportScale == RootCanvasProvider.defaultViewportScale,
+           snapshot.viewportOffset == .zero {
+            return
+        }
+
+        // Preserve roots that include any user-created nodes.
+        let rootIDs = Set(snapshot.nodes.map(\.id))
+        guard rootIDs.isSubset(of: curatedIDs.union(launchMiniAppIDs)) else { return }
+
+        try persistence.save(
+            ProjectSnapshot(
+                schemaVersion: snapshot.schemaVersion,
+                projectName: snapshot.projectName,
+                nodes: RootCanvasProvider.nodes,
+                viewportOffset: .zero,
+                viewportScale: RootCanvasProvider.defaultViewportScale,
+                checkpointLabel: snapshot.checkpointLabel
+            ),
+            fileName: rootFileName
+        )
+    }
+
+    private static func isPacManOnlyRoot(persistence: ProjectPersistenceService) -> Bool {
+        let rootFileName = CanvasFileNaming.rootFileName
+        guard persistence.projectExists(fileName: rootFileName) else { return false }
+        guard let snapshot = try? persistence.load(fileName: rootFileName) else { return false }
+        return Set(snapshot.nodes.map(\.id)) == Set(RootCanvasProvider.nodes.map(\.id))
+    }
+
+    private static func markLegacyLayoutMigrationsComplete(defaults: UserDefaults) {
+        let keys = [
+            verticalLayoutCompleteKey,
+            activityNodeCompleteKey,
+            launchLayoutCompleteKey,
+            dailyNodeCompleteKey,
+            constellationLayoutCompleteKey,
+            xoGridLayoutCompleteKey,
+            launchViewportScaleCompleteKey,
+            whatsAppNodeCompleteKey,
+            helpNodeCompleteKey,
+            launchAnchorLayoutCompleteKey,
+            appIconNodeCompleteKey,
+            profileAppIconLayoutCompleteKey,
+            whatsAppTopRightLayoutCompleteKey
+        ]
+        for key in keys {
+            defaults.set(true, forKey: key)
+        }
     }
 
     private static func seedIfMissing(

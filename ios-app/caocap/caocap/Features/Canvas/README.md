@@ -9,8 +9,8 @@ The Canvas feature is CAOCAP's spatial runtime. It renders the infinite workspac
 - `ViewportState` owns pan and zoom math. Keep gesture calculations here instead of spreading geometry math through views.
 - `NodeView` renders one node. It should stay presentational.
 - `NodeDetailView` opens Mini-App nodes into a large-sheet running preview with the shared omnibox (FAB tap and sparkles) plus MINI-APP tool rows for SRS, Code, Firebase, Agent, Settings, Publish, and Back to Canvas.
-- Providers under `Providers/` define the root constellation, curated Tutorial
-  and Pac-Man canvases, and generic Mini-App starter content.
+- Providers under `Providers/` define the root Hello World Mini-App, curated Tutorial
+  and XO canvases, and generic Mini-App starter content.
 - The protected Activity action node renders the device-wide 17-week save
   heatmap directly on the root canvas and opens the expanded activity sheet.
 

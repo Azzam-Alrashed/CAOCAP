@@ -12,23 +12,29 @@ final class ScreenCaptureController {
     private let ciContext = CIContext(options: nil)
 
     private var isCapturing = false
+    private var isStarting = false
+    private var startToken = UUID()
     private var lastFrameSentAt: Date = .distantPast
     private let minimumFrameInterval: TimeInterval = 1.0
     private let maxDimension: CGFloat = 768
 
     var onJPEGFrame: ((Data) -> Void)?
+    var onStarted: (() -> Void)?
     var onError: ((Error) -> Void)?
 
     var isActive: Bool { isCapturing }
 
     func start() {
-        guard !isCapturing else { return }
+        guard !isCapturing, !isStarting else { return }
         let recorder = RPScreenRecorder.shared()
         guard recorder.isAvailable else {
             onError?(ScreenCaptureError.unavailable)
             return
         }
 
+        let token = UUID()
+        startToken = token
+        isStarting = true
         recorder.isMicrophoneEnabled = false
         recorder.startCapture { [weak self] sampleBuffer, bufferType, error in
             guard let self else { return }
@@ -45,6 +51,16 @@ final class ScreenCaptureController {
         } completionHandler: { [weak self] error in
             Task { @MainActor in
                 guard let self else { return }
+                self.isStarting = false
+
+                // A newer start/stop superseded this attempt (e.g. user cancelled during the prompt).
+                guard self.startToken == token else {
+                    if RPScreenRecorder.shared().isRecording {
+                        RPScreenRecorder.shared().stopCapture { _ in }
+                    }
+                    return
+                }
+
                 if let error {
                     self.isCapturing = false
                     self.onError?(error)
@@ -52,13 +68,19 @@ final class ScreenCaptureController {
                 } else {
                     self.isCapturing = true
                     self.logger.info("ReplayKit capture started")
+                    self.onStarted?()
                 }
             }
         }
     }
 
     func stop() {
-        guard isCapturing || RPScreenRecorder.shared().isRecording else { return }
+        startToken = UUID()
+        isStarting = false
+        guard isCapturing || RPScreenRecorder.shared().isRecording else {
+            isCapturing = false
+            return
+        }
         RPScreenRecorder.shared().stopCapture { [weak self] error in
             Task { @MainActor in
                 self?.isCapturing = false

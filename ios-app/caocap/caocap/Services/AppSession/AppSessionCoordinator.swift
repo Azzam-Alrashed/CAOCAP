@@ -222,7 +222,6 @@ final class AppSessionCoordinator {
     }
 
     func restartOnboarding() {
-        restoreTutorialPortalIfNeeded()
         intro.reset()
         personalization.reset()
         onboarding.reset()
@@ -231,7 +230,6 @@ final class AppSessionCoordinator {
     }
 
     func restartTutorial() {
-        restoreTutorialPortalIfNeeded()
         onboarding.reset()
         router.navigate(to: .root, addToStack: false, animated: false)
         syncViewportWithActiveStore()
@@ -250,7 +248,6 @@ final class AppSessionCoordinator {
 
     func startLessonFromHelp(_ lessonID: OnboardingLessonID) {
         showingHelp = false
-        restoreTutorialPortalIfNeeded()
         prepareWorkspace(for: lessonID)
         onboarding.startLesson(lessonID, advancesThroughLessons: false)
     }
@@ -278,7 +275,6 @@ final class AppSessionCoordinator {
     private func prepareOmniboxNavigationWorkspace() {
         commandPalette.setPresented(false)
         coCaptain.setPresented(false)
-        restoreTutorialPortalIfNeeded()
         router.navigate(to: .root, addToStack: false, animated: false)
         syncViewportWithActiveStore()
         commandPalette.nodes = router.activeStore.nodes
@@ -297,7 +293,6 @@ final class AppSessionCoordinator {
     private func prepareHelpDiscoveryLessonWorkspace() {
         commandPalette.setPresented(false)
         coCaptain.setPresented(false)
-        restoreTutorialPortalIfNeeded()
         router.navigate(to: .root, addToStack: false, animated: false)
         syncViewportWithActiveStore()
         commandPalette.nodes = router.activeStore.nodes
@@ -317,17 +312,9 @@ final class AppSessionCoordinator {
         handleSubCanvasNavigation(fileName: fileName)
     }
 
-    private func restoreTutorialPortalIfNeeded() {
-        guard let tutorial = RootCanvasProvider.nodes.first(where: {
-            $0.id == RootCanvasProvider.tutorialNodeID
-        }) else { return }
-        router.rootStore.ensureNodeExists(tutorial)
-    }
-
     private func prepareTutorialLessonWorkspace() {
         commandPalette.setPresented(false)
         coCaptain.setPresented(false)
-        restoreTutorialPortalIfNeeded()
         router.navigateToSubCanvas(fileName: RootCanvasProvider.tutorialFileName)
         router.activeStore.ensureNodeExists(TutorialCanvasProvider.practiceMiniAppNode)
         syncViewportWithActiveStore()
@@ -952,7 +939,7 @@ final class AppSessionCoordinator {
         }
 
         if onboarding.currentStep == .searchFlyToNode,
-           (nodeId == RootCanvasProvider.pacManNodeID || nodeId == RootCanvasProvider.xoNodeID) {
+           nodeId == RootCanvasProvider.helloWorldMiniAppNodeID {
             onboarding.completeCurrentStep()
         }
     }

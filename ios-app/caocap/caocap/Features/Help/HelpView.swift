@@ -213,8 +213,6 @@ struct HelpView: View {
                 onOpenTutorial()
             case .restartInteractiveTutorial:
                 onRestartTutorial()
-            case .openPacManCanvas:
-                onOpenDemoCanvas(RootCanvasProvider.pacManFileName)
             case .openXOCanvas:
                 onOpenDemoCanvas(RootCanvasProvider.xoFileName)
             }

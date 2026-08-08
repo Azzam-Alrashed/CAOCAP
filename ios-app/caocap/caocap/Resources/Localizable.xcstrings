@@ -1766,6 +1766,40 @@
         }
       }
     },
+    "copilot.call.shareScreen": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مشاركة الشاشة"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share screen"
+          }
+        }
+      }
+    },
+    "copilot.call.stopSharing": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إيقاف المشاركة"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop sharing"
+          }
+        }
+      }
+    },
     "copilot.call.recording": {
       "extractionState": "manual",
       "localizations": {
@@ -3127,28 +3161,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Open Tutorial canvas"
-          }
-        }
-      }
-    },
-    "help.tutorial.pacman.subtitle": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "See a touch-first mini-game example"
-          }
-        }
-      }
-    },
-    "help.tutorial.pacman.title": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Explore Pac-Man demo"
           }
         }
       }
@@ -9090,6 +9102,23 @@
         }
       },
       "comment": "Omnibox action title for opening usage."
+    },
+    "Show Options Immediately": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إظهار الخيارات فورًا"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show Options Immediately"
+          }
+        }
+      }
     }
   },
   "version": "1.1"

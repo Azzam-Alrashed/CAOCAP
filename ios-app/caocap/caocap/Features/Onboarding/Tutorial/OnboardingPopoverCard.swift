@@ -100,7 +100,7 @@ struct UnifiedBubbleWithArrowShape: Shape {
 enum OnboardingTooltipAnchor: Hashable {
     /// Anchored to the Tutorial portal on the root canvas.
     case tutorialNode
-    /// Anchored to a demo game portal node (Pac-Man or XO) on the root canvas.
+    /// Anchored to a demo Mini-App node (Hello World or XO) on the root canvas.
     case demoGameNode
     /// Anchored to the floating command button (FAB) at the bottom of the canvas.
     case floatingCommandButton

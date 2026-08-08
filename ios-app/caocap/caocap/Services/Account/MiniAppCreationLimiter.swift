@@ -10,14 +10,14 @@ public enum MiniAppCreationGate: Equatable {
 ///
 /// Pro subscribers are unlimited. Free users may keep up to
 /// `freeMiniAppLimit` Mini-Apps across all canvases. Curated seed Mini-Apps
-/// (Tutorial / Pac-Man / XO) do not count toward the cap.
+/// (Tutorial / Hello World / XO) do not count toward the cap.
 public struct MiniAppCreationLimiter: Sendable {
     public static let freeMiniAppLimit = 5
 
     /// Stable IDs for app-owned example Mini-Apps that free users receive.
     public static let curatedSeedMiniAppIDs: Set<UUID> = [
         TutorialCanvasProvider.miniAppNodeID,
-        PacManCanvasProvider.miniAppNodeID,
+        RootCanvasProvider.helloWorldMiniAppNodeID,
         XOCanvasProvider.miniAppNodeID
     ]
 

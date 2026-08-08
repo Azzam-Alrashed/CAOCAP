@@ -5,7 +5,7 @@ import SwiftUI
 ///
 /// **Interaction modes:**
 /// - **Tap** – opens the command palette.
-/// - **Long-press** – expands a radial menu to choose Chat / Voice / Video with the copilot.
+/// - **Long-press** – expands a radial menu to choose Search / Chat / Video with the copilot.
 /// - **Drag** – repositions the button; on release it snaps to the nearest grid point.
 /// - **Drag while expanded** – gestures toward a bubble to highlight and select it.
 struct FloatingCommandButton: View {
@@ -16,7 +16,7 @@ struct FloatingCommandButton: View {
     @State private var activeAction: CommandAction? = nil
 
     enum CommandAction {
-        case voice
+        case search
         case chat
         case video
     }
@@ -266,18 +266,18 @@ struct FloatingCommandButton: View {
                 y: isExpanded ? direction.y * distance : 0
             )
 
-            // Left: Voice
+            // Left: Search / Command (omnibox)
             QuickActionBubble(
-                icon: CopilotInteractionMode.voice.systemImageName,
-                color: .secondary,
+                icon: "magnifyingglass",
+                color: .primary,
                 isExpanded: isExpanded,
-                isHighlighted: activeAction == .voice,
+                isHighlighted: activeAction == .search,
                 size: 40,
                 delay: 0.0
             ) {
                 triggerHapticFeedback(.medium)
                 withAnimation(.spring()) { isExpanded = false }
-                onSelectMode(.voice)
+                onTap()
             }
             .offset(
                 x: isExpanded ? direction.rotated(by: -angle).x * distance : 0,
@@ -287,7 +287,7 @@ struct FloatingCommandButton: View {
             // Right: Video (screen share)
             QuickActionBubble(
                 icon: CopilotInteractionMode.video.systemImageName,
-                color: .secondary,
+                color: .red,
                 isExpanded: isExpanded,
                 isHighlighted: activeAction == .video,
                 size: 40,
@@ -311,7 +311,7 @@ struct FloatingCommandButton: View {
         let angle: CGFloat = 45
         let threshold: CGFloat = 40
 
-        let voicePos = CGPoint(
+        let searchPos = CGPoint(
             x: center.x + direction.rotated(by: -angle).x * distance,
             y: center.y + direction.rotated(by: -angle).y * distance
         )
@@ -324,14 +324,14 @@ struct FloatingCommandButton: View {
             y: center.y + direction.rotated(by: angle).y * distance
         )
 
-        let dVoice = hypot(location.x - voicePos.x, location.y - voicePos.y)
+        let dSearch = hypot(location.x - searchPos.x, location.y - searchPos.y)
         let dChat = hypot(location.x - chatPos.x, location.y - chatPos.y)
         let dVideo = hypot(location.x - videoPos.x, location.y - videoPos.y)
 
         let previousAction = activeAction
 
-        if dVoice < threshold {
-            activeAction = .voice
+        if dSearch < threshold {
+            activeAction = .search
         } else if dChat < threshold {
             activeAction = .chat
         } else if dVideo < threshold {
@@ -348,8 +348,8 @@ struct FloatingCommandButton: View {
     private func executeAction(_ action: CommandAction) {
         triggerHapticFeedback(.medium)
         switch action {
-        case .voice:
-            onSelectMode(.voice)
+        case .search:
+            onTap()
         case .chat:
             onSelectMode(.chat)
             onDragSummon?()

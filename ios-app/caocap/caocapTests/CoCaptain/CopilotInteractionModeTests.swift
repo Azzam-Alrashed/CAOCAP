@@ -7,7 +7,7 @@ struct CopilotInteractionModeTests {
     @Test func modeIconsAreStable() {
         #expect(CopilotInteractionMode.chat.systemImageName == "bubble.left.and.bubble.right.fill")
         #expect(CopilotInteractionMode.voice.systemImageName == "mic.fill")
-        #expect(CopilotInteractionMode.video.systemImageName == "rectangle.dashed.badge.record")
+        #expect(CopilotInteractionMode.video.systemImageName == "video.fill")
     }
 
     @Test func personasUseGenderedLiveVoices() {

@@ -198,7 +198,7 @@ public final class AppActionDispatcher: AppActionPerforming {
         AppActionDefinition(
             id: .summonCopilotVideo,
             title: "Screen Share with Copilot",
-            icon: "rectangle.dashed.badge.record",
+            icon: "video.fill",
             category: .assistant,
             isMutating: false,
             allowsAutonomousExecution: false

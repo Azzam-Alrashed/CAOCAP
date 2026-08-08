@@ -7,6 +7,16 @@ public enum RootCanvasProvider {
     public static let pacManFileName = "canvas_pacman.json"
     public static let xoFileName = "canvas_xo.json"
 
+    /// Stable ID for the launch Hello World Mini-App on the root canvas.
+    public static let helloWorldMiniAppNodeID = UUID(uuidString: "CA0CA002-0000-4000-8000-000000000001")!
+
+    public static let helloWorldSRS = """
+    # Hello World
+
+    Tap the headline and explore the live preview.
+    """
+
+    /// Legacy curated portal / action node IDs (pre single-mini-app root).
     public static let tutorialNodeID = UUID(uuidString: "CA0CA001-0000-4000-8000-000000000001")!
     public static let pacManNodeID = UUID(uuidString: "CA0CA001-0000-4000-8000-000000000002")!
     public static let profileNodeID = UUID(uuidString: "CA0CA001-0000-4000-8000-000000000003")!
@@ -19,8 +29,8 @@ public enum RootCanvasProvider {
     public static let helpNodeID = UUID(uuidString: "CA0CA001-0000-4000-8000-00000000000A")!
     public static let appIconNodeID = UUID(uuidString: "CA0CA001-0000-4000-8000-00000000000B")!
 
-    /// Default root zoom that frames the 2×4 grid plus top/bottom anchor nodes on phone.
-    public static let defaultViewportScale: CGFloat = 0.45
+    /// Default root zoom that frames the centered Hello World Mini-App on phone.
+    public static let defaultViewportScale: CGFloat = 0.8
 
     private static let verticalSpacing: CGFloat = 220
     private static let columnSpacing: CGFloat = 250
@@ -105,8 +115,14 @@ public enum RootCanvasProvider {
         }
     }
 
-    public static var nodes: [SpatialNode] {
-        return [
+    /// IDs from the pre Pac-Man-only curated root (used by migrations).
+    public static var legacyCuratedNodeIDs: Set<UUID> {
+        Set(legacyCuratedNodes.map(\.id))
+    }
+
+    /// The former 11-node launch grid, retained so v1–v14 migrations can still compose.
+    public static var legacyCuratedNodes: [SpatialNode] {
+        [
             SpatialNode(
                 id: proNodeID,
                 position: gridPosition(for: proNodeID),
@@ -208,6 +224,26 @@ public enum RootCanvasProvider {
                 icon: "book.fill",
                 theme: .indigo,
                 action: .openHelp
+            )
+        ]
+    }
+
+    /// Launch root: a single Hello World Mini-App at the canvas origin.
+    public static var nodes: [SpatialNode] {
+        [
+            SpatialNode(
+                id: helloWorldMiniAppNodeID,
+                type: .miniApp,
+                position: .zero,
+                title: "Hello World",
+                subtitle: "Tap to run",
+                icon: "play.circle.fill",
+                theme: .blue,
+                miniApp: MiniAppState(
+                    srsText: helloWorldSRS,
+                    srsReadinessState: .implementationReady,
+                    codeText: ProjectTemplateProvider.defaultCode
+                )
             )
         ]
     }

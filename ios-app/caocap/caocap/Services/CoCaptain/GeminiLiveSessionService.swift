@@ -20,6 +20,8 @@ final class GeminiLiveSessionService {
     private(set) var inputTranscript: String = ""
     private(set) var outputTranscript: String = ""
     private(set) var isMuted = false
+    /// Whether ReplayKit screen frames are currently being sent to the live session.
+    private(set) var isScreenSharing = false
     /// True when the free-tier monthly CoCaptain budget blocked or ended the call.
     private(set) var isQuotaExceeded = false
 
@@ -38,8 +40,9 @@ final class GeminiLiveSessionService {
     private var accumulatedOutputTranscript = ""
     private var sessionStartedAt: Date?
     private var didRecordUsage = false
+    private var didUseScreenShare = false
 
-    static let liveModelName = "gemini-2.5-flash-native-audio-preview-12-2025"
+    static let liveModelName = "gemini-3.1-flash-live-preview"
 
     func start(
         mode: CopilotInteractionMode,
@@ -50,6 +53,8 @@ final class GeminiLiveSessionService {
         self.mode = mode
         connectionState = .connecting
         isQuotaExceeded = false
+        isScreenSharing = false
+        didUseScreenShare = false
         inputTranscript = ""
         outputTranscript = ""
         accumulatedInputTranscript = ""
@@ -101,20 +106,7 @@ final class GeminiLiveSessionService {
             try audioEngine.start()
 
             if mode == .video {
-                screenCapture.onJPEGFrame = { [weak self] jpeg in
-                    Task { @MainActor in
-                        await self?.liveSession?.sendVideoRealtime(jpeg, mimeType: "image/jpeg")
-                    }
-                }
-                screenCapture.onError = { [weak self] error in
-                    Task { @MainActor in
-                        self?.logger.error("Screen capture error: \(error.localizedDescription, privacy: .public)")
-                        if case .connected = self?.connectionState {
-                            self?.connectionState = .failed(error.localizedDescription)
-                        }
-                    }
-                }
-                screenCapture.start()
+                startScreenShare()
             }
 
             connectionState = .connected
@@ -143,8 +135,51 @@ final class GeminiLiveSessionService {
         audioEngine.setMuted(muted)
     }
 
+    func setScreenSharing(_ enabled: Bool) {
+        guard case .connected = connectionState else { return }
+        if enabled {
+            startScreenShare()
+        } else {
+            stopScreenShare()
+        }
+    }
+
     func stop() async {
         await stop(recordUsage: true)
+    }
+
+    private func startScreenShare() {
+        guard !isScreenSharing else { return }
+
+        screenCapture.onJPEGFrame = { [weak self] jpeg in
+            Task { @MainActor in
+                await self?.liveSession?.sendVideoRealtime(jpeg, mimeType: "image/jpeg")
+            }
+        }
+        screenCapture.onStarted = { [weak self] in
+            Task { @MainActor in
+                guard let self else { return }
+                self.isScreenSharing = true
+                self.didUseScreenShare = true
+            }
+        }
+        screenCapture.onError = { [weak self] error in
+            Task { @MainActor in
+                guard let self else { return }
+                self.logger.error("Screen capture error: \(error.localizedDescription, privacy: .public)")
+                self.stopScreenShare()
+            }
+        }
+
+        screenCapture.start()
+    }
+
+    private func stopScreenShare() {
+        screenCapture.stop()
+        screenCapture.onJPEGFrame = nil
+        screenCapture.onStarted = nil
+        screenCapture.onError = nil
+        isScreenSharing = false
     }
 
     private func stop(recordUsage: Bool) async {
@@ -152,7 +187,7 @@ final class GeminiLiveSessionService {
         quotaWatchTask = nil
         receiveTask?.cancel()
         receiveTask = nil
-        screenCapture.stop()
+        stopScreenShare()
         audioEngine.stop()
         if let liveSession {
             await liveSession.close()
@@ -220,7 +255,7 @@ final class GeminiLiveSessionService {
                 inputTranscript: accumulatedInputTranscript,
                 outputTranscript: accumulatedOutputTranscript,
                 duration: duration,
-                includesScreenShare: mode == .video,
+                includesScreenShare: didUseScreenShare,
                 isSubscribed: subscriptionManager.isSubscribed
             ) {
                 isQuotaExceeded = true
@@ -248,7 +283,7 @@ final class GeminiLiveSessionService {
             inputTranscript: accumulatedInputTranscript,
             outputTranscript: accumulatedOutputTranscript,
             duration: duration,
-            includesScreenShare: mode == .video,
+            includesScreenShare: didUseScreenShare,
             isSubscribed: subscriptionManager.isSubscribed
         )
     }

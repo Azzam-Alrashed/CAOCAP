@@ -65,6 +65,17 @@ struct LocalModelDeviceEligibilityTests {
         #expect(result == CoCaptainModelSelectionPolicy.cloudModelName)
     }
 
+    @Test func legacyCloudModelNamesMigrateToCurrentDefault() {
+        #expect(
+            CoCaptainModelSelectionPolicy.resolvedModelName("gemini-3-flash-preview")
+                == CoCaptainModelSelectionPolicy.cloudModelName
+        )
+        #expect(
+            CoCaptainModelSelectionPolicy.resolvedModelName("gemini-3.5-flash")
+                == CoCaptainModelSelectionPolicy.cloudModelName
+        )
+    }
+
     @Test func supportedPersistedLocalSelectionIsPreserved() {
         let result = CoCaptainModelSelectionPolicy.resolvedModelName(
             CoCaptainModelSelectionPolicy.localModelName,

@@ -13,11 +13,14 @@ struct CopilotCallView: View {
     @State private var statusPulse = false
 
     static let cardSize = CGSize(width: 268, height: 64)
+    static let videoCardSize = CGSize(width: 310, height: 64)
     static let quotaCardSize = CGSize(width: 300, height: 92)
     private let edgePadding: CGFloat = 16
 
     private var cardSize: CGSize {
-        viewModel.isQuotaExceeded ? Self.quotaCardSize : Self.cardSize
+        if viewModel.isQuotaExceeded { return Self.quotaCardSize }
+        if viewModel.showsScreenShareControl { return Self.videoCardSize }
+        return Self.cardSize
     }
 
     var body: some View {
@@ -66,6 +69,7 @@ struct CopilotCallView: View {
                     reportFrame(at: clamped(position, in: size))
                 }
                 .animation(.spring(response: 0.28, dampingFraction: 0.82), value: viewModel.isMuted)
+                .animation(.spring(response: 0.28, dampingFraction: 0.82), value: viewModel.isScreenSharing)
                 .animation(.easeInOut(duration: 0.25), value: viewModel.connectionState)
                 .animation(.spring(response: 0.32, dampingFraction: 0.84), value: viewModel.isQuotaExceeded)
         }
@@ -108,6 +112,9 @@ struct CopilotCallView: View {
                 upgradeButton
             } else {
                 muteButton
+                if viewModel.showsScreenShareControl {
+                    screenShareButton
+                }
             }
             endButton
         }
@@ -152,6 +159,31 @@ struct CopilotCallView: View {
         )
     }
 
+    private var screenShareButton: some View {
+        Button {
+            withAnimation(.spring(response: 0.28, dampingFraction: 0.7)) {
+                viewModel.toggleScreenShare()
+            }
+        } label: {
+            Image(systemName: "rectangle.dashed.badge.record")
+                .symbolRenderingMode(.monochrome)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(viewModel.isScreenSharing ? Color.red : Color.primary)
+                .frame(width: 32, height: 32)
+                .background(.thinMaterial, in: Circle())
+                .overlay(
+                    Circle()
+                        .stroke(viewModel.isScreenSharing ? Color.red.opacity(0.45) : Color.clear, lineWidth: 1.5)
+                )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(
+            viewModel.isScreenSharing
+                ? LocalizationManager.shared.localizedString("copilot.call.stopSharing")
+                : LocalizationManager.shared.localizedString("copilot.call.shareScreen")
+        )
+    }
+
     private var upgradeButton: some View {
         Button {
             viewModel.upgradeToPro()
@@ -183,7 +215,7 @@ struct CopilotCallView: View {
 
     private var modeLabel: String {
         LocalizationManager.shared.localizedString(
-            viewModel.mode == .video
+            viewModel.isScreenSharing
                 ? "copilot.call.recording"
                 : viewModel.mode.localizedTitleKey
         )
@@ -192,7 +224,7 @@ struct CopilotCallView: View {
     private var statusDotColor: Color {
         switch viewModel.connectionState {
         case .connected:
-            return viewModel.mode == .video ? .red : Color(hex: viewModel.persona.accentHex)
+            return viewModel.isScreenSharing ? .red : Color(hex: viewModel.persona.accentHex)
         case .connecting:
             return .orange
         case .failed:

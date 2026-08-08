@@ -15,7 +15,7 @@ enum CopilotInteractionMode: String, CaseIterable, Identifiable, Hashable, Codab
         switch self {
         case .chat: return "bubble.left.and.bubble.right.fill"
         case .voice: return "mic.fill"
-        case .video: return "rectangle.dashed.badge.record"
+        case .video: return "video.fill"
         }
     }
 
