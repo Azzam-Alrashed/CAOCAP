@@ -6,6 +6,8 @@ struct WorkspaceCanvasView: View {
     let canvasID: String
     @Binding var viewport: ViewportState
     @Binding var currentScale: CGFloat
+    @Binding var presentedMiniApp: SpatialNode?
+    @Binding var selectedNodeDetail: SpatialNode?
     var canvasFocusNodeID: UUID?
     var commandPalette: CommandPaletteViewModel?
     let onNodeAction: (NodeAction) -> Void
@@ -19,6 +21,8 @@ struct WorkspaceCanvasView: View {
             store: store,
             viewport: $viewport,
             currentScale: $currentScale,
+            presentedMiniApp: $presentedMiniApp,
+            selectedNodeDetail: $selectedNodeDetail,
             canvasFocusNodeID: canvasFocusNodeID,
             commandPalette: commandPalette,
             onNodeAction: onNodeAction,

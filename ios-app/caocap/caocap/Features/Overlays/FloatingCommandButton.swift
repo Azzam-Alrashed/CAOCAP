@@ -4,8 +4,8 @@ import SwiftUI
 /// bottom-trailing corner of the canvas and snaps to a 3×3 edge grid on release.
 ///
 /// **Interaction modes:**
-/// - **Tap** – opens Mission Control (or dismisses an open sheet).
-/// - **Long-press** – expands a radial menu to choose Search / Chat / Video with the copilot.
+/// - **Tap** – opens the omnibox (or dismisses an open sheet).
+/// - **Long-press** – expands a radial menu for Undo / Chat / Video.
 /// - **Drag** – repositions the button; on release it snaps to the nearest grid point.
 /// - **Drag while expanded** – gestures toward a bubble to highlight and select it.
 struct FloatingCommandButton: View {
@@ -16,7 +16,7 @@ struct FloatingCommandButton: View {
     @State private var activeAction: CommandAction? = nil
 
     enum CommandAction {
-        case search
+        case undo
         case chat
         case video
     }
@@ -24,8 +24,9 @@ struct FloatingCommandButton: View {
     @Environment(\.colorScheme) var colorScheme
 
     var onTap: () -> Void
-    /// Opens the command palette / omnibox (radial Search bubble).
-    var onSearch: () -> Void
+    /// Undoes the last canvas change (radial Undo bubble).
+    var onUndo: () -> Void
+    var canUndo: Bool = false
     var onSelectMode: (CopilotInteractionMode) -> Void
     var copilot: CopilotPersona = UserProfileStore().loadSelectedCopilot()
 
@@ -268,18 +269,19 @@ struct FloatingCommandButton: View {
                 y: isExpanded ? direction.y * distance : 0
             )
 
-            // Left: Search / Command (omnibox)
+            // Left: Undo
             QuickActionBubble(
-                icon: "magnifyingglass",
+                icon: "arrow.uturn.backward",
                 color: .primary,
                 isExpanded: isExpanded,
-                isHighlighted: activeAction == .search,
+                isEnabled: canUndo,
+                isHighlighted: activeAction == .undo,
                 size: 40,
                 delay: 0.0
             ) {
                 triggerHapticFeedback(.medium)
                 withAnimation(.spring()) { isExpanded = false }
-                onSearch()
+                onUndo()
             }
             .offset(
                 x: isExpanded ? direction.rotated(by: -angle).x * distance : 0,
@@ -313,7 +315,7 @@ struct FloatingCommandButton: View {
         let angle: CGFloat = 45
         let threshold: CGFloat = 40
 
-        let searchPos = CGPoint(
+        let undoPos = CGPoint(
             x: center.x + direction.rotated(by: -angle).x * distance,
             y: center.y + direction.rotated(by: -angle).y * distance
         )
@@ -326,21 +328,20 @@ struct FloatingCommandButton: View {
             y: center.y + direction.rotated(by: angle).y * distance
         )
 
-        let dSearch = hypot(location.x - searchPos.x, location.y - searchPos.y)
+        let dUndo = hypot(location.x - undoPos.x, location.y - undoPos.y)
         let dChat = hypot(location.x - chatPos.x, location.y - chatPos.y)
         let dVideo = hypot(location.x - videoPos.x, location.y - videoPos.y)
 
         let previousAction = activeAction
+        let nearest = [
+            (CommandAction.undo, dUndo, canUndo),
+            (.chat, dChat, true),
+            (.video, dVideo, true)
+        ]
+            .filter { $0.1 < threshold && $0.2 }
+            .min(by: { $0.1 < $1.1 })
 
-        if dSearch < threshold {
-            activeAction = .search
-        } else if dChat < threshold {
-            activeAction = .chat
-        } else if dVideo < threshold {
-            activeAction = .video
-        } else {
-            activeAction = nil
-        }
+        activeAction = nearest?.0
 
         if activeAction != previousAction && activeAction != nil {
             triggerHapticFeedback(.light)
@@ -350,8 +351,9 @@ struct FloatingCommandButton: View {
     private func executeAction(_ action: CommandAction) {
         triggerHapticFeedback(.medium)
         switch action {
-        case .search:
-            onSearch()
+        case .undo:
+            guard canUndo else { return }
+            onUndo()
         case .chat:
             onSelectMode(.chat)
             onDragSummon?()

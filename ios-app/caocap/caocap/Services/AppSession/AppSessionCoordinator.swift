@@ -31,8 +31,10 @@ final class AppSessionCoordinator {
     var showTutorialGraduationBanner = false
     var showingCopilotCall = false
     var showingCopilotPicker = false
-    /// Mission Control mid sheet opened by FAB tap.
-    var showingMissionControl = false
+    /// Fullscreen mini-app preview sheet opened by tapping a mini-app node.
+    var presentedMiniApp: SpatialNode?
+    /// Non-mini-app node inspector sheet opened from the canvas.
+    var selectedNodeDetail: SpatialNode?
     var activeCopilotCallMode: CopilotInteractionMode = .voice
     var selectedCopilot: CopilotPersona = UserProfileStore().loadSelectedCopilot()
     @ObservationIgnored var copilotCallViewModel: CopilotCallViewModel?
@@ -342,6 +344,11 @@ final class AppSessionCoordinator {
         router.activeStore.undoStackChanged += 1
     }
 
+    var canUndo: Bool {
+        _ = router.activeStore.undoStackChanged
+        return activeUndoManager?.canUndo == true
+    }
+
     func handleUndoStackChanged() {
         router.activeStore.undoStackChanged += 1
     }
@@ -354,6 +361,8 @@ final class AppSessionCoordinator {
     }
 
     func handleSubCanvasNavigation(fileName: String) {
+        presentedMiniApp = nil
+        selectedNodeDetail = nil
         router.navigateToSubCanvas(fileName: fileName)
     }
 
@@ -389,8 +398,12 @@ final class AppSessionCoordinator {
     func dismissPresentedSheets() -> Bool {
         var dismissed = false
 
-        if showingMissionControl {
-            showingMissionControl = false
+        if presentedMiniApp != nil {
+            presentedMiniApp = nil
+            dismissed = true
+        }
+        if selectedNodeDetail != nil {
+            selectedNodeDetail = nil
             dismissed = true
         }
         if coCaptain.isPresented {
@@ -453,15 +466,9 @@ final class AppSessionCoordinator {
         return dismissed
     }
 
-    /// FAB tap: dismiss any open sheet, otherwise open Mission Control.
+    /// FAB tap: dismiss any open sheet, otherwise open the omnibox.
     func handleFloatingCommandButtonTap() {
         if dismissPresentedSheets() { return }
-        showingMissionControl = true
-    }
-
-    /// Long-press Search: clear covering sheets, then open the omnibox.
-    func handleFloatingCommandSearch() {
-        _ = dismissPresentedSheets()
         commandPalette.setPresented(true)
     }
 
@@ -630,11 +637,15 @@ final class AppSessionCoordinator {
     private func configureActions() {
         actionDispatcher.register(.goRoot) { [weak self] in
             guard let self else { return }
+            self.presentedMiniApp = nil
+            self.selectedNodeDetail = nil
             self.router.goRoot()
             self.currentScale = 1.0
         }
         actionDispatcher.register(.goBack) { [weak self] in
             guard let self else { return }
+            self.presentedMiniApp = nil
+            self.selectedNodeDetail = nil
             self.router.goBack()
         }
         actionDispatcher.register(.createNode) { [weak self] in

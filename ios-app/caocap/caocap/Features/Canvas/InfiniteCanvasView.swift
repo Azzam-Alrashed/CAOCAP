@@ -13,6 +13,11 @@ struct InfiniteCanvasView: View {
     
     /// Real-time scale feedback for external overlays.
     @Binding var currentScale: CGFloat
+
+    /// Fullscreen mini-app preview — owned by the session so FAB dismiss can close it.
+    @Binding var presentedMiniApp: SpatialNode?
+    /// Non-mini-app node inspector sheet — also session-owned for FAB dismiss.
+    @Binding var selectedNodeDetail: SpatialNode?
     
     /// The central store managing node data and persistence.
     var store: ProjectStore
@@ -35,6 +40,8 @@ struct InfiniteCanvasView: View {
         store: ProjectStore,
         viewport: Binding<ViewportState>,
         currentScale: Binding<CGFloat>,
+        presentedMiniApp: Binding<SpatialNode?>,
+        selectedNodeDetail: Binding<SpatialNode?>,
         canvasFocusNodeID: UUID? = nil,
         commandPalette: CommandPaletteViewModel? = nil,
         onNodeAction: ((NodeAction) -> Void)? = nil,
@@ -46,6 +53,8 @@ struct InfiniteCanvasView: View {
         self.store = store
         self._viewport = viewport
         self._currentScale = currentScale
+        self._presentedMiniApp = presentedMiniApp
+        self._selectedNodeDetail = selectedNodeDetail
         self.canvasFocusNodeID = canvasFocusNodeID
         self.commandPalette = commandPalette
         self.onNodeAction = onNodeAction
@@ -58,10 +67,6 @@ struct InfiniteCanvasView: View {
     // Drag offsets stay local until the drag ends so links and nodes can track
     // the finger smoothly without writing every intermediate frame to ProjectStore.
     
-    /// The node currently presented in the detail sheet context menu/inspector.
-    @State private var selectedNode: SpatialNode?
-    /// The mini-app node currently presented in a full-screen editing experience.
-    @State private var presentedMiniApp: SpatialNode?
     /// Temporary translation offsets applied to nodes currently being dragged.
     @State private var nodeDragOffsets: [UUID: CGSize] = [:]
     /// Flag indicating an active node drag, used to disable canvas panning during the gesture.
@@ -222,7 +227,7 @@ struct InfiniteCanvasView: View {
             rendersAnchor: { $0.isCanvasLocal }
         )
         .edgesIgnoringSafeArea(.all)
-        .sheet(item: $selectedNode) { node in
+        .sheet(item: $selectedNodeDetail) { node in
             NodeDetailView(
                 node: node,
                 store: store,
@@ -271,7 +276,7 @@ struct InfiniteCanvasView: View {
         } else if node.type == .miniApp {
             presentedMiniApp = node
         } else {
-            selectedNode = node
+            selectedNodeDetail = node
         }
     }
 
@@ -293,7 +298,7 @@ struct InfiniteCanvasView: View {
     }
 
     private func handleNodeInspect(_ node: SpatialNode) {
-        selectedNode = node
+        selectedNodeDetail = node
     }
 
     private func handleNodeDragChanged(_ node: SpatialNode, translation: CGSize) {
@@ -338,7 +343,7 @@ struct InfiniteCanvasView: View {
 
     /// Dismisses node detail chrome, then flies the workspace camera to the target node.
     private func handleFlyToFromDetail(_ nodeID: UUID) {
-        selectedNode = nil
+        selectedNodeDetail = nil
         presentedMiniApp = nil
         onFlyToNode?(nodeID)
     }
@@ -524,7 +529,14 @@ private struct TrackpadPanGesture: UIGestureRecognizerRepresentable {
 
 
 #Preview {
-    InfiniteCanvasView(store: ProjectStore(), viewport: .constant(ViewportState()), currentScale: .constant(1.0), onNodeAction: nil)
+    InfiniteCanvasView(
+        store: ProjectStore(),
+        viewport: .constant(ViewportState()),
+        currentScale: .constant(1.0),
+        presentedMiniApp: .constant(nil),
+        selectedNodeDetail: .constant(nil),
+        onNodeAction: nil
+    )
 }
 
 /// An overlay view displayed when the current project file contains schema elements

@@ -162,10 +162,10 @@ struct GlobalFloatingChromeView: View {
                         GlobalFloatingChromeController.makeMainAppWindowKey()
                         session.handleFloatingCommandButtonTap()
                     },
-                    onSearch: {
-                        GlobalFloatingChromeController.makeMainAppWindowKey()
-                        session.handleFloatingCommandSearch()
+                    onUndo: {
+                        _ = session.actionDispatcher.perform(.undo, source: .user)
                     },
+                    canUndo: session.canUndo,
                     onSelectMode: { mode in
                         switch mode {
                         case .chat:

@@ -176,4 +176,26 @@ struct AppSessionCoordinatorTests {
         try? await Task.sleep(for: .milliseconds(100))
         #expect(!session.isLaunching)
     }
+
+    @Test func floatingCommandTapDismissesFullscreenMiniApp() {
+        let session = AppSessionCoordinator()
+        session.presentedMiniApp = SpatialNode(
+            type: .miniApp,
+            position: .zero,
+            title: "Hello"
+        )
+
+        session.handleFloatingCommandButtonTap()
+
+        #expect(session.presentedMiniApp == nil)
+        #expect(!session.commandPalette.isPresented)
+    }
+
+    @Test func floatingCommandTapOpensOmniboxWhenIdle() {
+        let session = AppSessionCoordinator()
+
+        session.handleFloatingCommandButtonTap()
+
+        #expect(session.commandPalette.isPresented)
+    }
 }
