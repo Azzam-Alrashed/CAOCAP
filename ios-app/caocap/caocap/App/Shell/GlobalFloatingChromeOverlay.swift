@@ -10,10 +10,15 @@ import UIKit
 final class PassthroughChromeWindow: UIWindow {
     /// Screen-space rects that should receive touches. Everything else passes through.
     var interactiveFrames: [CGRect] = []
+    /// When true, the window captures all hits (force-update and similar blocking overlays).
+    var blocksAllPassthrough = false
 
     override var canBecomeKey: Bool { false }
 
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if blocksAllPassthrough {
+            return super.hitTest(point, with: event)
+        }
         let allowed = interactiveFrames.contains { frame in
             frame.insetBy(dx: -6, dy: -6).contains(point)
         }
@@ -30,6 +35,7 @@ final class GlobalFloatingChromeBridge {
     var session: AppSessionCoordinator?
     var onInteractiveFramesChange: ([CGRect]) -> Void = { _ in }
     var onFABFrameChange: (CGRect) -> Void = { _ in }
+    var onBlocksAllPassthroughChange: (Bool) -> Void = { _ in }
 }
 
 /// Owns the high-level chrome window and refreshes its SwiftUI root.
@@ -51,6 +57,9 @@ final class GlobalFloatingChromeController {
         bridge.onFABFrameChange = onFABFrameChange
         bridge.onInteractiveFramesChange = { [weak self] frames in
             self?.window?.interactiveFrames = frames
+        }
+        bridge.onBlocksAllPassthroughChange = { [weak self] blocksAll in
+            self?.window?.blocksAllPassthrough = blocksAll
         }
 
         removeOrphanedChromeWindows(keeping: window)
@@ -119,7 +128,7 @@ final class GlobalFloatingChromeController {
     }
 }
 
-/// FAB, call chrome, and confetti rendered in the overlay window above sheets.
+/// FAB, call chrome, confetti, and force-update rendered in the overlay window above sheets.
 struct GlobalFloatingChromeView: View {
     @Bindable var bridge: GlobalFloatingChromeBridge
 
@@ -142,6 +151,8 @@ struct GlobalFloatingChromeView: View {
     @ViewBuilder
     private func chromeBody(session: AppSessionCoordinator) -> some View {
         @Bindable var session = session
+        let showsForceUpdate = shouldShowForceUpdate(session)
+
         ZStack {
             if shouldShowChrome(session) {
                 FloatingCommandButton(
@@ -191,6 +202,12 @@ struct GlobalFloatingChromeView: View {
                     .transition(.opacity)
                     .zIndex(1_000)
             }
+
+            if showsForceUpdate, let update = session.appUpdateService.availableUpdate {
+                AppUpdatePromptView(update: update, onUpdate: {})
+                    .transition(.opacity)
+                    .zIndex(2_000)
+            }
         }
         // Explicit FAB frame — `anchorPreference` is unreliable with `.position()` placement.
         .onboardingExplicitAnchorFrames(fabExplicitAnchorFrames)
@@ -204,6 +221,11 @@ struct GlobalFloatingChromeView: View {
         )
         .environment(session.onboarding)
         .onAppear {
+            publishInteractiveFrames(session: session)
+            bridge.onBlocksAllPassthroughChange(showsForceUpdate)
+        }
+        .onChange(of: showsForceUpdate) { _, blocksAll in
+            bridge.onBlocksAllPassthroughChange(blocksAll)
             publishInteractiveFrames(session: session)
         }
         .onChange(of: session.showingCopilotCall) { _, showing in
@@ -230,6 +252,9 @@ struct GlobalFloatingChromeView: View {
         .onChange(of: session.personalization.shouldPresent) { _, _ in
             refreshChromeVisibility(session: session)
         }
+        .onChange(of: session.appUpdateService.availableUpdate) { _, _ in
+            refreshChromeVisibility(session: session)
+        }
     }
 
     @ViewBuilder
@@ -253,10 +278,17 @@ struct GlobalFloatingChromeView: View {
         return [.floatingCommandButton: fabAnchorFrame]
     }
 
+    private func shouldShowForceUpdate(_ session: AppSessionCoordinator) -> Bool {
+        !session.isLaunching
+            && session.appUpdateService.shouldPresentUpdatePrompt
+            && session.appUpdateService.availableUpdate != nil
+    }
+
     private func shouldShowChrome(_ session: AppSessionCoordinator) -> Bool {
         !session.isLaunching
             && !session.intro.shouldPresent
             && !session.personalization.shouldPresent
+            && !shouldShowForceUpdate(session)
     }
 
     private func refreshChromeVisibility(session: AppSessionCoordinator) {
@@ -266,6 +298,7 @@ struct GlobalFloatingChromeView: View {
             fabTooltipFrame = .null
             fabAnchorFrame = .null
         }
+        bridge.onBlocksAllPassthroughChange(shouldShowForceUpdate(session))
         publishInteractiveFrames(session: session)
     }
 

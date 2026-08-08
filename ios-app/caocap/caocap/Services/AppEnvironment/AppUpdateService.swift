@@ -95,6 +95,16 @@ struct RemoteConfigMinimumVersionProvider: AppMinimumVersionProviding {
     init(remoteConfig: RemoteConfig = .remoteConfig()) {
         self.remoteConfig = remoteConfig
         self.remoteConfig.setDefaults([parameterKey: "" as NSObject])
+
+        // DEBUG: fetch every launch so Console publishes are testable immediately.
+        // Release: 1h throttle balances force-update freshness with Remote Config load.
+        let settings = RemoteConfigSettings()
+        #if DEBUG
+        settings.minimumFetchInterval = 0
+        #else
+        settings.minimumFetchInterval = 60 * 60
+        #endif
+        self.remoteConfig.configSettings = settings
     }
 
     func fetchMinimumRequiredVersion() async throws -> String {

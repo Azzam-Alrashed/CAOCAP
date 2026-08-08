@@ -3,7 +3,7 @@ import SwiftUI
 /// Root view that composes the active workspace canvas, global overlays, and session sheets.
 ///
 /// Session orchestration lives in `AppSessionCoordinator`; this view wires UI only.
-/// FAB, call chrome, and confetti live in a passthrough `UIWindow` above system sheets.
+/// FAB, call chrome, confetti, and force-update live in a passthrough `UIWindow` above system sheets.
 struct ContentView: View {
     @State private var session = AppSessionCoordinator()
     @Environment(\.undoManager) private var undoManager
@@ -55,7 +55,6 @@ struct ContentView: View {
             .overlay { launchOverlay }
             .overlay { introOverlay }
             .overlay { personalizationOverlay }
-            .overlay { updatePromptOverlay }
             .modifier(AppSheetsModifier(session: session))
             .modifier(AppSessionLifecycle(
                 session: session,
@@ -153,16 +152,6 @@ struct ContentView: View {
             )
             .transition(.opacity)
             .zIndex(75)
-        }
-    }
-
-    @ViewBuilder
-    private var updatePromptOverlay: some View {
-        if let availableUpdate = session.appUpdateService.availableUpdate,
-           session.appUpdateService.shouldPresentUpdatePrompt,
-           !session.isLaunching {
-            AppUpdatePromptView(update: availableUpdate, onUpdate: {})
-                .zIndex(90)
         }
     }
 }
