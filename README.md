@@ -1,2 +1,2 @@
 # CAOCAP
-Learn to Code with Your AI Programming Mentor.
+Learn and grow with your AI mentor.
