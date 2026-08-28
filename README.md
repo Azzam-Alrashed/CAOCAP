@@ -1,13 +1,19 @@
 # CAOCAP: Learn & Earn with AI
 
-Turn knowledge into income.
+Find your direction. Build your skills. Turn knowledge into income.
 
-CAOCAP is an AI mentor that helps you develop useful skills, build a portfolio, and put what you know to work through freelancing, a better career, or projects of your own.
+CAOCAP is an AI mentor for complete beginners who want to earn through digital skills but don’t know what to learn or where to start.
 
 ## The problem
 
-There is no shortage of things to learn. The challenge is knowing which skills are worth your time, how to gain experience, and how to get paid for what you can do. Too often, learning ends with a completed course instead of a clear next step.
+Before you can learn a skill, you need to choose one. For complete beginners, it can be difficult to understand what different digital skills involve, which might suit them, and how learning connects to paid work.
 
 ## The solution
 
-We believe learning should help you become more independent. CAOCAP provides a path shaped around your goals, guiding you through practice and real projects, then helping you present your work and pursue paid opportunities. At every stage, you know what to do next and why it matters.
+We believe learning should help you become more independent. CAOCAP helps you explore digital skills through small, guided tasks so you can choose a direction based on experience.
+
+From there, your AI mentor guides you through practical projects, gives feedback, and helps you build a portfolio—developing the skills and confidence to pursue paid opportunities.
+
+## The journey
+
+**Explore digital skills → try guided tasks → choose a direction → build real projects → create a portfolio → pursue paid opportunities.**
