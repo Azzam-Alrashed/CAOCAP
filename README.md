@@ -1,6 +1,5 @@
-# CAOCAP
-Learn and grow with your AI mentor.
+# CAOCAP: Learn & Earn with AI
 
-We believe everyone deserves guidance that helps them learn independently, make progress, and reach their potential.
-CAOCAP empowers you to build knowledge, skills, and confidence via personalized mentorship.
+Turn knowledge into income.
 
+CAOCAP is an AI mentor that helps you build practical skills, create a portfolio, and find ways to earn through freelancing, a better career, or your own projects.
