@@ -2,13 +2,13 @@
 
 **Find your direction. Build your skills. Turn knowledge into income.**
 
-CAOCAP is an early-stage AI mentor designed to help complete beginners explore digital skills, practise through guided projects, and prepare for paid opportunities.
+CAOCAP is an AI digital career mentor that helps complete beginners explore skills, choose a direction, build practical experience, demonstrate their abilities, and prepare for paid opportunities.
 
 > Explore skills → try guided tasks → choose a direction → build projects → create a portfolio → pursue paid opportunities
 
 ## Project status
 
-CAOCAP is at the initial scaffolding stage. The repository does not yet contain the AI mentorship or learning experience described in the product documentation.
+CAOCAP is at the initial scaffolding stage. The repository does not yet contain the AI digital career mentorship or learning experience described in the product documentation.
 
 | Area | Status |
 | --- | --- |
@@ -70,6 +70,6 @@ Technology choices for the other clients and shared services have not been made.
 
 ## Roadmap
 
-The product direction includes guided skill exploration, AI mentorship and feedback, practical projects, progress tracking, portfolio building, paid-opportunity preparation, and additional platform clients. These capabilities are planned and are not yet implemented.
+The product direction includes guided skill exploration, AI digital career mentorship and feedback, practical projects, progress tracking, portfolio building, paid-opportunity preparation, and additional platform clients. These capabilities are planned and are not yet implemented.
 
 See the [Software Requirements Specification](docs/SRS.md) for the requirements baseline and open decisions.

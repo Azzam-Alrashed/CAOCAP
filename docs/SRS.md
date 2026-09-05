@@ -22,21 +22,24 @@ This Software Requirements Specification (SRS) documents the approved requiremen
 
 ### 1.2 Scope
 
-CAOCAP is an autonomous, general-purpose computer-use orchestration platform. It translates user goals into supervised work performed across computer applications by multiple CAOCAP-managed AI agents.
+CAOCAP is an AI digital career mentor that helps complete beginners explore skills, choose a direction, build practical experience, demonstrate their abilities, and prepare for paid opportunities.
 
-The system coordinates agent work across user-owned and CAOCAP-managed computers. Users interact with the system through desktop, mobile, and web clients. They can observe execution, approve consequential actions, redirect agents, and interrupt work.
+The system supports a learner journey from guided skill exploration and representative tasks through practical projects, feedback, evidence of progress, portfolio development, and preparation for realistic paid-work contexts. Learners interact with the AI digital career mentor through desktop, mobile, and web clients while retaining responsibility for their choices and work.
 
-CAOCAP initially focuses on helping people learn and pursue income through AI-assisted digital work. This is the platform’s primary initial use case, not a limitation on the general-purpose goals the platform may support.
+Computer use and multi-agent orchestration are supporting capabilities that CAOCAP may use to facilitate learning activities. When these capabilities operate across computer applications, their actions remain observable and interruptible, and consequential actions require learner approval.
 
-This SRS covers the user clients, multi-agent orchestration, computer connections, agent execution and control, and user-supervision mechanisms. Underlying AI models, operating systems, third-party applications, and external services interact with CAOCAP through system interfaces but are not themselves part of the CAOCAP software.
+This SRS covers learner-facing clients, AI digital career mentorship, the learner journey, guided tasks and projects, contextual feedback, progress and portfolio evidence, paid-opportunity preparation, and the supporting execution and supervision mechanisms. Underlying AI models, operating systems, third-party applications, and external services interact with CAOCAP through system interfaces but are not themselves part of the CAOCAP software.
 
 ### 1.3 Intended audience
 
-<!-- Identify the people expected to read, approve, implement, and verify this specification. -->
+This SRS is intended for the product owner and contributors responsible for reviewing, designing, implementing, verifying, deploying, operating, and maintaining CAOCAP.
 
 ### 1.4 References
 
-- [ISO/IEC/IEEE 29148:2018 — Requirements engineering](https://www.iso.org/standard/72089.html)
+| ID | Document | Version or date | Relevance |
+| --- | --- | --- | --- |
+| `REF-001` | [ISO/IEC/IEEE 29148 — Requirements engineering](https://www.iso.org/standard/72089.html) | 2018 | SRS structure and requirements-engineering guidance |
+| `REF-002` | [CAOCAP Product Vision](product-vision.md) | Current | Product purpose, audience, and initial use case |
 
 ### 1.5 Requirement conventions
 

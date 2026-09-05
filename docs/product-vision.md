@@ -2,6 +2,8 @@
 
 ## Purpose
 
+CAOCAP is an AI digital career mentor that helps complete beginners explore skills, choose a direction, build practical experience, demonstrate their abilities, and prepare for paid opportunities.
+
 CAOCAP exists to help complete beginners move from uncertainty about digital work to an informed direction, demonstrated skills, and greater independence.
 
 The product is intended to make the path from learning to earning understandable and actionable without promising a particular income or employment outcome.
@@ -27,7 +29,7 @@ Even after choosing a skill, learners can struggle to turn disconnected lessons 
 
 CAOCAP helps learners make decisions through experience. Learners explore digital skills by completing small guided tasks, reflecting on the experience, and comparing possible directions.
 
-After a learner chooses a direction, an AI mentor supports a progression of practical projects. The mentor provides contextual guidance and feedback while keeping the learner responsible for decisions and work. Completed projects become evidence of developing capability and potential portfolio material.
+After a learner chooses a direction, the AI digital career mentor supports a progression of practical projects. The mentor provides contextual guidance and feedback while keeping the learner responsible for decisions and work. Completed projects become evidence of developing capability and potential portfolio material.
 
 CAOCAP then helps the learner understand how those capabilities may be presented and applied in realistic paid-work contexts. It prepares learners to pursue opportunities; it does not guarantee that opportunities or income will result.
 
@@ -54,7 +56,7 @@ Learning activities should result in observable work, feedback, or demonstrated 
 
 ### Guidance preserves agency
 
-The AI mentor should explain, prompt, and provide feedback without removing the learner's ownership of choices or work.
+The AI digital career mentor should explain, prompt, and provide feedback without removing the learner's ownership of choices or work.
 
 ### Beginner clarity
 
