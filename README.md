@@ -12,7 +12,7 @@ CAOCAP is at the initial scaffolding stage. The repository does not yet contain 
 
 | Area | Status |
 | --- | --- |
-| iOS | Basic SwiftUI starter application |
+| iOS | Basic SwiftUI starter application with imported asset catalog |
 | macOS | Basic SwiftUI starter application |
 | Android | Directory scaffold only |
 | Windows | Directory scaffold only |
@@ -24,15 +24,25 @@ CAOCAP is at the initial scaffolding stage. The repository does not yet contain 
 
 ```text
 .
-├── Android/                 # Planned Android client
-├── iOS/                     # iOS SwiftUI project
-├── Linux/                   # Planned Linux client
-├── MacOS/                   # macOS SwiftUI project
-├── Website/
-│   ├── LandingPage/         # Planned public website
-│   └── WebApp/              # Planned web client
-├── Windows/                 # Planned Windows client
-└── docs/                    # Product and requirements documentation
+├── apps/
+│   ├── ios/                 # iOS SwiftUI project and app assets
+│   ├── macos/               # macOS SwiftUI project
+│   ├── android/             # Planned Android client
+│   ├── windows/             # Planned Windows client
+│   ├── linux/               # Planned Linux client
+│   └── web/                 # Planned web client
+├── websites/
+│   └── landing/             # Planned public website
+├── assets/
+│   └── brand/               # Imported artwork and icon variants
+├── docs/
+│   ├── research/            # Imported UX research and audits
+│   ├── product-vision.md
+│   ├── SRS.md
+│   └── imported-assets.md
+├── AGENTS.md                # Repository guidance for coding agents
+├── README.md
+└── .gitignore
 ```
 
 ## Getting started
@@ -41,13 +51,13 @@ The runnable applications currently require macOS and an Xcode version compatibl
 
 ### iOS
 
-1. Open `iOS/caocap/caocap.xcodeproj` in Xcode.
+1. Open [the iOS project](apps/ios/caocap/caocap.xcodeproj) in Xcode.
 2. Select the `caocap` scheme and an iOS simulator or compatible device.
 3. Run the project with **Product → Run** or `Command-R`.
 
 ### macOS
 
-1. Open `MacOS/caocap/caocap.xcodeproj` in Xcode.
+1. Open [the macOS project](apps/macos/caocap/caocap.xcodeproj) in Xcode.
 2. Select the `caocap` scheme and the **My Mac** destination.
 3. Run the project with **Product → Run** or `Command-R`.
 
@@ -67,6 +77,10 @@ Technology choices for the other clients and shared services have not been made.
 
 - [Product vision](docs/product-vision.md) explains why CAOCAP exists and the experience it intends to create.
 - [Software Requirements Specification](docs/SRS.md) defines the envisioned system requirements and records unresolved decisions.
+- [Brand asset index](assets/brand/README.md) locates artwork, mascot references, and icon variants.
+- [Research index](docs/research/README.md) links to the imported UX reports and audits.
+- [Imported assets](docs/imported-assets.md) records their source, original paths, and license.
+- [Agent guidance](AGENTS.md) describes repository conventions and validation commands.
 
 ## Roadmap
 
