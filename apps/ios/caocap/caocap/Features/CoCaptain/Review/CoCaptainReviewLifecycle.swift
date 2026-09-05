@@ -1,0 +1,855 @@
+import Foundation
+import OSLog
+
+/// Owns the complete human-in-the-loop lifecycle for CoCaptain review work.
+///
+/// Model-output validation and timeline rendering remain outside this module.
+/// Staging is side-effect free: only an explicit approval may mutate a
+/// Mini-App or perform an app action.
+@MainActor
+public final class CoCaptainReviewLifecycle {
+    public struct Draft: Hashable {
+        public let pendingActions: [CoCaptainAgentAction]
+        public let nodeEdits: [CoCaptainNodeEditProposal]
+
+        public init(
+            pendingActions: [CoCaptainAgentAction] = [],
+            nodeEdits: [CoCaptainNodeEditProposal] = []
+        ) {
+            self.pendingActions = pendingActions
+            self.nodeEdits = nodeEdits
+        }
+
+        public var isEmpty: Bool {
+            pendingActions.isEmpty && nodeEdits.isEmpty
+        }
+    }
+
+    /// One Review Bundle in an active lifecycle session.
+    ///
+    /// The bundle identifier is the single identity used by the lifecycle,
+    /// timeline, and node persistence.
+    public struct Record: Identifiable, Hashable, Codable {
+        public var id: UUID { bundle.id }
+        public var bundle: ReviewBundleItem
+        public let createdAt: Date
+
+        public init(bundle: ReviewBundleItem, createdAt: Date = Date()) {
+            self.bundle = bundle
+            self.createdAt = createdAt
+        }
+
+        private enum CodingKeys: String, CodingKey {
+            case timelineItemID
+            case bundle
+            case createdAt
+        }
+
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            let decodedBundle = try container.decode(ReviewBundleItem.self, forKey: .bundle)
+            let legacyTimelineItemID = try container.decodeIfPresent(
+                UUID.self,
+                forKey: .timelineItemID
+            )
+            let canonicalID = legacyTimelineItemID ?? decodedBundle.id
+            bundle = ReviewBundleItem(
+                id: canonicalID,
+                title: decodedBundle.title,
+                items: decodedBundle.items
+            )
+            createdAt = try container.decode(Date.self, forKey: .createdAt)
+        }
+
+        public func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(id, forKey: .timelineItemID)
+            try container.encode(bundle, forKey: .bundle)
+            try container.encode(createdAt, forKey: .createdAt)
+        }
+    }
+
+    public enum Decision: Hashable {
+        case approve(itemID: UUID)
+        case reject(itemID: UUID)
+        case chooseClarification(itemID: UUID, candidateID: UUID)
+        case approveAll
+        case rejectAll
+    }
+
+    /// Ordered domain effects emitted by a successful lifecycle transition.
+    public enum Effect: Hashable {
+        case nodeEditApplied(
+            itemID: UUID,
+            nodeID: UUID,
+            role: NodeRole,
+            section: CoCaptainNodeEditProposal.MiniAppSection
+        )
+        case appActionPerformed(itemID: UUID, result: AppActionResult)
+        case rejected(itemID: UUID)
+        case clarificationResolved(itemID: UUID)
+        case conflicted(itemID: UUID, description: String)
+        case learningNote(itemID: UUID, note: CoCaptainLearningNote)
+    }
+
+    public struct Transition: Hashable {
+        public let record: Record
+        public let effects: [Effect]
+
+        public init(record: Record, effects: [Effect]) {
+            self.record = record
+            self.effects = effects
+        }
+    }
+
+    /// Failures caused by invalid caller input. Operational application
+    /// failures are represented as terminal conflicted review items instead.
+    public enum Failure: Error, Hashable, LocalizedError {
+        case bundleNotFound(UUID)
+        case itemNotFound(UUID)
+        case decisionNotAllowed(itemID: UUID, status: ReviewItemStatus)
+        case clarificationCandidateNotFound(itemID: UUID, candidateID: UUID)
+        case invalidSource(itemID: UUID)
+
+        public var errorDescription: String? {
+            switch self {
+            case .bundleNotFound:
+                return "The Review Bundle is no longer available."
+            case .itemNotFound:
+                return "The review item is no longer available."
+            case .decisionNotAllowed:
+                return "That review decision is not available for the item's current status."
+            case .clarificationCandidateNotFound:
+                return "The selected clarification choice is no longer available."
+            case .invalidSource:
+                return "That review item cannot perform the requested decision."
+            }
+        }
+    }
+
+    @MainActor
+    public final class Session {
+        public private(set) var records: [Record]
+
+        public var hasUnresolvedReviews: Bool {
+            records.contains { record in
+                record.bundle.items.contains { $0.status.isUnresolved }
+            }
+        }
+
+        private let scope: CoCaptainAgentScope
+        private let store: ProjectStore?
+        private var dispatcher: (any AppActionPerforming)?
+        private let patchEngine: NodePatchEngine
+        private let logger = Logger(
+            subsystem: "com.caocap.CoCaptainReviewLifecycle",
+            category: "Session"
+        )
+
+        fileprivate init(
+            scope: CoCaptainAgentScope,
+            store: ProjectStore?,
+            dispatcher: (any AppActionPerforming)?,
+            patchEngine: NodePatchEngine
+        ) {
+            self.scope = scope
+            self.store = store
+            self.dispatcher = dispatcher
+            self.patchEngine = patchEngine
+            self.records = []
+            restorePersistedRecords()
+        }
+
+        func updateDispatcher(_ dispatcher: (any AppActionPerforming)?) {
+            self.dispatcher = dispatcher
+        }
+
+        /// Converts a validated typed draft into a Review Bundle without
+        /// mutating the canvas or performing a pending app action.
+        @discardableResult
+        public func stage(_ draft: Draft, createdAt: Date = Date()) -> Record? {
+            guard !draft.isEmpty else { return nil }
+
+            var items = draft.pendingActions.map(stageAction)
+            items.append(contentsOf: draft.nodeEdits.map(stageNodeEdit))
+            guard !items.isEmpty else { return nil }
+
+            let bundle = ReviewBundleItem(
+                title: reviewBundleTitle(for: items),
+                items: items
+            )
+            let record = Record(bundle: bundle, createdAt: createdAt)
+            records.append(record)
+            persist(record)
+            return record
+        }
+
+        /// Applies one explicit user decision. Invalid caller input leaves the
+        /// record unchanged and returns a typed failure.
+        @discardableResult
+        public func resolve(
+            _ decision: Decision,
+            in bundleID: UUID
+        ) -> Result<Transition, Failure> {
+            guard let recordIndex = records.firstIndex(where: { $0.id == bundleID }) else {
+                return .failure(.bundleNotFound(bundleID))
+            }
+
+            if case .node = scope {
+                guard let persistedRecord = currentPersistedRecords()
+                    .first(where: { $0.id == bundleID }) else {
+                    return .failure(.bundleNotFound(bundleID))
+                }
+                records[recordIndex] = persistedRecord
+            }
+
+            var record = records[recordIndex]
+            let result: Result<[Effect], Failure>
+
+            switch decision {
+            case .approve(let itemID):
+                result = approve(
+                    itemID: itemID,
+                    in: &record,
+                    createsCheckpoint: true
+                )
+            case .reject(let itemID):
+                result = reject(itemID: itemID, in: &record)
+            case .chooseClarification(let itemID, let candidateID):
+                result = chooseClarification(
+                    itemID: itemID,
+                    candidateID: candidateID,
+                    in: &record
+                )
+            case .approveAll:
+                result = approveAll(in: &record)
+            case .rejectAll:
+                result = rejectAll(in: &record)
+            }
+
+            switch result {
+            case .failure(let failure):
+                return .failure(failure)
+            case .success(let effects):
+                records[recordIndex] = record
+                persist(record)
+                return .success(Transition(record: record, effects: effects))
+            }
+        }
+
+        /// Clears active records and node-scoped persisted Review Bundles.
+        public func clear() {
+            records.removeAll()
+            replacePersistedRecords(with: [])
+        }
+
+        /// Rebinds the in-memory Review Bundles when the user switches between
+        /// project conversations. Node sessions continue to restore exclusively
+        /// from `NodeAgentState` so their persistence contract is unchanged.
+        public func restoreProjectRecords(_ records: [Record]) {
+            guard case .project = scope else { return }
+            self.records = records
+        }
+
+        private func stageAction(_ action: CoCaptainAgentAction) -> PendingReviewItem {
+            guard let actionID = AppActionID(rawValue: action.actionID) else {
+                let reason = LocalizationManager.shared.localizedString(
+                    "Unknown pending action id `%@`.",
+                    arguments: [action.actionID]
+                )
+                return unavailableActionItem(action: action, reason: reason)
+            }
+            guard let definition = dispatcher?.definition(for: actionID) else {
+                let reason = LocalizationManager.shared.localizedString(
+                    "Pending action `%@` is not available in the current context.",
+                    arguments: [action.actionID]
+                )
+                return unavailableActionItem(action: action, reason: reason)
+            }
+
+            return PendingReviewItem(
+                targetLabel: definition.localizedTitle,
+                summary: LocalizationManager.shared.localizedString(
+                    "Awaiting approval to run %@.",
+                    arguments: [definition.localizedTitle]
+                ),
+                preview: actionPreview(for: action, definition: definition),
+                source: .appAction(actionID, action.args)
+            )
+        }
+
+        private func unavailableActionItem(
+            action: CoCaptainAgentAction,
+            reason: String
+        ) -> PendingReviewItem {
+            PendingReviewItem(
+                targetLabel: action.actionID,
+                summary: LocalizationManager.shared.localizedString(
+                    "The assistant proposed an action that could not be staged for review."
+                ),
+                preview: reason,
+                status: .conflicted,
+                source: .unavailableAction(actionID: action.actionID, reason: reason),
+                conflictDescription: reason
+            )
+        }
+
+        private func stageNodeEdit(_ edit: CoCaptainNodeEditProposal) -> PendingReviewItem {
+            guard let store else {
+                let reason = LocalizationManager.shared.localizedString(
+                    "No active project context is available for this edit."
+                )
+                return PendingReviewItem(
+                    targetNodeID: edit.nodeID,
+                    targetLabel: edit.role.localizedDisplayName,
+                    summary: edit.summary,
+                    preview: reason,
+                    status: .conflicted,
+                    source: .nodeEdit(
+                        role: edit.role,
+                        section: edit.section,
+                        operations: edit.operations,
+                        baseText: ""
+                    ),
+                    conflictDescription: reason,
+                    learningNote: edit.learningNote ?? fallbackLearningNote(for: edit)
+                )
+            }
+
+            do {
+                let resolved = try patchEngine.previewResolving(
+                    nodeID: edit.nodeID,
+                    role: edit.role,
+                    section: edit.section,
+                    operations: edit.operations,
+                    in: store
+                )
+                let preview = resolved.preview
+                let targetNode = store.nodes.first(where: { $0.id == preview.nodeID })
+                let snippets = CoCaptainReviewDiffSnippetter.makeSnippets(
+                    before: preview.originalText,
+                    after: preview.resultText
+                )
+                return PendingReviewItem(
+                    targetNodeID: preview.nodeID,
+                    targetLabel: "\(targetNode?.displayTitle ?? edit.role.localizedDisplayName) \(edit.section.rawValue.uppercased())",
+                    summary: edit.summary,
+                    preview: snippets.after,
+                    beforePreview: snippets.before,
+                    source: .nodeEdit(
+                        role: edit.role,
+                        section: edit.section,
+                        operations: resolved.canonicalOperations,
+                        baseText: preview.originalText
+                    ),
+                    learningNote: edit.learningNote ?? fallbackLearningNote(for: edit)
+                )
+            } catch let NodePatchError.ambiguous(_, candidates) {
+                return clarificationItem(for: edit, candidates: candidates, store: store)
+            } catch {
+                return PendingReviewItem(
+                    targetNodeID: edit.nodeID,
+                    targetLabel: edit.role.localizedDisplayName,
+                    summary: edit.summary,
+                    preview: error.localizedDescription,
+                    status: .conflicted,
+                    source: .nodeEdit(
+                        role: edit.role,
+                        section: edit.section,
+                        operations: edit.operations,
+                        baseText: ""
+                    ),
+                    conflictDescription: error.localizedDescription,
+                    learningNote: edit.learningNote ?? fallbackLearningNote(for: edit)
+                )
+            }
+        }
+
+        private func clarificationItem(
+            for edit: CoCaptainNodeEditProposal,
+            candidates: [PatchMatchCandidate],
+            store: ProjectStore
+        ) -> PendingReviewItem {
+            let node = patchEngine.resolveNode(nodeID: edit.nodeID, for: edit.role, in: store)
+            let baseText = sectionText(edit.section, from: node)
+            return PendingReviewItem(
+                targetNodeID: node?.id ?? edit.nodeID,
+                targetLabel: "\(node?.displayTitle ?? edit.role.localizedDisplayName) \(edit.section.rawValue.uppercased())",
+                summary: edit.summary,
+                preview: LocalizationManager.shared.localizedString(
+                    "I found a few places that could match. Pick the one you meant and I'll make the change."
+                ),
+                status: .needsClarification,
+                source: .nodeEdit(
+                    role: edit.role,
+                    section: edit.section,
+                    operations: edit.operations,
+                    baseText: baseText
+                ),
+                clarificationCandidates: candidates,
+                learningNote: edit.learningNote ?? fallbackLearningNote(for: edit)
+            )
+        }
+
+        private func approve(
+            itemID: UUID,
+            in record: inout Record,
+            createsCheckpoint: Bool
+        ) -> Result<[Effect], Failure> {
+            guard let itemIndex = record.bundle.items.firstIndex(where: { $0.id == itemID }) else {
+                return .failure(.itemNotFound(itemID))
+            }
+            guard record.bundle.items[itemIndex].status == .pending else {
+                return .failure(
+                    .decisionNotAllowed(
+                        itemID: itemID,
+                        status: record.bundle.items[itemIndex].status
+                    )
+                )
+            }
+
+            if createsCheckpoint {
+                store?.createCheckpoint(
+                    label: "Apply Suggestion: \(record.bundle.items[itemIndex].targetLabel)"
+                )
+            }
+            let effects = applyPendingItem(&record.bundle.items[itemIndex])
+            return .success(effects)
+        }
+
+        private func reject(
+            itemID: UUID,
+            in record: inout Record
+        ) -> Result<[Effect], Failure> {
+            guard let itemIndex = record.bundle.items.firstIndex(where: { $0.id == itemID }) else {
+                return .failure(.itemNotFound(itemID))
+            }
+            guard record.bundle.items[itemIndex].status.isUnresolved else {
+                return .failure(
+                    .decisionNotAllowed(
+                        itemID: itemID,
+                        status: record.bundle.items[itemIndex].status
+                    )
+                )
+            }
+
+            record.bundle.items[itemIndex].status = .rejected
+            record.bundle.items[itemIndex].clarificationCandidates = nil
+            return .success([.rejected(itemID: itemID)])
+        }
+
+        private func chooseClarification(
+            itemID: UUID,
+            candidateID: UUID,
+            in record: inout Record
+        ) -> Result<[Effect], Failure> {
+            guard let itemIndex = record.bundle.items.firstIndex(where: { $0.id == itemID }) else {
+                return .failure(.itemNotFound(itemID))
+            }
+            let item = record.bundle.items[itemIndex]
+            guard item.status == .needsClarification else {
+                return .failure(.decisionNotAllowed(itemID: itemID, status: item.status))
+            }
+            guard case .nodeEdit(let role, let section, let operations, let baseText) = item.source else {
+                return .failure(.invalidSource(itemID: itemID))
+            }
+            guard let candidate = item.clarificationCandidates?.first(where: { $0.id == candidateID }) else {
+                return .failure(
+                    .clarificationCandidateNotFound(
+                        itemID: itemID,
+                        candidateID: candidateID
+                    )
+                )
+            }
+
+            var updatedItem = item
+            do {
+                guard let store,
+                      let node = patchEngine.resolveNode(
+                        nodeID: item.targetNodeID,
+                        for: role,
+                        in: store
+                      ) else {
+                    throw NodePatchError.missingNode(role)
+                }
+                guard sectionText(section, from: node) == baseText else {
+                    throw NodePatchError.conflict(Self.staleEditDescription)
+                }
+                let resolved = try patchEngine.previewResolving(
+                    nodeID: node.id,
+                    role: role,
+                    section: section,
+                    operations: operations,
+                    in: store,
+                    choosing: candidate
+                )
+                let snippets = CoCaptainReviewDiffSnippetter.makeSnippets(
+                    before: resolved.preview.originalText,
+                    after: resolved.preview.resultText
+                )
+                updatedItem = PendingReviewItem(
+                    id: item.id,
+                    targetNodeID: resolved.preview.nodeID,
+                    targetLabel: item.targetLabel,
+                    summary: item.summary,
+                    preview: snippets.after,
+                    beforePreview: snippets.before,
+                    status: .pending,
+                    source: .nodeEdit(
+                        role: role,
+                        section: section,
+                        operations: resolved.canonicalOperations,
+                        baseText: resolved.preview.originalText
+                    ),
+                    learningNote: item.learningNote
+                )
+                record.bundle.items[itemIndex] = updatedItem
+                return .success([.clarificationResolved(itemID: itemID)])
+            } catch {
+                let description = error.localizedDescription
+                updatedItem.status = .conflicted
+                updatedItem.conflictDescription = description
+                updatedItem.clarificationCandidates = nil
+                record.bundle.items[itemIndex] = updatedItem
+                return .success([.conflicted(itemID: itemID, description: description)])
+            }
+        }
+
+        private func approveAll(in record: inout Record) -> Result<[Effect], Failure> {
+            let pendingItemIDs = record.bundle.items
+                .filter { $0.status == .pending }
+                .map(\.id)
+            if !pendingItemIDs.isEmpty {
+                store?.createCheckpoint(label: "Apply All Changes")
+            }
+
+            var effects: [Effect] = []
+            for itemID in pendingItemIDs {
+                guard let itemIndex = record.bundle.items.firstIndex(where: { $0.id == itemID }) else {
+                    continue
+                }
+                effects.append(contentsOf: applyPendingItem(&record.bundle.items[itemIndex]))
+            }
+            return .success(effects)
+        }
+
+        private func rejectAll(in record: inout Record) -> Result<[Effect], Failure> {
+            var effects: [Effect] = []
+            for itemIndex in record.bundle.items.indices
+            where record.bundle.items[itemIndex].status.isUnresolved {
+                let itemID = record.bundle.items[itemIndex].id
+                record.bundle.items[itemIndex].status = .rejected
+                record.bundle.items[itemIndex].clarificationCandidates = nil
+                effects.append(.rejected(itemID: itemID))
+            }
+            return .success(effects)
+        }
+
+        private func applyPendingItem(_ item: inout PendingReviewItem) -> [Effect] {
+            switch item.source {
+            case .appAction(let actionID, let arguments):
+                guard let dispatcher,
+                      dispatcher.definition(for: actionID) != nil else {
+                    return conflict(
+                        &item,
+                        description: LocalizationManager.shared.localizedString(
+                            "This action is no longer available."
+                        )
+                    )
+                }
+                let result = dispatcher.perform(
+                    actionID,
+                    source: .agentApproved,
+                    arguments: arguments
+                )
+                guard result.executed else {
+                    return conflict(&item, description: result.message)
+                }
+                item.status = .applied
+                item.conflictDescription = nil
+                return [.appActionPerformed(itemID: item.id, result: result)]
+
+            case .unavailableAction(_, let reason):
+                return conflict(&item, description: reason)
+
+            case .nodeEdit(let role, let section, let operations, let baseText):
+                guard let store,
+                      let node = patchEngine.resolveNode(
+                        nodeID: item.targetNodeID,
+                        for: role,
+                        in: store
+                      ) else {
+                    return conflict(
+                        &item,
+                        description: LocalizationManager.shared.localizedString(
+                            "The node could not be found in the current project."
+                        )
+                    )
+                }
+                guard sectionText(section, from: node) == baseText else {
+                    return conflict(&item, description: Self.staleEditDescription)
+                }
+
+                do {
+                    let preview = try patchEngine.preview(
+                        nodeID: node.id,
+                        role: role,
+                        section: section,
+                        operations: operations,
+                        in: store
+                    )
+                    switch section {
+                    case .srs:
+                        store.updateMiniAppSRS(id: node.id, text: preview.resultText, persist: true)
+                    case .code:
+                        store.updateMiniAppCode(id: node.id, text: preview.resultText, persist: true)
+                    }
+                    item.status = .applied
+                    item.conflictDescription = nil
+
+                    var effects: [Effect] = [
+                        .nodeEditApplied(
+                            itemID: item.id,
+                            nodeID: node.id,
+                            role: role,
+                            section: section
+                        )
+                    ]
+                    if let note = item.learningNote {
+                        effects.append(.learningNote(itemID: item.id, note: note))
+                    }
+                    return effects
+                } catch {
+                    return conflict(&item, description: error.localizedDescription)
+                }
+            }
+        }
+
+        private func conflict(
+            _ item: inout PendingReviewItem,
+            description: String
+        ) -> [Effect] {
+            item.status = .conflicted
+            item.conflictDescription = description
+            item.clarificationCandidates = nil
+            return [.conflicted(itemID: item.id, description: description)]
+        }
+
+        private func sectionText(
+            _ section: CoCaptainNodeEditProposal.MiniAppSection,
+            from node: SpatialNode?
+        ) -> String {
+            switch section {
+            case .srs:
+                return node?.miniApp?.srsText ?? ""
+            case .code:
+                return node?.miniApp?.codeText ?? ""
+            }
+        }
+
+        private func fallbackLearningNote(
+            for edit: CoCaptainNodeEditProposal
+        ) -> CoCaptainLearningNote? {
+            let summary = edit.summary.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !summary.isEmpty else { return nil }
+            return CoCaptainLearningNote(
+                concept: LocalizationManager.shared.localizedString(
+                    "cocaptain.mentorNote.fallbackConcept"
+                ),
+                body: LocalizationManager.shared.localizedString(
+                    "cocaptain.mentorNote.fallbackBody",
+                    arguments: [summary]
+                )
+            )
+        }
+
+        private func actionPreview(
+            for action: CoCaptainAgentAction,
+            definition: AppActionDefinition
+        ) -> String {
+            guard let arguments = action.args, !arguments.isEmpty else {
+                return definition.localizedTitle
+            }
+            let formattedArguments = arguments
+                .sorted { $0.key < $1.key }
+                .map { "\($0.key)=\($0.value)" }
+                .joined(separator: ", ")
+            return "\(definition.localizedTitle)\n\(formattedArguments)"
+        }
+
+        private func reviewBundleTitle(for items: [PendingReviewItem]) -> String {
+            let base = LocalizationManager.shared.localizedString("Pending changes")
+            guard items.count > 1 else { return base }
+            return LocalizationManager.shared.localizedString(
+                "Pending changes (%lld)",
+                arguments: [Int64(items.count)]
+            )
+        }
+
+        private func restorePersistedRecords() {
+            guard case .node(let nodeID) = scope,
+                  let store,
+                  let node = store.nodes.first(where: { $0.id == nodeID }) else {
+                return
+            }
+
+            let decoded = decodePersistedRecords(
+                from: node.agentState.pendingReviewBundlesData
+            )
+            records = decoded.records
+            if decoded.needsNormalization {
+                replacePersistedRecords(with: records)
+            }
+        }
+
+        /// Upserts only the transitioned record against the latest persisted
+        /// state so independent lifecycle sessions cannot delete one another's
+        /// Review Bundles. Terminal records are removed rather than encoded.
+        private func persist(_ record: Record) {
+            guard case .node = scope else { return }
+
+            var persistedRecords = currentPersistedRecords()
+            persistedRecords.removeAll { $0.id == record.id }
+            if record.bundle.items.contains(where: { $0.status.isUnresolved }) {
+                persistedRecords.append(record)
+            }
+            persistedRecords.sort { $0.createdAt < $1.createdAt }
+            replacePersistedRecords(with: persistedRecords)
+        }
+
+        private func currentPersistedRecords() -> [Record] {
+            guard case .node(let nodeID) = scope,
+                  let store,
+                  let node = store.nodes.first(where: { $0.id == nodeID }) else {
+                return []
+            }
+            return decodePersistedRecords(
+                from: node.agentState.pendingReviewBundlesData
+            ).records
+        }
+
+        private func decodePersistedRecords(
+            from encodedRecords: [Data]
+        ) -> (records: [Record], needsNormalization: Bool) {
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            var decodedRecords: [Record] = []
+            var needsNormalization = false
+
+            for data in encodedRecords {
+                do {
+                    let persisted = try decoder.decode(
+                        CoCaptainPersistedReviewRecord.self,
+                        from: data
+                    )
+                    let canonicalBundle = ReviewBundleItem(
+                        id: persisted.timelineItemID,
+                        title: persisted.bundle.title,
+                        items: persisted.bundle.items
+                    )
+                    let record = Record(
+                        bundle: canonicalBundle,
+                        createdAt: persisted.createdAt
+                    )
+                    guard record.bundle.items.contains(where: { $0.status.isUnresolved }) else {
+                        needsNormalization = true
+                        continue
+                    }
+                    if persisted.bundle.id != record.id {
+                        needsNormalization = true
+                    }
+                    if let existingIndex = decodedRecords.firstIndex(where: { $0.id == record.id }) {
+                        decodedRecords[existingIndex] = record
+                        needsNormalization = true
+                    } else {
+                        decodedRecords.append(record)
+                    }
+                } catch {
+                    needsNormalization = true
+                    logger.error(
+                        "Skipping a corrupted persisted Review Bundle: \(error.localizedDescription, privacy: .public)"
+                    )
+                }
+            }
+
+            return (decodedRecords, needsNormalization)
+        }
+
+        private func replacePersistedRecords(with persistedRecords: [Record]) {
+            guard case .node(let nodeID) = scope,
+                  let store,
+                  let nodeIndex = store.nodes.firstIndex(where: { $0.id == nodeID }) else {
+                return
+            }
+
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            let encodedRecords = persistedRecords.compactMap { record -> Data? in
+                do {
+                    return try encoder.encode(
+                        CoCaptainPersistedReviewRecord(record: record)
+                    )
+                } catch {
+                    logger.error(
+                        "Could not encode a persisted Review Bundle: \(error.localizedDescription, privacy: .public)"
+                    )
+                    return nil
+                }
+            }
+
+            var agentState = store.nodes[nodeIndex].agentState
+            guard agentState.pendingReviewBundlesData != encodedRecords else { return }
+            agentState.pendingReviewBundlesData = encodedRecords
+            store.updateNodeAgentState(id: nodeID, agentState: agentState)
+        }
+
+        private static var staleEditDescription: String {
+            LocalizationManager.shared.localizedString(
+                "This node was edited after the suggestion was generated. Ask Co-Captain to revise."
+            )
+        }
+    }
+
+    private let patchEngine: NodePatchEngine
+
+    public init(patchEngine: NodePatchEngine = NodePatchEngine()) {
+        self.patchEngine = patchEngine
+    }
+
+    public func session(
+        scope: CoCaptainAgentScope,
+        store: ProjectStore?,
+        dispatcher: (any AppActionPerforming)?
+    ) -> Session {
+        Session(
+            scope: scope,
+            store: store,
+            dispatcher: dispatcher,
+            patchEngine: patchEngine
+        )
+    }
+
+    /// Constant-time persistence query used by canvas rendering.
+    ///
+    /// The lifecycle invariant is that only unresolved records are encoded;
+    /// restoration removes terminal, duplicate, legacy-misaligned, or corrupt
+    /// entries before writing normalized persistence.
+    nonisolated static func hasUnresolvedPersistedRecords(
+        in agentState: NodeAgentState
+    ) -> Bool {
+        !agentState.pendingReviewBundlesData.isEmpty
+    }
+}
+
+private struct CoCaptainPersistedReviewRecord: Codable {
+    let timelineItemID: UUID
+    let bundle: ReviewBundleItem
+    let createdAt: Date
+
+    @MainActor
+    init(record: CoCaptainReviewLifecycle.Record) {
+        timelineItemID = record.id
+        bundle = record.bundle
+        createdAt = record.createdAt
+    }
+}

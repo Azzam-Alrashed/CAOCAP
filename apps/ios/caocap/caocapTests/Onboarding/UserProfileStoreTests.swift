@@ -1,0 +1,83 @@
+import Foundation
+import Testing
+@testable import caocap
+
+struct UserProfileStoreTests {
+    @Test func saveAndLoadAnswersRoundTrip() {
+        let defaults = UserDefaults(suiteName: "UserProfileStoreTests.save")!
+        defaults.removePersistentDomain(forName: "UserProfileStoreTests.save")
+        let store = UserProfileStore(defaults: defaults)
+
+        let answers = PersonalizationSurveyAnswers(
+            selections: [
+                "coding_level": "complete_beginner",
+                "build_target": "mobile_apps"
+            ],
+            completedAt: Date(timeIntervalSince1970: 1_700_000_000),
+            wasSkipped: false,
+            surveyVersion: "v2",
+            selectedCopilot: .costar
+        )
+
+        store.saveAnswers(answers)
+        store.isSurveyCompleted = true
+
+        #expect(store.isSurveyCompleted)
+        #expect(store.loadAnswers() == answers)
+        #expect(store.loadSelectedCopilot() == .costar)
+    }
+
+    @Test func loadSelectedCopilotDefaultsToCocaptain() {
+        let defaults = UserDefaults(suiteName: "UserProfileStoreTests.defaultCopilot")!
+        defaults.removePersistentDomain(forName: "UserProfileStoreTests.defaultCopilot")
+        let store = UserProfileStore(defaults: defaults)
+
+        #expect(store.loadSelectedCopilot() == .cocaptain)
+    }
+
+    @Test func saveSelectedCopilotUpdatesExistingAnswers() {
+        let defaults = UserDefaults(suiteName: "UserProfileStoreTests.saveSelected")!
+        defaults.removePersistentDomain(forName: "UserProfileStoreTests.saveSelected")
+        let store = UserProfileStore(defaults: defaults)
+
+        store.saveAnswers(
+            PersonalizationSurveyAnswers(
+                selections: ["coding_level": "experienced"],
+                selectedCopilot: .cocaptain
+            )
+        )
+        store.isSurveyCompleted = true
+
+        store.saveSelectedCopilot(.costar)
+
+        #expect(store.isSurveyCompleted)
+        #expect(store.loadSelectedCopilot() == .costar)
+        #expect(store.loadAnswers()?.selections["coding_level"] == "experienced")
+    }
+
+    @Test func saveSelectedCopilotCreatesAnswersWhenMissing() {
+        let defaults = UserDefaults(suiteName: "UserProfileStoreTests.createSelected")!
+        defaults.removePersistentDomain(forName: "UserProfileStoreTests.createSelected")
+        let store = UserProfileStore(defaults: defaults)
+
+        store.saveSelectedCopilot(.costar)
+
+        #expect(store.loadSelectedCopilot() == .costar)
+        #expect(store.loadAnswers()?.selectedCopilot == .costar)
+    }
+
+    @Test func resetSurveyClearsCompletionAndAnswers() {
+        let defaults = UserDefaults(suiteName: "UserProfileStoreTests.reset")!
+        defaults.removePersistentDomain(forName: "UserProfileStoreTests.reset")
+        let store = UserProfileStore(defaults: defaults)
+
+        store.saveAnswers(PersonalizationSurveyAnswers(selections: ["coding_level": "experienced"], selectedCopilot: .costar))
+        store.isSurveyCompleted = true
+
+        store.resetSurvey()
+
+        #expect(!store.isSurveyCompleted)
+        #expect(store.loadAnswers() == nil)
+        #expect(store.loadSelectedCopilot() == .cocaptain)
+    }
+}

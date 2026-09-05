@@ -6,20 +6,125 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		CA0C00012FB0000000000001 /* LiteRTLM in Frameworks */ = {isa = PBXBuildFile; productRef = CA0C00032FB0000000000003 /* LiteRTLM */; };
+		ECA100012FA0000000000001 /* FirebaseRemoteConfig in Frameworks */ = {isa = PBXBuildFile; productRef = ECA100022FA0000000000001 /* FirebaseRemoteConfig */; };
+		ECD77F7D2F99BCBA00C96BF7 /* FirebaseAI in Frameworks */ = {isa = PBXBuildFile; productRef = ECD77F7C2F99BCBA00C96BF7 /* FirebaseAI */; };
+		ECD77F7F2F99BCBA00C96BF7 /* FirebaseAILogic in Frameworks */ = {isa = PBXBuildFile; productRef = ECD77F7E2F99BCBA00C96BF7 /* FirebaseAILogic */; };
+		ECD77F812F99BCBA00C96BF7 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = ECD77F802F99BCBA00C96BF7 /* FirebaseAnalytics */; };
+		ECD77F832F99BCBA00C96BF7 /* FirebaseAppCheck in Frameworks */ = {isa = PBXBuildFile; productRef = ECD77F822F99BCBA00C96BF7 /* FirebaseAppCheck */; };
+		ECD77F852F99BCBA00C96BF7 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = ECD77F842F99BCBA00C96BF7 /* FirebaseAuth */; };
+		ECD77F872F99BCBA00C96BF7 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = ECD77F862F99BCBA00C96BF7 /* FirebaseCore */; };
+		ECD77F892F99BCBA00C96BF7 /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = ECD77F882F99BCBA00C96BF7 /* FirebaseCrashlytics */; };
+		ECD77F8B2F99BCBA00C96BF7 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = ECD77F8A2F99BCBA00C96BF7 /* FirebaseFirestore */; };
+		ECD77F8D2F99BCBA00C96BF7 /* FirebaseFunctions in Frameworks */ = {isa = PBXBuildFile; productRef = ECD77F8C2F99BCBA00C96BF7 /* FirebaseFunctions */; };
+		ECD77F8F2F99BCBA00C96BF7 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = ECD77F8E2F99BCBA00C96BF7 /* FirebaseMessaging */; };
+		ECD77F912F99BCBA00C96BF7 /* FirebasePerformance in Frameworks */ = {isa = PBXBuildFile; productRef = ECD77F902F99BCBA00C96BF7 /* FirebasePerformance */; };
+		ECD77F932F99BCBA00C96BF7 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = ECD77F922F99BCBA00C96BF7 /* FirebaseStorage */; };
+		ECD77FA32F99C9C900C96BF7 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = ECD77FA22F99C9C900C96BF7 /* GoogleSignIn */; };
+		ECD77FA52F99C9C900C96BF7 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = ECD77FA42F99C9C900C96BF7 /* GoogleSignInSwift */; };
+		ECD77FAC2F9AA6C400C96BF7 /* Popovers in Frameworks */ = {isa = PBXBuildFile; productRef = ECD77FAB2F9AA6C400C96BF7 /* Popovers */; };
+		ECD77FAF2F9AA83700C96BF7 /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = ECD77FAE2F9AA83700C96BF7 /* Lottie */; };
+		ECEC6A1D2F9AA8D3007F3CF0 /* SwiftSoup in Frameworks */ = {isa = PBXBuildFile; productRef = ECEC6A1C2F9AA8D3007F3CF0 /* SwiftSoup */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		EC997C8C2F96179000C19E5E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = EC997C6F2F96178E00C19E5E /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = EC997C762F96178E00C19E5E;
+			remoteInfo = caocap;
+		};
+		EC997C962F96179000C19E5E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = EC997C6F2F96178E00C19E5E /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = EC997C762F96178E00C19E5E;
+			remoteInfo = caocap;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
-		4C89E7823034162F00976521 /* caocap.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = caocap.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		EC997C772F96178E00C19E5E /* caocap.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = caocap.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		EC997C8B2F96179000C19E5E /* caocapTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = caocapTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		EC997C952F96179000C19E5E /* caocapUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = caocapUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		EC997C9D2F96179000C19E5E /* Exceptions for "caocap" folder in "caocap" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Features/Auth/README.md,
+				Features/Canvas/README.md,
+				Features/CoCaptain/README.md,
+				Features/Daily/README.md,
+				Features/Help/README.md,
+				Features/Omnibox/README.md,
+				Features/Onboarding/README.md,
+				Features/Subscription/README.md,
+				Resources/Config/Info.plist,
+			);
+			target = EC997C762F96178E00C19E5E /* caocap */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		4C89E7843034162F00976521 /* caocap */ = {
+		EC997C792F96178E00C19E5E /* caocap */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				EC997C9D2F96179000C19E5E /* Exceptions for "caocap" folder in "caocap" target */,
+			);
 			path = caocap;
+			sourceTree = "<group>";
+		};
+		EC997C8E2F96179000C19E5E /* caocapTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = caocapTests;
+			sourceTree = "<group>";
+		};
+		EC997C982F96179000C19E5E /* caocapUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = caocapUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		4C89E77F3034162F00976521 /* Frameworks */ = {
+		EC997C742F96178E00C19E5E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CA0C00012FB0000000000001 /* LiteRTLM in Frameworks */,
+				ECD77F912F99BCBA00C96BF7 /* FirebasePerformance in Frameworks */,
+				ECD77F832F99BCBA00C96BF7 /* FirebaseAppCheck in Frameworks */,
+				ECD77F852F99BCBA00C96BF7 /* FirebaseAuth in Frameworks */,
+				ECD77FA32F99C9C900C96BF7 /* GoogleSignIn in Frameworks */,
+				ECD77F8F2F99BCBA00C96BF7 /* FirebaseMessaging in Frameworks */,
+				ECD77F7F2F99BCBA00C96BF7 /* FirebaseAILogic in Frameworks */,
+				ECD77FAC2F9AA6C400C96BF7 /* Popovers in Frameworks */,
+				ECD77FAF2F9AA83700C96BF7 /* Lottie in Frameworks */,
+				ECEC6A1D2F9AA8D3007F3CF0 /* SwiftSoup in Frameworks */,
+				ECD77F932F99BCBA00C96BF7 /* FirebaseStorage in Frameworks */,
+				ECA100012FA0000000000001 /* FirebaseRemoteConfig in Frameworks */,
+				ECD77F8D2F99BCBA00C96BF7 /* FirebaseFunctions in Frameworks */,
+				ECD77F892F99BCBA00C96BF7 /* FirebaseCrashlytics in Frameworks */,
+				ECD77FA52F99C9C900C96BF7 /* GoogleSignInSwift in Frameworks */,
+				ECD77F7D2F99BCBA00C96BF7 /* FirebaseAI in Frameworks */,
+				ECD77F8B2F99BCBA00C96BF7 /* FirebaseFirestore in Frameworks */,
+				ECD77F872F99BCBA00C96BF7 /* FirebaseCore in Frameworks */,
+				ECD77F812F99BCBA00C96BF7 /* FirebaseAnalytics in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EC997C882F96179000C19E5E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EC997C922F96179000C19E5E /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -29,18 +134,22 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		4C89E7793034162F00976521 = {
+		EC997C6E2F96178E00C19E5E = {
 			isa = PBXGroup;
 			children = (
-				4C89E7843034162F00976521 /* caocap */,
-				4C89E7833034162F00976521 /* Products */,
+				EC997C792F96178E00C19E5E /* caocap */,
+				EC997C8E2F96179000C19E5E /* caocapTests */,
+				EC997C982F96179000C19E5E /* caocapUITests */,
+				EC997C782F96178E00C19E5E /* Products */,
 			);
 			sourceTree = "<group>";
 		};
-		4C89E7833034162F00976521 /* Products */ = {
+		EC997C782F96178E00C19E5E /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				4C89E7823034162F00976521 /* caocap.app */,
+				EC997C772F96178E00C19E5E /* caocap.app */,
+				EC997C8B2F96179000C19E5E /* caocapTests.xctest */,
+				EC997C952F96179000C19E5E /* caocapUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -48,64 +157,162 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		4C89E7813034162F00976521 /* caocap */ = {
+		EC997C762F96178E00C19E5E /* caocap */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 4C89E78D3034163000976521 /* Build configuration list for PBXNativeTarget "caocap" */;
+			buildConfigurationList = EC997C9E2F96179000C19E5E /* Build configuration list for PBXNativeTarget "caocap" */;
 			buildPhases = (
-				4C89E77E3034162F00976521 /* Sources */,
-				4C89E77F3034162F00976521 /* Frameworks */,
-				4C89E7803034162F00976521 /* Resources */,
+				EC997C732F96178E00C19E5E /* Sources */,
+				EC997C742F96178E00C19E5E /* Frameworks */,
+				EC997C752F96178E00C19E5E /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				4C89E7843034162F00976521 /* caocap */,
+				EC997C792F96178E00C19E5E /* caocap */,
 			);
 			name = caocap;
 			packageProductDependencies = (
+				CA0C00032FB0000000000003 /* LiteRTLM */,
+				ECD77F7C2F99BCBA00C96BF7 /* FirebaseAI */,
+				ECD77F7E2F99BCBA00C96BF7 /* FirebaseAILogic */,
+				ECD77F802F99BCBA00C96BF7 /* FirebaseAnalytics */,
+				ECD77F822F99BCBA00C96BF7 /* FirebaseAppCheck */,
+				ECD77F842F99BCBA00C96BF7 /* FirebaseAuth */,
+				ECD77F862F99BCBA00C96BF7 /* FirebaseCore */,
+				ECD77F882F99BCBA00C96BF7 /* FirebaseCrashlytics */,
+				ECD77F8A2F99BCBA00C96BF7 /* FirebaseFirestore */,
+				ECD77F8C2F99BCBA00C96BF7 /* FirebaseFunctions */,
+				ECD77F8E2F99BCBA00C96BF7 /* FirebaseMessaging */,
+				ECD77F902F99BCBA00C96BF7 /* FirebasePerformance */,
+				ECA100022FA0000000000001 /* FirebaseRemoteConfig */,
+				ECD77F922F99BCBA00C96BF7 /* FirebaseStorage */,
+				ECD77FA22F99C9C900C96BF7 /* GoogleSignIn */,
+				ECD77FA42F99C9C900C96BF7 /* GoogleSignInSwift */,
+				ECD77FAB2F9AA6C400C96BF7 /* Popovers */,
+				ECD77FAE2F9AA83700C96BF7 /* Lottie */,
+				ECEC6A1C2F9AA8D3007F3CF0 /* SwiftSoup */,
 			);
 			productName = caocap;
-			productReference = 4C89E7823034162F00976521 /* caocap.app */;
+			productReference = EC997C772F96178E00C19E5E /* caocap.app */;
 			productType = "com.apple.product-type.application";
+		};
+		EC997C8A2F96179000C19E5E /* caocapTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EC997CA32F96179000C19E5E /* Build configuration list for PBXNativeTarget "caocapTests" */;
+			buildPhases = (
+				EC997C872F96179000C19E5E /* Sources */,
+				EC997C882F96179000C19E5E /* Frameworks */,
+				EC997C892F96179000C19E5E /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				EC997C8D2F96179000C19E5E /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				EC997C8E2F96179000C19E5E /* caocapTests */,
+			);
+			name = caocapTests;
+			packageProductDependencies = (
+			);
+			productName = caocapTests;
+			productReference = EC997C8B2F96179000C19E5E /* caocapTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		EC997C942F96179000C19E5E /* caocapUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EC997CA62F96179000C19E5E /* Build configuration list for PBXNativeTarget "caocapUITests" */;
+			buildPhases = (
+				EC997C912F96179000C19E5E /* Sources */,
+				EC997C922F96179000C19E5E /* Frameworks */,
+				EC997C932F96179000C19E5E /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				EC997C972F96179000C19E5E /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				EC997C982F96179000C19E5E /* caocapUITests */,
+			);
+			name = caocapUITests;
+			packageProductDependencies = (
+			);
+			productName = caocapUITests;
+			productReference = EC997C952F96179000C19E5E /* caocapUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		4C89E77A3034162F00976521 /* Project object */ = {
+		EC997C6F2F96178E00C19E5E /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2660;
-				LastUpgradeCheck = 2660;
+				LastSwiftUpdateCheck = 1610;
+				LastUpgradeCheck = 2640;
 				TargetAttributes = {
-					4C89E7813034162F00976521 = {
-						CreatedOnToolsVersion = 26.6;
+					EC997C762F96178E00C19E5E = {
+						CreatedOnToolsVersion = 16.1;
+					};
+					EC997C8A2F96179000C19E5E = {
+						CreatedOnToolsVersion = 16.1;
+						TestTargetID = EC997C762F96178E00C19E5E;
+					};
+					EC997C942F96179000C19E5E = {
+						CreatedOnToolsVersion = 16.1;
+						TestTargetID = EC997C762F96178E00C19E5E;
 					};
 				};
 			};
-			buildConfigurationList = 4C89E77D3034162F00976521 /* Build configuration list for PBXProject "caocap" */;
+			buildConfigurationList = EC997C722F96178E00C19E5E /* Build configuration list for PBXProject "caocap" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
+				ar,
 				Base,
 			);
-			mainGroup = 4C89E7793034162F00976521;
+			mainGroup = EC997C6E2F96178E00C19E5E;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				CA0C00022FB0000000000002 /* XCRemoteSwiftPackageReference "LiteRT-LM" */,
+				ECD77F7B2F99BCBA00C96BF7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				ECD77FA12F99C9C900C96BF7 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+				ECD77FAA2F9AA6C400C96BF7 /* XCRemoteSwiftPackageReference "Popovers" */,
+				ECD77FAD2F9AA83700C96BF7 /* XCRemoteSwiftPackageReference "lottie-ios" */,
+				ECEC6A1B2F9AA8D3007F3CF0 /* XCRemoteSwiftPackageReference "SwiftSoup" */,
+			);
 			preferredProjectObjectVersion = 77;
-			productRefGroup = 4C89E7833034162F00976521 /* Products */;
+			productRefGroup = EC997C782F96178E00C19E5E /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				4C89E7813034162F00976521 /* caocap */,
+				EC997C762F96178E00C19E5E /* caocap */,
+				EC997C8A2F96179000C19E5E /* caocapTests */,
+				EC997C942F96179000C19E5E /* caocapUITests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		4C89E7803034162F00976521 /* Resources */ = {
+		EC997C752F96178E00C19E5E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EC997C892F96179000C19E5E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EC997C932F96179000C19E5E /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -115,7 +322,21 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		4C89E77E3034162F00976521 /* Sources */ = {
+		EC997C732F96178E00C19E5E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EC997C872F96179000C19E5E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EC997C912F96179000C19E5E /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -124,12 +345,102 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		EC997C8D2F96179000C19E5E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = EC997C762F96178E00C19E5E /* caocap */;
+			targetProxy = EC997C8C2F96179000C19E5E /* PBXContainerItemProxy */;
+		};
+		EC997C972F96179000C19E5E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = EC997C762F96178E00C19E5E /* caocap */;
+			targetProxy = EC997C962F96179000C19E5E /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
-		4C89E78B3034163000976521 /* Debug */ = {
+		EC997C9F2F96179000C19E5E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "AppIcon_0 AppIcon_1 AppIcon_2 AppIcon_3 AppIcon_5 AppIcon_6 AppIcon_7 AppIcon_8";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				CODE_SIGN_ENTITLEMENTS = caocap/Resources/Config/caocap.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_ASSET_PATHS = "\"caocap/Preview Content\"";
+				DEVELOPMENT_TEAM = 6QYT6GJB4Z;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = caocap/Resources/Config/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = caocap;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "CAOCAP uses the microphone for dictation and live voice calls with your copilot.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "CAOCAP uses speech recognition to turn your dictated words into text.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 9.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.Ficruty.caocap;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		EC997CA02F96179000C19E5E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "AppIcon_0 AppIcon_1 AppIcon_2 AppIcon_3 AppIcon_5 AppIcon_6 AppIcon_7 AppIcon_8";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				CODE_SIGN_ENTITLEMENTS = caocap/Resources/Config/caocap.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_ASSET_PATHS = "\"caocap/Preview Content\"";
+				DEVELOPMENT_TEAM = 6QYT6GJB4Z;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = caocap/Resources/Config/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = caocap;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "CAOCAP uses the microphone for dictation and live voice calls with your copilot.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "CAOCAP uses speech recognition to turn your dictated words into text.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 9.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.Ficruty.caocap;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		EC997CA12F96179000C19E5E /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -178,22 +489,24 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
 			name = Debug;
 		};
-		4C89E78C3034163000976521 /* Release */ = {
+		EC997CA22F96179000C19E5E /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -236,110 +549,274 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
 		};
-		4C89E78E3034163000976521 /* Debug */ = {
+		EC997CA42F96179000C19E5E /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 6QYT6GJB4Z;
-				ENABLE_PREVIEWS = YES;
+				CURRENT_PROJECT_VERSION = 9;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				MARKETING_VERSION = 10.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.Ficruty.caocap;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.Ficruty.caocapTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = NO;
-				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
-				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/caocap.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/caocap";
 			};
 			name = Debug;
 		};
-		4C89E78F3034163000976521 /* Release */ = {
+		EC997CA52F96179000C19E5E /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 6QYT6GJB4Z;
-				ENABLE_PREVIEWS = YES;
+				CURRENT_PROJECT_VERSION = 9;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				MARKETING_VERSION = 10.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.Ficruty.caocap;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.Ficruty.caocapTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = NO;
-				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
-				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/caocap.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/caocap";
+			};
+			name = Release;
+		};
+		EC997CA72F96179000C19E5E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 9;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.Ficruty.caocapUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = caocap;
+			};
+			name = Debug;
+		};
+		EC997CA82F96179000C19E5E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 9;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.Ficruty.caocapUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = caocap;
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		4C89E77D3034162F00976521 /* Build configuration list for PBXProject "caocap" */ = {
+		EC997C722F96178E00C19E5E /* Build configuration list for PBXProject "caocap" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				4C89E78B3034163000976521 /* Debug */,
-				4C89E78C3034163000976521 /* Release */,
+				EC997CA12F96179000C19E5E /* Debug */,
+				EC997CA22F96179000C19E5E /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		4C89E78D3034163000976521 /* Build configuration list for PBXNativeTarget "caocap" */ = {
+		EC997C9E2F96179000C19E5E /* Build configuration list for PBXNativeTarget "caocap" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				4C89E78E3034163000976521 /* Debug */,
-				4C89E78F3034163000976521 /* Release */,
+				EC997C9F2F96179000C19E5E /* Debug */,
+				EC997CA02F96179000C19E5E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		EC997CA32F96179000C19E5E /* Build configuration list for PBXNativeTarget "caocapTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EC997CA42F96179000C19E5E /* Debug */,
+				EC997CA52F96179000C19E5E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		EC997CA62F96179000C19E5E /* Build configuration list for PBXNativeTarget "caocapUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EC997CA72F96179000C19E5E /* Debug */,
+				EC997CA82F96179000C19E5E /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		CA0C00022FB0000000000002 /* XCRemoteSwiftPackageReference "LiteRT-LM" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google-ai-edge/LiteRT-LM";
+			requirement = {
+				kind = revision;
+				revision = ffed38adbc33509480b5340e5173638bc20a68ff;
+			};
+		};
+		ECD77F7B2F99BCBA00C96BF7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.12.1;
+			};
+		};
+		ECD77FA12F99C9C900C96BF7 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.1.0;
+			};
+		};
+		ECD77FAA2F9AA6C400C96BF7 /* XCRemoteSwiftPackageReference "Popovers" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/aheze/Popovers";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.3.2;
+			};
+		};
+		ECD77FAD2F9AA83700C96BF7 /* XCRemoteSwiftPackageReference "lottie-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/airbnb/lottie-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.6.0;
+			};
+		};
+		ECEC6A1B2F9AA8D3007F3CF0 /* XCRemoteSwiftPackageReference "SwiftSoup" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/scinfu/SwiftSoup";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.13.4;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		CA0C00032FB0000000000003 /* LiteRTLM */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CA0C00022FB0000000000002 /* XCRemoteSwiftPackageReference "LiteRT-LM" */;
+			productName = LiteRTLM;
+		};
+		ECA100022FA0000000000001 /* FirebaseRemoteConfig */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ECD77F7B2F99BCBA00C96BF7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseRemoteConfig;
+		};
+		ECD77F7C2F99BCBA00C96BF7 /* FirebaseAI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ECD77F7B2F99BCBA00C96BF7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAI;
+		};
+		ECD77F7E2F99BCBA00C96BF7 /* FirebaseAILogic */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ECD77F7B2F99BCBA00C96BF7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAILogic;
+		};
+		ECD77F802F99BCBA00C96BF7 /* FirebaseAnalytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ECD77F7B2F99BCBA00C96BF7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalytics;
+		};
+		ECD77F822F99BCBA00C96BF7 /* FirebaseAppCheck */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ECD77F7B2F99BCBA00C96BF7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAppCheck;
+		};
+		ECD77F842F99BCBA00C96BF7 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ECD77F7B2F99BCBA00C96BF7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		ECD77F862F99BCBA00C96BF7 /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ECD77F7B2F99BCBA00C96BF7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+		ECD77F882F99BCBA00C96BF7 /* FirebaseCrashlytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ECD77F7B2F99BCBA00C96BF7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCrashlytics;
+		};
+		ECD77F8A2F99BCBA00C96BF7 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ECD77F7B2F99BCBA00C96BF7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+		ECD77F8C2F99BCBA00C96BF7 /* FirebaseFunctions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ECD77F7B2F99BCBA00C96BF7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFunctions;
+		};
+		ECD77F8E2F99BCBA00C96BF7 /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ECD77F7B2F99BCBA00C96BF7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
+		};
+		ECD77F902F99BCBA00C96BF7 /* FirebasePerformance */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ECD77F7B2F99BCBA00C96BF7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebasePerformance;
+		};
+		ECD77F922F99BCBA00C96BF7 /* FirebaseStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ECD77F7B2F99BCBA00C96BF7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseStorage;
+		};
+		ECD77FA22F99C9C900C96BF7 /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ECD77FA12F99C9C900C96BF7 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+		ECD77FA42F99C9C900C96BF7 /* GoogleSignInSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ECD77FA12F99C9C900C96BF7 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignInSwift;
+		};
+		ECD77FAB2F9AA6C400C96BF7 /* Popovers */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ECD77FAA2F9AA6C400C96BF7 /* XCRemoteSwiftPackageReference "Popovers" */;
+			productName = Popovers;
+		};
+		ECD77FAE2F9AA83700C96BF7 /* Lottie */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ECD77FAD2F9AA83700C96BF7 /* XCRemoteSwiftPackageReference "lottie-ios" */;
+			productName = Lottie;
+		};
+		ECEC6A1C2F9AA8D3007F3CF0 /* SwiftSoup */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ECEC6A1B2F9AA8D3007F3CF0 /* XCRemoteSwiftPackageReference "SwiftSoup" */;
+			productName = SwiftSoup;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
-	rootObject = 4C89E77A3034162F00976521 /* Project object */;
+	rootObject = EC997C6F2F96178E00C19E5E /* Project object */;
 }
