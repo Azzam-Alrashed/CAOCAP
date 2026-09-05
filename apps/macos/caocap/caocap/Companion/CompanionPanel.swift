@@ -1,9 +1,54 @@
 import AppKit
 import SwiftUI
 
+/// Hosts the SwiftUI pet and owns native window dragging so the sprite follows the cursor.
+final class CompanionHostingView<Content: View>: NSHostingView<Content> {
+    var onDragBegan: (() -> Void)?
+    var onDragEnded: ((_ didMove: Bool) -> Void)?
+
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
+        true
+    }
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        bounds.contains(point) ? self : nil
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        guard let window else { return }
+        let startMouse = NSEvent.mouseLocation
+        let startOrigin = window.frame.origin
+        onDragBegan?()
+
+        var keepTracking = true
+        while keepTracking {
+            guard let next = window.nextEvent(
+                matching: [.leftMouseDragged, .leftMouseUp],
+                until: .distantFuture,
+                inMode: .eventTracking,
+                dequeue: true
+            ) else { break }
+
+            let now = NSEvent.mouseLocation
+            window.setFrameOrigin(
+                NSPoint(
+                    x: startOrigin.x + (now.x - startMouse.x),
+                    y: startOrigin.y + (now.y - startMouse.y)
+                )
+            )
+
+            if next.type == .leftMouseUp {
+                keepTracking = false
+                let distance = hypot(now.x - startMouse.x, now.y - startMouse.y)
+                onDragEnded?(distance >= CompanionLayout.clickSlop)
+            }
+        }
+    }
+}
+
 /// Borderless, always-on-top panel that hosts the CoCaptain sprite above other apps.
 final class CompanionPanel: NSPanel {
-    init(rootView: some View) {
+    init(rootView: some View, onDragBegan: @escaping () -> Void, onDragEnded: @escaping (Bool) -> Void) {
         let size = CompanionLayout.panelSize
         super.init(
             contentRect: NSRect(origin: .zero, size: size),
@@ -24,7 +69,9 @@ final class CompanionPanel: NSPanel {
         titlebarAppearsTransparent = true
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
 
-        let hosting = NSHostingView(rootView: rootView)
+        let hosting = CompanionHostingView(rootView: rootView)
+        hosting.onDragBegan = onDragBegan
+        hosting.onDragEnded = onDragEnded
         hosting.frame = NSRect(origin: .zero, size: size)
         contentView = hosting
     }

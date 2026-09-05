@@ -1,12 +1,11 @@
 import SwiftUI
 
-/// Desktop pet content: Ready bubble, idle sprite, drag to move, click to open.
+/// Desktop pet content: Ready bubble and idle sprite. Drag is handled by AppKit.
 struct CompanionView: View {
     @Bindable var controller: CompanionController
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var bobOffset: CGFloat = 0
-    @State private var dragOrigin: CGPoint?
 
     var body: some View {
         VStack(alignment: .trailing, spacing: 6) {
@@ -21,7 +20,7 @@ struct CompanionView: View {
                 .resizable()
                 .interpolation(.high)
                 .frame(width: CompanionLayout.spriteSize, height: CompanionLayout.spriteSize)
-                .offset(y: bobOffset)
+                .offset(y: controller.isDragging ? 0 : bobOffset)
                 .accessibilityLabel("CoCaptain")
         }
         .padding(8)
@@ -30,46 +29,25 @@ struct CompanionView: View {
             height: CompanionLayout.panelSize.height,
             alignment: .bottomTrailing
         )
-        .contentShape(Rectangle())
-        .gesture(dragGesture)
         .onAppear(perform: startIdleMotion)
         .onChange(of: reduceMotion) { _, reduced in
             if reduced {
                 bobOffset = 0
-            } else {
+            } else if !controller.isDragging {
+                startIdleMotion()
+            }
+        }
+        .onChange(of: controller.isDragging) { _, dragging in
+            if dragging {
+                bobOffset = 0
+            } else if !reduceMotion {
                 startIdleMotion()
             }
         }
     }
 
-    private var dragGesture: some Gesture {
-        DragGesture(minimumDistance: 0)
-            .onChanged { value in
-                if dragOrigin == nil {
-                    dragOrigin = controller.origin
-                }
-                guard let start = dragOrigin else { return }
-                // SwiftUI Y grows downward; AppKit window origins grow upward.
-                controller.move(
-                    to: NSPoint(
-                        x: start.x + value.translation.width,
-                        y: start.y - value.translation.height
-                    )
-                )
-            }
-            .onEnded { value in
-                let distance = hypot(value.translation.width, value.translation.height)
-                if distance < CompanionLayout.clickSlop {
-                    controller.openMainWindow()
-                } else {
-                    controller.persistOrigin()
-                }
-                dragOrigin = nil
-            }
-    }
-
     private func startIdleMotion() {
-        guard !reduceMotion else {
+        guard !reduceMotion, !controller.isDragging else {
             bobOffset = 0
             return
         }

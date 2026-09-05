@@ -10,7 +10,7 @@ enum CompanionLayout {
     static let spriteSize: CGFloat = 112
     static let panelSize = NSSize(width: 144, height: 168)
     static let screenInset: CGFloat = 24
-    static let clickSlop: CGFloat = 4
+    static let clickSlop: CGFloat = 8
 }
 
 enum CompanionDefaults {

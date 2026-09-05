@@ -37,7 +37,7 @@ struct caocapApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     var body: some Scene {
-        WindowGroup(id: "main") {
+        Window("CAOCAP", id: "main") {
             ContentView()
         }
 
@@ -60,8 +60,7 @@ private struct StatusItemLabel: View {
             .renderingMode(.template)
             .accessibilityLabel("CAOCAP")
             .onReceive(NotificationCenter.default.publisher(for: .showMainWindow)) { _ in
-                openWindow(id: "main")
-                NSApp.activate()
+                MainWindowFocus.reveal(openIfNeeded: openWindow)
             }
     }
 }
@@ -76,8 +75,7 @@ private struct StatusItemMenu: View {
             companion.toggleAwake()
         }
         Button("Open CAOCAP") {
-            openWindow(id: "main")
-            NSApp.activate()
+            MainWindowFocus.reveal(openIfNeeded: openWindow)
         }
         Divider()
         Button("Quit CAOCAP") {

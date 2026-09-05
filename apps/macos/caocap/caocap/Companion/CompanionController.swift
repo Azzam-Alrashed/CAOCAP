@@ -7,6 +7,7 @@ import Observation
 final class CompanionController {
     private(set) var isAwake: Bool
     private(set) var origin: NSPoint
+    private(set) var isDragging = false
     private(set) var mood: CompanionMood = .idle
 
     @ObservationIgnored
@@ -33,7 +34,15 @@ final class CompanionController {
 
     func install() {
         guard panel == nil else { return }
-        let panel = CompanionPanel(rootView: CompanionView(controller: self))
+        let panel = CompanionPanel(
+            rootView: CompanionView(controller: self),
+            onDragBegan: { [weak self] in
+                self?.beginDrag()
+            },
+            onDragEnded: { [weak self] didMove in
+                self?.endDrag(didMove: didMove)
+            }
+        )
         self.panel = panel
         origin = clamp(origin)
         panel.setFrameOrigin(origin)
@@ -70,9 +79,26 @@ final class CompanionController {
         setAwake(!isAwake)
     }
 
-    func move(to proposed: NSPoint) {
-        origin = clamp(proposed)
-        panel?.setFrameOrigin(origin)
+    func beginDrag() {
+        isDragging = true
+    }
+
+    func endDrag(didMove: Bool) {
+        isDragging = false
+        if didMove {
+            let current = panel?.frame.origin ?? origin
+            let clamped = clamp(current)
+            origin = clamped
+            if let panel, clamped != current {
+                panel.setFrame(NSRect(origin: clamped, size: CompanionLayout.panelSize), display: true, animate: true)
+            } else {
+                panel?.setFrameOrigin(clamped)
+            }
+            persistOrigin()
+        } else {
+            origin = panel?.frame.origin ?? origin
+            openMainWindow()
+        }
     }
 
     func persistOrigin() {
@@ -83,6 +109,7 @@ final class CompanionController {
     }
 
     func openMainWindow() {
+        if MainWindowFocus.focusExisting() { return }
         NotificationCenter.default.post(name: .showMainWindow, object: nil)
         NSApp.activate()
     }
