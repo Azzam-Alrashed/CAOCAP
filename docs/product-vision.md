@@ -2,79 +2,84 @@
 
 ## Purpose
 
-CAOCAP is a computer-use AI agent for learners who want to develop digital skills, mainly coding, and use those skills to earn income.
+CAOCAP is a platform where people discover, build, and publish AI agents together.
 
-CAOCAP exists to help learners gain practical ability by working with an AI agent in the computer tools where digital work happens. The aim is to connect learning, useful projects, and income opportunities while developing the learner's independence.
+Its purpose is to help people turn ideas into useful agents through shared work. Users can explore what others have built, create their own agents, and collaborate to test, improve, and publish them.
 
-The product is intended to make the path from learning to earning understandable and actionable without promising a particular income or employment outcome.
+The experience centers on three activities: **Explore, Build, and Collaborate.**
 
 ## Target audience
 
-CAOCAP is for learners who want to develop digital skills and apply them to income-generating work. Coding is the primary focus, with room for other digital skills.
+CAOCAP is for people who want to discover useful AI agents or contribute to building them.
 
-Learners may need help with:
+- **Explorers** want to find and try agents that address their needs.
+- **Builders** want to turn ideas into working agents and publish them.
+- **Collaborators** want to contribute knowledge, tools, testing, or feedback to shared projects.
 
-- getting started with unfamiliar tools and concepts;
-- turning explanations into practical coding ability;
-- completing useful projects and understanding their own work; or
-- demonstrating and applying their skills in paid-work contexts.
-
-The experience should be approachable for beginners while supporting learners who already have some experience.
+These roles can overlap. The experience should welcome newcomers while supporting experienced builders and teams.
 
 ## Problem
 
-Learning digital skills requires applying ideas in real tools. A learner can understand an explanation and still struggle to navigate an application, change code, diagnose an error, or decide what to do next.
+People exploring AI agents need to understand what an agent does, whether it fits their needs, and how well it works before using it.
 
-Learners can also struggle to turn disconnected lessons into practical capability. They may lack feedback on their actual work, evidence of progress, portfolio material, and a clear bridge between practice and paid opportunities.
+Builders need to turn ideas into working agents, test their behavior, and make them available to others. When people build together, they also need a way to coordinate contributions, review changes, and maintain a shared project.
+
+CAOCAP aims to connect these activities so people can discover existing work, contribute improvements, and publish useful agents together.
 
 ## Product approach
 
-CAOCAP brings a computer-use AI agent into the learning workflow. The agent is intended to observe relevant task context, guide the learner, and operate applications to demonstrate or assist with practical tasks. Computer use is central to how the product helps people learn.
+CAOCAP is intended to bring discovery, agent creation, and shared project work into one platform. The following capabilities describe the planned experience.
 
-For coding, the intended learning loop is to work on a task, understand the agent's explanation or demonstration, practise the skill, and receive feedback on the result. Projects should build the learner's ability to understand, change, and explain their own work. Completed projects become evidence of developing capability and potential portfolio material.
+### Explore
 
-CAOCAP then helps the learner understand how those capabilities may be presented and applied in realistic paid-work contexts. It prepares learners to pursue opportunities; it does not guarantee that opportunities or income will result.
+Users should be able to discover agents, understand their purpose and limitations, and try them on relevant tasks. Exploration should also help people find projects where they can contribute.
 
-## Intended learner journey
+### Build
 
-1. **Set a goal:** Choose a skill or practical project, with coding as the primary focus.
-2. **Learn in context:** Work with the agent in relevant computer tools and understand its guidance and demonstrations.
-3. **Practise:** Apply the skill directly and use feedback to improve.
-4. **Build:** Complete increasingly meaningful projects while developing independence.
-5. **Demonstrate:** Turn suitable completed work into evidence and portfolio material.
-6. **Pursue income:** Learn how to describe, package, and apply the skill in paid-opportunity contexts.
+Builders should be able to define an agent's purpose, shape its instructions, connect the tools and knowledge it needs, and test its behavior. They should be able to improve their work before publishing an agent for others to use.
 
-The journey is directional rather than rigid. Learners may revisit earlier stages as their interests, abilities, or circumstances change.
+### Collaborate
+
+People should be able to work on shared projects and contribute instructions, tools, knowledge, tests, or feedback. The experience should make contributions and proposed changes understandable so collaborators can review, test, and improve an agent together.
+
+Publishing connects the three activities: agents become available for others to explore and use, and feedback can guide further improvements.
+
+## Intended user journey
+
+1. **Explore:** Discover agents, try them, and identify a useful starting point or an unmet need.
+2. **Start or join:** Create a project with a clear purpose or join an existing project.
+3. **Build:** Define the agent's behavior and add the tools and knowledge needed for its task.
+4. **Collaborate and test:** Contribute work, review changes, and test the agent against example tasks.
+5. **Publish:** Make a tested version available with a clear description of what it does and its limitations.
+6. **Improve together:** Use feedback and observed results to refine the agent and publish updates.
+
+People can enter at different points. Some may only explore and use agents; others may build independently or contribute to shared projects.
 
 ## Product principles
 
-### Learn through real work
+### Useful outcomes
 
-Learning should connect explanations to practical tasks in the tools learners use to create digital work.
+Agents should have a clear purpose. Their usefulness should be demonstrated through results on relevant tasks.
 
-### Practice produces evidence
+### Collaboration is part of building
 
-Learning activities should result in observable work, feedback, or demonstrated progress—not completion markers alone.
+Contributing, reviewing changes, and testing together should be part of the project workflow. People should understand how their contributions affect the shared agent.
 
-### Guidance preserves agency
+### Test before publishing
 
-The computer-use AI agent should explain its actions, prompt practice, and provide feedback while preserving the learner's ownership of choices and work. Assistance should build understanding and independence.
+Builders should evaluate an agent's behavior before making it available to others. Test results and known limitations should guide improvements and help users decide whether the agent fits their needs.
 
-### Beginner clarity
+### Clear and approachable
 
-Language, navigation, and feedback should be understandable without assumed industry knowledge.
+Language, navigation, and feedback should welcome newcomers while giving experienced builders enough detail to understand and improve their work.
 
-### Progress can change direction
+### Ownership and attribution
 
-A learner's chosen path should be revisable. Changing direction is treated as informed learning, not failure.
-
-### Preparation without promises
-
-CAOCAP should connect learning to realistic opportunity contexts while avoiding guarantees about employment or income.
+People should retain control over their projects and understand who can contribute, change, or publish shared work. Contributions should be credited clearly.
 
 ### Trust through transparency
 
-Learners should understand when AI is involved, what information is used, and the limits of automated guidance.
+Users should understand what an agent does, what tools and information it uses, and where its limitations lie. Descriptions and examples should accurately represent its behavior.
 
 ## Related documentation
 
