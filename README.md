@@ -1,20 +1,20 @@
 # CAOCAP
 
-**Find your direction. Build your skills. Turn knowledge into income.**
+**Explore. Build. Collaborate.**
 
-CAOCAP is a computer-use AI agent for learners who want to develop digital skills, mainly coding, and use those skills to earn income.
+CAOCAP is a platform where people discover, build, and publish AI agents together.
 
-The intended experience brings the agent into the learner's computer workflow to guide practice, demonstrate tasks, and help build practical projects. Learning and developing the user's own ability are central to the agent's work.
+Users will be able to explore agents built by the community, create their own, and collaborate on shared projects. They can test and improve agents together, then publish them for others to use.
 
-> Learn with the agent → practise in real tools → build projects → demonstrate skills → pursue paid opportunities
+> Explore agents → build or join a project → collaborate and test → publish → improve together
 
 ## Project status
 
-CAOCAP is at the initial scaffolding stage. The repository does not yet implement the computer-use agent or learning experience described in the product documentation.
+CAOCAP is transitioning to a collaborative AI agent platform. Agent discovery, building, collaboration, and publishing are planned and not yet implemented.
 
 | Area | Status |
 | --- | --- |
-| iOS | Basic SwiftUI starter application with imported asset catalog |
+| iOS | Imported OSS-CAOCAP-v9 SwiftUI app with onboarding, authentication, canvas, CoCaptain, and tests; service configuration required |
 | macOS | Basic SwiftUI starter application |
 | Android | Directory scaffold only |
 | Windows | Directory scaffold only |
@@ -53,8 +53,9 @@ The runnable applications currently require macOS and an Xcode version compatibl
 ### iOS
 
 1. Open [the iOS project](apps/ios/caocap/caocap.xcodeproj) in Xcode.
-2. Select the `caocap` scheme and an iOS simulator or compatible device.
-3. Run the project with **Product → Run** or `Command-R`.
+2. Follow the [iOS setup notes](apps/ios/README.md), including Firebase configuration and package resolution.
+3. Select the `caocap` scheme and an iOS 26 or later simulator or compatible device.
+4. Run the project with **Product → Run** or `Command-R`.
 
 ### macOS
 
@@ -62,7 +63,7 @@ The runnable applications currently require macOS and an Xcode version compatibl
 2. Select the `caocap` scheme and the **My Mac** destination.
 3. Run the project with **Product → Run** or `Command-R`.
 
-Both projects currently display the default SwiftUI starter view.
+The macOS project currently displays the default SwiftUI starter view.
 
 ## Technology
 
@@ -84,6 +85,6 @@ Technology choices for the other clients and shared services have not been made.
 
 ## Roadmap
 
-The product direction centers on a computer-use AI agent that helps learners develop digital skills, with coding as the primary focus. Planned capabilities include guided practice in real tools, demonstrations and contextual feedback, practical projects, progress tracking, portfolio building, and preparation for paid opportunities. These capabilities are not yet implemented.
+The roadmap focuses on three core experiences: Explore, Build, and Collaborate. Planned capabilities include discovering and trying agents, creating and testing agents, collaborating on shared projects, and publishing agents for others to use. These capabilities are not yet implemented.
 
 See the [Software Requirements Specification](docs/SRS.md) for the requirements baseline and open decisions.
