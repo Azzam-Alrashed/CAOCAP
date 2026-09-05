@@ -2,13 +2,15 @@
 
 **Find your direction. Build your skills. Turn knowledge into income.**
 
-CAOCAP is an AI digital career mentor that helps complete beginners explore skills, choose a direction, build practical experience, demonstrate their abilities, and prepare for paid opportunities.
+CAOCAP is a computer-use AI agent for learners who want to develop digital skills, mainly coding, and use those skills to earn income.
 
-> Explore skills → try guided tasks → choose a direction → build projects → create a portfolio → pursue paid opportunities
+The intended experience brings the agent into the learner's computer workflow to guide practice, demonstrate tasks, and help build practical projects. Learning and developing the user's own ability are central to the agent's work.
+
+> Learn with the agent → practise in real tools → build projects → demonstrate skills → pursue paid opportunities
 
 ## Project status
 
-CAOCAP is at the initial scaffolding stage. The repository does not yet contain the AI digital career mentorship or learning experience described in the product documentation.
+CAOCAP is at the initial scaffolding stage. The repository does not yet implement the computer-use agent or learning experience described in the product documentation.
 
 | Area | Status |
 | --- | --- |
@@ -38,8 +40,7 @@ CAOCAP is at the initial scaffolding stage. The repository does not yet contain 
 ├── docs/
 │   ├── research/            # Imported UX research and audits
 │   ├── product-vision.md
-│   ├── SRS.md
-│   └── imported-assets.md
+│   └── SRS.md
 ├── AGENTS.md                # Repository guidance for coding agents
 ├── README.md
 └── .gitignore
@@ -77,13 +78,12 @@ Technology choices for the other clients and shared services have not been made.
 
 - [Product vision](docs/product-vision.md) explains why CAOCAP exists and the experience it intends to create.
 - [Software Requirements Specification](docs/SRS.md) defines the envisioned system requirements and records unresolved decisions.
-- [Brand asset index](assets/brand/README.md) locates artwork, mascot references, and icon variants.
+- [Brand assets](assets/brand/) contains artwork, mascot references, and icon variants.
 - [Research index](docs/research/README.md) links to the imported UX reports and audits.
-- [Imported assets](docs/imported-assets.md) records their source, original paths, and license.
 - [Agent guidance](AGENTS.md) describes repository conventions and validation commands.
 
 ## Roadmap
 
-The product direction includes guided skill exploration, AI digital career mentorship and feedback, practical projects, progress tracking, portfolio building, paid-opportunity preparation, and additional platform clients. These capabilities are planned and are not yet implemented.
+The product direction centers on a computer-use AI agent that helps learners develop digital skills, with coding as the primary focus. Planned capabilities include guided practice in real tools, demonstrations and contextual feedback, practical projects, progress tracking, portfolio building, and preparation for paid opportunities. These capabilities are not yet implemented.
 
 See the [Software Requirements Specification](docs/SRS.md) for the requirements baseline and open decisions.

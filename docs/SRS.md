@@ -2,7 +2,7 @@
 
 | Field | Value |
 | --- | --- |
-| Document version | 0.1 Draft |
+| Document version | 0.2 Draft |
 | Product | CAOCAP |
 | Status | Draft template |
 | Owner | Azzam Alrashed |
@@ -13,6 +13,7 @@
 | Version | Date | Description |
 | --- | --- | --- |
 | 0.1 Draft | 2026-09-04 | Established the initial SRS structure. |
+| 0.2 Draft | 2026-09-05 | Clarified the product as a computer-use AI agent for digital-skills learners, primarily focused on coding and earning income. |
 
 ## 1. Introduction
 
@@ -22,13 +23,13 @@ This Software Requirements Specification (SRS) documents the approved requiremen
 
 ### 1.2 Scope
 
-CAOCAP is an AI digital career mentor that helps complete beginners explore skills, choose a direction, build practical experience, demonstrate their abilities, and prepare for paid opportunities.
+CAOCAP is a computer-use AI agent for learners who want to develop digital skills, mainly coding, and use those skills to earn income.
 
-The system supports a learner journey from guided skill exploration and representative tasks through practical projects, feedback, evidence of progress, portfolio development, and preparation for realistic paid-work contexts. Learners interact with the AI digital career mentor through desktop, mobile, and web clients while retaining responsibility for their choices and work.
+The intended system supports learning through work in computer applications: guided practice, demonstrations, practical projects, contextual feedback, evidence of progress, portfolio development, and preparation for paid-work contexts. Coding is the primary learning focus; broader digital skills remain part of the product direction. Learners retain ownership of their choices and work.
 
-Computer use and multi-agent orchestration are supporting capabilities that CAOCAP may use to facilitate learning activities. When these capabilities operate across computer applications, their actions remain observable and interruptible, and consequential actions require learner approval.
+Computer use is a core product capability. The agent is intended to observe relevant task context and operate computer applications to help learners practise and build skills. Its actions remain observable and interruptible, and consequential actions require learner approval. The execution environment, supported applications, and role of each desktop, mobile, and web client remain to be specified.
 
-This SRS covers learner-facing clients, AI digital career mentorship, the learner journey, guided tasks and projects, contextual feedback, progress and portfolio evidence, paid-opportunity preparation, and the supporting execution and supervision mechanisms. Underlying AI models, operating systems, third-party applications, and external services interact with CAOCAP through system interfaces but are not themselves part of the CAOCAP software.
+This SRS covers learner-facing clients, the computer-use AI agent, the learner journey, guided tasks and projects, contextual feedback, progress and portfolio evidence, paid-opportunity preparation, and execution and supervision mechanisms. Underlying AI models, operating systems, third-party applications, and external services interact with CAOCAP through system interfaces but are not themselves part of the CAOCAP software.
 
 ### 1.3 Intended audience
 
