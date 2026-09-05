@@ -4,7 +4,7 @@
 
 CAOCAP is a platform where people discover, build, and publish AI agents together.
 
-Users will be able to explore agents built by the community, create their own, and collaborate on shared projects. They can test and improve agents together, then publish them for others to use.
+Users will be able to explore agents built by the community, create their own, and collaborate on shared projects. To build agents, they will use mindmaps to organize context and knowledge, and flowcharts to define logic and conditional flows. They can test and improve agents together, then publish them for others to use. The building experience will feel playful and responsive, helping users see their agents come to life.
 
 > Explore agents → build or join a project → collaborate and test → publish → improve together
 
@@ -86,5 +86,7 @@ Technology choices for the other clients and shared services have not been made.
 ## Roadmap
 
 The roadmap focuses on three core experiences: Explore, Build, and Collaborate. Planned capabilities include discovering and trying agents, creating and testing agents, collaborating on shared projects, and publishing agents for others to use. These capabilities are not yet implemented.
+
+Development will start with iOS and macOS, followed by the other platforms.
 
 See the [Software Requirements Specification](docs/SRS.md) for the requirements baseline and open decisions.

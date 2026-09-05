@@ -38,9 +38,11 @@ Users should be able to discover agents, understand their purpose and limitation
 
 Builders should be able to define an agent's purpose, shape its instructions, connect the tools and knowledge it needs, and test its behavior. They should be able to improve their work before publishing an agent for others to use.
 
+To build agents, users will use mindmaps to organize context and the agent's knowledge base, and flowcharts to define logic, operations, and conditional flows.
+
 ### Collaborate
 
-People should be able to work on shared projects and contribute instructions, tools, knowledge, tests, or feedback. The experience should make contributions and proposed changes understandable so collaborators can review, test, and improve an agent together.
+People should be able to work on shared projects and contribute instructions, tools, knowledge, mindmap and flowchart changes, tests, or feedback. The experience should make contributions and proposed changes understandable so collaborators can review, test, and improve an agent together.
 
 Publishing connects the three activities: agents become available for others to explore and use, and feedback can guide further improvements.
 
@@ -48,7 +50,7 @@ Publishing connects the three activities: agents become available for others to 
 
 1. **Explore:** Discover agents, try them, and identify a useful starting point or an unmet need.
 2. **Start or join:** Create a project with a clear purpose or join an existing project.
-3. **Build:** Define the agent's behavior and add the tools and knowledge needed for its task.
+3. **Build:** Organize the agent's context and knowledge in mindmaps, define its logic and conditional flows in flowcharts, and connect the tools needed for its task.
 4. **Collaborate and test:** Contribute work, review changes, and test the agent against example tasks.
 5. **Publish:** Make a tested version available with a clear description of what it does and its limitations.
 6. **Improve together:** Use feedback and observed results to refine the agent and publish updates.
@@ -73,6 +75,12 @@ Builders should evaluate an agent's behavior before making it available to other
 
 Language, navigation, and feedback should welcome newcomers while giving experienced builders enough detail to understand and improve their work.
 
+### Fun to build with
+
+Building an agent should feel like playing with ideas and watching them come alive. On iOS and macOS, the intended canvas experience will combine rounded nodes, soft connections, readable labels, and purposeful color to distinguish knowledge, actions, and conditions.
+
+Nodes should snap into place, and connections should respond as users draw them. During tests, the flowchart should light up along the path the agent actually takes. A small, brief celebration should acknowledge a first successful run without implying that its answer is correct. Labels and symbols should support color cues, and reduced-motion alternatives should preserve essential feedback.
+
 ### Ownership and attribution
 
 People should retain control over their projects and understand who can contribute, change, or publish shared work. Contributions should be credited clearly.
@@ -80,6 +88,10 @@ People should retain control over their projects and understand who can contribu
 ### Trust through transparency
 
 Users should understand what an agent does, what tools and information it uses, and where its limitations lie. Descriptions and examples should accurately represent its behavior.
+
+## Development order
+
+Development will start with iOS and macOS, followed by the other platforms.
 
 ## Related documentation
 
