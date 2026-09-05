@@ -4,7 +4,7 @@
 
 CAOCAP is a platform where people discover, build, and publish AI agents together.
 
-Users will be able to explore agents built by the community, create their own, and collaborate on shared projects. To build agents, they will use mindmaps to organize context and knowledge, and flowcharts to define logic and conditional flows. They can test and improve agents together, then publish them for others to use. The building experience will feel playful and responsive, helping users see their agents come to life.
+Users will be able to explore agents built by the community, create their own, and collaborate on shared projects. To build agents, they will use mindmaps to organize context and knowledge, and flowcharts to define logic and conditional flows. They can test and improve agents together, then publish them for others to use. The building experience will feel playful and responsive.
 
 > Explore agents → build or join a project → collaborate and test → publish → improve together
 
