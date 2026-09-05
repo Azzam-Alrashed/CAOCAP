@@ -14,14 +14,14 @@ No Firebase or other service configuration is required for the current shell.
 
 - A single **CAOCAP** window (placeholder Hello World content).
 - The CoCaptain porthole **app icon** and the cube-and-orbit **menu-bar** status item.
-- A floating **CoCaptain** companion above other apps. Drag to move. Click to focus the existing window, or reopen it if it was closed. The menu bar can show or hide the companion.
+- A floating companion above other apps. Drag to move. Click to focus the existing window, or reopen it if it was closed. The menu bar can show or hide the companion and switch between **CoCaptain** and **CoStar**.
 
-Wake/tuck and companion position persist locally. Reduced Motion turns off the idle bob.
+Wake/tuck, persona, and companion position persist locally. Reduced Motion turns off the idle bob.
 
 ## What is not implemented
 
 Explore, Build, and Collaborate are planned and not present on Mac. There is no canvas, CoCaptain chat, Firebase session, or agent-driven companion status. The Ready bubble is a placeholder.
 
-The idle sprite in `caocap/Assets.xcassets/CoCaptainIdle.imageset` was knocked out from CDL art for a transparent desktop pet. Do not edit files under `assets/brand/` when changing app assets.
+The idle sprites in `caocap/Assets.xcassets/CoCaptainIdle.imageset` and `CoStarIdle.imageset` were knocked out from CDL art for a transparent desktop pet. Do not edit files under `assets/brand/` when changing app assets.
 
-There is no test target. After Mac UI changes, run the app and check wake/tuck, drag, and window focus.
+There is no test target. After Mac UI changes, run the app and check wake/tuck, persona switch, drag, and window focus.

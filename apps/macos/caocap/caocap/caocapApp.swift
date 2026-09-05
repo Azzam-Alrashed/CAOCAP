@@ -71,9 +71,18 @@ private struct StatusItemMenu: View {
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
-        Button(companion.isAwake ? "Hide CoCaptain" : "Show CoCaptain") {
+        Button(companion.isAwake ? "Hide \(companion.persona.displayName)" : "Show \(companion.persona.displayName)") {
             companion.toggleAwake()
         }
+        Picker("Companion", selection: Binding(
+            get: { companion.persona },
+            set: { companion.setPersona($0) }
+        )) {
+            ForEach(CompanionPersona.allCases) { persona in
+                Text(persona.displayName).tag(persona)
+            }
+        }
+        .pickerStyle(.inline)
         Button("Open CAOCAP") {
             MainWindowFocus.reveal(openIfNeeded: openWindow)
         }

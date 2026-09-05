@@ -7,6 +7,7 @@ import Observation
 final class CompanionController {
     private(set) var isAwake: Bool
     private(set) var origin: NSPoint
+    private(set) var persona: CompanionPersona
     private(set) var isDragging = false
     private(set) var mood: CompanionMood = .idle
 
@@ -29,6 +30,13 @@ final class CompanionController {
             )
         } else {
             origin = Self.defaultOrigin()
+        }
+
+        if let raw = defaults.string(forKey: CompanionDefaults.persona),
+           let stored = CompanionPersona(rawValue: raw) {
+            persona = stored
+        } else {
+            persona = .cocaptain
         }
     }
 
@@ -77,6 +85,14 @@ final class CompanionController {
 
     func toggleAwake() {
         setAwake(!isAwake)
+    }
+
+    func setPersona(_ persona: CompanionPersona) {
+        self.persona = persona
+        UserDefaults.standard.set(persona.rawValue, forKey: CompanionDefaults.persona)
+        if !isAwake {
+            setAwake(true)
+        }
     }
 
     func beginDrag() {

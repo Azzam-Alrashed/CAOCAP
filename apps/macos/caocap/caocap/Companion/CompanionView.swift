@@ -16,12 +16,12 @@ struct CompanionView: View {
                 .padding(.vertical, 4)
                 .background(.ultraThinMaterial, in: Capsule())
 
-            Image("CoCaptainIdle")
+            Image(controller.persona.idleImageName)
                 .resizable()
                 .interpolation(.high)
                 .frame(width: CompanionLayout.spriteSize, height: CompanionLayout.spriteSize)
                 .offset(y: controller.isDragging ? 0 : bobOffset)
-                .accessibilityLabel("CoCaptain")
+                .accessibilityLabel(controller.persona.displayName)
         }
         .padding(8)
         .frame(
