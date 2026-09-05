@@ -18,11 +18,17 @@
 
 ### 1.1 Purpose
 
-<!-- State why this SRS exists and what it will define. -->
+This Software Requirements Specification (SRS) documents the approved requirements for CAOCAP. It provides a shared reference for product planning, design, implementation, verification, and future changes.
 
 ### 1.2 Scope
 
-<!-- Define the system boundary, intended outcomes, and capabilities in scope. -->
+CAOCAP is an autonomous, general-purpose computer-use orchestration platform. It translates user goals into supervised work performed across computer applications by multiple CAOCAP-managed AI agents.
+
+The system coordinates agent work across user-owned and CAOCAP-managed computers. Users interact with the system through desktop, mobile, and web clients. They can observe execution, approve consequential actions, redirect agents, and interrupt work.
+
+CAOCAP initially focuses on helping people learn and pursue income through AI-assisted digital work. This is the platform’s primary initial use case, not a limitation on the general-purpose goals the platform may support.
+
+This SRS covers the user clients, multi-agent orchestration, computer connections, agent execution and control, and user-supervision mechanisms. Underlying AI models, operating systems, third-party applications, and external services interact with CAOCAP through system interfaces but are not themselves part of the CAOCAP software.
 
 ### 1.3 Intended audience
 
