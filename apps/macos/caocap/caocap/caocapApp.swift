@@ -10,6 +10,12 @@ import SwiftUI
 
 /// Keeps the process alive after the last window closes so the status item stays in the menu bar.
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    let companion = CompanionController()
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        companion.install()
+    }
+
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         false
     }
@@ -37,7 +43,7 @@ struct caocapApp: App {
 
         // Status item on the right side of the menu bar. Separate from the Dock app icon.
         MenuBarExtra {
-            StatusItemMenu()
+            StatusItemMenu(companion: appDelegate.companion)
         } label: {
             StatusItemLabel()
         }
@@ -62,9 +68,13 @@ private struct StatusItemLabel: View {
 
 /// Menu shown when the status item is clicked.
 private struct StatusItemMenu: View {
+    @Bindable var companion: CompanionController
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
+        Button(companion.isAwake ? "Hide CoCaptain" : "Show CoCaptain") {
+            companion.toggleAwake()
+        }
         Button("Open CAOCAP") {
             openWindow(id: "main")
             NSApp.activate()
