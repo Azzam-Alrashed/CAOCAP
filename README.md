@@ -15,7 +15,7 @@ CAOCAP is transitioning to a collaborative AI agent platform. Agent discovery, b
 | Area | Status |
 | --- | --- |
 | iOS | Imported OSS-CAOCAP-v9 SwiftUI app with onboarding, authentication, canvas, CoCaptain, and tests; service configuration required |
-| macOS | Basic SwiftUI starter application |
+| macOS | SwiftUI shell with app icon, menu-bar status item, and a floating CoCaptain companion; Explore, Build, and Collaborate are not implemented |
 | Android | Directory scaffold only |
 | Windows | Directory scaffold only |
 | Linux | Directory scaffold only |
@@ -28,7 +28,7 @@ CAOCAP is transitioning to a collaborative AI agent platform. Agent discovery, b
 .
 ├── apps/
 │   ├── ios/                 # iOS SwiftUI project and app assets
-│   ├── macos/               # macOS SwiftUI project
+│   ├── macos/               # macOS SwiftUI project and setup notes
 │   ├── android/             # Planned Android client
 │   ├── windows/             # Planned Windows client
 │   ├── linux/               # Planned Linux client
@@ -60,10 +60,11 @@ The runnable applications currently require macOS and an Xcode version compatibl
 ### macOS
 
 1. Open [the macOS project](apps/macos/caocap/caocap.xcodeproj) in Xcode.
-2. Select the `caocap` scheme and the **My Mac** destination.
-3. Run the project with **Product → Run** or `Command-R`.
+2. Follow the [macOS setup notes](apps/macos/README.md).
+3. Select the `caocap` scheme and the **My Mac** destination.
+4. Run the project with **Product → Run** or `Command-R`.
 
-The macOS project currently displays the default SwiftUI starter view.
+You should see the CAOCAP window, a cube status item in the menu bar, and CoCaptain on the desktop. The window still shows placeholder Hello World content.
 
 ## Technology
 
@@ -81,6 +82,8 @@ Technology choices for the other clients and shared services have not been made.
 - [Software Requirements Specification](docs/SRS.md) defines the envisioned system requirements and records unresolved decisions.
 - [Brand assets](assets/brand/) contains artwork, mascot references, and icon variants.
 - [Research index](docs/research/README.md) links to the imported UX reports and audits.
+- [iOS setup](apps/ios/README.md) describes Firebase and package configuration for the iOS app.
+- [macOS setup](apps/macos/README.md) describes the current Mac shell and how to run it.
 - [Agent guidance](AGENTS.md) describes repository conventions and validation commands.
 
 ## Roadmap

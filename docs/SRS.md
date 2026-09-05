@@ -2,7 +2,7 @@
 
 | Field | Value |
 | --- | --- |
-| Document version | 0.5 Draft |
+| Document version | 0.6 Draft |
 | Product | CAOCAP |
 | Status | Draft for review |
 | Owner | Azzam Alrashed |
@@ -17,6 +17,7 @@
 | 0.3 Draft | 2026-09-05 | Aligned the scope with Explore, Build, and Collaborate; drafted requirements, verification criteria, and open decisions for the collaborative agent platform. |
 | 0.4 Draft | 2026-09-06 | Recorded mindmaps for agent context and knowledge, flowcharts for logic and conditional flows, and iOS and macOS as the first development platforms. Updated requirements and remaining design decisions. |
 | 0.5 Draft | 2026-09-06 | Documented the playful building experience, with proposed requirements for canvas feedback, execution highlighting, first-run celebrations, visual clarity, and reduced motion. |
+| 0.6 Draft | 2026-09-06 | Recorded the current macOS shell (app icon, menu-bar status item, floating CoCaptain companion) without adding companion requirements. |
 
 ## 1. Introduction
 
@@ -51,6 +52,7 @@ This SRS is intended for the product owner and contributors responsible for revi
 | `REF-003` | [Repository README](../README.md) | Current | Product summary, implementation status, and repository structure. |
 | `REF-004` | [Repository guidance](../AGENTS.md) | Current | Development conventions and validation commands. |
 | `REF-005` | [iOS setup](../apps/ios/README.md) | Current | Configuration required by the existing iOS application. |
+| `REF-006` | [macOS setup](../apps/macos/README.md) | Current | Current Mac shell and how to run it. |
 
 ### 1.5 Requirement conventions
 
@@ -125,7 +127,7 @@ The following describes the current repository, not a commitment to feature pari
 | Area | Current state |
 | --- | --- |
 | iOS | SwiftUI Xcode application targeting iOS 26 or later, with unit and UI test targets. Service configuration is described in `REF-005`. |
-| macOS | SwiftUI starter application currently targeting macOS 26.5, without a test target. |
+| macOS | SwiftUI application targeting macOS 26.5, with an app icon, menu-bar status item, and floating CoCaptain companion. The main window is still placeholder content. There is no test target. Setup is described in `REF-006`. |
 | Android, Windows, Linux, web app, and landing page | Directory scaffolds; their frameworks and shared services have not been selected. |
 | Development | Apple app builds require macOS and full Xcode with compatible SDKs; see `REF-004`. |
 
@@ -338,7 +340,7 @@ These decisions are unresolved and do not authorize a particular implementation 
 
 The product owner is responsible for reviewing requirement proposals, resolving product decisions, and approving release scope. Contributors may propose changes with their rationale and affected requirements.
 
-A requirement is **Proposed** until explicitly approved, **Approved** once its behavior is agreed, or **Retired** when it is superseded or removed. In version 0.5, the requirements in sections 4.1–4.4 remain Proposed with priority Unassigned; `CAO-CON-001` is Approved. The mindmap and flowchart building approach and playful product direction are confirmed, while their detailed interaction, execution, and visual requirements remain proposed. Record further approval and release-priority decisions against the affected identifiers.
+A requirement is **Proposed** until explicitly approved, **Approved** once its behavior is agreed, or **Retired** when it is superseded or removed. In version 0.6, the requirements in sections 4.1–4.4 remain Proposed with priority Unassigned; `CAO-CON-001` is Approved. The mindmap and flowchart building approach and playful product direction are confirmed, while their detailed interaction, execution, and visual requirements remain proposed. Record further approval and release-priority decisions against the affected identifiers.
 
 Implementation and verification status are tracked separately from approval, with references to changes and test evidence. Approval does not imply implementation, and implementation does not imply acceptance.
 

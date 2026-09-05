@@ -6,7 +6,7 @@ CAOCAP is a platform where people discover, build, and publish AI agents togethe
 
 Read `README.md`, `docs/product-vision.md`, and the relevant sections of `docs/SRS.md` before implementing product behavior. Requirements describe planned capabilities and should not be treated as evidence of implemented functionality.
 
-For iOS setup and service configuration, see `apps/ios/README.md`. The macOS app remains a starter app.
+For iOS setup and service configuration, see `apps/ios/README.md`. For the macOS shell, see `apps/macos/README.md`.
 
 ## Structure and conventions
 
@@ -34,7 +34,7 @@ xcodebuild -project apps/macos/caocap/caocap.xcodeproj -scheme caocap -configura
 git diff --check
 ```
 
-The iOS project includes `caocapTests` and `caocapUITests`; macOS has no test target.
+The iOS project includes `caocapTests` and `caocapUITests`; macOS has no test target. For macOS UI changes, run the app on **My Mac** and check wake/tuck, drag, and that tapping CoCaptain focuses the existing window.
 
 - For app changes, build the affected platform, run relevant tests, and check the changed flow when a simulator or device is available.
 - For documentation and folder moves, verify links, project-relative paths, and asset references.
