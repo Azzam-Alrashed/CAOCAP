@@ -155,13 +155,8 @@ public struct NodePatchEngine {
             throw NodePatchError.missingNode(role)
         }
 
-        let originalText: String
-        switch section {
-        case .srs:
-            originalText = node.miniApp?.srsText ?? ""
-        case .code:
-            originalText = node.miniApp?.codeText ?? ""
-        }
+        let originalText = ""
+        _ = section
         let resultText = try apply(operations: operations, to: originalText)
         return NodePatchPreview(nodeID: node.id, role: node.role, section: section, originalText: originalText, resultText: resultText)
     }
@@ -187,14 +182,8 @@ public struct NodePatchEngine {
             throw NodePatchError.missingNode(role)
         }
 
-        let originalText: String
-        switch section {
-        case .srs:
-            originalText = node.miniApp?.srsText ?? ""
-        case .code:
-            originalText = node.miniApp?.codeText ?? ""
-        }
-
+        let originalText = ""
+        _ = section
         let resolved = try applyResolvingTargets(operations: operations, to: originalText, choosing: candidate)
         let preview = NodePatchPreview(
             nodeID: node.id,

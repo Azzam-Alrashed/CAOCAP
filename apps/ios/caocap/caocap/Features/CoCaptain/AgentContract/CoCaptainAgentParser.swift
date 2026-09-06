@@ -52,63 +52,14 @@ public struct CoCaptainAgentParser {
             return CoCaptainAgentAction(actionID: id, args: actionArgs(from: attrs))
         }
         
-        let nodeEdits = extractTagMatches(name: "node_edit", from: xml).compactMap { item -> CoCaptainNodeEditProposal? in
-            let content = item.content
-            let attrs = item.attributes
-            let roleStr = attrs["role"]?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-            let role = roleStr.flatMap(NodeRole.init(rawValue:)) ?? .miniApp
-            let sectionStr = attrs["section"]?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-            let section = sectionStr.flatMap(CoCaptainNodeEditProposal.MiniAppSection.init(rawValue:)) ?? .code
-            let nodeID = (attrs["nodeId"] ?? attrs["node_id"] ?? attrs["nodeID"]).flatMap(UUID.init(uuidString:))
-            
-            let summary = attrs["summary"] ?? ""
-            let operations = extractTagMatches(name: "operation", from: content).compactMap { opItem -> NodePatchOperation? in
-                let opContent = opItem.content
-                let opAttrs = opItem.attributes
-                guard let typeStr = opAttrs["type"],
-                      let type = NodePatchOperationType(rawValue: typeStr) else { return nil }
-                
-                let target = extractTag(name: "target", from: opContent)
-                let body = extractCDATA(from: opContent) ?? extractTag(name: "content", from: opContent) ?? ""
-                
-                return NodePatchOperation(type: type, target: target, content: body)
-            }
-
-            return CoCaptainNodeEditProposal(
-                nodeID: nodeID,
-                role: role,
-                section: section,
-                summary: summary,
-                operations: operations,
-                learningNote: extractLearningNote(from: content)
-            )
-        }
-
         let payload = CoCaptainAgentPayload(
             assistantMessage: assistantMessage,
             safeActions: safeActions,
             pendingActions: pendingActions,
-            nodeEdits: nodeEdits,
             clarifyingQuestion: extractClarifyingQuestion(from: xml)
         )
 
         return CoCaptainParsedResponse(preamble: preamble, payload: payload)
-    }
-
-    /// Extracts an optional `learning_note` element from a `node_edit` body.
-    /// Malformed notes (missing concept or empty body) degrade to `nil` and
-    /// never invalidate the surrounding edit.
-    private func extractLearningNote(from nodeEditContent: String) -> CoCaptainLearningNote? {
-        guard let match = extractTagMatches(name: "learning_note", from: nodeEditContent).first else {
-            return nil
-        }
-
-        let concept = (match.attributes["concept"] ?? "")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        let body = match.content.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !concept.isEmpty, !body.isEmpty else { return nil }
-
-        return CoCaptainLearningNote(concept: concept, body: body)
     }
 
     /// Extracts the first well-formed `clarifying_question` element. Malformed

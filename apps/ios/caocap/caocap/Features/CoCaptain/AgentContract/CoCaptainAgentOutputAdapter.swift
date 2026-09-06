@@ -194,13 +194,9 @@ public struct CoCaptainFunctionCallAgentAdapter {
     }
 }
 
-/// Adapter that converts `propose_node_edit` and `ask_clarifying_question`
-/// function calls into the existing `CoCaptainAgentPayload` shapes.
-///
-/// The mapping is deliberately thin: the validator, review builder, and
-/// baseText conflict guard all consume the same `CoCaptainNodeEditProposal` /
-/// `CoCaptainClarifyingQuestion` values they receive from the XML parser, so
-/// downstream safety stays untouched.
+/// Adapter that converts `ask_clarifying_question` function calls into the
+/// existing `CoCaptainAgentPayload` shapes. Mini-App HTML/SRS edit tools are
+/// ignored so CoCaptain talks instead of offering source patches.
 public struct CoCaptainNodeEditFunctionAdapter {
     /// The tool names this adapter understands. The composite adapter uses
     /// this set to partition calls between adapters.
@@ -211,25 +207,19 @@ public struct CoCaptainNodeEditFunctionAdapter {
 
     public init() {}
 
-    /// Converts node-edit tool calls into a directive. Malformed arguments
-    /// become diagnostics so the agentic retry can feed them back to the model.
+    /// Converts clarifying-question tool calls into a directive. Proposed
+    /// Mini-App source edits are dropped without becoming diagnostics.
     public func directive(
         from functionCalls: [CoCaptainAgentFunctionCall],
         visibleText: String = ""
     ) -> CoCaptainAgentDirective {
-        var nodeEdits: [CoCaptainNodeEditProposal] = []
         var clarifyingQuestion: CoCaptainClarifyingQuestion?
         var diagnostics: [String] = []
 
         for functionCall in functionCalls {
             switch functionCall.name {
             case CoCaptainNodeEditTools.proposeNodeEditName:
-                switch nodeEdit(from: functionCall) {
-                case .success(let edit):
-                    nodeEdits.append(edit)
-                case .failure(let issue):
-                    diagnostics.append(issue)
-                }
+                continue
             case CoCaptainNodeEditTools.askClarifyingQuestionName:
                 if let question = question(from: functionCall) {
                     // Keep the first well-formed question; the contract allows one.
@@ -244,11 +234,10 @@ public struct CoCaptainNodeEditFunctionAdapter {
             }
         }
 
-        let payload = nodeEdits.isEmpty && clarifyingQuestion == nil
+        let payload = clarifyingQuestion == nil
             ? nil
             : CoCaptainAgentPayload(
                 assistantMessage: visibleText,
-                nodeEdits: nodeEdits,
                 clarifyingQuestion: clarifyingQuestion
             )
 
@@ -258,60 +247,6 @@ public struct CoCaptainNodeEditFunctionAdapter {
             payload: payload,
             diagnostics: diagnostics,
             source: .nodeEditFunctionCall
-        )
-    }
-
-    private enum NodeEditMappingResult {
-        case success(CoCaptainNodeEditProposal)
-        case failure(String)
-    }
-
-    private func nodeEdit(from functionCall: CoCaptainAgentFunctionCall) -> NodeEditMappingResult {
-        guard let summary = functionCall.stringArgument("summary") else {
-            return .failure("`propose_node_edit` requires a non-empty `summary`.")
-        }
-        guard let operationValues = functionCall.arguments["operations"]?.arrayValue,
-              !operationValues.isEmpty else {
-            return .failure("`propose_node_edit` requires a non-empty `operations` array.")
-        }
-
-        var operations: [NodePatchOperation] = []
-        for value in operationValues {
-            guard let object = value.objectValue,
-                  let typeRaw = object["type"]?.stringValue,
-                  let type = NodePatchOperationType(rawValue: typeRaw),
-                  let content = object["content"]?.stringValue else {
-                return .failure("`propose_node_edit` has a malformed operation; each needs a valid `type` and `content`.")
-            }
-            operations.append(
-                NodePatchOperation(type: type, target: object["target"]?.stringValue, content: content)
-            )
-        }
-
-        let learningNote: CoCaptainLearningNote? = functionCall.arguments["learningNote"]?.objectValue.flatMap { object in
-            guard let concept = object["concept"]?.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines),
-                  let body = object["body"]?.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines),
-                  !concept.isEmpty, !body.isEmpty else {
-                // Malformed notes degrade to nil; they never invalidate the edit.
-                return nil
-            }
-            return CoCaptainLearningNote(concept: concept, body: body)
-        }
-
-        let sectionName = functionCall.stringArgument("section")?.lowercased()
-        let section = sectionName.flatMap(CoCaptainNodeEditProposal.MiniAppSection.init(rawValue:)) ?? .code
-        let nodeID = (functionCall.stringArgument("nodeId") ?? functionCall.stringArgument("node_id"))
-            .flatMap(UUID.init(uuidString:))
-
-        return .success(
-            CoCaptainNodeEditProposal(
-                nodeID: nodeID,
-                role: .miniApp,
-                section: section,
-                summary: summary,
-                operations: operations,
-                learningNote: learningNote
-            )
         )
     }
 
@@ -412,10 +347,6 @@ public struct CoCaptainCompositeAgentAdapter: CoCaptainAgentOutputAdapting {
             return nil
         }
 
-        let nodeEdits = (nodeEditPayload?.nodeEdits.isEmpty == false)
-            ? nodeEditPayload?.nodeEdits ?? []
-            : fencedPayload?.nodeEdits ?? []
-
         return CoCaptainAgentPayload(
             assistantMessage: fencedPayload?.assistantMessage
                 ?? nodeEditPayload?.assistantMessage
@@ -423,7 +354,6 @@ public struct CoCaptainCompositeAgentAdapter: CoCaptainAgentOutputAdapting {
                 ?? "",
             safeActions: functionPayload?.safeActions ?? [],
             pendingActions: functionPayload?.pendingActions ?? [],
-            nodeEdits: nodeEdits,
             clarifyingQuestion: nodeEditPayload?.clarifyingQuestion ?? fencedPayload?.clarifyingQuestion
         )
     }

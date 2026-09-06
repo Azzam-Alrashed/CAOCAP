@@ -8,8 +8,7 @@ struct CanvasNodeTapTests {
         let node = SpatialNode(
             type: .miniApp,
             position: .zero,
-            title: "Leftover",
-            miniApp: MiniAppState(codeText: "<h1>Hi</h1>")
+            title: "Leftover"
         )
 
         #expect(node.tapDestination == .inspect)

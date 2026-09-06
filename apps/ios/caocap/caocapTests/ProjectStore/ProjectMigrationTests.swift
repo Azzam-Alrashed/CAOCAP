@@ -106,7 +106,7 @@ struct ProjectMigrationTests {
         let fileName = "corrupted.json"
         try Data("{not-json}".utf8).write(to: persistence.fileURL(for: fileName))
 
-        let fallbackNode = SpatialNode(type: .miniApp, position: .zero, title: "Mini-App", miniApp: MiniAppState(codeText: "<h1>Fallback</h1>"))
+        let fallbackNode = SpatialNode(type: .miniApp, position: .zero, title: "Mini-App")
         let store = ProjectStore(
             fileName: fileName,
             projectName: "Fallback Project",
@@ -135,7 +135,7 @@ struct ProjectMigrationTests {
         """
         try v1JSON.data(using: .utf8)!.write(to: persistence.fileURL(for: fileName))
 
-        let fallbackNode = SpatialNode(type: .miniApp, position: .zero, title: "Mini-App", miniApp: MiniAppState(codeText: "<h1>Fallback</h1>"))
+        let fallbackNode = SpatialNode(type: .miniApp, position: .zero, title: "Mini-App")
         _ = ProjectStore(
             fileName: fileName,
             projectName: "Fallback Project",
@@ -164,7 +164,7 @@ struct ProjectMigrationTests {
         """
         try legacyJSON.data(using: .utf8)!.write(to: persistence.fileURL(for: fileName))
 
-        let fallbackNode = SpatialNode(type: .miniApp, position: .zero, title: "Mini-App", miniApp: MiniAppState(codeText: "<h1>Fallback</h1>"))
+        let fallbackNode = SpatialNode(type: .miniApp, position: .zero, title: "Mini-App")
         _ = ProjectStore(
             fileName: fileName,
             projectName: "Fallback Project",
@@ -198,7 +198,6 @@ struct ProjectMigrationTests {
         #expect(loaded.nodes[0].type == .standard)
         #expect(loaded.nodes[0].title == "Card")
         #expect(loaded.nodes[0].position == CGPoint(x: 12, y: 24))
-        #expect(loaded.nodes[0].miniApp == nil)
         #expect(loaded.viewportScale == 0.75)
         #expect(loaded.schemaVersion == ProjectPersistenceService.currentSchemaVersion)
 
@@ -232,7 +231,6 @@ struct ProjectMigrationTests {
         #expect(decoded.type == .standard)
         #expect(decoded.title == "Hello World")
         #expect(decoded.position == CGPoint(x: 12, y: 24))
-        #expect(decoded.miniApp == nil)
 
         let encoded = try JSONEncoder().encode(decoded)
         let encodedObject = try #require(JSONSerialization.jsonObject(with: encoded) as? [String: Any])

@@ -1,6 +1,6 @@
 # App Session
 
-Owns root-level session orchestration for the running app: workspace routing hooks, global sheet flags, command palette binding, and `AppActionDispatcher` registration.
+Owns root-level session orchestration for the leftover canvas + CoCaptain + sign-in shell: workspace routing hooks, global sheet flags, command palette binding, and `AppActionDispatcher` registration. Home is an empty canvas. Explore, Build, and Collaborate are planned and are not wired here.
 
 ## Ownership
 
@@ -17,7 +17,7 @@ Owns root-level session orchestration for the running app: workspace routing hoo
 - Add new app-level actions by registering handlers in `AppSessionCoordinator.configureActions()` and exposing them through the dispatcher.
 - Keep feature-specific UI in `Features/*`; keep cross-cutting session wiring here.
 - When onboarding or CoCaptain presentation rules grow, prefer extracting focused helpers over expanding the coordinator indefinitely.
-- First-run handoffs: `finishIntroFlow()` → temporary personalization placeholder; `finishPersonalizationFlow()` → interactive tutorial via `startInteractiveOnboardingIfNeeded()`.
+- First-run handoffs: `finishIntroFlow()` → persona pick; `finishPersonalizationFlow()` → Home. The tutorial engine still exists, but the lesson catalogue is empty so first-run does not start a walkthrough.
 
 ## Related Tests
 

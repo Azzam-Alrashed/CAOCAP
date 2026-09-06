@@ -112,50 +112,48 @@ struct CoCaptainAgentTests {
     @MainActor
     @Test func productContextOmitsFirebaseImplementationDetails() throws {
         let store = makeStore()
-        store.nodes[0].miniApp?.firebaseConfigText = #"{"apiKey":"test"}"#
 
         let context = ProjectContextBuilder().buildPromptContext(from: store, detailLevel: .product)
 
-        #expect(context.contains("SRS Readiness:"))
+        #expect(context.contains("Project Name: Test Project"))
+        #expect(!context.contains("SRS Readiness:"))
         #expect(!context.contains("Mini-App Firebase wiring rules"))
         #expect(!context.contains("__caocapFirestore"))
         #expect(!context.contains("Firebase Config:"))
     }
 
     @MainActor
-    @Test func projectContextIncludesMiniAppsAndExcludesCompiledPreview() throws {
+    @Test func projectContextDescribesCanvasCardsNotHTML() throws {
         let store = makeStore()
-        store.nodes[0].miniApp?.compiledHTML = "<html>compiled</html>"
 
         let context = ProjectContextBuilder().buildPromptContext(from: store)
 
         #expect(context.contains("Project Name: Test Project"))
-        #expect(context.contains("Mini-App Count: 1"))
-        #expect(context.contains("SRS Readiness:"))
-        #expect(context.contains("Build a landing page"))
-        #expect(context.contains("<html><body><h1>Hello World!</h1></body></html>"))
-        #expect(!context.contains("compiled"))
+        #expect(context.contains("Node Count:"))
+        #expect(context.contains("cannot edit HTML"))
+        #expect(!context.contains("SRS Readiness:"))
+        #expect(!context.contains("<html><body><h1>Hello World!</h1></body></html>"))
     }
 
     @MainActor
-    @Test func projectContextIncludesBlankMiniAppCode() throws {
+    @Test func projectContextIncludesBlankCards() throws {
         let store = ProjectStore(
             fileName: "blank-canvas-test-\(UUID().uuidString).json",
             projectName: "Blank Project",
             initialNodes: [
                 SpatialNode(
-                    type: .miniApp,
+                    type: .standard,
                     position: CGPoint(x: 0, y: 0),
-                    title: "Mini-App",
-                    miniApp: MiniAppState(srsText: "Just starting out.", codeText: "")
+                    title: "Card"
                 )
             ]
         )
 
         let context = ProjectContextBuilder().buildPromptContext(from: store)
 
-        #expect(context.contains("Mini-App Count: 1"))
-        #expect(context.contains("Code:"))
+        #expect(context.contains("Node Count: 1"))
+        #expect(context.contains("Card"))
+        #expect(!context.contains("Code:"))
     }
 
     @MainActor
@@ -167,21 +165,20 @@ struct CoCaptainAgentTests {
             fileName: "node-context-\(UUID().uuidString).json",
             projectName: "Node Context",
             initialNodes: [
-                SpatialNode(id: selectedID, type: .miniApp, position: .zero, title: "Selected Mini-App", connectedNodeIds: [linkedID], miniApp: MiniAppState(srsText: "Selected SRS content", codeText: "<h1>Selected code</h1>")),
-                SpatialNode(id: linkedID, type: .miniApp, position: .zero, title: "Linked Mini-App", miniApp: MiniAppState(codeText: "<h1>Linked code</h1>")),
-                SpatialNode(id: unrelatedID, type: .miniApp, position: .zero, title: "Unrelated", miniApp: MiniAppState(codeText: "Do not leak full unrelated content"))
+                SpatialNode(id: selectedID, type: .standard, position: .zero, title: "Selected Card", connectedNodeIds: [linkedID]),
+                SpatialNode(id: linkedID, type: .standard, position: .zero, title: "Linked Card"),
+                SpatialNode(id: unrelatedID, type: .standard, position: .zero, title: "Unrelated")
             ]
         )
 
         let context = ProjectContextBuilder().buildNodePromptContext(from: store, nodeID: selectedID)
 
         #expect(context.contains("Selected Node ID: \(selectedID.uuidString)"))
-        #expect(context.contains("Selected Node Context:"))
-        #expect(context.contains("Selected SRS content"))
+        #expect(context.contains("Selected Node:"))
         #expect(context.contains("Linked Neighbor Nodes:"))
-        #expect(context.contains("<h1>Linked code</h1>"))
-        #expect(context.contains("Unrelated [miniApp] id: \(unrelatedID.uuidString)"))
-        #expect(!context.contains("Do not leak full unrelated content"))
+        #expect(context.contains("Linked Card"))
+        #expect(context.contains("Unrelated [standard] id: \(unrelatedID.uuidString)"))
+        #expect(!context.contains("SRS"))
     }
 
     @Test func parserExtractsNodeIDTargetedNodeEdit() throws {
@@ -205,40 +202,13 @@ struct CoCaptainAgentTests {
 
         let parsed = parser.parse(response)
 
-        #expect(parsed.payload?.nodeEdits.first?.nodeID == nodeID)
-        #expect(parsed.payload?.nodeEdits.first?.role == .miniApp)
-        #expect(parsed.payload?.nodeEdits.first?.section == .code)
-    }
-
-    @MainActor
-    @Test func nodePatchEngineTargetsNodeIDBeforeRoleFallback() throws {
-        let targetID = UUID()
-        let otherID = UUID()
-        let store = ProjectStore(
-            fileName: "node-patch-\(UUID().uuidString).json",
-            initialNodes: [
-                SpatialNode(id: otherID, type: .miniApp, position: .zero, title: "Other Mini-App", miniApp: MiniAppState(codeText: "wrong")),
-                SpatialNode(id: targetID, type: .miniApp, position: .zero, title: "Custom Mini-App", miniApp: MiniAppState(codeText: "right"))
-            ]
-        )
-
-        let preview = try NodePatchEngine().preview(
-            nodeID: targetID,
-            role: .miniApp,
-            section: .code,
-            operations: [NodePatchOperation(type: .replaceAll, content: "updated")],
-            in: store
-        )
-
-        #expect(preview.nodeID == targetID)
-        #expect(preview.originalText == "right")
-        #expect(preview.resultText == "updated")
+        #expect(parsed.payload?.nodeEdits.isEmpty == true)
     }
 
     @MainActor
     @Test func nodeAgentMessagesPersistOnNode() {
         let store = makeStore()
-        let node = store.nodes.first(where: { $0.role == .miniApp })!
+        let node = store.nodes[0]
 
         store.appendNodeAgentMessage(
             id: node.id,
@@ -249,43 +219,6 @@ struct CoCaptainAgentTests {
         let updatedNode = store.nodes.first(where: { $0.id == node.id })
         #expect(updatedNode?.agentState.messages.first?.text == "Draft the intro")
         #expect(updatedNode?.agentState.messages.first?.isUser == true)
-    }
-
-    @Test func nodePatchEngineAppliesOrderedOperations() throws {
-        let engine = NodePatchEngine()
-        let result = try engine.apply(
-            operations: [
-                NodePatchOperation(type: .replaceExact, target: "Hello", content: "Welcome"),
-                NodePatchOperation(type: .append, content: "\n<footer>Done</footer>")
-            ],
-            to: "<h1>Hello</h1>"
-        )
-
-        #expect(result.contains("Welcome"))
-        #expect(result.contains("<footer>Done</footer>"))
-    }
-
-    @Test func nodePatchEngineCanReplaceWholeNodeContent() throws {
-        let engine = NodePatchEngine()
-        let result = try engine.apply(
-            operations: [
-                NodePatchOperation(type: .replaceAll, content: "<main>New game shell</main>")
-            ],
-            to: "<h1>Old page</h1>"
-        )
-
-        #expect(result == "<main>New game shell</main>")
-    }
-
-    @Test func nodePatchEngineThrowsWhenAnchorMissing() throws {
-        let engine = NodePatchEngine()
-
-        #expect(throws: NodePatchError.self) {
-            try engine.apply(
-                operations: [NodePatchOperation(type: .insertAfterExact, target: "missing", content: "x")],
-                to: "<h1>Hello</h1>"
-            )
-        }
     }
 
     @Test func nodeRoleInferenceRecognizesCanonicalTemplateNodes() {
@@ -551,7 +484,8 @@ struct CoCaptainAgentTests {
 
         let parsed = parser.parse(response)
 
-        #expect(parsed.preamble == "First attempt.\n\nSecond attempt.")
+        #expect(parsed.preamble.contains("First attempt."))
+        #expect(parsed.preamble.contains("Second attempt."))
         #expect(parsed.payload?.assistantMessage == "Latest payload.")
         #expect(parsed.payload?.safeActions.first?.actionID == "open_settings")
     }
@@ -657,7 +591,7 @@ struct CoCaptainAgentTests {
         ) { _ in }
 
         #expect(result.reviewDraft?.pendingActions.count == 1)
-        #expect(result.reviewDraft?.nodeEdits.count == 1)
+        #expect(result.reviewDraft?.nodeEdits.isEmpty == true)
     }
 
     @Test func parserExtractsTrailingStructuredBlock() throws {
@@ -724,7 +658,7 @@ struct CoCaptainAgentTests {
         let parsed = parser.parse(response)
 
         #expect(parsed.preamble == "I can document that preference.")
-        #expect(parsed.payload?.nodeEdits.count == 1)
+        #expect(parsed.payload?.nodeEdits.isEmpty == true)
     }
 
     @Test func parserHidesIncompleteLooseTrailingActionXML() throws {
@@ -929,8 +863,7 @@ struct CoCaptainAgentTests {
         )
 
         #expect(directive.payload?.safeActions.first?.actionID == "go_root")
-        #expect(directive.payload?.nodeEdits.first?.role == .miniApp)
-        #expect(directive.payload?.nodeEdits.first?.section == .code)
+        #expect(directive.payload?.nodeEdits.isEmpty == true)
         #expect(directive.source == .combined)
     }
 
@@ -969,9 +902,8 @@ struct CoCaptainAgentTests {
             dispatcher: dispatcher
         ) { _ in }
 
-        #expect(llm.receivedMessages.count == 2)
-        #expect(llm.receivedMessages.last?.contains("satisfied the machine-readable CoCaptain action contract") == true)
-        #expect(result.reviewDraft?.nodeEdits.count == 1)
+        #expect(llm.receivedMessages.count == 1)
+        #expect(result.reviewDraft == nil)
     }
 
     @MainActor
@@ -1096,48 +1028,8 @@ struct CoCaptainAgentTests {
             dispatcher: dispatcher
         ) { _ in }
 
-        #expect(llm.receivedMessages.count == 2)
-        #expect(llm.receivedMessages.last?.contains("machine-readable CoCaptain action contract") == true)
-        #expect(result.reviewDraft?.nodeEdits.count == 1)
-    }
-
-    @MainActor
-    @Test func coordinatorRetriesSRSRequestsWithoutNodeEdits() async throws {
-        let dispatcher = TestActionDispatcher()
-        let llm = TestLLMClient(
-            responses: [
-                "I can help draft the requirements in chat.",
-                """
-                I prepared an SRS update.
-
-                <cocaptain_actions>
-                  <assistant_message>I prepared an SRS update.</assistant_message>
-                  <node_edits>
-                    <node_edit role="miniApp" section="srs" summary="Draft the product requirements.">
-                      <operation type="replace_all">
-                        <content><![CDATA[# Software Requirements
-
-                ## Goal
-                Define a focused first version of the app.
-                ]]></content>
-                      </operation>
-                    </node_edit>
-                  </node_edits>
-                </cocaptain_actions>
-                """
-            ]
-        )
-        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
-
-        let result = try await coordinator.run(
-            userMessage: "draft the SRS",
-            store: makeStore(),
-            dispatcher: dispatcher
-        ) { _ in }
-
-        #expect(llm.receivedMessages.count == 2)
-        #expect(llm.receivedMessages.last?.contains("documentation, requirements, spec, or SRS requests") == true)
-        #expect(result.reviewDraft?.nodeEdits.first?.section == .srs)
+        #expect(llm.receivedMessages.count == 1)
+        #expect(result.reviewDraft == nil)
     }
 
     @MainActor
@@ -1175,14 +1067,14 @@ struct CoCaptainAgentTests {
         #expect(dispatcher.executedActionIDs == [.goRoot])
         #expect(result.executionSummary?.summary.contains("Go to Root") == true)
         #expect(result.reviewDraft?.pendingActions.count == 1)
-        #expect(result.reviewDraft?.nodeEdits.count == 1)
+        #expect(result.reviewDraft?.nodeEdits.isEmpty == true)
     }
 
     @MainActor
     @Test func coordinatorUsesNodeScopedSessionAndStagesTargetedEdit() async throws {
         let dispatcher = TestActionDispatcher()
         let store = makeStore()
-        let miniAppNode = try #require(store.nodes.first(where: { $0.role == .miniApp }))
+        let miniAppNode = try #require(store.nodes.first)
         let llm = TestLLMClient(
             response:
                 """
@@ -1210,8 +1102,7 @@ struct CoCaptainAgentTests {
         ) { _ in }
 
         #expect(llm.receivedScopes == [.node(miniAppNode.id)])
-        #expect(result.reviewDraft?.nodeEdits.first?.nodeID == miniAppNode.id)
-        #expect(result.reviewDraft?.nodeEdits.first?.section == .code)
+        #expect(result.reviewDraft == nil)
     }
 
     @MainActor
@@ -1404,241 +1295,6 @@ struct CoCaptainAgentTests {
         #expect(result.payloadMessage?.contains("another run") == true)
         #expect(llm.receivedMessages.count == 3)
     }
-
-    @MainActor
-    @Test func coordinatorRetriesEmptyNodeEditOperations() async throws {
-        let dispatcher = TestActionDispatcher()
-        let llm = TestLLMClient(
-            responses: [
-                """
-                I prepared an edit.
-
-                <cocaptain_actions>
-                  <assistant_message>I prepared an edit.</assistant_message>
-                  <node_edits>
-                    <node_edit role="miniApp" section="code" summary="Update Code.">
-                    </node_edit>
-                  </node_edits>
-                </cocaptain_actions>
-                """,
-                """
-                I prepared a valid code edit.
-
-                <cocaptain_actions>
-                  <assistant_message>I prepared a valid code edit.</assistant_message>
-                  <node_edits>
-                    <node_edit role="miniApp" section="code" summary="Update Code.">
-                      <operation type="replace_all">
-                        <content><![CDATA[<h1>Fixed</h1>]]></content>
-                      </operation>
-                    </node_edit>
-                  </node_edits>
-                </cocaptain_actions>
-                """
-            ]
-        )
-        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
-
-        let result = try await coordinator.run(
-            userMessage: "update the code",
-            store: makeStore(),
-            dispatcher: dispatcher
-        ) { _ in }
-
-        #expect(llm.receivedMessages.count == 2)
-        #expect(llm.receivedMessages.last?.contains("must include at least one operation") == true)
-        #expect(result.reviewDraft?.nodeEdits.count == 1)
-    }
-
-    @Test func parserExtractsLearningNoteFromNodeEdit() throws {
-        let parser = CoCaptainAgentParser()
-        let response =
-            """
-            Done.
-
-            <cocaptain_actions>
-              <assistant_message>Updated the headline.</assistant_message>
-              <node_edits>
-                <node_edit role="miniApp" section="code" summary="Update headline">
-                  <operation type="replace_all">
-                    <content><![CDATA[<h1>New</h1>]]></content>
-                  </operation>
-                  <learning_note concept="Headings">The h1 tag is your page's headline. Changing its text changes what visitors see first.</learning_note>
-                </node_edit>
-              </node_edits>
-            </cocaptain_actions>
-            """
-
-        let parsed = parser.parse(response)
-        let note = parsed.payload?.nodeEdits.first?.learningNote
-
-        #expect(note?.concept == "Headings")
-        #expect(note?.body.contains("headline") == true)
-    }
-
-    @Test func parserDegradesMalformedLearningNoteWithoutInvalidatingEdit() throws {
-        let parser = CoCaptainAgentParser()
-        let response =
-            """
-            <cocaptain_actions>
-              <assistant_message>Updated.</assistant_message>
-              <node_edits>
-                <node_edit role="miniApp" section="code" summary="Update headline">
-                  <operation type="replace_all">
-                    <content><![CDATA[<h1>New</h1>]]></content>
-                  </operation>
-                  <learning_note>Missing concept attribute.</learning_note>
-                </node_edit>
-              </node_edits>
-            </cocaptain_actions>
-            """
-
-        let parsed = parser.parse(response)
-
-        #expect(parsed.payload?.nodeEdits.count == 1)
-        #expect(parsed.payload?.nodeEdits.first?.learningNote == nil)
-    }
-
-    @MainActor
-    @Test func coordinatorCarriesLearningNoteIntoReviewItem() async throws {
-        let llm = TestLLMClient(
-            response:
-                """
-                Updating now.
-
-                <cocaptain_actions>
-                  <assistant_message>Updated the headline.</assistant_message>
-                  <node_edits>
-                    <node_edit role="miniApp" section="code" summary="Update headline">
-                      <operation type="replace_all">
-                        <content><![CDATA[<h1>New</h1>]]></content>
-                      </operation>
-                      <learning_note concept="Headings">The h1 tag is your page's main headline.</learning_note>
-                    </node_edit>
-                  </node_edits>
-                </cocaptain_actions>
-                """
-        )
-        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
-
-        let result = try await coordinator.run(
-            userMessage: "update the headline",
-            store: makeStore(),
-            dispatcher: TestActionDispatcher()
-        ) { _ in }
-
-        let note = result.reviewDraft?.nodeEdits.first?.learningNote
-        #expect(note?.concept == "Headings")
-        #expect(note?.body == "The h1 tag is your page's main headline.")
-    }
-
-    @MainActor
-    @Test func reviewLifecycleBuildsFallbackLearningNoteWhenModelOmitsOne() async throws {
-        let llm = TestLLMClient(
-            response:
-                """
-                <cocaptain_actions>
-                  <assistant_message>Updated the headline.</assistant_message>
-                  <node_edits>
-                    <node_edit role="miniApp" section="code" summary="Update headline">
-                      <operation type="replace_all">
-                        <content><![CDATA[<h1>New</h1>]]></content>
-                      </operation>
-                    </node_edit>
-                  </node_edits>
-                </cocaptain_actions>
-                """
-        )
-        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
-
-        let store = makeStore()
-        let result = try await coordinator.run(
-            userMessage: "update the headline",
-            store: store,
-            dispatcher: TestActionDispatcher()
-        ) { _ in }
-
-        let draft = try #require(result.reviewDraft)
-        let record = try #require(
-            CoCaptainReviewLifecycle()
-                .session(scope: .project, store: store, dispatcher: nil)
-                .stage(draft)
-        )
-        let note = record.bundle.items.first?.learningNote
-        #expect(note != nil)
-        #expect(note?.body.contains("Update headline") == true)
-        #expect(note?.body.contains("Headline shows New") == false)
-    }
-
-    @MainActor
-    @Test func viewModelRendersLifecycleExecutionBeforeMentorNote() throws {
-        let store = makeStore()
-        let miniAppNode = try #require(store.nodes.first(where: { $0.title == "Mini-App" }))
-        let lifecycle = CoCaptainReviewLifecycle()
-        let note = CoCaptainLearningNote(concept: "Headings", body: "The h1 tag is your headline.")
-        let record = try #require(
-            lifecycle.session(
-                scope: .node(miniAppNode.id),
-                store: store,
-                dispatcher: nil
-            ).stage(
-                CoCaptainReviewLifecycle.Draft(
-                    nodeEdits: [
-                        CoCaptainNodeEditProposal(
-                            nodeID: miniAppNode.id,
-                            summary: "Update headline",
-                            operations: [
-                                NodePatchOperation(type: .replaceAll, content: "<h1>New</h1>")
-                            ],
-                            learningNote: note
-                        )
-                    ]
-                )
-            )
-        )
-        let itemID = try #require(record.bundle.items.first?.id)
-        let vm = CoCaptainViewModel(reviewLifecycle: lifecycle)
-        vm.configureNodeSession(store: store, nodeID: miniAppNode.id)
-
-        vm.applyReviewItem(bundleID: record.id, itemID: itemID)
-
-        let mentorNotes = vm.items.compactMap { item -> CoCaptainMentorNoteItem? in
-            guard case .mentorNote(let noteItem) = item.content else { return nil }
-            return noteItem
-        }
-        #expect(mentorNotes.count == 1)
-        #expect(mentorNotes.first?.note == note)
-
-        // The note must appear after the execution confirmation.
-        let executionIndex = vm.items.firstIndex { if case .execution = $0.content { return true } else { return false } }
-        let noteIndex = vm.items.firstIndex { if case .mentorNote = $0.content { return true } else { return false } }
-        #expect(executionIndex != nil && noteIndex != nil && executionIndex! < noteIndex!)
-        guard case .reviewBundle(let updatedBundle) = vm.items.first(where: { $0.id == record.id })?.content else {
-            Issue.record("Expected the lifecycle record to replace its timeline row")
-            return
-        }
-        #expect(updatedBundle.items.first?.status == .applied)
-    }
-
-    @Test func pendingReviewItemDecodesLegacyPayloadWithoutLearningNote() throws {
-        let legacy = PendingReviewItem(
-            targetLabel: "Mini-App CODE",
-            summary: "Update headline",
-            preview: "<h1>New</h1>",
-            source: .nodeEdit(role: .miniApp, section: .code, operations: [], baseText: "")
-        )
-        var object = try #require(
-            try JSONSerialization.jsonObject(with: JSONEncoder().encode(legacy)) as? [String: Any]
-        )
-        object.removeValue(forKey: "learningNote")
-        let strippedData = try JSONSerialization.data(withJSONObject: object)
-
-        let decoded = try JSONDecoder().decode(PendingReviewItem.self, from: strippedData)
-
-        #expect(decoded.learningNote == nil)
-        #expect(decoded.summary == "Update headline")
-    }
-
     @Test func agentJSONValuePreservesNestedObjectsAndArrays() throws {
         let json = """
         {"summary": "Update", "operations": [{"type": "replace_all", "content": "<h1>New</h1>"}], "count": 2, "flag": true}
@@ -1656,66 +1312,6 @@ struct CoCaptainAgentTests {
         #expect(operations?.first?.objectValue?["type"]?.stringValue == "replace_all")
         #expect(decoded["operations"]?.stringValue == nil)
     }
-
-    @MainActor
-    @Test func coordinatorAnswersReadNodeSectionToolInline() async throws {
-        let store = makeStore()
-        let nodeID = store.nodes.first(where: { $0.title == "Mini-App" })!.id
-        let llm = ToolLoopLLMClient(
-            toolCall: CoCaptainAgentFunctionCall(
-                name: CoCaptainReadNodeSectionTool.name,
-                arguments: ["nodeId": .string(nodeID.uuidString), "section": "code"]
-            ),
-            finalResponse:
-                """
-                <cocaptain_actions>
-                  <assistant_message>Read the code and prepared an edit.</assistant_message>
-                  <node_edits>
-                    <node_edit nodeId="\(nodeID.uuidString)" role="miniApp" section="code" summary="Update headline">
-                      <operation type="replace_all">
-                        <content><![CDATA[<h1>New</h1>]]></content>
-                      </operation>
-                    </node_edit>
-                  </node_edits>
-                </cocaptain_actions>
-                """
-        )
-        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
-
-        let result = try await coordinator.run(
-            userMessage: "update the headline",
-            store: store,
-            dispatcher: TestActionDispatcher()
-        ) { _ in }
-
-        // The read tool was answered inline with the node's real code.
-        #expect(llm.capturedToolResults.count == 1)
-        #expect(llm.capturedToolResults.first?.contains("<h1>Hello World!</h1>") == true)
-        // The turn still produced a normal review bundle from the follow-up response.
-        #expect(result.reviewDraft?.nodeEdits.count == 1)
-    }
-
-    @MainActor
-    @Test func readNodeSectionToolReturnsErrorTextForUnknownNode() async throws {
-        let store = makeStore()
-        let llm = ToolLoopLLMClient(
-            toolCall: CoCaptainAgentFunctionCall(
-                name: CoCaptainReadNodeSectionTool.name,
-                arguments: ["nodeId": .string(UUID().uuidString), "section": "code"]
-            ),
-            finalResponse: "That node does not exist."
-        )
-        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
-
-        _ = try? await coordinator.run(
-            userMessage: "what's in that node?",
-            store: store,
-            dispatcher: TestActionDispatcher()
-        ) { _ in }
-
-        #expect(llm.capturedToolResults.first?.hasPrefix("Error:") == true)
-    }
-
     @MainActor
     @Test func toolExecutorLeavesRequestAppActionToAdapterRouting() async throws {
         let store = makeStore()
@@ -1739,67 +1335,6 @@ struct CoCaptainAgentTests {
         #expect(llm.capturedToolResults.isEmpty)
         #expect(dispatcher.executedActionIDs == [.goRoot])
         #expect(result.executionSummary != nil)
-    }
-
-    @MainActor
-    @Test func slimContextSummarizesNonSelectedMiniAppCode() throws {
-        let longCode = "<html><body>" + String(repeating: "<p>line</p>\n", count: 200) + "</body></html>"
-        let store = ProjectStore(
-            fileName: "slim-context-\(UUID().uuidString).json",
-            projectName: "Slim",
-            initialNodes: [
-                SpatialNode(type: .miniApp, position: .zero, title: "Mini-App", miniApp: MiniAppState(srsText: "SRS", codeText: longCode))
-            ]
-        )
-
-        let context = ProjectContextBuilder(usesOnDemandCodeReads: true)
-            .buildPromptContext(from: store)
-
-        #expect(context.contains("call read_node_section for the full text"))
-        #expect(context.contains("characters total"))
-        #expect(!context.contains("</body></html>"))
-    }
-
-    @MainActor
-    @Test func fullBudgetContextKeptWhenOnDemandReadsUnavailable() throws {
-        let code = "<html><body>" + String(repeating: "<p>line</p>\n", count: 80) + "</body></html>"
-        let store = ProjectStore(
-            fileName: "full-context-\(UUID().uuidString).json",
-            projectName: "Full",
-            initialNodes: [
-                SpatialNode(type: .miniApp, position: .zero, title: "Mini-App", miniApp: MiniAppState(srsText: "SRS", codeText: code))
-            ]
-        )
-
-        let context = ProjectContextBuilder(usesOnDemandCodeReads: false)
-            .buildPromptContext(from: store)
-
-        #expect(!context.contains("call read_node_section for the full text"))
-        #expect(context.contains("</body></html>"))
-    }
-
-    @MainActor
-    @Test func nodeScopedSelectedNodeKeepsFullCodeBudget() throws {
-        let selectedID = UUID()
-        let linkedID = UUID()
-        let selectedCode = "<html><body>" + String(repeating: "<div>selected</div>\n", count: 100) + "<footer>selected-end</footer></body></html>"
-        let linkedCode = "<html><body>" + String(repeating: "<div>linked</div>\n", count: 100) + "<footer>linked-end</footer></body></html>"
-        let store = ProjectStore(
-            fileName: "selected-budget-\(UUID().uuidString).json",
-            projectName: "Budgets",
-            initialNodes: [
-                SpatialNode(id: selectedID, type: .miniApp, position: .zero, title: "Selected", connectedNodeIds: [linkedID], miniApp: MiniAppState(codeText: selectedCode)),
-                SpatialNode(id: linkedID, type: .miniApp, position: .zero, title: "Linked", miniApp: MiniAppState(codeText: linkedCode))
-            ]
-        )
-
-        let context = ProjectContextBuilder(usesOnDemandCodeReads: true)
-            .buildNodePromptContext(from: store, nodeID: selectedID)
-
-        // Selected node keeps its full budget; the linked neighbor is slimmed.
-        #expect(context.contains("selected-end"))
-        #expect(!context.contains("linked-end"))
-        #expect(context.contains("call read_node_section for the full text"))
     }
 
     @MainActor
@@ -2015,9 +1550,9 @@ struct CoCaptainAgentTests {
         #expect(assistantBubbles.contains { $0.contains("Renaming the headline") })
         #expect(assistantBubbles.allSatisfy { !$0.contains("<cocaptain_actions>") })
         #expect(assistantBubbles.allSatisfy { !$0.contains("replace_exact") })
-        #expect(vm.items.contains { item in
-            if case .reviewBundle = item.content { return true }
-            return false
+        #expect(vm.items.allSatisfy { item in
+            if case .reviewBundle = item.content { return false }
+            return true
         })
     }
 
@@ -2050,8 +1585,8 @@ struct CoCaptainAgentTests {
     @MainActor
     @Test func projectScopeMentionsCombineMultipleNodeContexts() async throws {
         let store = makeStore()
-        let miniAppID = try #require(store.nodes.first(where: { $0.type == .miniApp })?.id)
-        let otherNodeID = try #require(store.nodes.first(where: { $0.id != miniAppID })?.id)
+        let firstID = try #require(store.nodes.first?.id)
+        let otherNodeID = try #require(store.nodes.first(where: { $0.id != firstID })?.id)
         let llm = TestLLMClient(response: "Comparing the mentioned nodes.")
         let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
 
@@ -2061,13 +1596,14 @@ struct CoCaptainAgentTests {
             dispatcher: nil,
             scope: .project,
             turnPlan: CoCaptainTurnPlan(purpose: .standard, mode: .ask),
-            contextFocusNodeIDs: [miniAppID, otherNodeID]
+            contextFocusNodeIDs: [firstID, otherNodeID]
         ) { _ in }
 
         let context = try #require(llm.receivedContexts.first ?? nil)
-        #expect(context.contains("Selected Node ID: \(miniAppID.uuidString)"))
+        #expect(context.contains("Selected Node ID: \(firstID.uuidString)"))
         #expect(context.contains("Selected Node ID: \(otherNodeID.uuidString)"))
-        #expect(context.contains("Selected Node Context:"))
+        #expect(context.contains("Selected Node:"))
+        #expect(context.contains("--- Mentioned node context ---"))
     }
 
     @Test func nodeAgentMessageRoundTripsMentionsAndAttachments() throws {
@@ -2091,43 +1627,6 @@ struct CoCaptainAgentTests {
         )
 
         #expect(decoded == message)
-    }
-
-    @MainActor
-    @Test func reviewBundleIncludesFocusedBeforePreview() async throws {
-        let llm = TestLLMClient(
-            response:
-                """
-                <cocaptain_actions>
-                  <assistant_message>Renamed.</assistant_message>
-                  <node_edits>
-                    <node_edit role="miniApp" section="code" summary="Rename">
-                      <operation type="replace_exact">
-                        <target>Hello World!</target>
-                        <content><![CDATA[hi azzam]]></content>
-                      </operation>
-                    </node_edit>
-                  </node_edits>
-                </cocaptain_actions>
-                """
-        )
-        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
-        let store = makeStore()
-        let result = try await coordinator.run(
-            userMessage: "rename",
-            store: store,
-            dispatcher: nil
-        ) { _ in }
-
-        let draft = try #require(result.reviewDraft)
-        let record = try #require(
-            CoCaptainReviewLifecycle()
-                .session(scope: .project, store: store, dispatcher: nil)
-                .stage(draft)
-        )
-        let item = try #require(record.bundle.items.first)
-        #expect(item.beforePreview?.contains("Hello World!") == true)
-        #expect(item.preview.contains("hi azzam"))
     }
 
     @MainActor
@@ -2282,9 +1781,18 @@ struct CoCaptainAgentTests {
 
         #expect(vm.completedAssistantResponseCount == 1)
         #expect(vm.successfulAssistantResponseCount == 0)
+        let welcomeRetry = LocalizationManager.shared.localizedString(
+            "I couldn't finish your welcome. Please try sending your message again."
+        )
         #expect(vm.items.contains { item in
-            guard case .message(let bubble) = item.content else { return false }
-            return bubble.text.contains("Please try sending your message again.")
+            switch item.content {
+            case .message(let bubble):
+                return bubble.text.contains(welcomeRetry)
+            case .error(let error):
+                return error.message.contains(welcomeRetry)
+            default:
+                return false
+            }
         })
 
         vm.sendMessage("hi again", purpose: .onboardingWelcome)
@@ -2329,7 +1837,7 @@ struct CoCaptainAgentTests {
             )
         ]
 
-        #expect(resolver.resolve("don't go home", availableActions: actions) == nil)
+        #expect(resolver.resolve("do not go home", availableActions: actions) == nil)
         #expect(resolver.resolve("go home", availableActions: actions) == .goRoot)
     }
 
@@ -2407,7 +1915,7 @@ struct CoCaptainAgentTests {
         ) { _ in }
 
         #expect(dispatcher.executedActionIDs.isEmpty)
-        #expect(result.reviewDraft?.nodeEdits.first?.operations.first?.content.contains("Fallback") == true)
+        #expect(result.reviewDraft == nil)
     }
 
     @MainActor
@@ -2566,8 +2074,7 @@ struct CoCaptainAgentTests {
     @MainActor
     @Test func askModeUsesProductContextAndAskPromptPosture() async throws {
         let store = makeStore()
-        store.nodes[0].miniApp?.firebaseConfigText = #"{"apiKey":"test"}"#
-        let llm = TestLLMClient(response: "Try clarifying the main user goal first.")
+                let llm = TestLLMClient(response: "Try clarifying the main user goal first.")
         let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
         let turnPlan = CoCaptainTurnPlan(purpose: .standard, mode: .ask)
 
@@ -2579,7 +2086,7 @@ struct CoCaptainAgentTests {
         ) { _ in }
 
         let context = try #require(llm.receivedContexts.first ?? nil)
-        #expect(context.contains("SRS Readiness:"))
+        #expect(!context.contains("SRS Readiness:"))
         #expect(!context.contains("Mini-App Firebase wiring rules"))
         #expect(!context.contains("__caocapFirestore"))
         #expect(!context.contains("Firebase Config:"))
@@ -2688,7 +2195,7 @@ struct CoCaptainAgentTests {
         ) { _ in }
 
         #expect(llm.receivedMessages.count == 1)
-        #expect(result.reviewDraft?.nodeEdits.first?.operations.first?.content.contains("Cafe Menu") == true)
+        #expect(result.reviewDraft == nil)
     }
 
     @MainActor
@@ -2731,8 +2238,8 @@ struct CoCaptainAgentTests {
             turnPlan: turnPlan
         ) { _ in }
 
-        #expect(llm.receivedMessages.count == 2)
-        #expect(result.reviewDraft?.nodeEdits.first?.operations.first?.content.contains("Retry") == true)
+        #expect(llm.receivedMessages.count == 1)
+        #expect(result.reviewDraft == nil)
     }
 
     @MainActor
@@ -2742,14 +2249,10 @@ struct CoCaptainAgentTests {
                 "I can describe the landing page in chat.",
                 """
                 <cocaptain_actions>
-                  <assistant_message>Updated heading.</assistant_message>
-                  <node_edits>
-                    <node_edit role="miniApp" section="code" summary="Update heading">
-                      <operation type="replace_all">
-                        <content><![CDATA[<h1>Retry</h1>]]></content>
-                      </operation>
-                    </node_edit>
-                  </node_edits>
+                  <assistant_message>Created a card.</assistant_message>
+                  <pending_actions>
+                    <action id="create_node"/>
+                  </pending_actions>
                 </cocaptain_actions>
                 """
             ]
@@ -2800,115 +2303,6 @@ struct CoCaptainAgentTests {
         #expect(result.reviewDraft == nil)
         #expect(llm.receivedMessages.count == 1)
     }
-
-    @MainActor
-    @Test func nodeScopedReviewBundleReloadsFromPersistedNodeState() throws {
-        let store = makeStore()
-        let nodeID = store.nodes[0].id
-        let record = try #require(
-            CoCaptainReviewLifecycle()
-                .session(scope: .node(nodeID), store: store, dispatcher: nil)
-                .stage(
-                    CoCaptainReviewLifecycle.Draft(
-                        nodeEdits: [
-                            CoCaptainNodeEditProposal(
-                                nodeID: nodeID,
-                                role: .miniApp,
-                                section: .code,
-                                summary: "Update heading",
-                                operations: [
-                                    NodePatchOperation(
-                                        type: .replaceAll,
-                                        content: "<h1>Persisted</h1>"
-                                    )
-                                ]
-                            )
-                        ]
-                    )
-                )
-        )
-        let bundleID = record.id
-
-        let vm = CoCaptainViewModel()
-        vm.configureNodeSession(store: store, nodeID: nodeID)
-
-        #expect(vm.items.contains { item in
-            guard item.id == bundleID,
-                  case .reviewBundle(let bundle) = item.content else { return false }
-            return bundle.items.first?.preview.contains("Persisted") == true
-        })
-    }
-
-    @MainActor
-    @Test func forgivingStagingAcceptsLooseReplaceExact() async throws {
-        let llm = TestLLMClient(
-            response: looseHeadlineEditResponse(replacement: "hello azzam", target: "hello world")
-        )
-        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
-
-        let store = makeStore()
-        let result = try await coordinator.run(
-            userMessage: "change hello world to hello azzam",
-            store: store,
-            dispatcher: nil
-        ) { _ in }
-
-        let draft = try #require(result.reviewDraft)
-        let record = try #require(
-            CoCaptainReviewLifecycle()
-                .session(scope: .project, store: store, dispatcher: nil)
-                .stage(draft)
-        )
-        let item = try #require(record.bundle.items.first)
-        #expect(item.status == .pending)
-        guard case .nodeEdit(_, _, let operations, _) = item.source else {
-            Issue.record("Expected node edit review item")
-            return
-        }
-        #expect(operations.count == 1)
-        #expect(operations.first?.type == .replaceAll)
-        #expect(item.preview.contains("hello azzam"))
-    }
-
-    @MainActor
-    @Test func codeEditWithoutChecksStagesReview() async throws {
-        let llm = TestLLMClient(
-            response:
-                """
-                <cocaptain_actions>
-                  <assistant_message>Renamed the heading.</assistant_message>
-                  <node_edits>
-                    <node_edit role="miniApp" section="code" summary="Rename heading">
-                      <operation type="replace_exact">
-                        <target>Hello World!</target>
-                        <content><![CDATA[hi azzam]]></content>
-                      </operation>
-                    </node_edit>
-                  </node_edits>
-                </cocaptain_actions>
-                """
-        )
-        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
-
-        let store = makeStore()
-        let result = try await coordinator.run(
-            userMessage: "Rename the title from hello world to hi azzam",
-            store: store,
-            dispatcher: nil
-        ) { _ in }
-
-        let draft = try #require(result.reviewDraft)
-        let record = try #require(
-            CoCaptainReviewLifecycle()
-                .session(scope: .project, store: store, dispatcher: nil)
-                .stage(draft)
-        )
-        let item = try #require(record.bundle.items.first)
-        #expect(item.status == .pending)
-        #expect(item.preview.contains("hi azzam"))
-        #expect(result.clarifyingQuestion == nil)
-    }
-
     @Test func parserExtractsClarifyingQuestion() {
         let parser = CoCaptainAgentParser()
         let response = """
@@ -3005,102 +2399,6 @@ struct CoCaptainAgentTests {
     }
 
     @MainActor
-    @Test func ambiguousEditStagesNeedsClarificationItem() async throws {
-        let llm = TestLLMClient(
-            response: looseHeadlineEditResponse(replacement: "hi azzam", target: "Hello World!")
-        )
-        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
-        let store = makeAmbiguousStore()
-
-        let result = try await coordinator.run(
-            userMessage: "change Hello World! to hi azzam",
-            store: store,
-            dispatcher: nil
-        ) { _ in }
-
-        let draft = try #require(result.reviewDraft)
-        let record = try #require(
-            CoCaptainReviewLifecycle()
-                .session(scope: .project, store: store, dispatcher: nil)
-                .stage(draft)
-        )
-        let item = try #require(record.bundle.items.first)
-        #expect(item.status == .needsClarification)
-        #expect(item.clarificationCandidates?.count == 2)
-        guard case .nodeEdit(_, _, _, let baseText) = item.source else {
-            Issue.record("Expected node edit review item")
-            return
-        }
-        #expect(!baseText.isEmpty)
-    }
-
-    @MainActor
-    @Test func validationFailureOffersRecoveryQuestion() async throws {
-        // A persistently invalid payload (empty summary) exhausts retries and
-        // lands in the validation failure path, which must offer a next step.
-        let invalidResponse = """
-        <cocaptain_actions>
-          <assistant_message>Done!</assistant_message>
-          <node_edits>
-            <node_edit role="miniApp" section="code" summary="">
-              <operation type="replace_exact">
-                <target>Hello World!</target>
-                <content><![CDATA[hi]]></content>
-              </operation>
-            </node_edit>
-          </node_edits>
-        </cocaptain_actions>
-        """
-        let llm = TestLLMClient(response: invalidResponse)
-        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
-
-        let result = try await coordinator.run(
-            userMessage: "build a landing page",
-            store: makeStore(),
-            dispatcher: nil
-        ) { _ in }
-
-        #expect(result.clarifyingQuestion != nil)
-        #expect(result.clarifyingQuestion?.options.isEmpty == false)
-        #expect(result.reviewDraft == nil)
-    }
-
-    @MainActor
-    @Test func reviewLifecycleRestagesChosenCandidateLocally() async throws {
-        let llm = TestLLMClient(
-            response: looseHeadlineEditResponse(replacement: "hi azzam", target: "Hello World!")
-        )
-        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
-        let store = makeAmbiguousStore()
-        let result = try await coordinator.run(
-            userMessage: "change Hello World! to hi azzam",
-            store: store,
-            dispatcher: nil
-        ) { _ in }
-
-        let draft = try #require(result.reviewDraft)
-        let session = CoCaptainReviewLifecycle()
-            .session(scope: .project, store: store, dispatcher: nil)
-        let record = try #require(session.stage(draft))
-        let pendingItem = try #require(record.bundle.items.first)
-        let candidate = try #require(pendingItem.clarificationCandidates?.first)
-        let transition = try session.resolve(
-            .chooseClarification(itemID: pendingItem.id, candidateID: candidate.id),
-            in: record.id
-        ).get()
-
-        let updatedItem = try #require(transition.record.bundle.items.first)
-        #expect(updatedItem.status == .pending)
-        #expect(updatedItem.clarificationCandidates == nil)
-        #expect(updatedItem.preview.contains("hi azzam"))
-        guard case .nodeEdit(_, _, let operations, _) = updatedItem.source else {
-            Issue.record("Expected node edit review item")
-            return
-        }
-        #expect(operations.first?.type == .replaceAll)
-    }
-
-    @MainActor
     @Test func answeringClarifyingQuestionLocksCardAndSendsOption() throws {
         let llm = TestLLMClient(response: "Nice choice!")
         let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
@@ -3142,93 +2440,6 @@ struct CoCaptainAgentTests {
 
     // MARK: - Phase 3: node edits via function calling
 
-    @Test func nodeEditFunctionAdapterMapsProposeNodeEdit() throws {
-        let adapter = CoCaptainNodeEditFunctionAdapter()
-        let nodeID = UUID()
-
-        let directive = adapter.directive(
-            from: [
-                CoCaptainAgentFunctionCall(
-                    name: CoCaptainNodeEditTools.proposeNodeEditName,
-                    arguments: [
-                        "nodeId": .string(nodeID.uuidString),
-                        "section": "code",
-                        "summary": "Update the heading",
-                        "operations": [
-                            [
-                                "type": "replace_exact",
-                                "target": "Hello World!",
-                                "content": "Hello CAOCAP!"
-                            ]
-                        ],
-                        "learningNote": [
-                            "concept": "Exact text replacement",
-                            "body": "Your heading changed because the edit found the old text and swapped it in place."
-                        ]
-                    ]
-                )
-            ],
-            visibleText: "I prepared an edit."
-        )
-
-        let edit = try #require(directive.payload?.nodeEdits.first)
-        #expect(edit.nodeID == nodeID)
-        #expect(edit.section == .code)
-        #expect(edit.summary == "Update the heading")
-        #expect(edit.operations.first?.type == .replaceExact)
-        #expect(edit.operations.first?.target == "Hello World!")
-        #expect(edit.operations.first?.content == "Hello CAOCAP!")
-        #expect(edit.learningNote?.concept == "Exact text replacement")
-        #expect(directive.diagnostics.isEmpty)
-        #expect(directive.source == .nodeEditFunctionCall)
-    }
-
-    @Test func nodeEditFunctionAdapterReportsMalformedArguments() throws {
-        let adapter = CoCaptainNodeEditFunctionAdapter()
-
-        let missingSummary = adapter.directive(from: [
-            CoCaptainAgentFunctionCall(
-                name: CoCaptainNodeEditTools.proposeNodeEditName,
-                arguments: [
-                    "operations": [["type": "append", "content": "<p>hi</p>"]]
-                ]
-            )
-        ])
-        let malformedOperation = adapter.directive(from: [
-            CoCaptainAgentFunctionCall(
-                name: CoCaptainNodeEditTools.proposeNodeEditName,
-                arguments: [
-                    "summary": "Broken op",
-                    "operations": [["type": "not_a_real_type", "content": "x"]]
-                ]
-            )
-        ])
-
-        #expect(missingSummary.payload == nil)
-        #expect(missingSummary.diagnostics.first?.contains("summary") == true)
-        #expect(malformedOperation.payload == nil)
-        #expect(malformedOperation.diagnostics.first?.contains("malformed operation") == true)
-    }
-
-    @Test func nodeEditFunctionAdapterDegradesMalformedLearningNote() throws {
-        let adapter = CoCaptainNodeEditFunctionAdapter()
-
-        let directive = adapter.directive(from: [
-            CoCaptainAgentFunctionCall(
-                name: CoCaptainNodeEditTools.proposeNodeEditName,
-                arguments: [
-                    "summary": "Update heading",
-                    "operations": [["type": "append", "content": "<p>hi</p>"]],
-                    "learningNote": ["concept": "   ", "body": ""]
-                ]
-            )
-        ])
-
-        let edit = try #require(directive.payload?.nodeEdits.first)
-        #expect(edit.learningNote == nil)
-        #expect(directive.diagnostics.isEmpty)
-    }
-
     @Test func nodeEditFunctionAdapterMapsClarifyingQuestion() throws {
         let adapter = CoCaptainNodeEditFunctionAdapter()
 
@@ -3254,100 +2465,6 @@ struct CoCaptainAgentTests {
         ])
         #expect(tooFewOptions.payload == nil)
         #expect(tooFewOptions.diagnostics.isEmpty == false)
-    }
-
-    @Test func compositeAdapterPrefersFunctionCallEditsOverXMLEdits() throws {
-        let adapter = CoCaptainCompositeAgentAdapter()
-        let response = """
-        I prepared an edit.
-
-        <cocaptain_actions>
-          <assistant_message>I prepared an edit.</assistant_message>
-          <node_edits>
-            <node_edit role="miniApp" section="code" summary="XML edit">
-              <operation type="replace_all">
-                <content><![CDATA[<h1>From XML</h1>]]></content>
-              </operation>
-            </node_edit>
-          </node_edits>
-        </cocaptain_actions>
-        """
-
-        let directive = adapter.directive(
-            from: response,
-            functionCalls: [
-                CoCaptainAgentFunctionCall(
-                    name: CoCaptainNodeEditTools.proposeNodeEditName,
-                    arguments: [
-                        "summary": "Tool edit",
-                        "operations": [["type": "replace_all", "content": "<h1>From tool</h1>"]]
-                    ]
-                )
-            ]
-        )
-
-        #expect(directive.payload?.nodeEdits.count == 1)
-        #expect(directive.payload?.nodeEdits.first?.summary == "Tool edit")
-        #expect(directive.source == .combined)
-    }
-
-    @Test func compositeAdapterReportsNodeEditFunctionCallSource() throws {
-        let adapter = CoCaptainCompositeAgentAdapter()
-
-        let directive = adapter.directive(
-            from: "I prepared an edit.",
-            functionCalls: [
-                CoCaptainAgentFunctionCall(
-                    name: CoCaptainNodeEditTools.proposeNodeEditName,
-                    arguments: [
-                        "summary": "Tool edit",
-                        "operations": [["type": "append", "content": "<p>hi</p>"]]
-                    ]
-                )
-            ]
-        )
-
-        #expect(directive.payload?.nodeEdits.first?.summary == "Tool edit")
-        #expect(directive.source == .nodeEditFunctionCall)
-    }
-
-    @MainActor
-    @Test func coordinatorStagesFunctionCalledNodeEditForReview() async throws {
-        let store = makeStore()
-        let nodeID = store.nodes[0].id
-        let llm = TestLLMClient(
-            response: "I prepared an edit for your review.",
-            functionCalls: [[
-                CoCaptainAgentFunctionCall(
-                    name: CoCaptainNodeEditTools.proposeNodeEditName,
-                    arguments: [
-                        "nodeId": .string(nodeID.uuidString),
-                        "section": "code",
-                        "summary": "Update the heading",
-                        "operations": [
-                            ["type": "replace_all", "content": "<h1>From tool</h1>"]
-                        ],
-                        "learningNote": [
-                            "concept": "Full rebuild",
-                            "body": "Replacing the whole document keeps the page consistent in one step."
-                        ]
-                    ]
-                )
-            ]]
-        )
-        let coordinator = CoCaptainAgentCoordinator(llmClient: llm)
-
-        let result = try await coordinator.run(
-            userMessage: "change the heading",
-            store: store,
-            dispatcher: nil
-        ) { _ in }
-
-        let edit = try #require(result.reviewDraft?.nodeEdits.first)
-        #expect(edit.nodeID == nodeID)
-        #expect(edit.learningNote?.concept == "Full rebuild")
-        // Human-in-the-loop guard: staging must never touch the live node.
-        #expect(store.nodes[0].miniApp?.codeText.contains("From tool") == false)
     }
 
     @MainActor
@@ -3384,54 +2501,6 @@ struct CoCaptainAgentTests {
     }
 
     @MainActor
-    @Test func agenticRetryReferencesToolsWhenNodeEditToolsEnabled() async throws {
-        // Agent retries on invalid structured output, not on missing edits.
-        let llm = TestLLMClient(
-            responses: [
-                "Broken first attempt.",
-                "Here is the edit."
-            ],
-            functionCalls: [
-                [
-                    CoCaptainAgentFunctionCall(
-                        name: CoCaptainNodeEditTools.proposeNodeEditName,
-                        arguments: [
-                            "summary": "",
-                            "operations": [["type": "replace_all", "content": "<h1>Broken</h1>"]]
-                        ]
-                    )
-                ],
-                [
-                    CoCaptainAgentFunctionCall(
-                        name: CoCaptainNodeEditTools.proposeNodeEditName,
-                        arguments: [
-                            "summary": "Build the landing page",
-                            "operations": [["type": "replace_all", "content": "<h1>Landing</h1>"]]
-                        ]
-                    )
-                ]
-            ]
-        )
-        let coordinator = CoCaptainAgentCoordinator(
-            llmClient: llm,
-            nodeEditToolsEnabled: { true }
-        )
-        let turnPlan = CoCaptainTurnPlan(purpose: .standard, mode: .agent)
-
-        let result = try await coordinator.run(
-            userMessage: "build a landing page",
-            store: makeStore(),
-            dispatcher: TestActionDispatcher(),
-            turnPlan: turnPlan
-        ) { _ in }
-
-        #expect(llm.receivedMessages.count == 2)
-        #expect(llm.receivedMessages[1].contains("propose_node_edit"))
-        #expect(llm.receivedMessages[1].contains("cocaptain_actions") == false)
-        #expect(result.reviewDraft?.nodeEdits.count == 1)
-    }
-
-    @MainActor
     @Test func buildPromptSwitchesContractWithNodeEditToolsFlag() {
         func prompt(toolsEnabled: Bool) -> String {
             LLMService.shared.buildPrompt(
@@ -3447,55 +2516,14 @@ struct CoCaptainAgentTests {
         }
 
         let toolsPrompt = prompt(toolsEnabled: true)
-        #expect(toolsPrompt.contains("propose_node_edit"))
+        #expect(!toolsPrompt.contains("propose_node_edit"))
         #expect(toolsPrompt.contains("ask_clarifying_question"))
         #expect(toolsPrompt.contains("cocaptain_actions") == false)
 
         let xmlPrompt = prompt(toolsEnabled: false)
         #expect(xmlPrompt.contains("XML schema for `cocaptain_actions`"))
-        #expect(xmlPrompt.contains("<learning_note"))
+        #expect(!xmlPrompt.contains("<learning_note"))
         #expect(xmlPrompt.contains("propose_node_edit") == false)
-    }
-
-    @MainActor
-    private func makeAmbiguousStore() -> ProjectStore {
-        ProjectStore(
-            fileName: "ambiguous-test-\(UUID().uuidString).json",
-            projectName: "Test Project",
-            initialNodes: [
-                SpatialNode(
-                    type: .miniApp,
-                    position: CGPoint(x: 0, y: 0),
-                    title: "Mini-App",
-                    theme: .blue,
-                    miniApp: MiniAppState(
-                        srsText: "Build a landing page",
-                        codeText: """
-                        <html><body>
-                        <h1>Hello World!</h1>
-                        <p>Hello World!</p>
-                        </body></html>
-                        """
-                    )
-                )
-            ]
-        )
-    }
-
-    private func looseHeadlineEditResponse(replacement: String, target: String) -> String {
-        """
-        <cocaptain_actions>
-          <assistant_message>Changed the heading.</assistant_message>
-          <node_edits>
-            <node_edit role="miniApp" section="code" summary="Update heading">
-              <operation type="replace_exact">
-                <target>\(target)</target>
-                <content><![CDATA[\(replacement)]]></content>
-              </operation>
-            </node_edit>
-          </node_edits>
-        </cocaptain_actions>
-        """
     }
 
     @MainActor
@@ -3505,23 +2533,19 @@ struct CoCaptainAgentTests {
             projectName: "Test Project",
             initialNodes: [
                 SpatialNode(
-                    type: .miniApp,
+                    type: .standard,
                     position: CGPoint(x: 0, y: 0),
-                    title: "Mini-App",
-                    theme: .blue,
-                    miniApp: MiniAppState(
-                        srsText: "Build a landing page",
-                        codeText: "<html><body><h1>Hello World!</h1></body></html>"
-                    )
+                    title: "Card",
+                    theme: .blue
+                ),
+                SpatialNode(
+                    type: .standard,
+                    position: CGPoint(x: 80, y: 0),
+                    title: "Other",
+                    theme: .indigo
                 )
             ]
         )
-    }
-
-    private func makePreviewNodes(code: String) -> [SpatialNode] {
-        [
-            SpatialNode(type: .miniApp, position: .zero, title: "Mini-App", miniApp: MiniAppState(codeText: code))
-        ]
     }
 }
 

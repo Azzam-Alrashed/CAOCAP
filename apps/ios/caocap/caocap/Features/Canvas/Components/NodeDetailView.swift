@@ -133,7 +133,7 @@ private struct MiniAppSettingsView: View {
                     }
                 }
             }
-            .navigationTitle(currentNode.type == .miniApp ? "Mini-App Settings" : "Node Settings")
+            .navigationTitle("Node Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {

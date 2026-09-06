@@ -311,40 +311,6 @@ public class ProjectStore {
     public func updateNodeType(id: UUID, type: NodeType, persist: Bool = true) {
         mutationEngine.updateNodeType(nodes: &nodes, id: id, type: type, persist: persist)
     }
-    public func updateNodeTextContent(id: UUID, text: String, persist: Bool = true) {
-        mutationEngine.updateNodeTextContent(nodes: &nodes, id: id, text: text, persist: persist)
-    }
-    public func updateMiniAppSRS(id: UUID, text: String, persist: Bool = true) {
-        mutationEngine.updateMiniAppSRS(nodes: &nodes, id: id, text: text, persist: persist)
-    }
-    public func updateMiniAppCode(id: UUID, text: String, persist: Bool = true) {
-        mutationEngine.updateMiniAppCode(nodes: &nodes, id: id, text: text, persist: persist)
-    }
-    public func updateMiniAppFirebaseConfig(id: UUID, text: String, persist: Bool = true) {
-        mutationEngine.updateMiniAppFirebaseConfig(nodes: &nodes, id: id, text: text, persist: persist)
-    }
-    public func updateMiniAppPublishMetadata(
-        id: UUID,
-        publishURL: String,
-        githubRepoOwner: String,
-        githubRepoName: String,
-        githubRepoId: Int,
-        isPrivate: Bool,
-        publishedAt: Date = Date(),
-        persist: Bool = true
-    ) {
-        mutationEngine.updateMiniAppPublishMetadata(
-            nodes: &nodes,
-            id: id,
-            publishURL: publishURL,
-            githubRepoOwner: githubRepoOwner,
-            githubRepoName: githubRepoName,
-            githubRepoId: githubRepoId,
-            isPrivate: isPrivate,
-            publishedAt: publishedAt,
-            persist: persist
-        )
-    }
     public func updateNodeAgentState(id: UUID, agentState: NodeAgentState, persist: Bool = true) {
         mutationEngine.updateNodeAgentState(nodes: &nodes, id: id, agentState: agentState, persist: persist)
     }
@@ -412,9 +378,6 @@ public class ProjectStore {
     }
     public func deleteNode(id: UUID, persist: Bool = true) {
         mutationEngine.deleteNode(nodes: &nodes, id: id, persist: persist)
-    }
-    public func updateNodeFirebaseFirestorePath(id: UUID, path: String?, persist: Bool = true) {
-        mutationEngine.updateNodeFirebaseFirestorePath(nodes: &nodes, id: id, path: path, persist: persist)
     }
 
 }

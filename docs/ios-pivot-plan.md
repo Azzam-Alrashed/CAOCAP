@@ -134,12 +134,16 @@ There are no users, so we did not migrate saved mini-app homes. New saves do not
 
 ## Phase 8 — CoCaptain chats; it does not edit HTML
 
-**Status:** Not started  
+**Status:** Done
 **Depends on:** Phase 7
 
-- Keep conversation UI, personas, and sign-in-aware session.
-- Remove SRS / code patch proposals and review flows that only existed for mini-apps.
-- Canvas actions such as create / move a node can stay if they still compile.
+CoCaptain still talks. It no longer offers HTML or SRS patches.
+
+- Kept conversation UI, personas, and the sign-in-aware session.
+- Parser, tools, prompts, and review staging drop `node_edit` / `propose_node_edit` HTML and SRS proposals.
+- Leftover HTML-edit review items conflict instead of applying.
+- Canvas actions such as create / move a node can still go through review.
+- Deleted or updated tests that only covered HTML patch / review.
 
 **You should see:** CoCaptain talks. It does not offer “apply this HTML change.”
 
@@ -147,11 +151,11 @@ There are no users, so we did not migrate saved mini-app homes. New saves do not
 
 ## Phase 9 — Docs match the leftover app
 
-**Status:** Not started  
+**Status:** Done
 **Depends on:** Phase 8
 
-- Update iOS setup notes, canvas / session READMEs, and the SRS current-state row.
-- Do not add companion or mini-app requirements. Keep Explore / Build / Collaborate marked planned.
+- Updated iOS setup notes, canvas / session / CoCaptain READMEs, and the SRS current-state iOS row.
+- Did not add companion or mini-app requirements. Explore / Build / Collaborate stay planned.
 
 **You should see:** README and `apps/ios/README.md` describe a canvas + CoCaptain + sign-in shell, not a mini-app studio.
 

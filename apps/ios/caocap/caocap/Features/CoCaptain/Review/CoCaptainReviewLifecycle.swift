@@ -4,8 +4,8 @@ import OSLog
 /// Owns the complete human-in-the-loop lifecycle for CoCaptain review work.
 ///
 /// Model-output validation and timeline rendering remain outside this module.
-/// Staging is side-effect free: only an explicit approval may mutate a
-/// Mini-App or perform an app action.
+/// Staging is side-effect free: only an explicit approval may perform an
+/// app action. HTML / SRS node edits are not applied.
 @MainActor
 public final class CoCaptainReviewLifecycle {
     public struct Draft: Hashable {
@@ -21,7 +21,7 @@ public final class CoCaptainReviewLifecycle {
         }
 
         public var isEmpty: Bool {
-            pendingActions.isEmpty && nodeEdits.isEmpty
+            pendingActions.isEmpty
         }
     }
 
@@ -140,7 +140,6 @@ public final class CoCaptainReviewLifecycle {
         private let scope: CoCaptainAgentScope
         private let store: ProjectStore?
         private var dispatcher: (any AppActionPerforming)?
-        private let patchEngine: NodePatchEngine
         private let logger = Logger(
             subsystem: "com.caocap.CoCaptainReviewLifecycle",
             category: "Session"
@@ -149,13 +148,11 @@ public final class CoCaptainReviewLifecycle {
         fileprivate init(
             scope: CoCaptainAgentScope,
             store: ProjectStore?,
-            dispatcher: (any AppActionPerforming)?,
-            patchEngine: NodePatchEngine
+            dispatcher: (any AppActionPerforming)?
         ) {
             self.scope = scope
             self.store = store
             self.dispatcher = dispatcher
-            self.patchEngine = patchEngine
             self.records = []
             restorePersistedRecords()
         }
@@ -170,8 +167,7 @@ public final class CoCaptainReviewLifecycle {
         public func stage(_ draft: Draft, createdAt: Date = Date()) -> Record? {
             guard !draft.isEmpty else { return nil }
 
-            var items = draft.pendingActions.map(stageAction)
-            items.append(contentsOf: draft.nodeEdits.map(stageNodeEdit))
+            let items = draft.pendingActions.map(stageAction)
             guard !items.isEmpty else { return nil }
 
             let bundle = ReviewBundleItem(
@@ -294,103 +290,6 @@ public final class CoCaptainReviewLifecycle {
             )
         }
 
-        private func stageNodeEdit(_ edit: CoCaptainNodeEditProposal) -> PendingReviewItem {
-            guard let store else {
-                let reason = LocalizationManager.shared.localizedString(
-                    "No active project context is available for this edit."
-                )
-                return PendingReviewItem(
-                    targetNodeID: edit.nodeID,
-                    targetLabel: edit.role.localizedDisplayName,
-                    summary: edit.summary,
-                    preview: reason,
-                    status: .conflicted,
-                    source: .nodeEdit(
-                        role: edit.role,
-                        section: edit.section,
-                        operations: edit.operations,
-                        baseText: ""
-                    ),
-                    conflictDescription: reason,
-                    learningNote: edit.learningNote ?? fallbackLearningNote(for: edit)
-                )
-            }
-
-            do {
-                let resolved = try patchEngine.previewResolving(
-                    nodeID: edit.nodeID,
-                    role: edit.role,
-                    section: edit.section,
-                    operations: edit.operations,
-                    in: store
-                )
-                let preview = resolved.preview
-                let targetNode = store.nodes.first(where: { $0.id == preview.nodeID })
-                let snippets = CoCaptainReviewDiffSnippetter.makeSnippets(
-                    before: preview.originalText,
-                    after: preview.resultText
-                )
-                return PendingReviewItem(
-                    targetNodeID: preview.nodeID,
-                    targetLabel: "\(targetNode?.displayTitle ?? edit.role.localizedDisplayName) \(edit.section.rawValue.uppercased())",
-                    summary: edit.summary,
-                    preview: snippets.after,
-                    beforePreview: snippets.before,
-                    source: .nodeEdit(
-                        role: edit.role,
-                        section: edit.section,
-                        operations: resolved.canonicalOperations,
-                        baseText: preview.originalText
-                    ),
-                    learningNote: edit.learningNote ?? fallbackLearningNote(for: edit)
-                )
-            } catch let NodePatchError.ambiguous(_, candidates) {
-                return clarificationItem(for: edit, candidates: candidates, store: store)
-            } catch {
-                return PendingReviewItem(
-                    targetNodeID: edit.nodeID,
-                    targetLabel: edit.role.localizedDisplayName,
-                    summary: edit.summary,
-                    preview: error.localizedDescription,
-                    status: .conflicted,
-                    source: .nodeEdit(
-                        role: edit.role,
-                        section: edit.section,
-                        operations: edit.operations,
-                        baseText: ""
-                    ),
-                    conflictDescription: error.localizedDescription,
-                    learningNote: edit.learningNote ?? fallbackLearningNote(for: edit)
-                )
-            }
-        }
-
-        private func clarificationItem(
-            for edit: CoCaptainNodeEditProposal,
-            candidates: [PatchMatchCandidate],
-            store: ProjectStore
-        ) -> PendingReviewItem {
-            let node = patchEngine.resolveNode(nodeID: edit.nodeID, for: edit.role, in: store)
-            let baseText = sectionText(edit.section, from: node)
-            return PendingReviewItem(
-                targetNodeID: node?.id ?? edit.nodeID,
-                targetLabel: "\(node?.displayTitle ?? edit.role.localizedDisplayName) \(edit.section.rawValue.uppercased())",
-                summary: edit.summary,
-                preview: LocalizationManager.shared.localizedString(
-                    "I found a few places that could match. Pick the one you meant and I'll make the change."
-                ),
-                status: .needsClarification,
-                source: .nodeEdit(
-                    role: edit.role,
-                    section: edit.section,
-                    operations: edit.operations,
-                    baseText: baseText
-                ),
-                clarificationCandidates: candidates,
-                learningNote: edit.learningNote ?? fallbackLearningNote(for: edit)
-            )
-        }
-
         private func approve(
             itemID: UUID,
             in record: inout Record,
@@ -450,10 +349,10 @@ public final class CoCaptainReviewLifecycle {
             guard item.status == .needsClarification else {
                 return .failure(.decisionNotAllowed(itemID: itemID, status: item.status))
             }
-            guard case .nodeEdit(let role, let section, let operations, let baseText) = item.source else {
+            guard case .nodeEdit = item.source else {
                 return .failure(.invalidSource(itemID: itemID))
             }
-            guard let candidate = item.clarificationCandidates?.first(where: { $0.id == candidateID }) else {
+            guard item.clarificationCandidates?.contains(where: { $0.id == candidateID }) == true else {
                 return .failure(
                     .clarificationCandidateNotFound(
                         itemID: itemID,
@@ -463,56 +362,14 @@ public final class CoCaptainReviewLifecycle {
             }
 
             var updatedItem = item
-            do {
-                guard let store,
-                      let node = patchEngine.resolveNode(
-                        nodeID: item.targetNodeID,
-                        for: role,
-                        in: store
-                      ) else {
-                    throw NodePatchError.missingNode(role)
-                }
-                guard sectionText(section, from: node) == baseText else {
-                    throw NodePatchError.conflict(Self.staleEditDescription)
-                }
-                let resolved = try patchEngine.previewResolving(
-                    nodeID: node.id,
-                    role: role,
-                    section: section,
-                    operations: operations,
-                    in: store,
-                    choosing: candidate
-                )
-                let snippets = CoCaptainReviewDiffSnippetter.makeSnippets(
-                    before: resolved.preview.originalText,
-                    after: resolved.preview.resultText
-                )
-                updatedItem = PendingReviewItem(
-                    id: item.id,
-                    targetNodeID: resolved.preview.nodeID,
-                    targetLabel: item.targetLabel,
-                    summary: item.summary,
-                    preview: snippets.after,
-                    beforePreview: snippets.before,
-                    status: .pending,
-                    source: .nodeEdit(
-                        role: role,
-                        section: section,
-                        operations: resolved.canonicalOperations,
-                        baseText: resolved.preview.originalText
-                    ),
-                    learningNote: item.learningNote
-                )
-                record.bundle.items[itemIndex] = updatedItem
-                return .success([.clarificationResolved(itemID: itemID)])
-            } catch {
-                let description = error.localizedDescription
-                updatedItem.status = .conflicted
-                updatedItem.conflictDescription = description
-                updatedItem.clarificationCandidates = nil
-                record.bundle.items[itemIndex] = updatedItem
-                return .success([.conflicted(itemID: itemID, description: description)])
-            }
+            let description = LocalizationManager.shared.localizedString(
+                "CoCaptain no longer applies HTML or SRS edits."
+            )
+            updatedItem.status = .conflicted
+            updatedItem.conflictDescription = description
+            updatedItem.clarificationCandidates = nil
+            record.bundle.items[itemIndex] = updatedItem
+            return .success([.conflicted(itemID: itemID, description: description)])
         }
 
         private func approveAll(in record: inout Record) -> Result<[Effect], Failure> {
@@ -572,56 +429,13 @@ public final class CoCaptainReviewLifecycle {
             case .unavailableAction(_, let reason):
                 return conflict(&item, description: reason)
 
-            case .nodeEdit(let role, let section, let operations, let baseText):
-                guard let store,
-                      let node = patchEngine.resolveNode(
-                        nodeID: item.targetNodeID,
-                        for: role,
-                        in: store
-                      ) else {
-                    return conflict(
-                        &item,
-                        description: LocalizationManager.shared.localizedString(
-                            "The node could not be found in the current project."
-                        )
+            case .nodeEdit:
+                return conflict(
+                    &item,
+                    description: LocalizationManager.shared.localizedString(
+                        "CoCaptain no longer applies HTML or SRS edits."
                     )
-                }
-                guard sectionText(section, from: node) == baseText else {
-                    return conflict(&item, description: Self.staleEditDescription)
-                }
-
-                do {
-                    let preview = try patchEngine.preview(
-                        nodeID: node.id,
-                        role: role,
-                        section: section,
-                        operations: operations,
-                        in: store
-                    )
-                    switch section {
-                    case .srs:
-                        store.updateMiniAppSRS(id: node.id, text: preview.resultText, persist: true)
-                    case .code:
-                        store.updateMiniAppCode(id: node.id, text: preview.resultText, persist: true)
-                    }
-                    item.status = .applied
-                    item.conflictDescription = nil
-
-                    var effects: [Effect] = [
-                        .nodeEditApplied(
-                            itemID: item.id,
-                            nodeID: node.id,
-                            role: role,
-                            section: section
-                        )
-                    ]
-                    if let note = item.learningNote {
-                        effects.append(.learningNote(itemID: item.id, note: note))
-                    }
-                    return effects
-                } catch {
-                    return conflict(&item, description: error.localizedDescription)
-                }
+                )
             }
         }
 
@@ -633,34 +447,6 @@ public final class CoCaptainReviewLifecycle {
             item.conflictDescription = description
             item.clarificationCandidates = nil
             return [.conflicted(itemID: item.id, description: description)]
-        }
-
-        private func sectionText(
-            _ section: CoCaptainNodeEditProposal.MiniAppSection,
-            from node: SpatialNode?
-        ) -> String {
-            switch section {
-            case .srs:
-                return node?.miniApp?.srsText ?? ""
-            case .code:
-                return node?.miniApp?.codeText ?? ""
-            }
-        }
-
-        private func fallbackLearningNote(
-            for edit: CoCaptainNodeEditProposal
-        ) -> CoCaptainLearningNote? {
-            let summary = edit.summary.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !summary.isEmpty else { return nil }
-            return CoCaptainLearningNote(
-                concept: LocalizationManager.shared.localizedString(
-                    "cocaptain.mentorNote.fallbackConcept"
-                ),
-                body: LocalizationManager.shared.localizedString(
-                    "cocaptain.mentorNote.fallbackBody",
-                    arguments: [summary]
-                )
-            )
         }
 
         private func actionPreview(
@@ -803,18 +589,9 @@ public final class CoCaptainReviewLifecycle {
             store.updateNodeAgentState(id: nodeID, agentState: agentState)
         }
 
-        private static var staleEditDescription: String {
-            LocalizationManager.shared.localizedString(
-                "This node was edited after the suggestion was generated. Ask Co-Captain to revise."
-            )
-        }
     }
 
-    private let patchEngine: NodePatchEngine
-
-    public init(patchEngine: NodePatchEngine = NodePatchEngine()) {
-        self.patchEngine = patchEngine
-    }
+    public init() {}
 
     public func session(
         scope: CoCaptainAgentScope,
@@ -824,8 +601,7 @@ public final class CoCaptainReviewLifecycle {
         Session(
             scope: scope,
             store: store,
-            dispatcher: dispatcher,
-            patchEngine: patchEngine
+            dispatcher: dispatcher
         )
     }
 

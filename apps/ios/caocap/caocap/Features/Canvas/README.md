@@ -1,6 +1,8 @@
 # Canvas Feature
 
-The Canvas feature is CAOCAP's spatial runtime. It renders the infinite workspace, Mini-App nodes, sub-canvases, links, embedded previews, and editor overlays.
+The Canvas feature is CAOCAP's leftover spatial workspace. It renders an infinite Home canvas of ordinary cards, sub-canvases, links, pan, zoom, save, and undo.
+
+Home starts empty. There are no launch cards. Explore, Build (mindmaps), and Collaborate are planned and are not implemented here.
 
 ## Ownership
 
@@ -8,19 +10,15 @@ The Canvas feature is CAOCAP's spatial runtime. It renders the infinite workspac
 - `InfiniteCanvasView` owns transient interaction state: active viewport gestures, selected node, node drag offsets, and whether a node is currently being dragged.
 - `ViewportState` owns pan and zoom math. Keep gesture calculations here instead of spreading geometry math through views.
 - `NodeView` renders one node. It should stay presentational.
-- `NodeDetailView` inspects a node as a card. It does not open a live HTML preview or publish sheet.
-- Providers under `Providers/` define the root constellation, curated Tutorial
-  and Pac-Man canvases, and generic Mini-App starter content.
-- The protected Activity action node renders the device-wide 17-week save
-  heatmap directly on the root canvas and opens the expanded activity sheet.
+- `NodeDetailView` inspects a node as a card. It does not open an HTML editor or publish sheet.
+- Providers under `Providers/` define the empty root canvas. They do not seed demo apps.
 
 ## Data Flow
 
 1. `ContentView` provides an active `ProjectStore` from `AppRouter`.
 2. `InfiniteCanvasView` renders `store.nodes`.
-3. Tapping a leftover Mini-App inspects the card, tapping an action node calls
-   `onNodeAction`, and tapping a subcanvas portal opens its linked canvas file.
-4. `ProjectStore` debounces saves. It does not compile live HTML previews.
+3. Tapping a card inspects it. Tapping an action node calls `onNodeAction`. Tapping a subcanvas portal opens its linked canvas file.
+4. `ProjectStore` debounces saves. New cards persist title and position. Saves do not write HTML or SRS.
 5. `ConnectionLayer` draws arrows from `nextNodeId` and `connectedNodeIds`.
 
 Views should call store methods rather than mutating `store.nodes` directly.
@@ -34,30 +32,26 @@ Views should call store methods rather than mutating `store.nodes` directly.
 
 When changing gestures or connection rendering, test pan, zoom, drag, and arrow placement together.
 
-
-
 ## Editing Guidance
 
 - Put reusable node graph construction in `Providers/`, not in `AppRouter` or large views.
 - Keep `NodeView` focused on visual rendering. Put editing behavior in sheet views or store methods.
-- Keep `NodeDetailView` focused on Mini-App preview/tool routing; put persistent mutations in store methods.
-- If adding a node type, update `SpatialNode`, `NodeDetailView`, `ProjectContextBuilder`, and any CoCaptain role/patch behavior that should understand it.
-- Mini-App preview content should flow through `ProjectStore` compilation instead of being assembled in UI components.
+- Keep `NodeDetailView` focused on card inspection; put persistent mutations in store methods.
+- If adding a node type, update `SpatialNode`, `NodeDetailView`, and `ProjectContextBuilder`.
+- Do not add HTML, SRS, or live-preview compilation back onto cards.
 
 ## Verification Checklist
 
-- Create/open a project and confirm nodes render at the expected zoom.
-- Drag a node, pan the canvas, pinch zoom, then reopen the project and verify persisted state.
+- Fresh install: Home is empty except the HUD and FAB. You can still pan and zoom.
+- Create a card, drag it, pan, pinch zoom, quit, and reopen. Position and title remain.
 - Check connection arrows while dragging nodes and at multiple zoom levels.
-- Verify action nodes on the Home screen navigate to correct destinations.
-- Make a saved change on any canvas, return to Root, and confirm the Activity
-  node and expanded sheet update without counting failed or cancelled saves.
+- Settings, Profile, Help, sign-in, and CoCaptain stay reachable from the HUD, FAB / command palette, and existing sheets.
 
 ## Test Targets
 
 Useful test coverage for this feature:
 
 - `ViewportState` pan and zoom math.
-- `ProjectStore` Mini-App preview compilation.
 - save/load of node positions, links, and viewport state.
-- provider output for required home action nodes.
+- leftover mini-app files decode as ordinary cards.
+- tapping a leftover mini-app card inspects it instead of opening an editor.

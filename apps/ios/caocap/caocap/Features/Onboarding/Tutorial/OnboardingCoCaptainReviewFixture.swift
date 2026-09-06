@@ -1,29 +1,14 @@
 import Foundation
 
-/// Offline-safe typed review draft used when the guided onboarding edit cannot reach the model.
+/// Offline fallback used when a guided onboarding turn cannot reach the model.
+/// Lesson catalogue is empty, so this no longer stages HTML review drafts.
 enum OnboardingCoCaptainReviewFixture {
     static func makeDraft(
         nodeID: UUID,
         baseText: String
     ) -> CoCaptainReviewLifecycle.Draft {
-        let updatedText = baseText.replacingOccurrences(
-            of: "Hello World!",
-            with: "Hello from CoCaptain!"
-        )
-        return CoCaptainReviewLifecycle.Draft(
-            nodeEdits: [
-                CoCaptainNodeEditProposal(
-                    nodeID: nodeID,
-                    role: .miniApp,
-                    section: .code,
-                    summary: LocalizationManager.shared.localizedString(
-                        "Update the headline to greet you from CoCaptain."
-                    ),
-                    operations: [
-                        NodePatchOperation(type: .replaceAll, content: updatedText)
-                    ]
-                )
-            ]
-        )
+        _ = nodeID
+        _ = baseText
+        return CoCaptainReviewLifecycle.Draft()
     }
 }

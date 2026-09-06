@@ -133,15 +133,15 @@ struct AppSessionCoordinatorTests {
         #expect(scale == 1.2)
     }
 
-    @Test func flyToTargetScaleFallsBackToDefaultMiniAppSize() {
+    @Test func flyToTargetScaleFallsBackToDefaultCardSize() {
         let session = AppSessionCoordinator()
         let nodeID = UUID()
-        let node = SpatialNode(id: nodeID, type: .miniApp, position: .zero, title: "Mini")
+        let node = SpatialNode(id: nodeID, type: .standard, position: .zero, title: "Card")
         session.containerSize = CGSize(width: 375, height: 667)
 
         let scale = session.flyToTargetScale(for: node, nodeId: nodeID)
 
-        #expect(scale == 0.8)
+        #expect(abs(scale - ((375 * 0.8) / 280)) < 0.0001)
     }
 
     @Test func bootstrapDismissesLaunchAfterReadyMinimumNotFixedTwoPointFiveSeconds() async {

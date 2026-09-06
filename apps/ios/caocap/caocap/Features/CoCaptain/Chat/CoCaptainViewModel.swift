@@ -1138,45 +1138,18 @@ public final class CoCaptainViewModel {
     ) {
         removeEmptyMessage(id: replacingMessageID)
 
-        guard case .node(let nodeID) = scope,
-              let store,
-              let node = store.nodes.first(where: { $0.id == nodeID }),
-              let baseText = node.miniApp?.codeText else {
-            markAssistantResponseCompleted(
-                turnID: turnID,
-                purpose: .onboardingGuidedEdit,
-                successful: false
-            )
-            return
-        }
-
         appendAssistantMessage(
             LocalizationManager.shared.localizedString(
                 "onboarding.guidedEdit.fallback.message"
             )
         )
-        let draft = OnboardingCoCaptainReviewFixture.makeDraft(
-            nodeID: nodeID,
-            baseText: baseText
-        )
-        guard let record = stageReviewDraft(draft) else {
-            markAssistantResponseCompleted(
-                turnID: turnID,
-                purpose: .onboardingGuidedEdit,
-                successful: false
-            )
-            return
-        }
-        appendReviewRecord(record)
         onOnboardingReviewFallback?()
         requestScrollToBottom()
         markAssistantResponseCompleted(
             turnID: turnID,
             purpose: .onboardingGuidedEdit,
-            successful: true,
-            presentedReviewBundle: true
+            successful: true
         )
-        turnState = .awaitingReview
         synchronizeActiveConversation()
     }
 

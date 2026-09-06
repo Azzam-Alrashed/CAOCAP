@@ -367,14 +367,14 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = caocap/Resources/Config/caocap.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"caocap/Preview Content\"";
 				DEVELOPMENT_TEAM = 6QYT6GJB4Z;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = caocap/Resources/Config/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = caocap;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "CAOCAP uses the microphone for dictation and live voice calls with your copilot.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "CAOCAP uses speech recognition to turn your dictated words into text.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -387,9 +387,13 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 9.0.0;
+				MARKETING_VERSION = 10.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.Ficruty.caocap;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -405,14 +409,14 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = caocap/Resources/Config/caocap.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"caocap/Preview Content\"";
 				DEVELOPMENT_TEAM = 6QYT6GJB4Z;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = caocap/Resources/Config/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = caocap;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "CAOCAP uses the microphone for dictation and live voice calls with your copilot.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "CAOCAP uses speech recognition to turn your dictated words into text.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -425,9 +429,13 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 9.0.0;
+				MARKETING_VERSION = 10.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.Ficruty.caocap;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";

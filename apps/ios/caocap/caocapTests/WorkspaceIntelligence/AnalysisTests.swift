@@ -4,36 +4,17 @@ import Testing
 
 struct AnalysisTests {
 
-    @Test func analyzerIdentifiesEmptyCode() throws {
-        let nodes = [
-            SpatialNode(type: .miniApp, position: .zero, title: "Mini-App", miniApp: MiniAppState(codeText: ""))
-        ]
-        let analyzer = ProjectAnalyzer()
-        let suggestions = analyzer.analyze(nodes: nodes)
-        
-        #expect(suggestions.contains { $0.title == "Mini-App code is empty" })
-    }
-
     @Test func analyzerDoesNotSuggestAnythingForEmptyCanvas() throws {
-        let nodes: [SpatialNode] = []
-        let analyzer = ProjectAnalyzer()
-        let suggestions = analyzer.analyze(nodes: nodes)
-        
+        let suggestions = ProjectAnalyzer().analyze(nodes: [])
         #expect(suggestions.isEmpty)
     }
 
-    @Test func analyzerIdentifiesIncompleteHTML() {
+    @Test func analyzerDoesNotSuggestHTMLOrSRSWork() {
         let nodes = [
-            SpatialNode(
-                type: .miniApp,
-                position: .zero,
-                title: "Mini-App",
-                miniApp: MiniAppState(codeText: "<h1>Fragment only</h1>")
-            )
+            SpatialNode(type: .standard, position: .zero, title: "Card")
         ]
         let suggestions = ProjectAnalyzer().analyze(nodes: nodes)
-
-        #expect(suggestions.contains { $0.title == "Mini-App code may be incomplete" })
+        #expect(suggestions.isEmpty)
     }
 
     @Test func analyzerFlagsPendingNodeReviews() throws {
@@ -42,15 +23,10 @@ struct AnalysisTests {
         let bundle = ReviewBundleItem(
             items: [
                 PendingReviewItem(
-                    targetLabel: "Mini-App CODE",
+                    targetLabel: "Create node",
                     summary: "Pending",
                     preview: "preview",
-                    source: .nodeEdit(
-                        role: .miniApp,
-                        section: .code,
-                        operations: [],
-                        baseText: ""
-                    )
+                    source: .appAction(.createNode, ["title": "New"])
                 )
             ]
         )
@@ -60,27 +36,26 @@ struct AnalysisTests {
 
         let nodes = [
             SpatialNode(
-                type: .miniApp,
+                type: .standard,
                 position: .zero,
-                title: "Mini-App",
-                miniApp: MiniAppState(codeText: "<html><body><h1>Hi</h1></body></html>"),
+                title: "Card",
                 agentState: agentState
             )
         ]
 
         let suggestions = ProjectAnalyzer().analyze(nodes: nodes)
-        #expect(suggestions.contains { $0.title == "Mini-App has pending CoCaptain reviews" })
+        #expect(suggestions.contains { $0.title == "Card has pending CoCaptain reviews" })
     }
 
     @MainActor
     @Test func viewModelDoesNotShowSuggestionsForEmptyCanvas() throws {
         let viewModel = CoCaptainViewModel()
         let store = ProjectStore(fileName: "test_project.json", projectName: "Test")
-        
+
         #expect(viewModel.analysisItems.isEmpty)
-        
+
         viewModel.store = store
-        
+
         #expect(viewModel.analysisItems.isEmpty)
     }
 }

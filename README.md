@@ -14,7 +14,7 @@ CAOCAP is transitioning to a collaborative AI agent platform. Agent discovery, b
 
 | Area | Status |
 | --- | --- |
-| iOS | Imported OSS-CAOCAP-v9 SwiftUI app with onboarding, authentication, canvas, CoCaptain, and tests; service configuration required |
+| iOS | SwiftUI canvas + CoCaptain + sign-in shell; Pro purchase screen; Explore, Build, and Collaborate are planned; service configuration required |
 | macOS | SwiftUI shell with app icon, menu-bar status item, and a floating CoCaptain companion; Explore, Build, and Collaborate are not implemented |
 | Android | Directory scaffold only |
 | Windows | Directory scaffold only |

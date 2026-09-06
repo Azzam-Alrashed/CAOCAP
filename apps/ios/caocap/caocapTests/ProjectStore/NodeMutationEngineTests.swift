@@ -12,8 +12,6 @@ final class NodeMutationEngineTests: XCTestCase {
 
     func testAddNodeCreatesStandardCardByDefault() {
         var nodes: [SpatialNode] = []
-        var compileCalled = false
-        engine.onCompileLivePreview = { _ in compileCalled = true }
 
         engine.addNode(nodes: &nodes)
 
@@ -23,27 +21,6 @@ final class NodeMutationEngineTests: XCTestCase {
         XCTAssertEqual(nodes[0].title, NodeType.standard.defaultTitle)
         XCTAssertEqual(nodes[0].icon, NodeType.standard.defaultIcon)
         XCTAssertNil(nodes[0].subtitle)
-        XCTAssertNil(nodes[0].miniApp)
-        XCTAssertTrue(compileCalled)
-    }
-
-    func testUpdateMiniAppSectionsTriggersExpectedCallbacks() {
-        var nodes = [
-            SpatialNode(type: .miniApp, position: .zero, title: "Mini-App", miniApp: MiniAppState())
-        ]
-
-        var saveCalled = false
-        var compileCalled = false
-        engine.onRequestSave = { _ in saveCalled = true }
-        engine.onCompileLivePreview = { _ in compileCalled = true }
-
-        engine.updateMiniAppSRS(nodes: &nodes, id: nodes[0].id, text: "# Intent\nShip it.", persist: true)
-        XCTAssertEqual(nodes[0].miniApp?.srsText, "# Intent\nShip it.")
-        XCTAssertTrue(saveCalled)
-
-        engine.updateMiniAppCode(nodes: &nodes, id: nodes[0].id, text: "<h1>Updated</h1>", persist: true)
-        XCTAssertEqual(nodes[0].miniApp?.codeText, "<h1>Updated</h1>")
-        XCTAssertTrue(compileCalled)
     }
 
     func testApplyingCanonicalThemeRepairsMiniAppTheme() {

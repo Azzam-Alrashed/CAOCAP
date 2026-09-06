@@ -120,7 +120,6 @@ public struct CoCaptainAgentRunResult: Hashable {
 public final class CoCaptainAgentCoordinator {
     private let llmClient: any CoCaptainLLMClient
     private let contextBuilder: ProjectContextBuilder?
-    private let patchEngine: NodePatchEngine
     private let outputAdapter: any CoCaptainAgentOutputAdapting
     private let validator: CoCaptainAgentValidator
     private let nodeEditToolsEnabled: () -> Bool
@@ -132,7 +131,6 @@ public final class CoCaptainAgentCoordinator {
     public init(
         llmClient: (any CoCaptainLLMClient)? = nil,
         contextBuilder: ProjectContextBuilder? = nil,
-        patchEngine: NodePatchEngine = NodePatchEngine(),
         parser: CoCaptainAgentParser = CoCaptainAgentParser(),
         outputAdapter: (any CoCaptainAgentOutputAdapting)? = nil,
         validator: CoCaptainAgentValidator = CoCaptainAgentValidator(),
@@ -140,7 +138,6 @@ public final class CoCaptainAgentCoordinator {
     ) {
         self.llmClient = llmClient ?? LLMService.shared
         self.contextBuilder = contextBuilder
-        self.patchEngine = patchEngine
         // Wrap the XML adapter in the composite so function-call responses are
         // merged with fenced-XML responses when both arrive in the same turn.
         self.outputAdapter = outputAdapter ?? CoCaptainCompositeAgentAdapter(
@@ -388,9 +385,6 @@ public final class CoCaptainAgentCoordinator {
         // turn: the model was unsure, so nothing should be staged until the
         // user answers. Safe/pending actions are also held back.
         if !connectionFallback, let question = payload?.clarifyingQuestion {
-            if let payload, !payload.nodeEdits.isEmpty {
-                logger.debug("CoCaptain dropped \(payload.nodeEdits.count) node edit(s) accompanying a clarifying question.")
-            }
             return CoCaptainAgentRunResult(
                 preamble: directive.preamble,
                 payloadMessage: payload?.assistantMessage,
@@ -403,8 +397,7 @@ public final class CoCaptainAgentCoordinator {
         let safeActions = connectionFallback ? [] : (payload?.safeActions ?? [])
         let executionSummary = executeSafeActions(safeActions, dispatcher: dispatcher, store: store)
         let reviewDraft = makeReviewDraft(
-            pendingActions: payload?.pendingActions ?? [],
-            nodeEdits: payload?.nodeEdits ?? []
+            pendingActions: payload?.pendingActions ?? []
         )
 
         return CoCaptainAgentRunResult(
@@ -485,54 +478,11 @@ public final class CoCaptainAgentCoordinator {
         return directive
     }
 
-    /// Builds the in-turn tool executor for read-style tools.
-    ///
-    /// Only `read_node_section` is answered inline; every other call returns
-    /// `nil` so it keeps its existing collect-and-route behavior. Read results
-    /// never touch the validator or the review pipeline.
+    /// In-turn tools no longer answer Mini-App section reads. App-action calls
+    /// continue to be collected and routed through the output adapters.
     private func makeToolExecutor(store: ProjectStore?) -> CoCaptainToolExecutor? {
-        guard let store else { return nil }
-        return { [weak self] functionCall in
-            guard let self, functionCall.name == CoCaptainReadNodeSectionTool.name else {
-                return nil
-            }
-            return self.readNodeSection(functionCall: functionCall, store: store)
-        }
-    }
-
-    /// Resolves one `read_node_section` call against the active store.
-    /// Errors are returned as text so the model can self-correct in-turn.
-    private func readNodeSection(
-        functionCall: CoCaptainAgentFunctionCall,
-        store: ProjectStore
-    ) -> String {
-        let nodeID = (functionCall.stringArgument("nodeId") ?? functionCall.stringArgument("node_id"))
-            .flatMap(UUID.init(uuidString:))
-        guard let nodeID else {
-            return "Error: `read_node_section` requires a valid `nodeId` UUID from the canvas context."
-        }
-        guard let sectionName = functionCall.stringArgument("section")?.lowercased(),
-              let section = CoCaptainNodeEditProposal.MiniAppSection(rawValue: sectionName) else {
-            return "Error: `section` must be \"code\" or \"srs\"."
-        }
-        guard let node = patchEngine.resolveNode(nodeID: nodeID, for: .miniApp, in: store),
-              let miniApp = node.miniApp else {
-            return "Error: no Mini-App node with id \(nodeID.uuidString) exists on the canvas."
-        }
-
-        let text: String
-        switch section {
-        case .code:
-            text = miniApp.codeText
-        case .srs:
-            text = miniApp.srsText
-        }
-
-        logger.debug("read_node_section answered for \(nodeID.uuidString, privacy: .public) section=\(sectionName, privacy: .public) chars=\(text.count, privacy: .public)")
-        guard text.count > CoCaptainReadNodeSectionTool.maximumResponseCharacters else {
-            return text
-        }
-        return String(text.prefix(CoCaptainReadNodeSectionTool.maximumResponseCharacters)) + "\n[TRUNCATED]"
+        _ = store
+        return nil
     }
 
     /// A locally-built question offered after a failed turn so the user always
@@ -606,14 +556,11 @@ public final class CoCaptainAgentCoordinator {
             \(issueList)
             
             CRITICAL: 
-            1. Do NOT just provide code in markdown chat. 
-            2. You MUST call the `propose_node_edit` function for code/content changes, or `ask_clarifying_question` when the request is too vague to act on.
-            3. For app navigation/tool actions, call `request_app_action`.
-            4. Put code/content implementation in `propose_node_edit` operations.
-            5. Put mutating or non-autonomous app actions in `request_app_action` with `executionMode=pending`.
-            6. Use `executionMode=safe` only for available, non-mutating, autonomous app actions.
-            7. For full builds or games, use one `replace_all` operation on the Mini-App `section="code"` with a complete single-file HTML document.
-            8. For documentation, requirements, spec, or SRS requests, target the Mini-App `section="srs"` unless the user explicitly asks for code.
+            1. Talk in chat. Do not propose HTML, SRS, or Mini-App source edits.
+            2. Call `ask_clarifying_question` when the request is too vague to act on.
+            3. For app navigation or canvas actions such as creating or moving a node, call `request_app_action`.
+            4. Put mutating or non-autonomous app actions in `request_app_action` with `executionMode=pending`.
+            5. Use `executionMode=safe` only for available, non-mutating, autonomous app actions.
             
             Original user request:
             \(userMessage)
@@ -627,14 +574,11 @@ public final class CoCaptainAgentCoordinator {
         \(issueList)
         
         CRITICAL: 
-        1. Do NOT just provide code in markdown chat. 
-        2. You MUST include a `cocaptain_actions` XML block.
-        3. For app navigation/tool actions, call `request_app_action`.
-        4. Put code/content implementation in `nodeEdits`.
-        5. Put mutating or non-autonomous app actions in `pendingActions` or call `request_app_action` with `executionMode=pending`.
-        6. Use `safeActions` or `executionMode=safe` only for available, non-mutating, autonomous app actions.
-        7. For full builds or games, use `replace_all` for the Mini-App `section="code"` with a complete single-file HTML document.
-        8. For documentation, requirements, spec, or SRS requests, target the Mini-App `section="srs"` unless the user explicitly asks for code.
+        1. Talk in chat. Do not propose HTML, SRS, or Mini-App source edits.
+        2. You MUST include a `cocaptain_actions` XML block when requesting app actions.
+        3. For app navigation or canvas actions such as creating or moving a node, call `request_app_action`.
+        4. Put mutating or non-autonomous app actions in `pendingActions` or call `request_app_action` with `executionMode=pending`.
+        5. Use `safeActions` or `executionMode=safe` only for available, non-mutating, autonomous app actions.
         
         Original user request:
         \(userMessage)
@@ -707,15 +651,13 @@ public final class CoCaptainAgentCoordinator {
         )
     }
 
-    /// Packages validated reviewable work for the review lifecycle. Previewing,
-    /// target resolution, identity, and persistence are owned by that module.
+    /// Packages validated reviewable app actions for the review lifecycle.
+    /// HTML / SRS node edits are dropped; CoCaptain no longer applies them.
     private func makeReviewDraft(
-        pendingActions: [CoCaptainAgentAction],
-        nodeEdits: [CoCaptainNodeEditProposal]
+        pendingActions: [CoCaptainAgentAction]
     ) -> CoCaptainReviewLifecycle.Draft? {
         let draft = CoCaptainReviewLifecycle.Draft(
-            pendingActions: pendingActions,
-            nodeEdits: nodeEdits
+            pendingActions: pendingActions
         )
         return draft.isEmpty ? nil : draft
     }

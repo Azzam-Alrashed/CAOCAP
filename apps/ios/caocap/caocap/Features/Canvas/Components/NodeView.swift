@@ -1,9 +1,8 @@
 import SwiftUI
 
 /// The primary card-shaped visual representation of a `SpatialNode` on the canvas.
-/// Renders the node's icon, title, subtitle, SRS readiness badge, and — for
-/// Mini-App nodes — a scaled live HTML preview. Applies glass-morphism styling and
-/// animated overlays that reflect the current CoCaptain agent execution state.
+/// Renders the node's icon, title, subtitle, and glass-morphism card chrome.
+/// Animated overlays reflect the current CoCaptain agent execution state.
 struct NodeView: View, Equatable {
     /// The underlying domain model whose data is displayed.
     let node: SpatialNode
@@ -87,22 +86,6 @@ struct NodeView: View, Equatable {
                             .foregroundColor(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                             .lineLimit(3)
-                    }
-
-                    if node.type == .miniApp, let miniApp = node.miniApp {
-                        let state = miniApp.srsReadinessState
-                        HStack(spacing: 5) {
-                            Image(systemName: state.icon)
-                                .font(.system(size: 10, weight: .semibold))
-                            Text(state.displayTitle)
-                                .font(.system(size: 11, weight: .semibold, design: .rounded))
-                        }
-                        .foregroundColor(state == .stale ? .orange : themeColor)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background((state == .stale ? Color.orange : themeColor).opacity(0.12))
-                        .clipShape(Capsule())
-                        .padding(.top, 4)
                     }
                 }
                 .frame(maxWidth: 240, alignment: .leading)
