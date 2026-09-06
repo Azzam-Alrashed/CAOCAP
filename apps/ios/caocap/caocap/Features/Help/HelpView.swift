@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// In-app help center: Omnibox shortcuts and getting-started guides.
+/// In-app help center for getting-started guides.
 struct HelpView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
@@ -13,12 +13,6 @@ struct HelpView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 32) {
                     header
-
-                    SettingsSection("help.section.shortcuts") {
-                        ForEach(HelpManifest.omniboxShortcuts) { shortcut in
-                            shortcutRow(shortcut)
-                        }
-                    }
 
                     SettingsSection("help.section.guides") {
                         ForEach(HelpManifest.articles) { article in
@@ -77,32 +71,6 @@ struct HelpView: View {
                 .font(.system(size: 15, weight: .medium))
                 .foregroundStyle(.secondary)
         }
-    }
-
-    private func shortcutRow(_ shortcut: HelpShortcutItem) -> some View {
-        HStack(spacing: 16) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(Color.indigo.opacity(0.15))
-                    .frame(width: 32, height: 32)
-                Image(systemName: "command")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.indigo)
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(LocalizedStringKey(shortcut.titleKey))
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(.primary)
-                Text(LocalizationManager.shared.localizedString(shortcut.examplePhraseKey))
-                    .font(.system(size: 12, weight: .medium, design: .monospaced))
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer()
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
     }
 
     private func articleRow(_ article: HelpArticle) -> some View {

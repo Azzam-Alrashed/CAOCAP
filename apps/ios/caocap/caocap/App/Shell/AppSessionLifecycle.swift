@@ -26,9 +26,6 @@ struct AppSessionLifecycle: ViewModifier {
                     await SubscriptionManager.shared.refreshEntitlements()
                 }
             }
-            .onChange(of: session.commandPalette.isPresented) { _, isPresented in
-                session.handleCommandPalettePresentationChange(isPresented: isPresented)
-            }
             .onChange(of: session.coCaptain.isPresented) { _, isPresented in
                 session.handleCoCaptainPresentationChange(isPresented: isPresented)
             }
@@ -41,8 +38,8 @@ struct AppSessionLifecycle: ViewModifier {
             .onReceive(NotificationCenter.default.publisher(for: .NSUndoManagerDidRedoChange)) { _ in
                 session.handleUndoStackChanged()
             }
-            .onReceive(NotificationCenter.default.publisher(for: .openCommandPalette)) { _ in
-                session.commandPalette.setPresented(true)
+            .onReceive(NotificationCenter.default.publisher(for: .toggleChatOrDismissSheets)) { _ in
+                session.handleFABTapOrCommandJ()
             }
             .onReceive(NotificationCenter.default.publisher(for: .summonCoCaptain)) { _ in
                 _ = session.actionDispatcher.perform(.summonCoCaptain, source: .user)

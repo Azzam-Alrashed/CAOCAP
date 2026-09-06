@@ -12,12 +12,6 @@ struct HelpTutorialItem: Identifiable, Hashable {
     let colorName: String
 }
 
-struct HelpShortcutItem: Identifiable, Hashable {
-    let id: String
-    let titleKey: String
-    let examplePhraseKey: String
-}
-
 struct HelpArticle: Identifiable, Hashable {
     let id: String
     let titleKey: String
@@ -31,17 +25,6 @@ enum HelpManifest {
     static let supportURL = URL(string: "https://www.azzam.ai/caocap/support")!
 
     static let tutorials: [HelpTutorialItem] = []
-
-    static let omniboxShortcuts: [HelpShortcutItem] = [
-        HelpShortcutItem(id: "settings", titleKey: "Settings", examplePhraseKey: "help.shortcut.settings"),
-        HelpShortcutItem(id: "profile", titleKey: "Profile", examplePhraseKey: "help.shortcut.profile"),
-        HelpShortcutItem(id: "cocaptain", titleKey: "Summon Co-Captain", examplePhraseKey: "help.shortcut.cocaptain"),
-        HelpShortcutItem(id: "help", titleKey: "Help & Documentation", examplePhraseKey: "help.shortcut.help"),
-        HelpShortcutItem(id: "activity", titleKey: "Activity", examplePhraseKey: "help.shortcut.activity"),
-        HelpShortcutItem(id: "grid", titleKey: "Toggle Grid", examplePhraseKey: "help.shortcut.grid"),
-        HelpShortcutItem(id: "organize", titleKey: "Organize Nodes", examplePhraseKey: "help.shortcut.organize"),
-        HelpShortcutItem(id: "pendingReviews", titleKey: "Pending CoCaptain Reviews", examplePhraseKey: "help.shortcut.pendingReviews")
-    ]
 
     static let articles: [HelpArticle] = [
         HelpArticle(
@@ -74,16 +57,6 @@ enum HelpManifest {
                 "help.article.cocaptain.body1",
                 "help.article.cocaptain.body2",
                 "help.article.cocaptain.body3"
-            ]
-        ),
-        HelpArticle(
-            id: "omnibox",
-            titleKey: "help.article.omnibox.title",
-            subtitleKey: "help.article.omnibox.subtitle",
-            icon: "command",
-            bodyParagraphKeys: [
-                "help.article.omnibox.body1",
-                "help.article.omnibox.body2"
             ]
         )
     ]

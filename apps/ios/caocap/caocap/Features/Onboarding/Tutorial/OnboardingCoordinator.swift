@@ -11,36 +11,22 @@ public class OnboardingCoordinator {
     public enum Step: Int, CaseIterable {
         /// User must open the Tutorial portal on the root canvas.
         case openTutorial = 0
-        /// User must tap the floating command button (FAB) to open the command palette.
+        /// User must tap the floating command button (FAB) to open chat.
         case tapFAB
-        /// User must type any text in the omnibox search field.
-        case typeCoCaptainPrompt
-        /// User must send the typed text to CoCaptain via the prompt row or Return key.
-        case submitCoCaptainPrompt
-        /// User must ask CoCaptain for a small guided change to the Hello World app.
+        /// User must ask CoCaptain for a small guided change.
         case chatCoCaptain
         /// User must dismiss the CoCaptain panel by tapping Done or dragging it down.
         case dismissCoCaptain
         /// User must long-press the FAB to reveal the quick-action radial menu.
         case longPressFAB
-        /// User must open the omnibox from a subcanvas to begin navigation practice.
-        case returnToRoot
-        /// User must type "go back" in the omnibox search field.
-        case typeGoBackInOmnibox
-        /// User must tap the Go Back action row or press return to navigate up.
-        case tapGoBackAction
-        /// User must search for and fly to Pac-Man or XO via the command palette.
-        case searchFlyToNode
         /// User must tap a demo-game portal node to open its linked subcanvas.
         case openPortal
-        /// User must ask CoCaptain for a small guided change on a demo game canvas.
+        /// User must ask CoCaptain for a small guided change on a leftover canvas.
         case chatCoCaptainGameEdit
         /// User must review the pending CoCaptain change card.
         case reviewCoCaptainChange
         /// User must tap Apply on the CoCaptain review card.
         case applyCoCaptainChange
-        /// User must open Help from the command palette.
-        case openHelpCenter
         /// User must browse Help guides to discover additional lessons.
         case browseHelpGuides
         /// User must drag the canvas background to pan around the workspace.
@@ -51,12 +37,6 @@ public class OnboardingCoordinator {
         case fitAllNodes
         /// User must drag the practice node to a new position.
         case dragCanvasNode
-        /// User must run Organize Nodes from the omnibox.
-        case runOrganizeNodes
-        /// User must undo the last canvas edit.
-        case undoCanvasEdit
-        /// User must redo the last undone edit.
-        case redoCanvasEdit
 
         var titleKey: String {
             OnboardingManifest.content(for: self).titleKey
@@ -77,10 +57,8 @@ public class OnboardingCoordinator {
 
         var blocksCoCaptainPrompt: Bool {
             switch self {
-            case .returnToRoot, .typeGoBackInOmnibox, .tapGoBackAction, .panCanvas, .pinchZoom, .fitAllNodes,
-                 .searchFlyToNode, .openPortal, .openHelpCenter, .browseHelpGuides,
-                 .dragCanvasNode, .runOrganizeNodes,
-                 .undoCanvasEdit, .redoCanvasEdit, .reviewCoCaptainChange, .applyCoCaptainChange:
+            case .panCanvas, .pinchZoom, .fitAllNodes, .openPortal, .browseHelpGuides,
+                 .dragCanvasNode, .reviewCoCaptainChange, .applyCoCaptainChange:
                 return true
             default:
                 return false

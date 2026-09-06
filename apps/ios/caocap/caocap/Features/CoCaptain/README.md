@@ -6,7 +6,7 @@ Personas (CoCaptain / CoStar) stay. Ask / Plan modes stay prose-only.
 
 ## Ownership
 
-- `Chat/` owns the adaptive CoCaptain sheet/inspector, shared chat visual language, grouped project conversation browser, lazy timeline, bubbles and on-demand message actions, typed progress/errors, context-aware input composer (Agent/Ask/Plan mode, optional `@` pin, route disclosure, and `cocaptain.chatMode` persistence), streaming task lifetime, and direct command handling.
+- `Chat/` owns the adaptive CoCaptain sheet, shared chat visual language, grouped project conversation browser, lazy timeline, bubbles and on-demand message actions, typed progress/errors, context-aware input composer (Agent/Ask/Plan mode, optional `@` pin, route disclosure, and `cocaptain.chatMode` persistence), streaming task lifetime, and direct command handling.
 - `AgentContract/` owns the machine-readable agent contract: coordinator, parser, output adapters, validator, typed review drafts, and shared agent/review/timeline models.
 - `Review/` owns `CoCaptainReviewLifecycle` plus Review Bundle rendering for human approval of **app actions**. HTML / SRS node-edit proposals are not staged.
 - `Analysis/` owns structural parser warnings and project recommendations from the analyzer.
@@ -147,7 +147,7 @@ Review cards with a target node include **View on Canvas**, which flies the work
 - Switch to Ask and send the same prompt; confirm prose-only reply with no review staging.
 - Open node-scoped CoCaptain and confirm it uses the same Agent/Ask/Plan selection.
 - Send a direct navigation command and confirm safe actions execute or review appears as expected.
-- On regular-width iPad, confirm CoCaptain stays beside the canvas as an inspector; on compact width, confirm the detented sheet remains.
+- On iPhone and iPad, confirm CoCaptain opens as a detented sheet (large from FAB tap / ⌘J, medium from the FAB Chat bubble).
 
 ## Test Targets
 

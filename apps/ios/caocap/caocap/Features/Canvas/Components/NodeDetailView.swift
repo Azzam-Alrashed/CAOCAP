@@ -8,13 +8,9 @@ struct NodeDetailView: View {
     let node: SpatialNode
     /// The owning project store, passed through to child sheets.
     let store: ProjectStore
-    var commandPalette: CommandPaletteViewModel? = nil
     var onFlyToNode: ((UUID) -> Void)? = nil
 
     @Environment(\.dismiss) private var dismiss
-
-    // commandPalette / onFlyToNode remain so leftover call sites compile.
-    // Phase 2 does not present Mini-App preview tools.
 
     /// Always reads the node from the store so that any edits made inside a
     /// child sheet (e.g. title change in settings) are reflected here without

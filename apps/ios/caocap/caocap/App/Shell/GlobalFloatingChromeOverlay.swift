@@ -5,7 +5,7 @@ import UIKit
 /// explicitly registered chrome frames (FAB, call pill, expanded FAB menu).
 ///
 /// Must not become the key window — otherwise FAB taps steal first-responder
-/// ownership from the main app window and the Omnibox keyboard never appears.
+/// ownership from the main app window.
 @MainActor
 final class PassthroughChromeWindow: UIWindow {
     /// Screen-space rects that should receive touches. Everything else passes through.
@@ -141,9 +141,8 @@ struct GlobalFloatingChromeView: View {
             if shouldShowChrome(session) {
                 FloatingCommandButton(
                     onTap: {
-                        // Ensure the main app window owns keyboard focus before the Omnibox focuses.
                         GlobalFloatingChromeController.makeMainAppWindowKey()
-                        session.commandPalette.setPresented(true)
+                        session.handleFABTapOrCommandJ()
                     },
                     onSelectMode: { mode in
                         switch mode {
@@ -169,14 +168,6 @@ struct GlobalFloatingChromeView: View {
                     isOnboardingHighlighted: session.onboarding.showPopover && (
                         session.onboarding.currentStep == .tapFAB
                         || session.onboarding.currentStep == .longPressFAB
-                        || session.onboarding.currentStep == .runOrganizeNodes
-                        || (session.onboarding.currentStep == .undoCanvasEdit && !session.commandPalette.isPresented)
-                        || (session.onboarding.currentStep == .redoCanvasEdit && !session.commandPalette.isPresented)
-                        || (session.onboarding.currentStep == .searchFlyToNode && !session.commandPalette.isPresented)
-                        || (session.onboarding.currentStep == .returnToRoot && !session.commandPalette.isPresented)
-                        || (session.onboarding.currentStep == .typeGoBackInOmnibox && !session.commandPalette.isPresented)
-                        || (session.onboarding.currentStep == .tapGoBackAction && !session.commandPalette.isPresented)
-                        || (session.onboarding.currentStep == .openHelpCenter && !session.commandPalette.isPresented)
                     ),
                     obstacleFrame: session.showingCopilotCall ? callChromeFrame : .null,
                     onInteractiveFrameChange: { frame in
@@ -206,7 +197,6 @@ struct GlobalFloatingChromeView: View {
         .onboardingExplicitAnchorFrames(fabExplicitAnchorFrames)
         // Prefer onPreferenceChange over overlayPreferenceValue — the latter duplicated the FAB.
         .fabChromeOnboardingTooltipOverlay(
-            isCommandPalettePresented: session.commandPalette.isPresented,
             onCardFrameChange: { frame in
                 fabTooltipFrame = frame
                 publishInteractiveFrames(session: session)
@@ -221,9 +211,6 @@ struct GlobalFloatingChromeView: View {
                 callChromeFrame = .null
                 publishInteractiveFrames(session: session)
             }
-        }
-        .onChange(of: session.commandPalette.isPresented) { _, _ in
-            publishInteractiveFrames(session: session)
         }
         .onChange(of: session.onboarding.currentStep) { _, _ in
             publishInteractiveFrames(session: session)

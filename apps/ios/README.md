@@ -23,7 +23,7 @@ Firebase configuration is required at launch. CoCaptain cloud chat also needs th
 
 ## What you should see
 
-On a fresh install, intro and persona pick come first. Then Home is blank except the HUD and FAB. You can still pan and zoom. Settings, Profile, Help, sign-in, CoCaptain, and CAOCAP Pro stay reachable from the HUD and command palette. If a simulator still shows old Home cards, delete the app and run again.
+On a fresh install, intro and persona pick come first. Then Home is blank except the HUD and FAB. You can still pan and zoom. Tap the FAB (or press ⌘J) to open CoCaptain chat. Long-press the FAB for Chat / Voice / Video. Settings, Profile, Help, and Pro may only be reachable from leftover canvas cards, CoCaptain actions, or existing sheets. If a simulator still shows old Home cards, delete the app and run again.
 
 ## Related notes
 

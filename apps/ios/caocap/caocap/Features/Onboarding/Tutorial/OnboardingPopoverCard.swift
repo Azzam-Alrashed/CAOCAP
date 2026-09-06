@@ -104,30 +104,16 @@ enum OnboardingTooltipAnchor: Hashable {
     case demoGameNode
     /// Anchored to the floating command button (FAB) at the bottom of the canvas.
     case floatingCommandButton
-    /// Anchored to the omnibox search text field.
-    case omniboxSearchField
-    /// Anchored to the "Ask CoCaptain" prompt row inside the omnibox.
-    case omniboxPromptRow
     /// Anchored to the CoCaptain chat input field.
     case coCaptainInput
     /// Anchored to the CoCaptain panel's Done/dismiss button.
     case coCaptainDoneButton
-    /// Anchored to the Go Back row in the command palette navigation section.
-    case commandPaletteGoBack
-    /// Anchored to the Help row in the command palette.
-    case commandPaletteHelp
     /// Anchored to the main canvas gesture area used for pan, pinch, and fit-all steps.
     case canvasGestureArea
     /// Anchored to the zoom percentage pill in the canvas HUD.
     case canvasHUDZoom
     /// Anchored to the practice node on the Tutorial canvas.
     case practiceCanvasNode
-    /// Anchored to the Organize Nodes action row in the omnibox.
-    case omniboxOrganizeRow
-    /// Anchored to the Undo action row in the omnibox.
-    case omniboxUndoRow
-    /// Anchored to the Redo action row in the omnibox.
-    case omniboxRedoRow
     /// Anchored to the Apply button on a CoCaptain review card.
     case coCaptainReviewApply
     /// Anchored to the Guides section in Help.
@@ -223,7 +209,6 @@ extension View {
     }
 
     func onboardingTooltipOverlay(
-        isCommandPalettePresented: Bool = false,
         rendersAnchor: @escaping (OnboardingTooltipAnchor) -> Bool = { _ in true },
         onCardFrameChange: ((CGRect) -> Void)? = nil
     ) -> some View {
@@ -232,7 +217,6 @@ extension View {
                 OnboardingTooltipOverlay(
                     anchors: anchors,
                     explicitFrames: explicitFrames,
-                    isCommandPalettePresented: isCommandPalettePresented,
                     rendersAnchor: rendersAnchor,
                     onCardFrameChange: onCardFrameChange
                 )
@@ -249,12 +233,10 @@ extension View {
 
     /// Chrome-window FAB tooltips. Avoids `overlayPreferenceValue`, which duplicated the FAB.
     func fabChromeOnboardingTooltipOverlay(
-        isCommandPalettePresented: Bool,
         onCardFrameChange: ((CGRect) -> Void)? = nil
     ) -> some View {
         modifier(
             FABChromeOnboardingTooltipOverlayModifier(
-                isCommandPalettePresented: isCommandPalettePresented,
                 onCardFrameChange: onCardFrameChange
             )
         )
@@ -275,7 +257,6 @@ private struct CoCaptainSheetTooltipOverlayModifier: ViewModifier {
                 OnboardingTooltipOverlay(
                     anchors: layoutAnchors,
                     explicitFrames: explicitFrames,
-                    isCommandPalettePresented: false,
                     rendersAnchor: { $0.isCoCaptainLocal }
                 )
             }
@@ -284,7 +265,6 @@ private struct CoCaptainSheetTooltipOverlayModifier: ViewModifier {
 
 /// Same preference pattern as CoCaptain — `overlayPreferenceValue` was drawing a second FAB.
 private struct FABChromeOnboardingTooltipOverlayModifier: ViewModifier {
-    let isCommandPalettePresented: Bool
     var onCardFrameChange: ((CGRect) -> Void)?
 
     @State private var layoutAnchors: [OnboardingTooltipAnchor: Anchor<CGRect>] = [:]
@@ -298,7 +278,6 @@ private struct FABChromeOnboardingTooltipOverlayModifier: ViewModifier {
                 OnboardingTooltipOverlay(
                     anchors: layoutAnchors,
                     explicitFrames: explicitFrames,
-                    isCommandPalettePresented: isCommandPalettePresented,
                     rendersAnchor: { $0 == .floatingCommandButton },
                     onCardFrameChange: onCardFrameChange
                 )
@@ -313,21 +292,11 @@ extension OnboardingCoordinator.Step {
             return .tutorialNode
         case .openPortal:
             return .demoGameNode
-        case .tapFAB, .longPressFAB, .searchFlyToNode, .returnToRoot, .typeGoBackInOmnibox:
-            return .floatingCommandButton
-        case .tapGoBackAction:
-            return .commandPaletteGoBack
-        case .openHelpCenter:
+        case .tapFAB, .longPressFAB:
             return .floatingCommandButton
         case .browseHelpGuides:
             return .helpGuidesSection
-        case .typeCoCaptainPrompt:
-            return .omniboxSearchField
-        case .submitCoCaptainPrompt:
-            return .omniboxPromptRow
-        case .chatCoCaptain:
-            return .coCaptainInput
-        case .chatCoCaptainGameEdit:
+        case .chatCoCaptain, .chatCoCaptainGameEdit:
             return .coCaptainInput
         case .reviewCoCaptainChange, .applyCoCaptainChange:
             return .coCaptainReviewApply
@@ -339,47 +308,15 @@ extension OnboardingCoordinator.Step {
             return .canvasHUDZoom
         case .dragCanvasNode:
             return .practiceCanvasNode
-        case .runOrganizeNodes:
-            return .omniboxOrganizeRow
-        case .undoCanvasEdit, .redoCanvasEdit:
-            return .floatingCommandButton
         }
-    }
-
-    func resolvedTooltipAnchor(isCommandPalettePresented: Bool) -> OnboardingTooltipAnchor {
-        if self == .searchFlyToNode, isCommandPalettePresented {
-            return .omniboxSearchField
-        }
-        if self == .typeGoBackInOmnibox, isCommandPalettePresented {
-            return .omniboxSearchField
-        }
-        if self == .tapGoBackAction, isCommandPalettePresented {
-            return .commandPaletteGoBack
-        }
-        if self == .openHelpCenter, isCommandPalettePresented {
-            return .commandPaletteHelp
-        }
-        if self == .runOrganizeNodes, isCommandPalettePresented {
-            return .omniboxOrganizeRow
-        }
-        if self == .undoCanvasEdit, isCommandPalettePresented {
-            return .omniboxUndoRow
-        }
-        if self == .redoCanvasEdit, isCommandPalettePresented {
-            return .omniboxRedoRow
-        }
-        return tooltipAnchor
     }
 
     var tooltipArrowPlacement: UnifiedBubbleWithArrowShape.ArrowPlacement {
         switch self {
         case .dismissCoCaptain, .pinchZoom, .reviewCoCaptainChange:
             return .top
-        case .openTutorial, .tapFAB, .typeCoCaptainPrompt, .submitCoCaptainPrompt, .chatCoCaptain,
-             .longPressFAB, .returnToRoot, .typeGoBackInOmnibox, .tapGoBackAction, .panCanvas, .fitAllNodes, .searchFlyToNode, .openPortal,
-             .openHelpCenter, .browseHelpGuides, .chatCoCaptainGameEdit,
-             .dragCanvasNode,
-             .runOrganizeNodes, .undoCanvasEdit, .redoCanvasEdit, .applyCoCaptainChange:
+        case .openTutorial, .tapFAB, .chatCoCaptain, .longPressFAB, .panCanvas, .fitAllNodes, .openPortal,
+             .browseHelpGuides, .chatCoCaptainGameEdit, .dragCanvasNode, .applyCoCaptainChange:
             return .bottom
         }
     }
@@ -392,7 +329,6 @@ extension OnboardingCoordinator.Step {
 private struct OnboardingTooltipOverlay: View {
     let anchors: [OnboardingTooltipAnchor: Anchor<CGRect>]
     let explicitFrames: [OnboardingTooltipAnchor: CGRect]
-    let isCommandPalettePresented: Bool
     let rendersAnchor: (OnboardingTooltipAnchor) -> Bool
     var onCardFrameChange: ((CGRect) -> Void)? = nil
 
@@ -404,7 +340,7 @@ private struct OnboardingTooltipOverlay: View {
             if let onboarding,
                let step = onboarding.currentStep,
                onboarding.showPopover {
-                let resolvedAnchor = step.resolvedTooltipAnchor(isCommandPalettePresented: isCommandPalettePresented)
+                let resolvedAnchor = step.tooltipAnchor
                 if rendersAnchor(resolvedAnchor),
                    let targetFrame = resolvedTargetFrame(for: resolvedAnchor, in: proxy) {
                 let tooltipCenter = tooltipCenter(
@@ -456,7 +392,6 @@ private struct OnboardingTooltipOverlay: View {
         }
         .animation(.spring(response: 0.35, dampingFraction: 0.82), value: onboarding?.currentStep)
         .animation(.spring(response: 0.35, dampingFraction: 0.82), value: onboarding?.showPopover)
-        .animation(.spring(response: 0.35, dampingFraction: 0.82), value: isCommandPalettePresented)
         .onDisappear { onCardFrameChange?(.null) }
     }
 

@@ -69,13 +69,8 @@ struct caocapApp: App {
             }
 
             CommandMenu("Commands") {
-                Button("Command Palette") {
-                    NotificationCenter.default.post(name: .openCommandPalette, object: nil)
-                }
-                .keyboardShortcut("k", modifiers: .command)
-
-                Button("Summon CoCaptain") {
-                    NotificationCenter.default.post(name: .summonCoCaptain, object: nil)
+                Button("Chat") {
+                    NotificationCenter.default.post(name: .toggleChatOrDismissSheets, object: nil)
                 }
                 .keyboardShortcut("j", modifiers: .command)
             }

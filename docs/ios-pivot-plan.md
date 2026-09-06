@@ -194,7 +194,7 @@ The tutorial engine stays. Mini-App preview lessons and unused CoCaptain HTML-pa
 
 ## Phase 12 — Rewire the FAB; delete leftover command palette
 
-**Status:** Not started
+**Status:** Done
 **Depends on:** Phase 11
 
 iOS leftover cleanup: rewire the FAB and delete the command palette. This is not Build mindmaps, Explore, or Collaborate.

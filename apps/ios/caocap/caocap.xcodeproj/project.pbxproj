@@ -59,7 +59,6 @@
 				Features/Canvas/README.md,
 				Features/CoCaptain/README.md,
 				Features/Help/README.md,
-				Features/Omnibox/README.md,
 				Features/Onboarding/README.md,
 				Features/Subscription/README.md,
 				Resources/Config/Info.plist,

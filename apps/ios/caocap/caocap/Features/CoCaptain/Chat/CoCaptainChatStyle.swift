@@ -2,8 +2,8 @@ import SwiftUI
 
 /// Feature-local visual tokens for the CoCaptain conversation surfaces.
 ///
-/// Keeping these values together makes the sheet and iPad inspector feel like
-/// one product while avoiding a second app-wide design system.
+/// Keeping these values together makes the chat sheet feel like one product
+/// while avoiding a second app-wide design system.
 enum CoCaptainChatStyle {
     static let compactSpacing: CGFloat = 4
     static let smallSpacing: CGFloat = 8

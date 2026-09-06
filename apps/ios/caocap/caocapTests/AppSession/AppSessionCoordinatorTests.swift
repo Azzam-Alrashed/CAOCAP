@@ -53,14 +53,58 @@ struct AppSessionCoordinatorTests {
         #expect(session.router.activeStore.nodes.first?.position == CGPoint(x: 120, y: 80))
     }
 
-    @Test func filteredPaletteActionsHideRootNavigationAtRoot() {
+    @Test func fabTapOpensChatWhenNoListedSheetIsPresented() {
         let session = AppSessionCoordinator()
-        session.router.currentWorkspace = .root
+        session.ensureActionsConfigured()
 
-        let actionIDs = session.filteredPaletteActionIDs(at: .root)
+        session.handleFABTapOrCommandJ()
 
-        #expect(!actionIDs.contains(.goRoot))
-        #expect(!actionIDs.contains(.goBack))
+        #expect(session.coCaptain.isPresented)
+        #expect(session.coCaptainDetent == .large)
+        #expect(session.hasListedSheetPresented)
+    }
+
+    @Test func fabTapClosesListedSheetsWithoutOpeningChat() {
+        let session = AppSessionCoordinator()
+        session.ensureActionsConfigured()
+        session.showingSettings = true
+
+        session.handleFABTapOrCommandJ()
+
+        #expect(!session.showingSettings)
+        #expect(!session.coCaptain.isPresented)
+        #expect(!session.hasListedSheetPresented)
+    }
+
+    @Test func closeListedSheetsLeavesOverlaysAlone() {
+        let session = AppSessionCoordinator()
+        session.showingSettings = true
+        session.showingHelp = true
+        session.showingCopilotCall = true
+        session.showConfetti = true
+        session.isLaunching = true
+
+        session.closeListedSheets()
+
+        #expect(!session.showingSettings)
+        #expect(!session.showingHelp)
+        #expect(session.showingCopilotCall)
+        #expect(session.showConfetti)
+        #expect(session.isLaunching)
+    }
+
+    @Test func summonCoCaptainReplacesListedSheetWithChat() async {
+        let session = AppSessionCoordinator()
+        session.ensureActionsConfigured()
+        session.showingProfile = true
+
+        _ = session.actionDispatcher.perform(.summonCoCaptain, source: .user)
+
+        try? await Task.sleep(for: .milliseconds(400))
+
+        #expect(!session.showingProfile)
+        #expect(session.coCaptain.isPresented)
+        #expect(session.coCaptainDetent == .medium)
     }
 
     @Test func activityNodeActionPresentsActivitySheet() {

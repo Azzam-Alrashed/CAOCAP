@@ -33,10 +33,7 @@ struct OnboardingManifestTests {
         #expect(OnboardingCoordinator.Step.openTutorial.tooltipAnchor == .tutorialNode)
         #expect(OnboardingCoordinator.Step.openPortal.tooltipAnchor == .demoGameNode)
         #expect(OnboardingCoordinator.Step.tapFAB.tooltipAnchor == .floatingCommandButton)
-        #expect(OnboardingCoordinator.Step.openHelpCenter.tooltipAnchor == .floatingCommandButton)
         #expect(OnboardingCoordinator.Step.browseHelpGuides.tooltipAnchor == .helpGuidesSection)
-        #expect(OnboardingCoordinator.Step.typeCoCaptainPrompt.tooltipAnchor == .omniboxSearchField)
-        #expect(OnboardingCoordinator.Step.submitCoCaptainPrompt.tooltipAnchor == .omniboxPromptRow)
         #expect(OnboardingCoordinator.Step.chatCoCaptain.tooltipAnchor == .coCaptainInput)
         #expect(OnboardingCoordinator.Step.chatCoCaptainGameEdit.tooltipAnchor == .coCaptainInput)
         #expect(OnboardingCoordinator.Step.reviewCoCaptainChange.tooltipAnchor == .coCaptainReviewApply)
@@ -46,42 +43,7 @@ struct OnboardingManifestTests {
         #expect(OnboardingCoordinator.Step.panCanvas.tooltipAnchor == .canvasGestureArea)
         #expect(OnboardingCoordinator.Step.pinchZoom.tooltipAnchor == .canvasHUDZoom)
         #expect(OnboardingCoordinator.Step.fitAllNodes.tooltipAnchor == .canvasGestureArea)
-        #expect(OnboardingCoordinator.Step.searchFlyToNode.tooltipAnchor == .floatingCommandButton)
-        #expect(OnboardingCoordinator.Step.returnToRoot.tooltipAnchor == .floatingCommandButton)
-        #expect(OnboardingCoordinator.Step.typeGoBackInOmnibox.tooltipAnchor == .floatingCommandButton)
-        #expect(OnboardingCoordinator.Step.tapGoBackAction.tooltipAnchor == .commandPaletteGoBack)
         #expect(OnboardingCoordinator.Step.dragCanvasNode.tooltipAnchor == .practiceCanvasNode)
-        #expect(OnboardingCoordinator.Step.runOrganizeNodes.tooltipAnchor == .omniboxOrganizeRow)
-        #expect(OnboardingCoordinator.Step.undoCanvasEdit.tooltipAnchor == .floatingCommandButton)
-        #expect(OnboardingCoordinator.Step.redoCanvasEdit.tooltipAnchor == .floatingCommandButton)
-        #expect(
-            OnboardingCoordinator.Step.undoCanvasEdit.resolvedTooltipAnchor(isCommandPalettePresented: true)
-                == .omniboxUndoRow
-        )
-        #expect(
-            OnboardingCoordinator.Step.redoCanvasEdit.resolvedTooltipAnchor(isCommandPalettePresented: true)
-                == .omniboxRedoRow
-        )
-        #expect(
-            OnboardingCoordinator.Step.typeGoBackInOmnibox.resolvedTooltipAnchor(isCommandPalettePresented: true)
-                == .omniboxSearchField
-        )
-        #expect(
-            OnboardingCoordinator.Step.tapGoBackAction.resolvedTooltipAnchor(isCommandPalettePresented: true)
-                == .commandPaletteGoBack
-        )
-        #expect(
-            OnboardingCoordinator.Step.openHelpCenter.resolvedTooltipAnchor(isCommandPalettePresented: true)
-                == .commandPaletteHelp
-        )
-        #expect(
-            OnboardingCoordinator.Step.searchFlyToNode.resolvedTooltipAnchor(isCommandPalettePresented: true)
-                == .omniboxSearchField
-        )
-        #expect(
-            OnboardingCoordinator.Step.runOrganizeNodes.resolvedTooltipAnchor(isCommandPalettePresented: true)
-                == .omniboxOrganizeRow
-        )
     }
 
     @MainActor
@@ -112,10 +74,11 @@ struct OnboardingManifestTests {
         #expect(!onboarding.showPopover)
     }
 
-    @Test func newLessonStepsBlockCoCaptainPromptSubmission() {
+    @Test func canvasStepsBlockCoCaptainPromptSubmission() {
         #expect(OnboardingCoordinator.Step.dragCanvasNode.blocksCoCaptainPrompt)
-        #expect(OnboardingCoordinator.Step.runOrganizeNodes.blocksCoCaptainPrompt)
+        #expect(OnboardingCoordinator.Step.panCanvas.blocksCoCaptainPrompt)
         #expect(!OnboardingCoordinator.Step.chatCoCaptain.blocksCoCaptainPrompt)
+        #expect(!OnboardingCoordinator.Step.tapFAB.blocksCoCaptainPrompt)
     }
 
     @MainActor

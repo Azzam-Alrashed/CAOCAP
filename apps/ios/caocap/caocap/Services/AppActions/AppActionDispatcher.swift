@@ -1,6 +1,6 @@
 import Foundation
 
-/// Top-level grouping for app actions surfaced in the command palette and agent.
+/// Top-level grouping for app actions the agent can request.
 public enum AppActionCategory: String, Hashable {
     /// Actions that navigate between workspaces or canvas levels.
     case navigation
@@ -34,7 +34,6 @@ public enum AppActionID: String, CaseIterable, Identifiable, Codable, Hashable {
     case organizeNodes = "organize_nodes"
     case openSnapshotBrowser = "open_snapshot_browser"
     case toggleHUD = "toggle_hud"
-    case showActionsList = "show_actions_list"
     case createSubCanvas = "create_sub_canvas"
     case openActivity = "open_activity"
     case openWhatsApp = "open_whatsapp"
@@ -329,14 +328,6 @@ public final class AppActionDispatcher: AppActionPerforming {
             id: .toggleHUD,
             title: "Toggle HUD",
             icon: "menubar.rectangle",
-            category: .navigation,
-            isMutating: false,
-            allowsAutonomousExecution: true
-        ),
-        AppActionDefinition(
-            id: .showActionsList,
-            title: "Show Actions List",
-            icon: "list.bullet.rectangle.portrait",
             category: .navigation,
             isMutating: false,
             allowsAutonomousExecution: true

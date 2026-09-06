@@ -45,7 +45,7 @@ When changing gestures or connection rendering, test pan, zoom, drag, and arrow 
 - Fresh install: Home is empty except the HUD and FAB. You can still pan and zoom.
 - Create a card, drag it, pan, pinch zoom, quit, and reopen. Position and title remain.
 - Check connection arrows while dragging nodes and at multiple zoom levels.
-- Settings, Profile, Help, sign-in, and CoCaptain stay reachable from the HUD, FAB / command palette, and existing sheets.
+- FAB tap or ⌘J opens CoCaptain chat (or closes listed sheets if one is already open). Long-press the FAB for Chat / Voice / Video.
 
 ## Test Targets
 

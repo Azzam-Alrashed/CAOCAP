@@ -5,28 +5,6 @@ import CoreGraphics
 
 struct SearchTests {
 
-    @Test func searchIndexScoresTitleMatchesHigherThanSubtitle() throws {
-        let nodes = [
-            SpatialNode(id: UUID(), type: .standard, position: .zero, title: "Login Page", subtitle: "Form"),
-            SpatialNode(id: UUID(), type: .standard, position: .zero, title: "Other", subtitle: "This contains the word login")
-        ]
-        let index = NodeSearchIndex()
-        let results = index.search(query: "login", in: nodes)
-
-        #expect(results.count == 2)
-        #expect(results[0].title == "Login Page")
-        #expect(results[0].relevanceScore > results[1].relevanceScore)
-    }
-
-    @Test func searchIndexMatchesCardTitle() throws {
-        let previewNode = SpatialNode(id: UUID(), type: .standard, position: .zero, title: "Card")
-        let index = NodeSearchIndex()
-        let results = index.search(query: "card", in: [previewNode])
-
-        #expect(results.count == 1)
-        #expect(results[0].title == "Card")
-    }
-
     @Test func viewportFlyToCalculatesCorrectOffset() throws {
         let viewport = ViewportState()
         let nodePosition = CGPoint(x: 100, y: 200)

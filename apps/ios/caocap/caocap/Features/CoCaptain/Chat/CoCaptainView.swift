@@ -229,8 +229,6 @@ struct CoCaptainView: View {
     /// Gives each onboarding conversation turn its explicit UX objective.
     private var currentTurnPurpose: CoCaptainTurnPurpose {
         switch onboarding?.currentStep {
-        case .some(.submitCoCaptainPrompt):
-            return .onboardingWelcome
         case .some(.chatCoCaptain), .some(.chatCoCaptainGameEdit):
             return .onboardingGuidedEdit
         default:

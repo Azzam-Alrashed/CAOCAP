@@ -22,14 +22,9 @@ struct ContentView: View {
                     )
                 }
 
-                CommandPaletteView(viewModel: session.commandPalette)
-
                 KeyboardShortcutBridge(
-                    onOpenCommandPalette: {
-                        session.commandPalette.setPresented(true)
-                    },
-                    onSummonCoCaptain: {
-                        _ = session.actionDispatcher.perform(.summonCoCaptain, source: .user)
+                    onToggleChatOrDismissSheets: {
+                        session.handleFABTapOrCommandJ()
                     },
                     onUndo: {
                         _ = session.actionDispatcher.perform(.undo, source: .user)
@@ -40,7 +35,6 @@ struct ContentView: View {
                 )
             }
             .onboardingTooltipOverlay(
-                isCommandPalettePresented: session.commandPalette.isPresented,
                 // FAB tooltips render in the chrome overlay window so they sit above the FAB.
                 rendersAnchor: {
                     !$0.isCanvasLocal
@@ -93,7 +87,6 @@ struct ContentView: View {
                 viewport: $session.viewport,
                 currentScale: $session.currentScale,
                 canvasFocusNodeID: session.canvasFocusNodeID,
-                commandPalette: session.commandPalette,
                 onNodeAction: { session.handleNodeAction($0) },
                 onNavigateToSubCanvas: { fileName in
                     session.handleSubCanvasNavigation(fileName: fileName)
@@ -110,7 +103,6 @@ struct ContentView: View {
                 viewport: $session.viewport,
                 currentScale: $session.currentScale,
                 canvasFocusNodeID: session.canvasFocusNodeID,
-                commandPalette: session.commandPalette,
                 onNodeAction: { session.handleNodeAction($0) },
                 onNavigateToSubCanvas: { fileName in
                     session.handleSubCanvasNavigation(fileName: fileName)

@@ -4,7 +4,7 @@ import SwiftUI
 /// bottom-trailing corner of the canvas and snaps to a 3×3 edge grid on release.
 ///
 /// **Interaction modes:**
-/// - **Tap** – opens the command palette.
+/// - **Tap** – opens CoCaptain chat, or closes listed sheets if one is already open.
 /// - **Long-press** – expands a radial menu to choose Chat / Voice / Video with the copilot.
 /// - **Drag** – repositions the button; on release it snaps to the nearest grid point.
 /// - **Drag while expanded** – gestures toward a bubble to highlight and select it.

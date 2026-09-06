@@ -5,12 +5,11 @@ import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
 
-/// Orchestrates root-session state: routing, actions, palette binding, sheets, and onboarding hooks.
+/// Orchestrates root-session state: routing, actions, sheets, and onboarding hooks.
 @MainActor
 @Observable
 final class AppSessionCoordinator {
     var router = AppRouter()
-    var commandPalette = CommandPaletteViewModel()
     var coCaptain = CoCaptainViewModel()
     private(set) var actionDispatcher = AppActionDispatcher()
 
@@ -37,7 +36,7 @@ final class AppSessionCoordinator {
     var viewport = ViewportState()
     var nodeSizes: [UUID: CGSize] = [:]
     var containerSize: CGSize = .zero
-    /// Briefly highlights a node after fly-to navigation from CoCaptain or the command palette.
+    /// Briefly highlights a node after fly-to navigation from CoCaptain.
     var canvasFocusNodeID: UUID?
     @ObservationIgnored private var canvasFocusClearTask: Task<Void, Never>?
     /// Matches `LaunchScreenView` entrance length so the brand animation can land.
@@ -57,7 +56,6 @@ final class AppSessionCoordinator {
     var coCaptainDetent: PresentationDetent = .medium
     var coCaptainStartsLarge = false
     var coCaptainAllowsMediumDetent = true
-    private var onboardingInitialCoCaptainSuccessBaseline: Int?
 
     private var actionsConfigured = false
     @ObservationIgnored private var activeUndoManager: UndoManager?
@@ -112,7 +110,7 @@ final class AppSessionCoordinator {
     func bootstrap(undoManager: UndoManager?) {
         activeUndoManager = undoManager
         selectedCopilot = UserProfileStore().loadSelectedCopilot()
-        bindCommandPalette()
+        bindCoCaptainSession()
         configureActionsIfNeeded()
         actionDispatcher.refreshCopilotActionTitle()
         syncViewportWithActiveStore()
@@ -170,11 +168,9 @@ final class AppSessionCoordinator {
 
     func handleWorkspaceChange(undoManager: UndoManager?) {
         activeUndoManager = undoManager
-        bindCommandPalette()
+        bindCoCaptainSession()
         attachUndoManager(undoManager)
         coCaptain.configureProjectSession(store: router.activeStore, dispatcher: actionDispatcher)
-        syncCommandPaletteActions()
-        commandPalette.nodes = router.activeStore.nodes
         syncViewportWithActiveStore()
     }
 
@@ -230,6 +226,7 @@ final class AppSessionCoordinator {
         router.navigate(to: .root, addToStack: false, animated: false)
         syncViewportWithActiveStore()
         onboarding.startIfNeeded()
+        presentChatIfTutorialNeedsIt()
     }
 
     func restartTutorialFromHelp() {
@@ -241,14 +238,13 @@ final class AppSessionCoordinator {
         showingHelp = false
         prepareWorkspace(for: lessonID)
         onboarding.startLesson(lessonID, advancesThroughLessons: false)
+        presentChatIfTutorialNeedsIt()
     }
 
     func prepareWorkspace(for lessonID: OnboardingLessonID) {
-        commandPalette.setPresented(false)
-        coCaptain.setPresented(false)
+        closeListedSheets()
         router.navigate(to: .root, addToStack: false, animated: false)
         syncViewportWithActiveStore()
-        commandPalette.nodes = router.activeStore.nodes
         _ = lessonID
     }
 
@@ -280,7 +276,6 @@ final class AppSessionCoordinator {
         ActivityStore.shared.reset()
 
         router = AppRouter()
-        commandPalette = CommandPaletteViewModel()
         coCaptain = CoCaptainViewModel()
         actionDispatcher = AppActionDispatcher()
         intro = IntroCoordinator()
@@ -295,10 +290,9 @@ final class AppSessionCoordinator {
         viewport = ViewportState()
         currentScale = 1
         nodeSizes = [:]
-        onboardingInitialCoCaptainSuccessBaseline = nil
         actionsConfigured = false
 
-        bindCommandPalette()
+        bindCoCaptainSession()
         configureActionsIfNeeded()
         attachUndoManager(activeUndoManager)
         coCaptain.configureProjectSession(store: router.activeStore, dispatcher: actionDispatcher)
@@ -340,54 +334,64 @@ final class AppSessionCoordinator {
         router.navigateToSubCanvas(fileName: fileName)
     }
 
-    // MARK: - Onboarding + CoCaptain Presentation
+    // MARK: - Listed Sheets
 
-    func handleCommandPalettePresentationChange(isPresented: Bool) {
-        if isPresented {
-            commandPalette.nodes = router.activeStore.nodes
-            if onboarding.currentStep == .tapFAB || onboarding.currentStep == .returnToRoot
-                || onboarding.currentStep == .runOrganizeNodes {
-                onboarding.completeCurrentStep()
-            }
-        } else if onboarding.currentStep == .typeCoCaptainPrompt
-                    || onboarding.currentStep == .submitCoCaptainPrompt
-                    || onboarding.currentStep == .typeGoBackInOmnibox
-                    || onboarding.currentStep == .tapGoBackAction
-                    || onboarding.currentStep == .openHelpCenter {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                if (self.onboarding.currentStep == .typeCoCaptainPrompt || self.onboarding.currentStep == .submitCoCaptainPrompt),
-                   !self.coCaptain.isPresented {
-                    self.onboarding.moveToStep(.typeCoCaptainPrompt)
-                } else if (self.onboarding.currentStep == .typeGoBackInOmnibox
-                            || self.onboarding.currentStep == .tapGoBackAction),
-                          !self.commandPalette.isPresented {
-                    if self.onboarding.activeLessonID == .canvasBasics {
-                        self.onboarding.moveToStep(.tapGoBackAction)
-                    } else {
-                        self.onboarding.moveToStep(.returnToRoot)
-                    }
-                } else if self.onboarding.currentStep == .openHelpCenter,
-                          !self.showingHelp {
-                    self.onboarding.moveToStep(.tapFAB)
-                }
-            }
-        }
+    /// Session SwiftUI sheets that FAB tap / ⌘J can dismiss together.
+    /// HUD, voice/video call, launch, intro, and confetti are overlays and stay.
+    var hasListedSheetPresented: Bool {
+        coCaptain.isPresented
+            || showingSignIn
+            || showingPurchaseSheet
+            || showingSettings
+            || showingUsage
+            || showingSnapshotBrowser
+            || showExportSheet
+            || showingProfile
+            || showingActivity
+            || showingHelp
+            || showingAppIconPicker
+            || showingCopilotPicker
     }
+
+    func closeListedSheets() {
+        if coCaptain.isPresented {
+            coCaptain.setPresented(false)
+        }
+        showingSignIn = false
+        showingPurchaseSheet = false
+        showingSettings = false
+        showingUsage = false
+        showingSnapshotBrowser = false
+        showExportSheet = false
+        showingProfile = false
+        showingActivity = false
+        showingHelp = false
+        showingAppIconPicker = false
+        showingCopilotPicker = false
+    }
+
+    /// FAB tap and ⌘J: open chat at large, or close every listed sheet if one is already up.
+    func handleFABTapOrCommandJ() {
+        if hasListedSheetPresented {
+            closeListedSheets()
+            return
+        }
+        presentCoCaptain(preferredDetent: .large)
+    }
+
+    // MARK: - Onboarding + CoCaptain Presentation
 
     func handleCoCaptainPresentationChange(isPresented: Bool) {
         if isPresented {
             Task {
                 await SubscriptionManager.shared.refreshEntitlements()
             }
-            if onboarding.currentStep == .submitCoCaptainPrompt {
-                onboarding.hidePopoverForCurrentStep()
+            if onboarding.currentStep == .tapFAB {
+                onboarding.completeCurrentStep()
             }
         } else {
-            onboardingInitialCoCaptainSuccessBaseline = nil
             if onboarding.currentStep == .dismissCoCaptain {
                 onboarding.completeCurrentStep()
-            } else if onboarding.currentStep == .submitCoCaptainPrompt {
-                onboarding.moveToStep(.typeCoCaptainPrompt)
             } else if onboarding.currentStep == .chatCoCaptain
                         || onboarding.currentStep == .applyCoCaptainChange {
                 if coCaptainHasPendingOnboardingReview {
@@ -403,7 +407,7 @@ final class AppSessionCoordinator {
     }
 
     func handleCoCaptainSuccessCountChange() {
-        advanceInitialCoCaptainOnboardingIfReady()
+        // Chat-sheet tutorial steps advance from CoCaptainView, not from a palette prompt row.
     }
 
     func handleHelpGuidesShownForOnboarding() {
@@ -473,29 +477,9 @@ final class AppSessionCoordinator {
         }
     }
 
-    // MARK: - Command Palette
+    // MARK: - CoCaptain Session Hooks
 
-    func bindCommandPalette() {
-        syncCommandPaletteActions()
-        commandPalette.nodes = router.activeStore.nodes
-        commandPalette.onExecute = { [weak self] actionID in
-            guard let self else { return }
-            _ = self.actionDispatcher.perform(actionID, source: .user)
-        }
-        commandPalette.onPinAction = { [weak self] actionID in
-            guard let self,
-                  let definition = self.actionDispatcher.definition(for: actionID) else { return }
-            self.router.activeStore.addShortcutNode(for: actionID, definition: definition)
-            self.commandPalette.nodes = self.router.activeStore.nodes
-        }
-        commandPalette.onCreateNode = { [weak self] type in
-            guard let self else { return }
-            self.createNode(type: type)
-            self.commandPalette.nodes = self.router.activeStore.nodes
-        }
-        commandPalette.onFlyToNode = { [weak self] nodeId in
-            self?.focusCanvasNode(nodeId)
-        }
+    func bindCoCaptainSession() {
         coCaptain.onFlyToNode = { [weak self] nodeId in
             self?.focusCanvasNode(nodeId)
         }
@@ -508,27 +492,6 @@ final class AppSessionCoordinator {
                 OnboardingAnalytics.cocaptainReviewFallback,
                 parameters: [OnboardingAnalytics.lessonID: lessonID]
             )
-        }
-        commandPalette.onSubmitPrompt = { [weak self] prompt in
-            self?.submitCoCaptainPrompt(prompt)
-        }
-    }
-
-    func syncCommandPaletteActions() {
-        let isRoot = router.currentWorkspace == .root
-        commandPalette.actions = actionDispatcher.availableActions.filter { action in
-            if isRoot && action.id == .goRoot { return false }
-            if isRoot && action.id == .goBack { return false }
-            return true
-        }
-    }
-
-    func filteredPaletteActionIDs(at workspace: WorkspaceState) -> [AppActionID] {
-        let isRoot = workspace == .root
-        return actionDispatcher.availableActions.compactMap { action in
-            if isRoot && action.id == .goRoot { return nil }
-            if isRoot && action.id == .goBack { return nil }
-            return action.id
         }
     }
 
@@ -577,9 +540,6 @@ final class AppSessionCoordinator {
         actionDispatcher.register(.goBack) { [weak self] in
             guard let self else { return }
             self.router.goBack()
-            if self.onboarding.currentStep == .tapGoBackAction {
-                self.onboarding.completeCurrentStep()
-            }
         }
         actionDispatcher.register(.createNode) { [weak self] in
             self?.createNode(type: .standard)
@@ -588,9 +548,7 @@ final class AppSessionCoordinator {
             self?.createNode(type: .standard)
         }
         actionDispatcher.register(.summonCoCaptain) { [weak self] in
-            guard let self else { return }
-            self.coCaptain.configureProjectSession(store: self.router.activeStore, dispatcher: self.actionDispatcher)
-            self.presentCoCaptain()
+            self?.presentCoCaptainReplacingListedSheets(preferredDetent: .medium)
         }
         actionDispatcher.register(.summonCopilotVoice) { [weak self] in
             self?.presentCopilotCall(mode: .voice)
@@ -601,16 +559,10 @@ final class AppSessionCoordinator {
         actionDispatcher.register(.undo) { [weak self] in
             guard let self else { return }
             self.performUndo(undoManager: self.activeUndoManager)
-            if self.onboarding.currentStep == .undoCanvasEdit {
-                self.onboarding.completeCurrentStep()
-            }
         }
         actionDispatcher.register(.redo) { [weak self] in
             guard let self else { return }
             self.performRedo(undoManager: self.activeUndoManager)
-            if self.onboarding.currentStep == .redoCanvasEdit {
-                self.onboarding.completeCurrentStep()
-            }
         }
         actionDispatcher.register(.openFile) { [weak self] in
             self?.showingFileImporter = true
@@ -653,15 +605,11 @@ final class AppSessionCoordinator {
         }
         actionDispatcher.register(.help) { [weak self] in
             self?.showingHelp = true
-            if self?.onboarding.currentStep == .openHelpCenter {
-                self?.onboarding.completeCurrentStep()
-            }
         }
         actionDispatcher.register(.openAppIcon) { [weak self] in
             self?.showingAppIconPicker = true
         }
         actionDispatcher.register(.changeCopilot) { [weak self] in
-            self?.commandPalette.setPresented(false)
             self?.showingCopilotPicker = true
         }
         actionDispatcher.register(.openSnapshotBrowser) { [weak self] in
@@ -682,16 +630,10 @@ final class AppSessionCoordinator {
             withAnimation(.spring(response: 0.8, dampingFraction: 0.85)) {
                 self.viewport.fitTo(nodes: self.router.activeStore.nodes, containerSize: self.containerSize)
             }
-            if self.onboarding.currentStep == .runOrganizeNodes {
-                self.onboarding.completeCurrentStep()
-            }
         }
         actionDispatcher.register(.toggleHUD) { [weak self] in
             guard let self else { return }
             self.showingHUD.toggle()
-        }
-        actionDispatcher.register(.showActionsList) { [weak self] in
-            self?.commandPalette.setPresented(true, mode: .actionsList)
         }
         actionDispatcher.register(.createSubCanvas) { [weak self] in
             self?.router.activeStore.addNode(type: .subCanvas)
@@ -708,32 +650,8 @@ final class AppSessionCoordinator {
     }
 
     private func presentPurchaseSheet() {
-        if coCaptain.isPresented {
-            coCaptain.setPresented(false)
-            Task { @MainActor [weak self] in
-                try? await Task.sleep(for: .seconds(0.3))
-                self?.showingPurchaseSheet = true
-            }
-        } else if showingProfile {
-            showingProfile = false
-            Task { @MainActor [weak self] in
-                try? await Task.sleep(for: .seconds(0.3))
-                self?.showingPurchaseSheet = true
-            }
-        } else if showingSettings {
-            showingSettings = false
-            Task { @MainActor [weak self] in
-                try? await Task.sleep(for: .seconds(0.3))
-                self?.showingPurchaseSheet = true
-            }
-        } else if showingUsage {
-            showingUsage = false
-            Task { @MainActor [weak self] in
-                try? await Task.sleep(for: .seconds(0.3))
-                self?.showingPurchaseSheet = true
-            }
-        } else {
-            showingPurchaseSheet = true
+        presentListedSheetAfterClosingOthers { [weak self] in
+            self?.showingPurchaseSheet = true
         }
     }
 
@@ -786,46 +704,64 @@ final class AppSessionCoordinator {
             }
         }
 
-        if onboarding.currentStep == .searchFlyToNode {
-            onboarding.completeCurrentStep()
+    }
+
+    private var tutorialNeedsChatSheet: Bool {
+        switch onboarding.currentStep {
+        case .tapFAB, .chatCoCaptain, .dismissCoCaptain, .chatCoCaptainGameEdit,
+             .reviewCoCaptainChange, .applyCoCaptainChange:
+            return true
+        default:
+            return false
         }
     }
 
-    private func submitCoCaptainPrompt(_ prompt: String) {
-        if let step = onboarding.currentStep, step.blocksCoCaptainPrompt {
-            return
+    /// Opens chat at large when a CoCaptain-sheet lesson step is already active.
+    /// `tapFAB` stays a user gesture — it does not auto-present.
+    private func presentChatIfTutorialNeedsIt() {
+        switch onboarding.currentStep {
+        case .chatCoCaptain, .dismissCoCaptain, .chatCoCaptainGameEdit,
+             .reviewCoCaptainChange, .applyCoCaptainChange:
+            guard !coCaptain.isPresented else { return }
+            presentCoCaptain(preferredDetent: .large)
+        default:
+            break
         }
-        coCaptain.configureProjectSession(store: router.activeStore, dispatcher: actionDispatcher)
-        let purpose: CoCaptainTurnPurpose =
-            onboarding.currentStep == .submitCoCaptainPrompt ? .onboardingWelcome : .standard
-        beginInitialCoCaptainOnboardingWaitIfNeeded()
-        presentCoCaptain()
-        coCaptain.sendMessage(prompt, purpose: purpose)
-        advanceInitialCoCaptainOnboardingIfReady()
     }
 
-    private var shouldOpenCoCaptainLargeForOnboarding: Bool {
-        UIDevice.current.userInterfaceIdiom == .phone &&
-            (onboarding.currentStep == .submitCoCaptainPrompt || onboarding.currentStep == .chatCoCaptain)
+    private func presentListedSheetAfterClosingOthers(_ present: @escaping () -> Void) {
+        if hasListedSheetPresented {
+            closeListedSheets()
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(0.3))
+                guard self != nil else { return }
+                present()
+            }
+        } else {
+            present()
+        }
     }
 
-    private func prepareCoCaptainPresentation() {
-        let startsLarge = shouldOpenCoCaptainLargeForOnboarding
+    /// Radial-menu Chat: open at medium, replacing any listed sheet. Tutorial steps that need chat stay large.
+    func presentCoCaptainReplacingListedSheets(preferredDetent: PresentationDetent) {
+        let detent: PresentationDetent = tutorialNeedsChatSheet ? .large : preferredDetent
+        presentListedSheetAfterClosingOthers { [weak self] in
+            self?.presentCoCaptain(preferredDetent: detent)
+        }
+    }
+
+    private func presentCoCaptain(preferredDetent: PresentationDetent) {
+        let detent: PresentationDetent = tutorialNeedsChatSheet ? .large : preferredDetent
+        let startsLarge = detent == .large
         coCaptainStartsLarge = startsLarge
         coCaptainAllowsMediumDetent = !startsLarge
-        coCaptainDetent = startsLarge ? .large : .medium
-    }
-
-    private func presentCoCaptain() {
-        prepareCoCaptainPresentation()
+        coCaptainDetent = detent
+        coCaptain.configureProjectSession(store: router.activeStore, dispatcher: actionDispatcher)
         coCaptain.setPresented(true)
     }
 
     func presentCopilotCall(mode: CopilotInteractionMode) {
-        if coCaptain.isPresented {
-            coCaptain.setPresented(false)
-        }
-        commandPalette.setPresented(false)
+        closeListedSheets()
 
         let persona = selectedCopilot
         let context = copilotCallProjectContext()
@@ -875,12 +811,6 @@ final class AppSessionCoordinator {
         """
     }
 
-    private func beginInitialCoCaptainOnboardingWaitIfNeeded() {
-        guard onboarding.currentStep == .submitCoCaptainPrompt else { return }
-        onboardingInitialCoCaptainSuccessBaseline = coCaptain.successfulAssistantResponseCount
-        onboarding.hidePopoverForCurrentStep()
-    }
-
     private func handleOnboardingReviewApplied() {
         guard onboarding.currentStep == .applyCoCaptainChange,
               !coCaptainHasPendingOnboardingReview else {
@@ -918,14 +848,4 @@ final class AppSessionCoordinator {
         }
     }
 
-    private func advanceInitialCoCaptainOnboardingIfReady() {
-        guard let baseline = onboardingInitialCoCaptainSuccessBaseline,
-              onboarding.currentStep == .submitCoCaptainPrompt,
-              coCaptain.successfulAssistantResponseCount > baseline else {
-            return
-        }
-
-        onboardingInitialCoCaptainSuccessBaseline = nil
-        onboarding.completeCurrentStep()
-    }
 }

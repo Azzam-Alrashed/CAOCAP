@@ -176,40 +176,6 @@ final class NodeMutationEngine {
         }
         onRequestSave?(true)
     }
-
-    /// Creates a `.standard` shortcut node pinned to a specific canvas action,
-    /// placed at the given position. Used when the user pins an action from the
-    /// command palette to their canvas.
-    public func addShortcutNode(
-        nodes: inout [SpatialNode],
-        action: NodeAction,
-        title: String,
-        icon: String,
-        at position: CGPoint
-    ) {
-        let newNode = SpatialNode(
-            type: .standard,
-            position: position,
-            title: title,
-            icon: icon,
-            theme: .indigo,
-            action: action
-        )
-
-        undoManager?.registerUndo(withTarget: self) { target in
-            MainActor.assumeIsolated {
-                target.onPerformUndoMutation? { currentNodes in
-                    target.deleteNode(nodes: &currentNodes, id: newNode.id, persist: true)
-                }
-            }
-        }
-        undoStackChanged += 1
-
-        withAnimation(.spring()) {
-            nodes.append(newNode)
-        }
-        onRequestSave?(true)
-    }
     
     public func nodeIcon(for type: NodeType) -> String {
         type.defaultIcon

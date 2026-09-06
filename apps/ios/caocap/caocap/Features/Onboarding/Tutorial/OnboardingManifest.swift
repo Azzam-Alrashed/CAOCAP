@@ -47,34 +47,6 @@ enum OnboardingManifest {
                 messageKey: "onboarding.tapFAB.message",
                 icon: "hand.tap"
             )
-        case .returnToRoot:
-            return OnboardingStepContent(
-                step: step,
-                titleKey: "onboarding.returnToRoot.title",
-                messageKey: "onboarding.returnToRoot.message",
-                icon: "arrow.uturn.backward.circle.fill"
-            )
-        case .typeGoBackInOmnibox:
-            return OnboardingStepContent(
-                step: step,
-                titleKey: "onboarding.typeGoBackInOmnibox.title",
-                messageKey: "onboarding.typeGoBackInOmnibox.message",
-                icon: "keyboard"
-            )
-        case .tapGoBackAction:
-            return OnboardingStepContent(
-                step: step,
-                titleKey: "onboarding.tapGoBackAction.title",
-                messageKey: "onboarding.tapGoBackAction.message",
-                icon: "arrow.uturn.backward"
-            )
-        case .searchFlyToNode:
-            return OnboardingStepContent(
-                step: step,
-                titleKey: "onboarding.searchFlyToNode.title",
-                messageKey: "onboarding.searchFlyToNode.message",
-                icon: "magnifyingglass"
-            )
         case .openPortal:
             return OnboardingStepContent(
                 step: step,
@@ -89,33 +61,12 @@ enum OnboardingManifest {
                 messageKey: "onboarding.chatCoCaptainGameEdit.message",
                 icon: "gamecontroller.fill"
             )
-        case .openHelpCenter:
-            return OnboardingStepContent(
-                step: step,
-                titleKey: "onboarding.openHelpCenter.title",
-                messageKey: "onboarding.openHelpCenter.message",
-                icon: "questionmark.circle.fill"
-            )
         case .browseHelpGuides:
             return OnboardingStepContent(
                 step: step,
                 titleKey: "onboarding.browseHelpGuides.title",
                 messageKey: "onboarding.browseHelpGuides.message",
                 icon: "book.fill"
-            )
-        case .typeCoCaptainPrompt:
-            return OnboardingStepContent(
-                step: step,
-                titleKey: "onboarding.typeCoCaptainPrompt.title",
-                messageKey: "onboarding.typeCoCaptainPrompt.message",
-                icon: "keyboard"
-            )
-        case .submitCoCaptainPrompt:
-            return OnboardingStepContent(
-                step: step,
-                titleKey: "onboarding.submitCoCaptainPrompt.title",
-                messageKey: "onboarding.submitCoCaptainPrompt.message",
-                icon: "sparkles"
             )
         case .chatCoCaptain:
             return OnboardingStepContent(
@@ -158,27 +109,6 @@ enum OnboardingManifest {
                 titleKey: "onboarding.dragCanvasNode.title",
                 messageKey: "onboarding.dragCanvasNode.message",
                 icon: "arrow.up.and.down.and.arrow.left.and.right"
-            )
-        case .runOrganizeNodes:
-            return OnboardingStepContent(
-                step: step,
-                titleKey: "onboarding.runOrganizeNodes.title",
-                messageKey: "onboarding.runOrganizeNodes.message",
-                icon: "wand.and.stars"
-            )
-        case .undoCanvasEdit:
-            return OnboardingStepContent(
-                step: step,
-                titleKey: "onboarding.undoCanvasEdit.title",
-                messageKey: "onboarding.undoCanvasEdit.message",
-                icon: "arrow.uturn.backward"
-            )
-        case .redoCanvasEdit:
-            return OnboardingStepContent(
-                step: step,
-                titleKey: "onboarding.redoCanvasEdit.title",
-                messageKey: "onboarding.redoCanvasEdit.message",
-                icon: "arrow.uturn.forward"
             )
         }
     }

@@ -1,6 +1,6 @@
 # App Session
 
-Owns root-level session orchestration for the leftover canvas + CoCaptain + sign-in shell: workspace routing hooks, global sheet flags, command palette binding, and `AppActionDispatcher` registration. Home is an empty canvas. Explore, Build, and Collaborate are planned and are not wired here.
+Owns root-level session orchestration for the leftover canvas + CoCaptain + sign-in shell: workspace routing hooks, global sheet flags, and `AppActionDispatcher` registration. Home is an empty canvas. Explore, Build, and Collaborate are planned and are not wired here.
 
 ## Ownership
 

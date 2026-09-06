@@ -19,7 +19,6 @@ struct InfiniteCanvasView: View {
     
     /// Node to pulse-highlight after fly-to navigation from CoCaptain or search.
     var canvasFocusNodeID: UUID?
-    var commandPalette: CommandPaletteViewModel? = nil
     
     /// Callback triggered when a specialized action node is tapped. Its
     /// presence also marks the canvas as non-persistent onboarding mode.
@@ -34,7 +33,6 @@ struct InfiniteCanvasView: View {
         viewport: Binding<ViewportState>,
         currentScale: Binding<CGFloat>,
         canvasFocusNodeID: UUID? = nil,
-        commandPalette: CommandPaletteViewModel? = nil,
         onNodeAction: ((NodeAction) -> Void)? = nil,
         onNavigateToSubCanvas: ((String) -> Void)? = nil,
         onRecoverUnsupportedProject: (() -> Void)? = nil,
@@ -44,7 +42,6 @@ struct InfiniteCanvasView: View {
         self._viewport = viewport
         self._currentScale = currentScale
         self.canvasFocusNodeID = canvasFocusNodeID
-        self.commandPalette = commandPalette
         self.onNodeAction = onNodeAction
         self.onNavigateToSubCanvas = onNavigateToSubCanvas
         self.onRecoverUnsupportedProject = onRecoverUnsupportedProject
@@ -218,7 +215,6 @@ struct InfiniteCanvasView: View {
         }
         .background(backgroundColor)
         .onboardingTooltipOverlay(
-            isCommandPalettePresented: commandPalette?.isPresented ?? false,
             rendersAnchor: { $0.isCanvasLocal }
         )
         .edgesIgnoringSafeArea(.all)
@@ -226,7 +222,6 @@ struct InfiniteCanvasView: View {
             NodeDetailView(
                 node: node,
                 store: store,
-                commandPalette: commandPalette,
                 onFlyToNode: handleFlyToFromDetail
             )
         }

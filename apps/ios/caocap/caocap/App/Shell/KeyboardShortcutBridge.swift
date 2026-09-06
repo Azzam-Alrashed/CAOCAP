@@ -2,17 +2,13 @@ import SwiftUI
 
 /// Captures hardware keyboard shortcuts on iPhone where `.commands` is ignored.
 struct KeyboardShortcutBridge: View {
-    let onOpenCommandPalette: () -> Void
-    let onSummonCoCaptain: () -> Void
+    let onToggleChatOrDismissSheets: () -> Void
     let onUndo: () -> Void
     let onRedo: () -> Void
 
     var body: some View {
         Group {
-            Button("") { onOpenCommandPalette() }
-                .keyboardShortcut("k", modifiers: .command)
-
-            Button("") { onSummonCoCaptain() }
+            Button("") { onToggleChatOrDismissSheets() }
                 .keyboardShortcut("j", modifiers: .command)
 
             Button("") { onUndo() }
