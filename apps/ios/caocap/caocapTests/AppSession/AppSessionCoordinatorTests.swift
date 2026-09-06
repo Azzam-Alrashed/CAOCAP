@@ -72,15 +72,6 @@ struct AppSessionCoordinatorTests {
         #expect(session.showingActivity)
     }
 
-    @Test func dailyNodeActionPresentsDailySheet() {
-        let session = AppSessionCoordinator()
-        session.ensureActionsConfigured()
-
-        session.handleNodeAction(.openDaily)
-
-        #expect(session.showingDaily)
-    }
-
     @Test func navigateRootNodeActionRoutesThroughDispatcher() {
         let session = AppSessionCoordinator()
         session.ensureActionsConfigured()

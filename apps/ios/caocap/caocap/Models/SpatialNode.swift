@@ -18,8 +18,6 @@ public enum NodeAction: String, Codable, Equatable {
     case proSubscription
     /// Open the device-wide project activity history.
     case openActivity
-    /// Open today's daily HTML challenges and XP progress.
-    case openDaily
     /// Open a WhatsApp chat with the CAOCAP creator.
     case openWhatsApp
     /// Open the in-app help and documentation center.

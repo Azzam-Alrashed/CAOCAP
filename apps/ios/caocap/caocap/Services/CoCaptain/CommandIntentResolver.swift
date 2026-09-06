@@ -285,16 +285,6 @@ public struct CommandIntentResolver {
                 "افتح النشاط",
                 "سجل النشاط"
             ]
-        case .openDaily:
-            return [
-                "open daily",
-                "daily",
-                "daily challenges",
-                "اليومي",
-                "التحديات اليومية",
-                "افتح اليومي",
-                "التحدي اليومي"
-            ]
         case .openWhatsApp:
             return [
                 "open whatsapp",

@@ -75,12 +75,15 @@ Deleted the unused mini-app stack and its tests.
 
 ## Phase 4 — Delete daily challenges and XP
 
-**Status:** Not started  
+**Status:** Done
 **Depends on:** Phase 3
 
-- Remove Daily UI and gamification services.
-- Profile no longer shows XP / badges.
-- Delete those tests.
+Removed Daily UI and gamification services.
+
+- Deleted the Daily sheet, badge row, Profile level card, and challenge evaluation after a save.
+- Saves still record Activity history. Confetti still plays for tutorial graduation.
+- Command palette, Help, and leftover `openDaily` nodes no longer open a Daily sheet. Old saved Daily actions decode as unused.
+- Deleted those tests and the iron / gold / diamond badge assets.
 
 **You should see:** No daily sheet, no level card, no challenge evaluation after a save.
 

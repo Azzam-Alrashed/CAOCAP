@@ -31,13 +31,12 @@ Some actions can be pinned as shortcut nodes on the active canvas:
 - Summon Co-Captain
 - Pro Subscription
 - Activity
-- Daily
 - WhatsApp
 - Help & Documentation
 
 Pin-able rows show an **Add to canvas** affordance. Choosing it calls `ProjectStore.addShortcutNode(for:definition:)` and creates a standard node at the viewport center with the matching `NodeAction`. Selecting the row normally still runs the action immediately through the dispatcher.
 
-Root canvas nodes with rich previews (Activity heatmap, Daily progress) remain spatial dashboard content on the home grid. Their actions still route through `AppActionDispatcher` like every other `NodeAction`. The Help node opens the in-app help center sheet.
+Root canvas nodes with rich previews (Activity heatmap) remain spatial dashboard content. Their actions still route through `AppActionDispatcher` like every other `NodeAction`. The Help node opens the in-app help center sheet.
 
 ## Intent Matching
 

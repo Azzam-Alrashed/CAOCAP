@@ -22,7 +22,6 @@ final class AppSessionCoordinator {
     var showingSnapshotBrowser = false
     var showingProfile = false
     var showingActivity = false
-    var showingDaily = false
     var showingHelp = false
     var showingAppIconPicker = false
     var showConfetti = false
@@ -116,7 +115,6 @@ final class AppSessionCoordinator {
         bindCommandPalette()
         configureActionsIfNeeded()
         actionDispatcher.refreshCopilotActionTitle()
-        wireGamification()
         syncViewportWithActiveStore()
         attachUndoManager(undoManager)
         coCaptain.configureProjectSession(store: router.activeStore, dispatcher: actionDispatcher)
@@ -173,7 +171,6 @@ final class AppSessionCoordinator {
     func handleWorkspaceChange(undoManager: UndoManager?) {
         activeUndoManager = undoManager
         bindCommandPalette()
-        wireGamification()
         attachUndoManager(undoManager)
         coCaptain.configureProjectSession(store: router.activeStore, dispatcher: actionDispatcher)
         syncCommandPaletteActions()
@@ -281,10 +278,8 @@ final class AppSessionCoordinator {
         LocalGemmaModelManager.shared.clearLocalModelCache()
         try await AppDataResetService.eraseLocalData()
         ActivityStore.shared.reset()
-        GamificationStore.shared.reset()
 
         router = AppRouter()
-        wireGamification()
         commandPalette = CommandPaletteViewModel()
         coCaptain = CoCaptainViewModel()
         actionDispatcher = AppActionDispatcher()
@@ -573,29 +568,6 @@ final class AppSessionCoordinator {
         currentScale = viewport.scale
     }
 
-    private func wireGamification() {
-        let handler: ([DailyChallengeDefinition]) -> Void = { [weak self] _ in
-            self?.celebrateChallengeCompletion()
-        }
-        router.rootStore.onChallengesCompleted = handler
-        for store in router.projects.values {
-            store.onChallengesCompleted = handler
-        }
-        router.activeStore.onChallengesCompleted = handler
-        _ = GamificationStore.shared.evaluateMiniApps(
-            htmlSamples: router.activeStore.nodes.compactMap(\.miniApp?.compiledHTML)
-        )
-    }
-
-    private func celebrateChallengeCompletion() {
-        HapticsManager.shared.notification(.success)
-        showConfetti = true
-        Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .seconds(2.5))
-            self?.showConfetti = false
-        }
-    }
-
     func ensureActionsConfigured() {
         configureActionsIfNeeded()
     }
@@ -683,9 +655,6 @@ final class AppSessionCoordinator {
         }
         actionDispatcher.register(.openActivity) { [weak self] in
             self?.showingActivity = true
-        }
-        actionDispatcher.register(.openDaily) { [weak self] in
-            self?.showingDaily = true
         }
         actionDispatcher.register(.openWhatsApp) {
             if let url = SupportContact.whatsAppURL {
@@ -937,7 +906,7 @@ final class AppSessionCoordinator {
         coCaptain.setPresented(false)
 
         if onboarding.activeLessonID == .canvasBasics {
-            celebrateChallengeCompletion()
+            celebrateTutorialGraduation()
             Task { @MainActor [weak self] in
                 try? await Task.sleep(for: .seconds(2.5))
                 guard let self,

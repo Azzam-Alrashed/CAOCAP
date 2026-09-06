@@ -33,7 +33,6 @@ public class LocalizationManager {
         "JavaScript",
         "New Logic",
         "Activity",
-        "Daily",
         "Help",
         "WhatsApp"
     ]

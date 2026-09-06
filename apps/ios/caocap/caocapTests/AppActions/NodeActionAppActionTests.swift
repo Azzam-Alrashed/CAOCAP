@@ -11,7 +11,6 @@ struct NodeActionAppActionTests {
             (.summonCoCaptain, .summonCoCaptain),
             (.proSubscription, .proSubscription),
             (.openActivity, .openActivity),
-            (.openDaily, .openDaily),
             (.openWhatsApp, .openWhatsApp),
             (.openHelp, .help),
             (.openAppIcon, .openAppIcon)
@@ -30,7 +29,6 @@ struct NodeActionAppActionTests {
             .summonCoCaptain,
             .proSubscription,
             .openActivity,
-            .openDaily,
             .openWhatsApp,
             .help,
             .openAppIcon
@@ -45,7 +43,7 @@ struct NodeActionAppActionTests {
     @MainActor
     @Test func dispatcherExposesNewRootShortcutActions() throws {
         let dispatcher = AppActionDispatcher()
-        let newIDs: [AppActionID] = [.openActivity, .openDaily, .openWhatsApp, .help, .openAppIcon]
+        let newIDs: [AppActionID] = [.openActivity, .openWhatsApp, .help, .openAppIcon]
 
         for id in newIDs {
             let definition = try #require(dispatcher.definition(for: id))

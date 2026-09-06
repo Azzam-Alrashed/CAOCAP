@@ -37,7 +37,6 @@ public enum AppActionID: String, CaseIterable, Identifiable, Codable, Hashable {
     case showActionsList = "show_actions_list"
     case createSubCanvas = "create_sub_canvas"
     case openActivity = "open_activity"
-    case openDaily = "open_daily"
     case openWhatsApp = "open_whatsapp"
     case openAppIcon = "open_app_icon"
     case changeCopilot = "change_copilot"
@@ -54,7 +53,6 @@ public enum AppActionID: String, CaseIterable, Identifiable, Codable, Hashable {
         case .summonCoCaptain: return .summonCoCaptain
         case .proSubscription: return .proSubscription
         case .openActivity: return .openActivity
-        case .openDaily: return .openDaily
         case .openWhatsApp: return .openWhatsApp
         case .help: return .openHelp
         case .openAppIcon: return .openAppIcon
@@ -355,15 +353,6 @@ public final class AppActionDispatcher: AppActionPerforming {
             id: .openActivity,
             title: "Activity",
             icon: "chart.bar.xaxis",
-            category: .assistant,
-            isMutating: false,
-            allowsAutonomousExecution: false,
-            canPinToCanvas: true
-        ),
-        AppActionDefinition(
-            id: .openDaily,
-            title: "Daily",
-            icon: "rosette",
             category: .assistant,
             isMutating: false,
             allowsAutonomousExecution: false,
