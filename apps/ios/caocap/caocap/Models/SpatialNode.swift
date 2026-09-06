@@ -28,17 +28,17 @@ public enum NodeAction: String, Codable, Equatable {
 
 /// Structural kind of a canvas node, determining its rendering, behavior, and default metadata.
 public enum NodeType: String, Codable, Equatable, Hashable, CaseIterable {
-    /// A generic node with no special workflow behavior.
+    /// An ordinary canvas card.
     case standard
-    /// Leftover mini-app card. Tapping inspects the card; it does not open an HTML workspace.
+    /// Leftover in-memory mini-app type. Saves as `.standard`; old files decode as `.standard`.
     case miniApp
     /// A node that acts as a portal to a separate nested canvas.
     case subCanvas
     
     public var displayName: String {
         switch self {
-        case .standard: return "Standard"
-        case .miniApp: return "Mini-App"
+        case .standard: return "Card"
+        case .miniApp: return "Card"
         case .subCanvas: return "Sub-Canvas"
         }
     }
@@ -55,9 +55,9 @@ public enum NodeType: String, Codable, Equatable, Hashable, CaseIterable {
     /// Placeholder title applied when a new node of this type is created.
     public var defaultTitle: String {
         switch self {
-        case .miniApp: return "Mini-App"
+        case .miniApp: return "Card"
         case .subCanvas: return "New Canvas"
-        case .standard: return "Standard"
+        case .standard: return "Card"
         }
     }
 
@@ -308,7 +308,7 @@ public struct SpatialNode: Identifiable, Codable, Equatable {
         self.nextNodeId = nextNodeId
         self.connectedNodeIds = connectedNodeIds
         self.action = action
-        self.miniApp = type == .miniApp ? (miniApp ?? MiniAppState()) : miniApp
+        self.miniApp = type == .miniApp ? miniApp : nil
         self.agentState = agentState
         self.agentProfile = agentProfile
         self.linkedCanvasFileName = linkedCanvasFileName
@@ -371,14 +371,31 @@ public struct SpatialNode: Identifiable, Codable, Equatable {
         } else {
             self.action = nil
         }
-        self.miniApp = try container.decodeIfPresent(MiniAppState.self, forKey: .miniApp)
-        // Migration: ensure older saves that predate `MiniAppState` still get a default state.
-        if self.type == .miniApp, self.miniApp == nil {
-            self.miniApp = MiniAppState()
+        // Leftover mini-app files still open: type becomes an ordinary card and HTML / SRS is dropped.
+        if self.type == .miniApp {
+            self.type = .standard
         }
+        self.miniApp = nil
         self.agentState = try container.decodeIfPresent(NodeAgentState.self, forKey: .agentState) ?? NodeAgentState()
         self.agentProfile = try container.decodeIfPresent(AgentProfile.self, forKey: .agentProfile) ?? AgentProfile()
         self.linkedCanvasFileName = try container.decodeIfPresent(String.self, forKey: .linkedCanvasFileName)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(type == .miniApp ? NodeType.standard : type, forKey: .type)
+        try container.encode(position, forKey: .position)
+        try container.encode(title, forKey: .title)
+        try container.encodeIfPresent(subtitle, forKey: .subtitle)
+        try container.encodeIfPresent(icon, forKey: .icon)
+        try container.encode(theme, forKey: .theme)
+        try container.encodeIfPresent(nextNodeId, forKey: .nextNodeId)
+        try container.encodeIfPresent(connectedNodeIds, forKey: .connectedNodeIds)
+        try container.encodeIfPresent(action, forKey: .action)
+        try container.encode(agentState, forKey: .agentState)
+        try container.encode(agentProfile, forKey: .agentProfile)
+        try container.encodeIfPresent(linkedCanvasFileName, forKey: .linkedCanvasFileName)
     }
 
     /// Repairs legacy saves where workflow nodes kept outdated titles, icons, or themes.

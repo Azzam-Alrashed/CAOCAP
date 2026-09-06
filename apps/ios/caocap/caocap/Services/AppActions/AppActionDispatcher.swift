@@ -162,7 +162,7 @@ public final class AppActionDispatcher: AppActionPerforming {
         ),
         AppActionDefinition(
             id: .createNode,
-            title: "Create Mini-App",
+            title: "Create Card",
             icon: "plus.square",
             category: .project,
             isMutating: true,
@@ -170,8 +170,8 @@ public final class AppActionDispatcher: AppActionPerforming {
         ),
         AppActionDefinition(
             id: .createFirebaseNode,
-            title: "Create Mini-App",
-            icon: "app.connected.to.app.below.fill",
+            title: "Create Card",
+            icon: "square.grid.2x2",
             category: .project,
             isMutating: true,
             allowsAutonomousExecution: true

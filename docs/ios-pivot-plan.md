@@ -119,14 +119,14 @@ The purchase screen stays. The Home crown node is already gone from Phase 1. Old
 
 ## Phase 7 — Drop mini-app from the data model
 
-**Status:** Not started  
+**Status:** Done
 **Depends on:** Phase 6
 
-This is the risky persistence change. Do it only after the UI no longer needs those fields.
+There are no users, so we did not migrate saved mini-app homes. New saves do not write HTML / SRS.
 
-- Remove mini-app payload and `miniApp` node type from saved projects.
-- Old files still open: extra fields are ignored; leftover mini-app nodes become ordinary cards or are dropped.
-- Save / undo / viewport still work.
+- Creating a node now makes an ordinary card (`.standard`), not a Mini-App.
+- Saves omit the `miniApp` payload. Leftover `miniApp` nodes decode as ordinary cards; extra fields are ignored.
+- In-memory Mini-App helpers stay for CoCaptain until Phase 8. Save / undo / viewport still work.
 
 **You should see:** Create a node, quit, reopen: position and title remain. No HTML / SRS fields.
 

@@ -535,17 +535,7 @@ final class AppSessionCoordinator {
     func flyToTargetScale(for node: SpatialNode, nodeId: UUID) -> CGFloat {
         guard containerSize != .zero else { return 1.0 }
 
-        let size: CGSize
-        if let measuredSize = nodeSizes[nodeId] {
-            size = measuredSize
-        } else {
-            switch node.type {
-            case .miniApp:
-                size = CGSize(width: 375, height: 667)
-            default:
-                size = CGSize(width: 280, height: 180)
-            }
-        }
+        let size = nodeSizes[nodeId] ?? CGSize(width: 280, height: 180)
 
         let paddingFactor: CGFloat = 0.8
         let scaleX = (containerSize.width * paddingFactor) / size.width
@@ -592,10 +582,10 @@ final class AppSessionCoordinator {
             }
         }
         actionDispatcher.register(.createNode) { [weak self] in
-            self?.createNode(type: .miniApp)
+            self?.createNode(type: .standard)
         }
         actionDispatcher.register(.createFirebaseNode) { [weak self] in
-            self?.createNode(type: .miniApp)
+            self?.createNode(type: .standard)
         }
         actionDispatcher.register(.summonCoCaptain) { [weak self] in
             guard let self else { return }

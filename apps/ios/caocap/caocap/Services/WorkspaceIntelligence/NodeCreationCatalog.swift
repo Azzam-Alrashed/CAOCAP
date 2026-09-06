@@ -19,10 +19,10 @@ public struct NodeCreationOption: Identifiable, Equatable {
 public struct NodeCreationCatalog {
     public static let options: [NodeCreationOption] = [
         NodeCreationOption(
-            id: .miniApp,
-            title: "Create Mini-App",
-            icon: NodeType.miniApp.defaultIcon,
-            keywords: ["mini-app", "mini app", "app", "preview", "srs", "code", "firebase"]
+            id: .standard,
+            title: "Create Card",
+            icon: NodeType.standard.defaultIcon,
+            keywords: ["card", "node", "standard"]
         ),
         NodeCreationOption(
             id: .subCanvas,

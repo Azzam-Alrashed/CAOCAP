@@ -56,18 +56,13 @@ final class NodeMutationEngine {
             }
             undoStackChanged += 1
             
-            nodes[index].type = type
-            nodes[index].theme = nodeTheme(for: type)
-            nodes[index].icon = nodeIcon(for: type)
+            let createdType = type == .miniApp ? NodeType.standard : type
+            nodes[index].type = createdType
+            nodes[index].theme = nodeTheme(for: createdType)
+            nodes[index].icon = nodeIcon(for: createdType)
             
-            switch type {
-            case .miniApp:
-                nodes[index].miniApp = nodes[index].miniApp ?? MiniAppState(
-                    srsReadinessState: SRSReadinessEvaluator().evaluate(text: SRSScaffold.defaultText, currentState: nil),
-                    codeText: ProjectTemplateProvider.defaultCode,
-                    firebaseConfigText: FirebasePreviewBootstrap.placeholderConfigJSON()
-                )
-            case .standard:
+            switch createdType {
+            case .miniApp, .standard:
                 nodes[index].miniApp = nil
             case .subCanvas:
                 nodes[index].miniApp = nil
@@ -245,27 +240,22 @@ final class NodeMutationEngine {
     /// Creates a new node of the given type and appends it to the canvas.
     /// The new node is placed at the current viewport centre, given a unique title,
     /// and appropriate type-specific state is bootstrapped automatically.
-    public func addNode(nodes: inout [SpatialNode], type: NodeType = .miniApp) {
-        let uniqueTitle = generateUniqueTitle(nodes: nodes, base: type.defaultTitle)
+    public func addNode(nodes: inout [SpatialNode], type: NodeType = .standard) {
+        let createdType = type == .miniApp ? NodeType.standard : type
+        let uniqueTitle = generateUniqueTitle(nodes: nodes, base: createdType.defaultTitle)
 
-        let subtitle = type.defaultSubtitle
-        let linkedFileName: String? = type == .subCanvas ? CanvasFileNaming.newCanvasFileName() : nil
-        let miniApp = type == .miniApp ? MiniAppState(
-            srsReadinessState: SRSReadinessEvaluator().evaluate(text: SRSScaffold.defaultText, currentState: nil),
-            codeText: ProjectTemplateProvider.defaultCode,
-            firebaseConfigText: FirebasePreviewBootstrap.placeholderConfigJSON()
-        ) : nil
+        let subtitle = createdType.defaultSubtitle
+        let linkedFileName: String? = createdType == .subCanvas ? CanvasFileNaming.newCanvasFileName() : nil
         let offset = onViewportChange?() ?? .zero
 
         let newNode = SpatialNode(
             id: UUID(),
-            type: type,
+            type: createdType,
             position: CGPoint(x: -offset.width, y: -offset.height), // Scale is applied in view usually, simplified here based on ProjectStore
             title: uniqueTitle,
             subtitle: subtitle,
-            icon: nodeIcon(for: type),
-            theme: nodeTheme(for: type),
-            miniApp: miniApp,
+            icon: nodeIcon(for: createdType),
+            theme: nodeTheme(for: createdType),
             linkedCanvasFileName: linkedFileName
         )
         

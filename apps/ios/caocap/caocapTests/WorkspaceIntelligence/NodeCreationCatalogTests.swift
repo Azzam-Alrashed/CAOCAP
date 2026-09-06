@@ -4,19 +4,19 @@ import Testing
 
 struct NodeCreationCatalogTests {
 
-    @Test func catalogMatchesCodeQueryWithMiniApp() {
+    @Test func catalogMatchesCardQuery() {
         let catalog = NodeCreationCatalog()
-        let results = catalog.search(query: "code")
+        let results = catalog.search(query: "card")
 
-        #expect(results.contains(where: { $0.id == .miniApp }))
+        #expect(results.contains(where: { $0.id == .standard }))
         #expect(!results.contains(where: { $0.id == .subCanvas }))
     }
 
-    @Test func catalogMatchesPreviewAlias() {
+    @Test func catalogMatchesNodeAlias() {
         let catalog = NodeCreationCatalog()
-        let results = catalog.search(query: "preview")
+        let results = catalog.search(query: "node")
 
-        #expect(results.contains(where: { $0.id == .miniApp }))
+        #expect(results.contains(where: { $0.id == .standard }))
     }
 
     @Test func catalogReturnsEmptyForBlankQuery() {

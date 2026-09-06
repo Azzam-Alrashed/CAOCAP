@@ -378,7 +378,7 @@ public class ProjectStore {
     public func organizeNodes() {
         mutationEngine.organizeNodes(nodes: &nodes, )
     }
-    public func addNode(type: NodeType = .miniApp) {
+    public func addNode(type: NodeType = .standard) {
         mutationEngine.addNode(nodes: &nodes, type: type)
     }
     public func addShortcutNode(for appAction: AppActionID, definition: AppActionDefinition) {

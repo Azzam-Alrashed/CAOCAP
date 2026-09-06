@@ -10,7 +10,7 @@ final class NodeMutationEngineTests: XCTestCase {
         engine = NodeMutationEngine()
     }
 
-    func testAddNodeCreatesMiniAppByDefault() {
+    func testAddNodeCreatesStandardCardByDefault() {
         var nodes: [SpatialNode] = []
         var compileCalled = false
         engine.onCompileLivePreview = { _ in compileCalled = true }
@@ -18,13 +18,12 @@ final class NodeMutationEngineTests: XCTestCase {
         engine.addNode(nodes: &nodes)
 
         XCTAssertEqual(nodes.count, 1)
-        XCTAssertEqual(nodes[0].type, .miniApp)
-        XCTAssertEqual(nodes[0].theme, .blue)
-        XCTAssertEqual(nodes[0].title, "Mini-App")
-        XCTAssertEqual(nodes[0].icon, NodeType.miniApp.defaultIcon)
+        XCTAssertEqual(nodes[0].type, .standard)
+        XCTAssertEqual(nodes[0].theme, NodeType.standard.defaultTheme)
+        XCTAssertEqual(nodes[0].title, NodeType.standard.defaultTitle)
+        XCTAssertEqual(nodes[0].icon, NodeType.standard.defaultIcon)
         XCTAssertNil(nodes[0].subtitle)
-        XCTAssertNotNil(nodes[0].miniApp)
-        XCTAssertFalse(nodes[0].miniApp?.codeText.isEmpty ?? true)
+        XCTAssertNil(nodes[0].miniApp)
         XCTAssertTrue(compileCalled)
     }
 

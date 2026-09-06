@@ -184,7 +184,7 @@ struct ProjectMigrationTests {
         let snapshot = ProjectSnapshot(
             projectName: "Round Trip",
             nodes: [
-                SpatialNode(type: .miniApp, position: CGPoint(x: 12, y: 24), title: "Mini-App", miniApp: MiniAppState(codeText: "<h1>Hello</h1>"))
+                SpatialNode(type: .standard, position: CGPoint(x: 12, y: 24), title: "Card")
             ],
             viewportOffset: CGSize(width: 10, height: 20),
             viewportScale: 0.75
@@ -193,8 +193,52 @@ struct ProjectMigrationTests {
         try persistence.save(snapshot, fileName: fileName)
         let loaded = try persistence.load(fileName: fileName)
 
-        #expect(loaded == snapshot)
+        #expect(loaded.projectName == snapshot.projectName)
+        #expect(loaded.nodes.count == 1)
+        #expect(loaded.nodes[0].type == .standard)
+        #expect(loaded.nodes[0].title == "Card")
+        #expect(loaded.nodes[0].position == CGPoint(x: 12, y: 24))
+        #expect(loaded.nodes[0].miniApp == nil)
+        #expect(loaded.viewportScale == 0.75)
         #expect(loaded.schemaVersion == ProjectPersistenceService.currentSchemaVersion)
+
+        let savedJSON = String(data: try Data(contentsOf: persistence.fileURL(for: fileName)), encoding: .utf8) ?? ""
+        #expect(!savedJSON.contains("\"miniApp\""))
+        #expect(!savedJSON.contains("srsText"))
+        #expect(!savedJSON.contains("codeText"))
+    }
+
+    @Test func leftoverMiniAppNodeDecodesAsOrdinaryCard() throws {
+        let nodeID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+        let json = """
+        {
+            "id": "\(nodeID.uuidString)",
+            "type": "miniApp",
+            "position": [12, 24],
+            "title": "Hello World",
+            "theme": "blue",
+            "miniApp": {
+                "srsText": "# Intent",
+                "srsReadinessState": "empty",
+                "codeText": "<h1>Hello</h1>",
+                "firebaseConfigText": ""
+            }
+        }
+        """
+
+        let decoded = try JSONDecoder().decode(SpatialNode.self, from: Data(json.utf8))
+
+        #expect(decoded.id == nodeID)
+        #expect(decoded.type == .standard)
+        #expect(decoded.title == "Hello World")
+        #expect(decoded.position == CGPoint(x: 12, y: 24))
+        #expect(decoded.miniApp == nil)
+
+        let encoded = try JSONEncoder().encode(decoded)
+        let encodedObject = try #require(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+        #expect(encodedObject["type"] as? String == "standard")
+        #expect(encodedObject["miniApp"] == nil)
+        #expect(encodedObject["title"] as? String == "Hello World")
     }
 
     @Test func legacyNodeActionStringDecodesToNil() throws {
