@@ -192,9 +192,33 @@ The tutorial engine stays. Mini-App preview lessons and unused CoCaptain HTML-pa
 
 ---
 
+## Phase 12 — Rewire the FAB; delete leftover command palette
+
+**Status:** Not started
+**Depends on:** Phase 11
+
+iOS leftover cleanup: rewire the FAB and delete the command palette. This is not Build mindmaps, Explore, or Collaborate.
+
+- FAB tap and ⌘J: if no listed sheet is open, open CoCaptain / CoStar chat as a SwiftUI sheet at large. If any listed sheet is already open, close them all.
+- Listed sheets: chat, Settings, Profile, Help, sign-in, Pro, usage, checkpoints, share, Activity, app icon, copilot picker.
+- HUD, voice / video call, launch, intro, and confetti are overlays, not sheets. They stay.
+- On iPad, chat is a sheet like iPhone. Remove the inspector-column presentation.
+- Long-press FAB still opens the radial menu (Chat / Voice / Video). Drag still moves the FAB. Long-press never skips the menu.
+- The Chat bubble opens chat at medium. If a listed sheet is already up, the chat sheet replaces it.
+- Tutorial steps that need chat open the sheet at large. Delete palette-only tutorial steps and tooltip anchors. Keep tapFAB (open chat), longPressFAB (radial menu), and CoCaptain-sheet steps.
+- Delete the command palette / OmniBox UI. No replacement launcher. Delete `Features/Omnibox/`, palette tests, and palette-only search (for example `NodeSearchIndex` if only the palette uses it).
+- Delete pin / "Add to canvas" shortcut cards, leftover summon / shortcut canvas cards, app action `showActionsList`, the OmniBox Help article, and the "Omnibox shortcuts" block.
+- Keep `AppActionDispatcher` and `CommandIntentResolver` so CoCaptain can still request actions from chat (open Settings, create a card, go back, organize).
+- Keep Voice / Video on the radial menu. Keep undo / redo keyboard shortcuts. Remove ⌘K (it opened the palette).
+- Settings, Profile, Help, and Pro may have no dedicated button after this. That is accepted for now.
+
+**You should see:** FAB tap or ⌘J opens chat at large, or closes listed sheets if one is already open. Long-press still shows Chat / Voice / Video. No command palette. No ⌘K. iPad chat is a sheet. CoCaptain can still request actions from chat.
+
+---
+
 ## After this plan
 
-Only then do we add new product behavior, starting with Build: mindmap nodes and connections on the canvas we kept.
+This leftover strip ends at Phase 12. Only then do we add new product behavior, starting with Build: mindmap nodes and connections on the canvas we kept.
 
 ## Checks after every phase
 
