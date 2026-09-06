@@ -47,21 +47,7 @@ struct caocapTests {
     }
 
     @Test func defaultProjectStartsWithCleanCanvas() {
-        #expect(ProjectTemplateProvider.defaultNodes.isEmpty)
-    }
-
-    @Test func defaultMiniAppCodeRemainsAvailableForManualCreation() {
-        #expect(ProjectTemplateProvider.defaultCode.contains("Hello World!"))
-    }
-
-    @Test func srsScaffoldPreservesDraftAndAddsMissingSections() {
-        let draft = "# Intent\nBuild a calmer way to shape software requirements."
-        let structuredText = SRSScaffold.structuredText(from: draft)
-
-        #expect(structuredText.hasPrefix(draft))
-        #expect(structuredText.contains("## People"))
-        #expect(structuredText.contains("## Requirements"))
-        #expect(structuredText.contains("## Constraints"))
+        #expect(RootCanvasProvider.nodes.isEmpty)
     }
 
     @MainActor

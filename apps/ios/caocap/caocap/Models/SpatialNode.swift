@@ -27,18 +27,15 @@ public enum NodeAction: String, Codable, Equatable {
 }
 
 /// Structural kind of a canvas node, determining its rendering, behavior, and default metadata.
-public enum NodeType: String, Codable, Equatable, Hashable, CaseIterable {
+public enum NodeType: String, Equatable, Hashable, CaseIterable {
     /// An ordinary canvas card.
     case standard
-    /// Leftover in-memory mini-app type. Saves as `.standard`; old files decode as `.standard`.
-    case miniApp
     /// A node that acts as a portal to a separate nested canvas.
     case subCanvas
     
     public var displayName: String {
         switch self {
         case .standard: return "Card"
-        case .miniApp: return "Card"
         case .subCanvas: return "Sub-Canvas"
         }
     }
@@ -46,7 +43,6 @@ public enum NodeType: String, Codable, Equatable, Hashable, CaseIterable {
     /// Default palette theme for each workflow node type on the canvas.
     public var defaultTheme: NodeTheme {
         switch self {
-        case .miniApp: return .blue
         case .subCanvas: return .cyan
         case .standard: return .indigo
         }
@@ -55,7 +51,6 @@ public enum NodeType: String, Codable, Equatable, Hashable, CaseIterable {
     /// Placeholder title applied when a new node of this type is created.
     public var defaultTitle: String {
         switch self {
-        case .miniApp: return "Card"
         case .subCanvas: return "New Canvas"
         case .standard: return "Card"
         }
@@ -65,7 +60,6 @@ public enum NodeType: String, Codable, Equatable, Hashable, CaseIterable {
     /// `nil` for `.standard` because standard nodes have no fixed workflow subtitle.
     public var defaultSubtitle: String? {
         switch self {
-        case .miniApp: return nil
         case .subCanvas: return "Tap to open this canvas"
         case .standard: return nil
         }
@@ -74,14 +68,32 @@ public enum NodeType: String, Codable, Equatable, Hashable, CaseIterable {
     /// SF Symbol name used for the node card icon when no custom icon is set.
     public var defaultIcon: String {
         switch self {
-        case .miniApp: return "app.connected.to.app.below.fill"
         case .subCanvas: return "folder.fill"
         case .standard: return "square.grid.2x2"
         }
     }
 }
 
-/// What a canvas tap should do. Mini-app nodes inspect like ordinary cards.
+extension NodeType: Codable {
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        switch raw {
+        case NodeType.subCanvas.rawValue:
+            self = .subCanvas
+        default:
+            // Leftover "miniApp" and unknown types open as ordinary cards.
+            self = .standard
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
+}
+
+/// What a canvas tap should do. Cards inspect; action and portal nodes still navigate.
 public enum CanvasNodeTapDestination: Equatable {
     case action(NodeAction)
     case subCanvas(String)
@@ -205,7 +217,7 @@ public struct AgentProfile: Codable, Equatable, Hashable {
 /// The core domain entity representing a single node on the CAOCAP spatial canvas.
 ///
 /// A `SpatialNode` is position-aware, themeable, and optionally connected to
-/// sibling nodes, nested canvases, or mini-app content. It is the unit of
+/// sibling nodes or nested canvases. It is the unit of
 /// persistence: every project file is a collection of `SpatialNode` values.
 public struct SpatialNode: Identifiable, Codable, Equatable {
     public let id: UUID
@@ -253,7 +265,7 @@ public struct SpatialNode: Identifiable, Codable, Equatable {
         self.linkedCanvasFileName = linkedCanvasFileName
     }
 
-    /// Mini-app leftover cards inspect; they do not open an HTML workspace.
+    /// Cards inspect. Action nodes and sub-canvas portals still navigate.
     public var tapDestination: CanvasNodeTapDestination {
         if let action {
             return .action(action)
@@ -309,10 +321,7 @@ public struct SpatialNode: Identifiable, Codable, Equatable {
         } else {
             self.action = nil
         }
-        // Leftover mini-app files still open: type becomes an ordinary card. Extra HTML / SRS keys are ignored.
-        if self.type == .miniApp {
-            self.type = .standard
-        }
+        // Extra leftover keys such as HTML / SRS payloads are ignored.
         self.agentState = try container.decodeIfPresent(NodeAgentState.self, forKey: .agentState) ?? NodeAgentState()
         self.agentProfile = try container.decodeIfPresent(AgentProfile.self, forKey: .agentProfile) ?? AgentProfile()
         self.linkedCanvasFileName = try container.decodeIfPresent(String.self, forKey: .linkedCanvasFileName)
@@ -321,7 +330,7 @@ public struct SpatialNode: Identifiable, Codable, Equatable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(id, forKey: .id)
-        try container.encode(type == .miniApp ? NodeType.standard : type, forKey: .type)
+        try container.encode(type, forKey: .type)
         try container.encode(position, forKey: .position)
         try container.encode(title, forKey: .title)
         try container.encodeIfPresent(subtitle, forKey: .subtitle)
@@ -340,7 +349,7 @@ public struct SpatialNode: Identifiable, Codable, Equatable {
         guard action == nil, type != .standard else { return self }
 
         var updated = self
-        if theme == .blue, type != .miniApp {
+        if theme == .blue {
             updated.theme = type.defaultTheme
         }
 

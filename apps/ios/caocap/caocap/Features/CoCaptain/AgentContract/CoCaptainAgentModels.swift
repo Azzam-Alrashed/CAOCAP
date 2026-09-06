@@ -450,7 +450,7 @@ public struct CoCaptainLearningNote: Codable, Hashable {
 /// at which point `NodePatchEngine` applies the operations against the live
 /// project store.
 public struct CoCaptainNodeEditProposal: Codable, Hashable {
-    /// The two editable sections of a Mini-App node that the model can target.
+    /// Leftover HTML / SRS section names so old review JSON can still decode.
     public enum MiniAppSection: String, Codable, Hashable {
         /// The Software Requirements Specification / documentation section.
         case srs
@@ -461,7 +461,7 @@ public struct CoCaptainNodeEditProposal: Codable, Hashable {
     /// The specific node to edit, or `nil` when the model omits the ID and
     /// the coordinator resolves it by role matching against the active store.
     public let nodeID: UUID?
-    /// The role the target node must have (e.g. `.miniApp`).
+    /// The role the leftover HTML-edit payload claimed to target.
     public let role: NodeRole
     /// Which of the node's text sections the operations should be applied to.
     public let section: MiniAppSection
@@ -474,7 +474,7 @@ public struct CoCaptainNodeEditProposal: Codable, Hashable {
 
     public init(
         nodeID: UUID? = nil,
-        role: NodeRole = .miniApp,
+        role: NodeRole = .custom,
         section: MiniAppSection = .code,
         summary: String,
         operations: [NodePatchOperation],
@@ -500,8 +500,8 @@ public struct CoCaptainNodeEditProposal: Codable, Hashable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.nodeID = try container.decodeIfPresent(UUID.self, forKey: .nodeID)
-        // Default to .miniApp / .code so the model can omit these fields for the common case.
-        self.role = try container.decodeIfPresent(NodeRole.self, forKey: .role) ?? .miniApp
+        // Leftover payloads may omit role; treat them as ordinary cards.
+        self.role = try container.decodeIfPresent(NodeRole.self, forKey: .role) ?? .custom
         self.section = try container.decodeIfPresent(MiniAppSection.self, forKey: .section) ?? .code
         self.summary = try container.decodeIfPresent(String.self, forKey: .summary) ?? ""
         self.operations = try container.decode([NodePatchOperation].self, forKey: .operations)

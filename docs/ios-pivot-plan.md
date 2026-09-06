@@ -161,6 +161,21 @@ CoCaptain still talks. It no longer offers HTML or SRS patches.
 
 ---
 
+## Phase 10 — Delete leftover Mini-App types and SRS
+
+**Status:** Done
+**Depends on:** Phase 9
+
+Phase 8 left Mini-App / SRS types in memory so old reviews could decode. There are no users. This phase removes that leftover.
+
+- Drop `NodeType.miniApp` and `NodeRole.miniApp`. Leftover files with `type: "miniApp"` still open as ordinary cards.
+- Delete the unused SRS scaffold / readiness evaluator, Hello World HTML template, and Firebase preview helper.
+- Cards no longer have a Mini-App size or role. CoCaptain leftover HTML-patch types stay only so old review JSON can decode; they still do not apply HTML.
+
+**You should see:** Same leftover app. Create a card, quit, reopen. No Mini-App type, no Hello World HTML, no SRS helper.
+
+---
+
 ## After this plan
 
 Only then do we add new product behavior, starting with Build: mindmap nodes and connections on the canvas we kept.

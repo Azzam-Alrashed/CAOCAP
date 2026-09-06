@@ -38,8 +38,7 @@ final class NodeMutationEngine {
     
     /// Changes a node's fundamental type and initialises type-specific state.
     ///
-    /// Switching to `.miniApp` becomes an ordinary card. Switching to `.subCanvas`
-    /// generates a new canvas file name if one doesn't exist yet.
+    /// Switching to `.subCanvas` generates a new canvas file name if one doesn't exist yet.
     public func updateNodeType(nodes: inout [SpatialNode], id: UUID, type: NodeType, persist: Bool = true) {
         if let index = nodes.firstIndex(where: { $0.id == id }) {
             let oldType = nodes[index].type
@@ -53,12 +52,11 @@ final class NodeMutationEngine {
             }
             undoStackChanged += 1
             
-            let createdType = type == .miniApp ? NodeType.standard : type
-            nodes[index].type = createdType
-            nodes[index].theme = nodeTheme(for: createdType)
-            nodes[index].icon = nodeIcon(for: createdType)
+            nodes[index].type = type
+            nodes[index].theme = nodeTheme(for: type)
+            nodes[index].icon = nodeIcon(for: type)
             
-            if createdType == .subCanvas, nodes[index].linkedCanvasFileName == nil {
+            if type == .subCanvas, nodes[index].linkedCanvasFileName == nil {
                 nodes[index].linkedCanvasFileName = CanvasFileNaming.newCanvasFileName()
             }
             
@@ -147,21 +145,20 @@ final class NodeMutationEngine {
     /// The new node is placed at the current viewport centre, given a unique title,
     /// and appropriate type-specific state is bootstrapped automatically.
     public func addNode(nodes: inout [SpatialNode], type: NodeType = .standard) {
-        let createdType = type == .miniApp ? NodeType.standard : type
-        let uniqueTitle = generateUniqueTitle(nodes: nodes, base: createdType.defaultTitle)
+        let uniqueTitle = generateUniqueTitle(nodes: nodes, base: type.defaultTitle)
 
-        let subtitle = createdType.defaultSubtitle
-        let linkedFileName: String? = createdType == .subCanvas ? CanvasFileNaming.newCanvasFileName() : nil
+        let subtitle = type.defaultSubtitle
+        let linkedFileName: String? = type == .subCanvas ? CanvasFileNaming.newCanvasFileName() : nil
         let offset = onViewportChange?() ?? .zero
 
         let newNode = SpatialNode(
             id: UUID(),
-            type: createdType,
+            type: type,
             position: CGPoint(x: -offset.width, y: -offset.height), // Scale is applied in view usually, simplified here based on ProjectStore
             title: uniqueTitle,
             subtitle: subtitle,
-            icon: nodeIcon(for: createdType),
-            theme: nodeTheme(for: createdType),
+            icon: nodeIcon(for: type),
+            theme: nodeTheme(for: type),
             linkedCanvasFileName: linkedFileName
         )
         

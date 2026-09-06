@@ -106,7 +106,7 @@ struct ProjectMigrationTests {
         let fileName = "corrupted.json"
         try Data("{not-json}".utf8).write(to: persistence.fileURL(for: fileName))
 
-        let fallbackNode = SpatialNode(type: .miniApp, position: .zero, title: "Mini-App")
+        let fallbackNode = SpatialNode(type: .standard, position: .zero, title: "Mini-App")
         let store = ProjectStore(
             fileName: fileName,
             projectName: "Fallback Project",
@@ -135,7 +135,7 @@ struct ProjectMigrationTests {
         """
         try v1JSON.data(using: .utf8)!.write(to: persistence.fileURL(for: fileName))
 
-        let fallbackNode = SpatialNode(type: .miniApp, position: .zero, title: "Mini-App")
+        let fallbackNode = SpatialNode(type: .standard, position: .zero, title: "Mini-App")
         _ = ProjectStore(
             fileName: fileName,
             projectName: "Fallback Project",
@@ -164,7 +164,7 @@ struct ProjectMigrationTests {
         """
         try legacyJSON.data(using: .utf8)!.write(to: persistence.fileURL(for: fileName))
 
-        let fallbackNode = SpatialNode(type: .miniApp, position: .zero, title: "Mini-App")
+        let fallbackNode = SpatialNode(type: .standard, position: .zero, title: "Mini-App")
         _ = ProjectStore(
             fileName: fileName,
             projectName: "Fallback Project",

@@ -36,7 +36,7 @@ struct AppSessionCoordinatorTests {
         session.ensureActionsConfigured()
         let nodeID = UUID()
         session.router.activeStore.nodes = [
-            SpatialNode(id: nodeID, type: .miniApp, position: .zero, title: "Test")
+            SpatialNode(id: nodeID, type: .standard, position: .zero, title: "Test")
         ]
 
         let result = session.actionDispatcher.perform(
@@ -124,7 +124,7 @@ struct AppSessionCoordinatorTests {
     @Test func flyToTargetScaleUsesMeasuredSizeWhenAvailable() {
         let session = AppSessionCoordinator()
         let nodeID = UUID()
-        let node = SpatialNode(id: nodeID, type: .miniApp, position: CGPoint(x: 10, y: 20), title: "Mini")
+        let node = SpatialNode(id: nodeID, type: .standard, position: CGPoint(x: 10, y: 20), title: "Mini")
         session.containerSize = CGSize(width: 400, height: 800)
         session.nodeSizes[nodeID] = CGSize(width: 200, height: 400)
 

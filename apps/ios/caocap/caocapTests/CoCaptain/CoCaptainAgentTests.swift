@@ -222,7 +222,7 @@ struct CoCaptainAgentTests {
     }
 
     @Test func nodeRoleInferenceRecognizesCanonicalTemplateNodes() {
-        #expect(SpatialNode(type: .miniApp, position: .zero, title: "Mini-App").role == .miniApp)
+        #expect(SpatialNode(type: .standard, position: .zero, title: "Card").role == .custom)
         #expect(SpatialNode(type: .subCanvas, position: .zero, title: "Nested").role == .subCanvas)
         #expect(SpatialNode(position: .zero, title: "New Logic").role == .custom)
     }

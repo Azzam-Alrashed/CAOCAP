@@ -90,9 +90,7 @@ struct NodeView: View, Equatable {
                 }
                 .frame(maxWidth: 240, alignment: .leading)
             }
-            .frame(width: node.type == .miniApp ? 240 : nil, alignment: .leading)
             .environment(\.layoutDirection, LocalizationManager.shared.layoutDirection(for: selectedLanguage))
-            .padding(.bottom, node.type == .miniApp ? 12 : 0)
             
             NodePreviewContent(
                 node: node,
@@ -101,8 +99,8 @@ struct NodeView: View, Equatable {
                 activityStore: ActivityStore.shared
             )
         }
-        .padding(.horizontal, node.type == .miniApp ? 12 : 20)
-        .padding(.vertical, node.type == .miniApp ? 12 : 20)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 20)
         .background(backgroundWithoutShadow)
         .overlay(borderOverlay)
         .overlay(statusOverlay)

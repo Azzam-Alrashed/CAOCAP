@@ -22,8 +22,8 @@ final class AgentPipelineEngineTests: XCTestCase {
         UserDefaults.standard.set(true, forKey: ProjectStore.experimentalAgentPipesEnabledKey)
         defer { UserDefaults.standard.removeObject(forKey: ProjectStore.experimentalAgentPipesEnabledKey) }
 
-        let sourceNode = SpatialNode(type: .miniApp, position: .zero, title: "Source")
-        var destNode = SpatialNode(type: .miniApp, position: .zero, title: "Dest")
+        let sourceNode = SpatialNode(type: .standard, position: .zero, title: "Source")
+        var destNode = SpatialNode(type: .standard, position: .zero, title: "Dest")
         destNode.agentProfile.isAutoTriggerEnabled = true
 
         engine.triggerDownstreamAgents(from: sourceNode.id, nodes: [sourceNode, destNode], store: store)

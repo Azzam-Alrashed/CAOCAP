@@ -242,13 +242,11 @@ public final class CoCaptainViewModel {
         runAnalysis()
     }
 
-    /// Nodes available for inline @ mention suggestions (Mini-Apps first, then others).
+    /// Nodes available for inline @ mention suggestions, sorted by title.
     public var pinnableContextNodes: [SpatialNode] {
         guard scope == .project, let nodes = store?.nodes else { return [] }
         return nodes.sorted { lhs, rhs in
-            if lhs.type == .miniApp && rhs.type != .miniApp { return true }
-            if lhs.type != .miniApp && rhs.type == .miniApp { return false }
-            return lhs.displayTitle.localizedCaseInsensitiveCompare(rhs.displayTitle) == .orderedAscending
+            lhs.displayTitle.localizedCaseInsensitiveCompare(rhs.displayTitle) == .orderedAscending
         }
     }
 

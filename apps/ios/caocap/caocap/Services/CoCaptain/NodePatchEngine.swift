@@ -104,9 +104,9 @@ public struct NodePatchResolvedApply: Hashable {
 public struct NodePatchPreview: Hashable {
     /// The node that would be modified.
     public let nodeID: UUID
-    /// The role of that node (e.g. `.miniApp`).
+    /// The role of that node.
     public let role: NodeRole
-    /// Which section of the Mini-App is being patched.
+    /// Which leftover HTML / SRS section the unused patch claimed to target.
     public let section: CoCaptainNodeEditProposal.MiniAppSection
     /// The section text before any operations are applied.
     public let originalText: String
@@ -122,18 +122,12 @@ public struct NodePatchEngine {
 
     /// Looks up the target node either by explicit UUID or by canonical role.
     ///
-    /// - When `nodeID` is provided the node must be a Mini-App; any other type
-    ///   returns `nil` to prevent accidental edits to incompatible node types.
-    /// - When `nodeID` is absent the canvas is searched for the first node whose
-    ///   role matches and is marked as an editable canonical role.
+    /// - When `nodeID` is provided, look up that card.
+    /// - When `nodeID` is absent, no leftover HTML role is editable, so this returns nil.
     @MainActor
     public func resolveNode(nodeID: UUID? = nil, for role: NodeRole, in store: ProjectStore) -> SpatialNode? {
         if let nodeID {
-            guard let node = store.nodes.first(where: { $0.id == nodeID }),
-                  node.type == .miniApp else {
-                return nil
-            }
-            return node
+            return store.nodes.first(where: { $0.id == nodeID })
         }
         guard role.isEditableCanonicalRole else { return nil }
         return store.nodes.first(where: { role.matches(node: $0) })

@@ -53,5 +53,5 @@ Useful test coverage for this feature:
 
 - `ViewportState` pan and zoom math.
 - save/load of node positions, links, and viewport state.
-- leftover mini-app files decode as ordinary cards.
-- tapping a leftover mini-app card inspects it instead of opening an editor.
+- leftover files with `type: "miniApp"` decode as ordinary cards.
+- tapping a leftover card inspects it instead of opening an editor.

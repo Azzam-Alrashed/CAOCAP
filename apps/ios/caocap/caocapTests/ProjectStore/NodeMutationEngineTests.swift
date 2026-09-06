@@ -23,15 +23,15 @@ final class NodeMutationEngineTests: XCTestCase {
         XCTAssertNil(nodes[0].subtitle)
     }
 
-    func testApplyingCanonicalThemeRepairsMiniAppTheme() {
-        let miniApp = SpatialNode(type: .miniApp, position: .zero, title: "Mini-App", theme: .orange)
+    func testApplyingCanonicalThemeLeavesCustomCardTheme() {
+        let card = SpatialNode(type: .standard, position: .zero, title: "Card", theme: .orange)
 
-        XCTAssertEqual(miniApp.applyingCanonicalThemeIfNeeded().theme, .orange)
+        XCTAssertEqual(card.applyingCanonicalThemeIfNeeded().theme, .orange)
     }
 
     func testDeleteNodeCleansUpConnections() {
-        let node1 = SpatialNode(type: .miniApp, position: .zero, title: "1")
-        var node2 = SpatialNode(type: .miniApp, position: .zero, title: "2")
+        let node1 = SpatialNode(type: .standard, position: .zero, title: "1")
+        var node2 = SpatialNode(type: .standard, position: .zero, title: "2")
 
         node2.connectedNodeIds = [node1.id]
         node2.nextNodeId = node1.id

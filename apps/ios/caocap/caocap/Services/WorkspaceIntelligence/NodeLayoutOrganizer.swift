@@ -112,14 +112,7 @@ public struct NodeLayoutOrganizer: Sendable {
                     let rankNodes = nodesByRank[rank] ?? []
                     let x = CGFloat(rankIdx) * horizontalSpacing
                     
-                    // Determine vertical spacing dynamically
-                    let hasLargeNodes = rankNodes.contains { id in
-                        if let node = nodes.first(where: { $0.id == id }) {
-                            return node.type == .miniApp
-                        }
-                        return false
-                    }
-                    let verticalSpacing = hasLargeNodes ? CGFloat(300) : CGFloat(220)
+                    let verticalSpacing = CGFloat(220)
                     
                     // Center vertically around y=0
                     let totalHeight = CGFloat(rankNodes.count - 1) * verticalSpacing

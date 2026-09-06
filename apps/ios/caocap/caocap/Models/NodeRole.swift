@@ -1,17 +1,13 @@
 import Foundation
 
-public enum NodeRole: String, CaseIterable, Codable, Hashable {
-    case miniApp
+public enum NodeRole: String, CaseIterable, Hashable {
     case subCanvas
     case custom
 
-    public static let editableCanonicalRoles: [NodeRole] = [
-        .miniApp
-    ]
+    public static let editableCanonicalRoles: [NodeRole] = []
 
     public var displayName: String {
         switch self {
-        case .miniApp: return "Mini-App"
         case .subCanvas: return "Sub-Canvas"
         case .custom: return "Custom"
         }
@@ -30,11 +26,28 @@ public enum NodeRole: String, CaseIterable, Codable, Hashable {
     }
 }
 
+extension NodeRole: Codable {
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        switch raw {
+        case NodeRole.subCanvas.rawValue:
+            self = .subCanvas
+        default:
+            // Leftover "miniApp" and unknown roles become ordinary cards.
+            self = .custom
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
+}
+
 public extension SpatialNode {
     var role: NodeRole {
         switch type {
-        case .miniApp:
-            return .miniApp
         case .subCanvas:
             return .subCanvas
         default:
