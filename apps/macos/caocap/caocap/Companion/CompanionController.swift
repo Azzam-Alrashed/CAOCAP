@@ -10,9 +10,19 @@ final class CompanionController {
     private(set) var persona: CompanionPersona
     private(set) var isDragging = false
     private(set) var mood: CompanionMood = .idle
+    private(set) var isChatPresented = false
+
+    private let cocaptainChat = AgentChatSession()
+    private let costarChat = AgentChatSession()
+
+    var chatSession: AgentChatSession {
+        persona == .cocaptain ? cocaptainChat : costarChat
+    }
 
     @ObservationIgnored
     private var panel: CompanionPanel?
+    @ObservationIgnored
+    private var chatPanel: AgentChatPanel?
     @ObservationIgnored
     private var screenObserver: NSObjectProtocol?
 
@@ -60,7 +70,7 @@ final class CompanionController {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
                 self?.reclampToScreens()
             }
         }
@@ -79,6 +89,7 @@ final class CompanionController {
             panel.setFrameOrigin(origin)
             panel.orderFrontRegardless()
         } else {
+            closeChat()
             panel.orderOut(nil)
         }
     }
@@ -97,6 +108,8 @@ final class CompanionController {
 
     func beginDrag() {
         isDragging = true
+        // Keep the draft, but tuck the chat while the user moves its agent.
+        chatPanel?.orderOut(nil)
     }
 
     func endDrag(didMove: Bool) {
@@ -111,9 +124,13 @@ final class CompanionController {
                 panel?.setFrameOrigin(clamped)
             }
             persistOrigin()
+            if isChatPresented {
+                positionChat()
+                chatPanel?.orderFrontRegardless()
+            }
         } else {
             origin = panel?.frame.origin ?? origin
-            openMainWindow()
+            toggleChat()
         }
     }
 
@@ -130,10 +147,40 @@ final class CompanionController {
         NSApp.activate()
     }
 
+    func toggleChat() {
+        if isChatPresented {
+            closeChat()
+        } else {
+            openChat()
+        }
+    }
+
+    func openChat() {
+        if !isAwake { setAwake(true) }
+        if chatPanel == nil {
+            chatPanel = AgentChatPanel(rootView: AgentChatView(controller: self))
+        }
+        isChatPresented = true
+        positionChat()
+        chatPanel?.makeKeyAndOrderFront(nil)
+    }
+
+    func closeChat() {
+        isChatPresented = false
+        chatPanel?.orderOut(nil)
+    }
+
+    private func positionChat() {
+        let agentFrame = panel?.frame ?? NSRect(origin: origin, size: CompanionLayout.panelSize)
+        let visible = Self.screen(containing: agentFrame).visibleFrame
+        chatPanel?.setFrame(AgentChatPanel.frame(beside: agentFrame, visibleFrame: visible), display: true)
+    }
+
     private func reclampToScreens() {
         origin = clamp(origin)
         panel?.setFrameOrigin(origin)
         persistOrigin()
+        if isChatPresented { positionChat() }
     }
 
     private func clamp(_ point: NSPoint) -> NSPoint {

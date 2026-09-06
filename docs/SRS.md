@@ -127,7 +127,7 @@ The following describes the current repository, not a commitment to feature pari
 | Area | Current state |
 | --- | --- |
 | iOS | SwiftUI canvas + CoCaptain + sign-in shell targeting iOS 26 or later, with a Pro purchase screen, unit tests, and UI tests. Home is an empty canvas. CoCaptain talks and can request canvas actions; it does not edit HTML or SRS. Explore, Build, and Collaborate are planned. Service configuration is described in `REF-005`. |
-| macOS | SwiftUI application targeting macOS 26.5, with an app icon, menu-bar status item, and floating CoCaptain companion. The main window is still placeholder content. There is no test target. Setup is described in `REF-006`. |
+| macOS | SwiftUI application targeting macOS 26.5, with an app icon, menu-bar status item, and floating Agent that opens its own compact chat UI. Prompts are session-only and are not sent to an agent service; computer use is not implemented. The hub window is still placeholder content. There is no test target. Setup is described in `REF-006`. |
 | Android, Windows, Linux, web app, and landing page | Directory scaffolds; their frameworks and shared services have not been selected. |
 | Development | Apple app builds require macOS and full Xcode with compatible SDKs; see `REF-004`. |
 

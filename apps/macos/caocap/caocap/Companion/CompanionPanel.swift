@@ -18,7 +18,7 @@ final class CompanionHostingView<Content: View>: NSHostingView<Content> {
         guard let window else { return }
         let startMouse = NSEvent.mouseLocation
         let startOrigin = window.frame.origin
-        onDragBegan?()
+        var didMove = false
 
         var keepTracking = true
         while keepTracking {
@@ -30,17 +30,23 @@ final class CompanionHostingView<Content: View>: NSHostingView<Content> {
             ) else { break }
 
             let now = NSEvent.mouseLocation
-            window.setFrameOrigin(
-                NSPoint(
-                    x: startOrigin.x + (now.x - startMouse.x),
-                    y: startOrigin.y + (now.y - startMouse.y)
+            let distance = hypot(now.x - startMouse.x, now.y - startMouse.y)
+            if !didMove, distance >= CompanionLayout.clickSlop {
+                didMove = true
+                onDragBegan?()
+            }
+            if didMove {
+                window.setFrameOrigin(
+                    NSPoint(
+                        x: startOrigin.x + (now.x - startMouse.x),
+                        y: startOrigin.y + (now.y - startMouse.y)
+                    )
                 )
-            )
+            }
 
             if next.type == .leftMouseUp {
                 keepTracking = false
-                let distance = hypot(now.x - startMouse.x, now.y - startMouse.y)
-                onDragEnded?(distance >= CompanionLayout.clickSlop)
+                onDragEnded?(didMove)
             }
         }
     }

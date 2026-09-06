@@ -34,7 +34,7 @@ xcodebuild -project apps/macos/caocap/caocap.xcodeproj -scheme caocap -configura
 git diff --check
 ```
 
-The iOS project includes `caocapTests` and `caocapUITests`; macOS has no test target. For macOS UI changes, run the app on **My Mac** and check wake/tuck, CoCaptain/CoStar switch, drag, and that tapping the companion focuses the existing window.
+The iOS project includes `caocapTests` and `caocapUITests`; macOS has no test target. For macOS UI changes, run the app on **My Mac** and check wake/tuck, CoCaptain/CoStar switch, drag, tap-to-toggle Agent chat, prompt entry and draft retention, and that the chat's Open CAOCAP button focuses the existing hub window. See `apps/macos/README.md` for the chat checks.
 
 - For app changes, build the affected platform, run relevant tests, and check the changed flow when a simulator or device is available.
 - For documentation and folder moves, verify links, project-relative paths, and asset references.

@@ -40,6 +40,11 @@ struct caocapApp: App {
         Window("CAOCAP", id: "main") {
             ContentView()
         }
+        .commands {
+            CommandMenu("Agent") {
+                AgentMenuControls(companion: appDelegate.companion)
+            }
+        }
 
         // Status item on the right side of the menu bar. Separate from the Dock app icon.
         MenuBarExtra {
@@ -71,6 +76,26 @@ private struct StatusItemMenu: View {
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
+        AgentMenuControls(companion: companion)
+        Button("Open CAOCAP") {
+            MainWindowFocus.reveal(openIfNeeded: openWindow)
+        }
+        Divider()
+        Button("Quit CAOCAP") {
+            NSApp.terminate(nil)
+        }
+    }
+}
+
+/// Shared controls keep menu-bar and keyboard access in sync with the floating agent.
+private struct AgentMenuControls: View {
+    @Bindable var companion: CompanionController
+
+    var body: some View {
+        Button("Chat with \(companion.persona.displayName)") {
+            companion.openChat()
+        }
+        .keyboardShortcut("j", modifiers: [.command, .shift])
         Button(companion.isAwake ? "Hide \(companion.persona.displayName)" : "Show \(companion.persona.displayName)") {
             companion.toggleAwake()
         }
@@ -83,12 +108,5 @@ private struct StatusItemMenu: View {
             }
         }
         .pickerStyle(.inline)
-        Button("Open CAOCAP") {
-            MainWindowFocus.reveal(openIfNeeded: openWindow)
-        }
-        Divider()
-        Button("Quit CAOCAP") {
-            NSApp.terminate(nil)
-        }
     }
 }

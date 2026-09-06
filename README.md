@@ -15,7 +15,7 @@ CAOCAP is transitioning to a collaborative AI agent platform. Agent discovery, b
 | Area | Status |
 | --- | --- |
 | iOS | SwiftUI canvas + CoCaptain + sign-in shell; Pro purchase screen; Explore, Build, and Collaborate are planned; service configuration required |
-| macOS | SwiftUI shell with app icon, menu-bar status item, and a floating CoCaptain companion; Explore, Build, and Collaborate are not implemented |
+| macOS | SwiftUI shell with app icon, menu-bar status item, and a floating Agent with its own chat UI; AI responses, computer use, Explore, Build, and Collaborate are not implemented |
 | Android | Directory scaffold only |
 | Windows | Directory scaffold only |
 | Linux | Directory scaffold only |
@@ -64,7 +64,7 @@ The runnable applications currently require macOS and an Xcode version compatibl
 3. Select the `caocap` scheme and the **My Mac** destination.
 4. Run the project with **Product → Run** or `Command-R`.
 
-You should see the CAOCAP window, a cube status item in the menu bar, and CoCaptain on the desktop. The window still shows placeholder Hello World content.
+You should see the CAOCAP window, a cube status item in the menu bar, and CoCaptain on the desktop. Tap CoCaptain to open its compact chat UI. Prompts stay in memory for the current session; agent responses and computer use are not connected. The hub window still shows placeholder Hello World content.
 
 ## Technology
 

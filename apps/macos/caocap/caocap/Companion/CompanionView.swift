@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Desktop pet content: Ready bubble and idle sprite. Drag is handled by AppKit.
+/// Desktop agent and chat affordance. Drag is handled by AppKit.
 struct CompanionView: View {
     @Bindable var controller: CompanionController
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -9,7 +9,7 @@ struct CompanionView: View {
 
     var body: some View {
         VStack(alignment: .trailing, spacing: 6) {
-            Text("Ready")
+            Text(controller.isChatPresented ? "Let's talk" : "Chat with me")
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(.primary)
                 .padding(.horizontal, 8)
@@ -29,6 +29,10 @@ struct CompanionView: View {
             height: CompanionLayout.panelSize.height,
             alignment: .bottomTrailing
         )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Chat with \(controller.persona.displayName)")
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction { controller.toggleChat() }
         .onAppear(perform: startIdleMotion)
         .onChange(of: reduceMotion) { _, reduced in
             if reduced {
