@@ -2673,13 +2673,13 @@
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "اللوحة الرئيسية هي مساحة عملك غير المحدودة. كل عقدة تمثل جزءاً من مشروعك — إعدادات، تطبيق مصغر، أو لوحة فرعية."
+            "value" : "اللوحة الرئيسية هي مساحة عملك غير المحدودة. البطاقات التي تضيفها تظهر هنا. تبدأ الصفحة الرئيسية فارغة."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Your home canvas is an infinite workspace. Each node represents part of your project — settings, a mini-app, or a nested canvas."
+            "value" : "Your home canvas is an infinite workspace. Cards you add live here. Home starts empty."
           }
         }
       }
@@ -2729,7 +2729,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "CoCaptain reads your current canvas and helps you plan, explain, and edit mini-apps."
+            "value" : "CoCaptain reads your current canvas and helps you plan and explain it."
           }
         }
       }
@@ -2828,13 +2828,13 @@
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "أنهيت البرنامج التعليمي للمرة الأولى. تطبيق Hello World المصغّر موجود على لوحة البرنامج التعليمي — افتحه في أي وقت من بوابة اللوحة الرئيسية."
+            "value" : "بعد المقدمة واختيار المساعد تصل إلى لوحة رئيسية فارغة. حرّك وكبّر لتستكشف المساحة."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "You finished the first-run tutorial. Your Hello World mini-app lives on the Tutorial canvas — open it anytime from the root canvas portal."
+            "value" : "After intro and persona pick, you land on an empty Home canvas. Pan and zoom to look around."
           }
         }
       }
@@ -2845,13 +2845,13 @@
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "عندما تكون جاهزاً للجلسة ٢، اطلب من CoCaptain تحويل Hello World إلى لعبة صغيرة بسيطة. راجع كل اقتراح واضغط «تطبيق» — لا يتغير شيء حتى توافق عليه."
+            "value" : "افتح CoCaptain من الزر العائم عندما تحتاج مساعدة. الملف الشخصي والإعدادات تبقى في الواجهة."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "When you are ready for session 2, ask CoCaptain to turn Hello World into a simple mini game. Review each suggestion and tap Apply — nothing changes until you approve it."
+            "value" : "Open CoCaptain from the FAB when you want help. Profile and Settings stay in the HUD."
           }
         }
       }
@@ -2862,13 +2862,13 @@
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "أعد أي درس تفاعلي من المساعدة → الدروس التفاعلية، أو استكشف لوحات Pac-Man وXO التجريبية على اللوحة الرئيسية عندما تريد إلهاماً."
+            "value" : "تبقى المساعدة هنا للوحة وCoCaptain واختصارات الأوامر. لا يوجد درس إلزامي للتطبيقات المصغّرة."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Replay any interactive lesson from Help → Interactive lessons, or explore the Pac-Man and XO demo canvases on the root canvas when you want inspiration."
+            "value" : "Help stays here for canvas, CoCaptain, and command shortcuts. There is no required mini-app lesson."
           }
         }
       }
@@ -2879,13 +2879,13 @@
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "الجلسة ٢ — طوّر تطبيق Hello World"
+            "value" : "الرئيسية واللوحة وCoCaptain"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Session 2 — grow your Hello World app"
+            "value" : "Home, canvas, and CoCaptain"
           }
         }
       }
@@ -2968,7 +2968,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tutorials, shortcuts, and guides to get the most from CAOCAP."
+            "value" : "Shortcuts and guides to get the most from CAOCAP."
           }
         }
       }
@@ -6927,9 +6927,6 @@
     "Restart Onboarding" : {
 
     },
-    "Restart Tutorial" : {
-
-    },
     "Restore" : {
 
     },
@@ -6971,9 +6968,6 @@
           }
         }
       }
-    },
-    "Return to the guided app walkthrough" : {
-
     },
     "Review Canvas" : {
       "extractionState" : "stale",

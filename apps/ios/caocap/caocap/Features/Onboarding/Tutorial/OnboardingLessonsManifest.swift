@@ -26,92 +26,9 @@ struct OnboardingLesson: Identifiable, Hashable {
 /// Static registry of interactive tutorial lessons.
 enum OnboardingLessonsManifest {
     static let maxStepsPerLesson = 9
-    static let mainLessonIDs: [OnboardingLessonID] = [
-        .canvasBasics,
-        .omniboxNavigation,
-        .miniAppPreview
-    ]
-    static let optionalLessonIDs: [OnboardingLessonID] = [
-        .coCaptainChat,
-        .moveAndOrganize
-    ]
-
-    static let lessons: [OnboardingLesson] = [
-        OnboardingLesson(
-            id: .canvasBasics,
-            titleKey: "onboarding.lesson.canvasBasics.title",
-            subtitleKey: "onboarding.lesson.canvasBasics.subtitle",
-            icon: "graduationcap.fill",
-            accentHex: "00B894",
-            steps: [
-                .openTutorial,
-                .tapFAB,
-                .typeCoCaptainPrompt,
-                .submitCoCaptainPrompt,
-                .chatCoCaptain,
-                .applyCoCaptainChange,
-                .tapGoBackAction
-            ]
-        ),
-        OnboardingLesson(
-            id: .omniboxNavigation,
-            titleKey: "onboarding.lesson.omniboxNavigation.title",
-            subtitleKey: "onboarding.lesson.omniboxNavigation.subtitle",
-            icon: "command",
-            accentHex: "F39C12",
-            steps: [
-                .searchFlyToNode,
-                .openPortal,
-                .chatCoCaptainGameEdit,
-                .reviewCoCaptainChange
-            ]
-        ),
-        OnboardingLesson(
-            id: .miniAppPreview,
-            titleKey: "onboarding.lesson.miniAppPreview.title",
-            subtitleKey: "onboarding.lesson.miniAppPreview.subtitle",
-            icon: "book.fill",
-            accentHex: "E84393",
-            steps: [
-                .openHelpCenter,
-                .browseHelpGuides
-            ]
-        ),
-        OnboardingLesson(
-            id: .coCaptainChat,
-            titleKey: "onboarding.lesson.coCaptainChat.title",
-            subtitleKey: "onboarding.lesson.coCaptainChat.subtitle",
-            icon: "sparkles",
-            accentHex: "6C5CE7",
-            steps: [
-                .returnToRoot,
-                .longPressFAB,
-                .dismissCoCaptain,
-                .tapMiniAppNode,
-                .interactMiniAppPreview,
-                .openMiniAppCodeTool,
-                .saveMiniAppCodeEdit,
-                .returnFromMiniAppPreview
-            ]
-        ),
-        OnboardingLesson(
-            id: .moveAndOrganize,
-            titleKey: "onboarding.lesson.moveAndOrganize.title",
-            subtitleKey: "onboarding.lesson.moveAndOrganize.subtitle",
-            icon: "arrow.up.and.down.and.arrow.left.and.right",
-            accentHex: "74B9FF",
-            steps: [
-                .typeGoBackInOmnibox,
-                .panCanvas,
-                .pinchZoom,
-                .fitAllNodes,
-                .dragCanvasNode,
-                .runOrganizeNodes,
-                .undoCanvasEdit,
-                .redoCanvasEdit
-            ]
-        )
-    ]
+    static let mainLessonIDs: [OnboardingLessonID] = []
+    static let optionalLessonIDs: [OnboardingLessonID] = []
+    static let lessons: [OnboardingLesson] = []
 
     static func lesson(for id: OnboardingLessonID) -> OnboardingLesson {
         guard let lesson = lessons.first(where: { $0.id == id }) else {
@@ -138,7 +55,8 @@ enum OnboardingLessonsManifest {
     }
 
     static func areAllMainLessonsCompleted(completedLessonIDs: Set<OnboardingLessonID>) -> Bool {
-        mainLessonIDs.allSatisfy { completedLessonIDs.contains($0) }
+        guard !mainLessonIDs.isEmpty else { return false }
+        return mainLessonIDs.allSatisfy { completedLessonIDs.contains($0) }
     }
 
     static func nextStep(

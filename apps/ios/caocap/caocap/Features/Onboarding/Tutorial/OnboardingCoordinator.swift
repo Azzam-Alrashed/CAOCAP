@@ -178,17 +178,9 @@ public class OnboardingCoordinator {
     }
 
     /// Call once from `AppSessionCoordinator.bootstrap` after the launch screen fades.
+    /// The walkthrough engine stays. There is no lesson list, so first-run does not start one.
     public func startIfNeeded() {
-        guard !isCompleted else { return }
-
-        guard let lessonID = OnboardingLessonsManifest.firstIncompleteLesson(
-            completedLessonIDs: completedLessonIDs
-        ) else {
-            markComplete()
-            return
-        }
-
-        startLesson(lessonID, advancesThroughLessons: true)
+        // Intentionally empty. Do not startLesson and do not markComplete.
     }
 
     /// Starts a specific lesson. Used for first-run progression and Help relaunches.

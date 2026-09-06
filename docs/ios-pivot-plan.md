@@ -106,12 +106,12 @@ The purchase screen stays. The Home crown node is already gone from Phase 1. Old
 
 ## Phase 6 — First run without the mini-app tutorial
 
-**Status:** Not started  
+**Status:** Done
 **Depends on:** Phase 5
 
-- Intro and persona pick (CoCaptain / CoStar) can stay.
-- Skip the interactive tutorial that teaches Pac-Man, XO, and mini-app edits.
-- Trim Help articles that only describe the old product.
+- Intro and persona pick (CoCaptain / CoStar) stay.
+- Kept the tutorial engine (coordinator, popovers, tooltip anchors, confetti). Cleared the lesson list so first-run does not start or complete a walkthrough.
+- Help and Settings no longer restart those lessons. Removed the Mini-Apps Help article and trimmed leftover Hello World / demo-canvas copy.
 
 **You should see:** New users reach Home after intro + persona. No required mini-app lesson.
 

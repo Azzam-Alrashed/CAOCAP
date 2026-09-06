@@ -7,7 +7,6 @@ struct SettingsView: View {
     var onUpgrade: (() -> Void)? = nil
     var onRestartPersonalization: () -> Void = {}
     var onRestartOnboarding: () -> Void = {}
-    var onRestartTutorial: () -> Void = {}
     var onEraseEverything: () async throws -> Void = {}
     
     @AppStorage("app_language") private var selectedLanguage = "English"
@@ -155,19 +154,6 @@ struct SettingsView: View {
                                     color: .blue,
                                     action: {
                                         onRestartOnboarding()
-                                        dismiss()
-                                    }
-                                )
-
-                                Divider().padding(.leading, 56).opacity(0.3)
-
-                                SettingsRow(
-                                    icon: "graduationcap.fill",
-                                    title: "Restart Tutorial",
-                                    subtitle: "Return to the guided app walkthrough",
-                                    color: .cyan,
-                                    action: {
-                                        onRestartTutorial()
                                         dismiss()
                                     }
                                 )
