@@ -16,7 +16,6 @@ final class AppSessionCoordinator {
 
     var showingFileImporter = false
     var showingPurchaseSheet = false
-    var showingMiniAppLimitAlert = false
     var showingUsage = false
     var showingSignIn = false
     var showingSettings = false
@@ -222,7 +221,6 @@ final class AppSessionCoordinator {
     }
 
     func restartOnboarding() {
-        restoreTutorialPortalIfNeeded()
         intro.reset()
         personalization.reset()
         onboarding.reset()
@@ -231,16 +229,10 @@ final class AppSessionCoordinator {
     }
 
     func restartTutorial() {
-        restoreTutorialPortalIfNeeded()
         onboarding.reset()
         router.navigate(to: .root, addToStack: false, animated: false)
         syncViewportWithActiveStore()
         onboarding.startIfNeeded()
-    }
-
-    func openTutorialFromHelp() {
-        showingHelp = false
-        handleSubCanvasNavigation(fileName: RootCanvasProvider.tutorialFileName)
     }
 
     func restartTutorialFromHelp() {
@@ -250,57 +242,17 @@ final class AppSessionCoordinator {
 
     func startLessonFromHelp(_ lessonID: OnboardingLessonID) {
         showingHelp = false
-        restoreTutorialPortalIfNeeded()
         prepareWorkspace(for: lessonID)
         onboarding.startLesson(lessonID, advancesThroughLessons: false)
     }
 
     func prepareWorkspace(for lessonID: OnboardingLessonID) {
-        if OnboardingLessonsManifest.optionalLessonIDs.contains(lessonID) {
-            prepareTutorialLessonWorkspace()
-            return
-        }
-
-        switch lessonID {
-        case .canvasBasics:
-            router.navigate(to: .root, addToStack: false, animated: false)
-            syncViewportWithActiveStore()
-        case .omniboxNavigation:
-            prepareOmniboxNavigationWorkspace()
-        case .miniAppPreview:
-            prepareHelpDiscoveryLessonWorkspace()
-        case .coCaptainChat, .moveAndOrganize:
-            // Exhaustiveness fallback; optional lessons are handled above.
-            prepareTutorialLessonWorkspace()
-        }
-    }
-
-    private func prepareOmniboxNavigationWorkspace() {
         commandPalette.setPresented(false)
         coCaptain.setPresented(false)
-        restoreTutorialPortalIfNeeded()
         router.navigate(to: .root, addToStack: false, animated: false)
         syncViewportWithActiveStore()
         commandPalette.nodes = router.activeStore.nodes
-    }
-
-    private func prepareCoCaptainLessonWorkspace() {
-        prepareTutorialLessonWorkspace()
-        coCaptain.configureNodeSession(
-            store: router.activeStore,
-            nodeID: TutorialCanvasProvider.miniAppNodeID,
-            dispatcher: actionDispatcher
-        )
-        presentCoCaptain()
-    }
-
-    private func prepareHelpDiscoveryLessonWorkspace() {
-        commandPalette.setPresented(false)
-        coCaptain.setPresented(false)
-        restoreTutorialPortalIfNeeded()
-        router.navigate(to: .root, addToStack: false, animated: false)
-        syncViewportWithActiveStore()
-        commandPalette.nodes = router.activeStore.nodes
+        _ = lessonID
     }
 
     private func celebrateTutorialGraduation() {
@@ -310,28 +262,6 @@ final class AppSessionCoordinator {
             try? await Task.sleep(for: .seconds(2.5))
             self?.showConfetti = false
         }
-    }
-
-    func openDemoCanvasFromHelp(fileName: String) {
-        showingHelp = false
-        handleSubCanvasNavigation(fileName: fileName)
-    }
-
-    private func restoreTutorialPortalIfNeeded() {
-        guard let tutorial = RootCanvasProvider.nodes.first(where: {
-            $0.id == RootCanvasProvider.tutorialNodeID
-        }) else { return }
-        router.rootStore.ensureNodeExists(tutorial)
-    }
-
-    private func prepareTutorialLessonWorkspace() {
-        commandPalette.setPresented(false)
-        coCaptain.setPresented(false)
-        restoreTutorialPortalIfNeeded()
-        router.navigateToSubCanvas(fileName: RootCanvasProvider.tutorialFileName)
-        router.activeStore.ensureNodeExists(TutorialCanvasProvider.practiceMiniAppNode)
-        syncViewportWithActiveStore()
-        commandPalette.nodes = router.activeStore.nodes
     }
 
     func eraseEverything(authManager: AuthenticationManager) async throws {
@@ -413,20 +343,6 @@ final class AppSessionCoordinator {
 
     func handleSubCanvasNavigation(fileName: String) {
         router.navigateToSubCanvas(fileName: fileName)
-        if fileName == RootCanvasProvider.tutorialFileName {
-            if onboarding.currentStep == .openTutorial {
-                onboarding.completeCurrentStep()
-            }
-            return
-        }
-
-        if onboarding.currentStep == .openPortal &&
-            (fileName == RootCanvasProvider.pacManFileName || fileName == RootCanvasProvider.xoFileName) {
-            onboarding.completeCurrentStep()
-            if onboarding.currentStep == .chatCoCaptainGameEdit {
-                presentCoCaptain()
-            }
-        }
     }
 
     // MARK: - Onboarding + CoCaptain Presentation
@@ -744,10 +660,7 @@ final class AppSessionCoordinator {
             guard let self else { return }
             Task { @MainActor [weak self] in
                 guard let self else { return }
-                if let url = await ExportService.export(from: self.router.activeStore, format: .webBundle(includeProjectContext: true)) {
-                    self.exportURL = url
-                    self.showExportSheet = true
-                } else if let url = await ExportService.export(from: self.router.activeStore, format: .caocap) {
+                if let url = await ExportService.export(from: self.router.activeStore, format: .caocap) {
                     self.exportURL = url
                     self.showExportSheet = true
                 }
@@ -890,48 +803,11 @@ final class AppSessionCoordinator {
               let idString = args["nodeId"], let uuid = UUID(uuidString: idString),
               let typeStr = args["type"], let type = NodeType(rawValue: typeStr) else { return }
 
-        if type == .miniApp,
-           let existing = router.activeStore.nodes.first(where: { $0.id == uuid }),
-           existing.type != .miniApp,
-           !canCreateMiniApp() {
-            presentMiniAppLimitReached()
-            return
-        }
-
         router.activeStore.updateNodeType(id: uuid, type: type)
     }
 
     private func createNode(type: NodeType) {
-        if type == .miniApp, !canCreateMiniApp() {
-            presentMiniAppLimitReached()
-            return
-        }
         router.activeStore.addNode(type: type)
-    }
-
-    private func canCreateMiniApp() -> Bool {
-        let subscriptionManager = SubscriptionManager.shared
-        let limiter = MiniAppCreationLimiter()
-        let count = userMiniAppCount()
-        if case .requiresPro = limiter.gate(
-            isSubscribed: subscriptionManager.isSubscribed,
-            miniAppCount: count
-        ) {
-            return false
-        }
-        return true
-    }
-
-    func userMiniAppCount() -> Int {
-        MiniAppCreationLimiter().countUserMiniApps(
-            persistence: ProjectPersistenceService(),
-            liveNodesByFileName: router.liveNodesByFileName()
-        )
-    }
-
-    private func presentMiniAppLimitReached() {
-        HapticsManager.shared.notification(.warning)
-        showingMiniAppLimitAlert = true
     }
 
     func focusCanvasNode(_ nodeId: UUID) {
@@ -951,8 +827,7 @@ final class AppSessionCoordinator {
             }
         }
 
-        if onboarding.currentStep == .searchFlyToNode,
-           (nodeId == RootCanvasProvider.pacManNodeID || nodeId == RootCanvasProvider.xoNodeID) {
+        if onboarding.currentStep == .searchFlyToNode {
             onboarding.completeCurrentStep()
         }
     }

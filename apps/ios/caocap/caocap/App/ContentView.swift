@@ -22,9 +22,7 @@ struct ContentView: View {
                     )
                 }
 
-                if session.commandPalette.miniAppPreviewContext == nil {
-                    CommandPaletteView(viewModel: session.commandPalette)
-                }
+                CommandPaletteView(viewModel: session.commandPalette)
 
                 KeyboardShortcutBridge(
                     onOpenCommandPalette: {
@@ -102,7 +100,7 @@ struct ContentView: View {
                     session.handleSubCanvasNavigation(fileName: fileName)
                 },
                 onRecoverUnsupportedProject: {
-                    session.router.createFreshMiniAppCanvas()
+                    session.router.createFreshCanvas()
                 },
                 onFlyToNode: { session.focusCanvasNode($0) }
             )
@@ -119,7 +117,7 @@ struct ContentView: View {
                     session.handleSubCanvasNavigation(fileName: fileName)
                 },
                 onRecoverUnsupportedProject: {
-                    session.router.createFreshMiniAppCanvas()
+                    session.router.createFreshCanvas()
                 },
                 onFlyToNode: { session.focusCanvasNode($0) }
             )

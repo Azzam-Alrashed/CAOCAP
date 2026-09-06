@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Opens a canvas node. Mini-App nodes enter a large-sheet running preview with
-/// Mini-App tools available through the shared omnibox.
+/// Opens a canvas node as a card inspector. Mini-app leftover nodes do not
+/// enter a live preview, SRS, code, Firebase, or publish workspace.
 struct NodeDetailView: View {
     /// The canvas node whose detail is being shown. Used as the initial value;
     /// the live version is always read from `store.nodes`.
@@ -13,6 +13,9 @@ struct NodeDetailView: View {
 
     @Environment(\.dismiss) private var dismiss
 
+    // commandPalette / onFlyToNode remain so leftover call sites compile.
+    // Phase 2 does not present Mini-App preview tools.
+
     /// Always reads the node from the store so that any edits made inside a
     /// child sheet (e.g. title change in settings) are reflected here without
     /// needing to re-open the detail view.
@@ -21,159 +24,8 @@ struct NodeDetailView: View {
     }
 
     var body: some View {
-        if currentNode.type == .miniApp {
-            MiniAppPreviewShell(
-                node: currentNode,
-                store: store,
-                commandPalette: commandPalette,
-                onFlyToNode: onFlyToNode
-            )
-        } else {
-            MiniAppSettingsView(node: currentNode, store: store) {
-                dismiss()
-            }
-        }
-    }
-}
-
-/// Identifies which tool sheet should be presented over the live Mini-App preview.
-private enum MiniAppTool: String, Identifiable {
-    /// Software Requirements Specification editor.
-    case srs
-    /// HTML/JS source code editor.
-    case code
-    /// Firebase Web SDK configuration editor.
-    case firebase
-    /// CoCaptain agent chat panel.
-    case agent
-    /// Node identity and agent profile settings form.
-    case settings
-
-    var id: String { rawValue }
-
-    init?(_ previewTool: MiniAppPreviewTool) {
-        switch previewTool {
-        case .srs: self = .srs
-        case .code: self = .code
-        case .firebase: self = .firebase
-        case .agent: self = .agent
-        case .settings: self = .settings
-        case .publish, .backToCanvas: return nil
-        }
-    }
-}
-
-/// Large-sheet shell that hosts the live Mini-App HTML preview and surfaces all
-/// Mini-App tools through the shared omnibox (opened via the global FAB above sheets).
-private struct MiniAppPreviewShell: View {
-    let node: SpatialNode
-    let store: ProjectStore
-    var commandPalette: CommandPaletteViewModel?
-    var onFlyToNode: ((UUID) -> Void)? = nil
-
-    @Environment(\.dismiss) private var dismiss
-    @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
-    /// Drives which tool sheet is currently presented.
-    @State private var activeTool: MiniAppTool?
-    @State private var showingPublish = false
-
-    /// Live-refreshed node so any background store mutation (e.g. CoCaptain applying
-    /// a patch) is immediately reflected in the preview without dismissing the sheet.
-    private var currentNode: SpatialNode {
-        store.nodes.first(where: { $0.id == node.id }) ?? node
-    }
-
-    var body: some View {
-        ZStack {
-            Color(uiColor: .systemBackground).ignoresSafeArea()
-
-            if let html = currentNode.miniApp?.compiledHTML {
-                HTMLWebView(
-                    htmlContent: html,
-                    onUserInteraction: {
-                        if onboarding?.currentStep == .interactMiniAppPreview {
-                            onboarding?.completeCurrentStep()
-                        }
-                    }
-                )
-                    .ignoresSafeArea()
-                    .onboardingTooltipAnchor(.miniAppPreviewArea)
-            } else {
-                Text("No preview to display.")
-                    .foregroundStyle(.secondary)
-            }
-
-            if let commandPalette {
-                CommandPaletteView(viewModel: commandPalette)
-            }
-        }
-        .onboardingTooltipOverlay(
-            isCommandPalettePresented: commandPalette?.isPresented ?? false,
-            rendersAnchor: { $0 == .miniAppPreviewArea }
-        )
-        .onChange(of: onboarding?.currentStep) { _, step in
-            guard step == .openMiniAppCodeTool else { return }
-            commandPalette?.setPresented(true)
-        }
-        .onAppear {
-            guard let commandPalette else { return }
-            commandPalette.miniAppPreviewContext = MiniAppPreviewPaletteContext(
-                nodeID: currentNode.id,
-                onSelectTool: handlePreviewToolSelection
-            )
-        }
-        .onDisappear {
-            commandPalette?.miniAppPreviewContext = nil
-            commandPalette?.setPresented(false)
-        }
-        .sheet(isPresented: $showingPublish) {
-            MiniAppPublishView(node: currentNode, store: store)
-                .presentationDragIndicator(.visible)
-        }
-        .sheet(item: $activeTool) { tool in
-            switch tool {
-            case .srs:
-                SRSEditorView(node: currentNode, store: store)
-            case .code:
-                CodeEditorView(node: currentNode, store: store)
-            case .firebase:
-                FirebaseConfigNodeEditorView(node: currentNode, store: store)
-            case .agent:
-                NavigationStack {
-                    NodeAgentChatView(
-                        nodeID: currentNode.id,
-                        store: store,
-                        actionDispatcher: nil,
-                        onFlyToNode: { nodeID in
-                            activeTool = nil
-                            onFlyToNode?(nodeID)
-                        }
-                    )
-                }
-            case .settings:
-                MiniAppSettingsView(node: currentNode, store: store) {
-                    dismiss()
-                }
-            }
-        }
-    }
-
-    private func handlePreviewToolSelection(_ tool: MiniAppPreviewTool) {
-        switch tool {
-        case .publish:
-            showingPublish = true
-        case .backToCanvas:
-            if onboarding?.currentStep == .returnFromMiniAppPreview {
-                onboarding?.completeCurrentStep()
-            }
+        MiniAppSettingsView(node: currentNode, store: store) {
             dismiss()
-        default:
-            if let miniAppTool = MiniAppTool(tool) {
-                activeTool = miniAppTool
-                if miniAppTool == .code, onboarding?.currentStep == .openMiniAppCodeTool {
-                    onboarding?.completeCurrentStep()
-                }
-            }
         }
     }
 }

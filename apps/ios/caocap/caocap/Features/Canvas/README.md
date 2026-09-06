@@ -4,11 +4,11 @@ The Canvas feature is CAOCAP's spatial runtime. It renders the infinite workspac
 
 ## Ownership
 
-- `ProjectStore` owns durable canvas state: nodes, viewport offset, viewport scale, persistence, and Mini-App preview compilation.
+- `ProjectStore` owns durable canvas state: nodes, viewport offset, viewport scale, and persistence.
 - `InfiniteCanvasView` owns transient interaction state: active viewport gestures, selected node, node drag offsets, and whether a node is currently being dragged.
 - `ViewportState` owns pan and zoom math. Keep gesture calculations here instead of spreading geometry math through views.
 - `NodeView` renders one node. It should stay presentational.
-- `NodeDetailView` opens Mini-App nodes into a large-sheet running preview with the shared omnibox (FAB tap and sparkles) plus MINI-APP tool rows for SRS, Code, Firebase, Agent, Settings, Publish, and Back to Canvas.
+- `NodeDetailView` inspects a node as a card. It does not open a live HTML preview or publish sheet.
 - Providers under `Providers/` define the root constellation, curated Tutorial
   and Pac-Man canvases, and generic Mini-App starter content.
 - The protected Activity action node renders the device-wide 17-week save
@@ -18,11 +18,10 @@ The Canvas feature is CAOCAP's spatial runtime. It renders the infinite workspac
 
 1. `ContentView` provides an active `ProjectStore` from `AppRouter`.
 2. `InfiniteCanvasView` renders `store.nodes`.
-3. Tapping a Mini-App opens its large-sheet preview, tapping an action node calls
+3. Tapping a leftover Mini-App inspects the card, tapping an action node calls
    `onNodeAction`, and tapping a subcanvas portal opens its linked canvas file.
-4. Mini-App tools call `ProjectStore` mutation methods such as `updateMiniAppSRS`, `updateMiniAppCode`, and `updateMiniAppFirebaseConfig`.
-5. `ProjectStore` debounces saves and recompiles each Mini-App preview from its embedded code/Firebase state.
-6. `ConnectionLayer` draws arrows from `nextNodeId` and `connectedNodeIds`.
+4. `ProjectStore` debounces saves. It does not compile live HTML previews.
+5. `ConnectionLayer` draws arrows from `nextNodeId` and `connectedNodeIds`.
 
 Views should call store methods rather than mutating `store.nodes` directly.
 

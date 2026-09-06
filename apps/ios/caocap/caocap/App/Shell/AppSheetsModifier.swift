@@ -28,7 +28,6 @@ struct AppSheetsModifier: ViewModifier {
                         get: { session.selectedCopilot },
                         set: { session.updateSelectedCopilot($0) }
                     ),
-                    miniAppCount: session.userMiniAppCount(),
                     onUpgrade: {
                         session.requestPurchaseSheet()
                     },
@@ -50,7 +49,6 @@ struct AppSheetsModifier: ViewModifier {
             }
             .sheet(isPresented: $session.showingUsage) {
                 UsageSheetView(
-                    miniAppCount: session.userMiniAppCount(),
                     onUpgrade: {
                         session.requestPurchaseSheet()
                     }
@@ -97,10 +95,8 @@ struct AppSheetsModifier: ViewModifier {
             .sheet(isPresented: $session.showingHelp) {
                 HelpView(
                     completedLessonIDs: session.onboarding.completedLessonIDs,
-                    onOpenTutorial: { session.openTutorialFromHelp() },
                     onRestartTutorial: { session.restartTutorialFromHelp() },
                     onStartLesson: { session.startLessonFromHelp($0) },
-                    onOpenDemoCanvas: { session.openDemoCanvasFromHelp(fileName: $0) },
                     onHelpGuidesShown: { session.handleHelpGuidesShownForOnboarding() }
                 )
                 .presentationDetents([.large])
@@ -118,21 +114,6 @@ struct AppSheetsModifier: ViewModifier {
                 )
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
-            }
-            .alert(
-                LocalizationManager.shared.localizedString("Mini-App limit reached"),
-                isPresented: $session.showingMiniAppLimitAlert
-            ) {
-                Button(LocalizationManager.shared.localizedString("View Pro")) {
-                    session.showingPurchaseSheet = true
-                }
-                Button(LocalizationManager.shared.localizedString("Not Now"), role: .cancel) {}
-            } message: {
-                Text(
-                    LocalizationManager.shared.localizedString(
-                        "Free accounts can create up to 5 Mini-Apps. Upgrade to Pro for unlimited Mini-Apps."
-                    )
-                )
             }
     }
 

@@ -32,7 +32,7 @@ public enum NodeAction: String, Codable, Equatable {
 public enum NodeType: String, Codable, Equatable, Hashable, CaseIterable {
     /// A generic node with no special workflow behavior.
     case standard
-    /// A node that hosts a runnable HTML/CSS/JS mini-application with its own SRS and code editor.
+    /// Leftover mini-app card. Tapping inspects the card; it does not open an HTML workspace.
     case miniApp
     /// A node that acts as a portal to a separate nested canvas.
     case subCanvas
@@ -67,7 +67,7 @@ public enum NodeType: String, Codable, Equatable, Hashable, CaseIterable {
     /// `nil` for `.standard` because standard nodes have no fixed workflow subtitle.
     public var defaultSubtitle: String? {
         switch self {
-        case .miniApp: return "Tap to run, build, and configure this mini-app."
+        case .miniApp: return nil
         case .subCanvas: return "Tap to open this canvas"
         case .standard: return nil
         }
@@ -81,6 +81,13 @@ public enum NodeType: String, Codable, Equatable, Hashable, CaseIterable {
         case .standard: return "square.grid.2x2"
         }
     }
+}
+
+/// What a canvas tap should do. Mini-app nodes inspect like ordinary cards.
+public enum CanvasNodeTapDestination: Equatable {
+    case action(NodeAction)
+    case subCanvas(String)
+    case inspect
 }
 
 /// All mutable content owned by a Mini-App node: the SRS specification text,
@@ -307,6 +314,17 @@ public struct SpatialNode: Identifiable, Codable, Equatable {
         self.agentState = agentState
         self.agentProfile = agentProfile
         self.linkedCanvasFileName = linkedCanvasFileName
+    }
+
+    /// Mini-app leftover cards inspect; they do not open an HTML workspace.
+    public var tapDestination: CanvasNodeTapDestination {
+        if let action {
+            return .action(action)
+        }
+        if type == .subCanvas, let linkedCanvasFileName {
+            return .subCanvas(linkedCanvasFileName)
+        }
+        return .inspect
     }
 
     /// Returns the node's title after passing it through `LocalizationManager` for

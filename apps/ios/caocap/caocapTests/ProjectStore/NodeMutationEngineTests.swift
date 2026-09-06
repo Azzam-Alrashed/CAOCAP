@@ -22,7 +22,7 @@ final class NodeMutationEngineTests: XCTestCase {
         XCTAssertEqual(nodes[0].theme, .blue)
         XCTAssertEqual(nodes[0].title, "Mini-App")
         XCTAssertEqual(nodes[0].icon, NodeType.miniApp.defaultIcon)
-        XCTAssertEqual(nodes[0].subtitle, "Tap to run, build, and configure this mini-app.")
+        XCTAssertNil(nodes[0].subtitle)
         XCTAssertNotNil(nodes[0].miniApp)
         XCTAssertFalse(nodes[0].miniApp?.codeText.isEmpty ?? true)
         XCTAssertTrue(compileCalled)

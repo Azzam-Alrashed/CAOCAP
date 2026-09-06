@@ -56,8 +56,6 @@ struct InfiniteCanvasView: View {
     
     /// The node currently presented in the detail sheet context menu/inspector.
     @State private var selectedNode: SpatialNode?
-    /// The mini-app node currently presented in a full-screen editing experience.
-    @State private var presentedMiniApp: SpatialNode?
     /// Temporary translation offsets applied to nodes currently being dragged.
     @State private var nodeDragOffsets: [UUID: CGSize] = [:]
     /// Flag indicating an active node drag, used to disable canvas panning during the gesture.
@@ -81,11 +79,6 @@ struct InfiniteCanvasView: View {
         )
     }
 
-    private var shouldAnchorTutorialNode: Bool {
-        guard let step = onboarding?.currentStep else { return false }
-        return step == .openTutorial || step == .openPortal
-    }
-    
     var body: some View {
         GeometryReader { geometry in
             // Node positions are stored as offsets from the visible center, so
@@ -237,23 +230,8 @@ struct InfiniteCanvasView: View {
                 onFlyToNode: handleFlyToFromDetail
             )
         }
-        .sheet(item: $presentedMiniApp) { node in
-            NodeDetailView(
-                node: node,
-                store: store,
-                commandPalette: commandPalette,
-                onFlyToNode: handleFlyToFromDetail
-            )
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
-        }
         .onAppear {
             currentScale = viewport.scale
-        }
-        .onChange(of: presentedMiniApp?.id) { _, nodeID in
-            guard nodeID == TutorialCanvasProvider.miniAppNodeID,
-                  onboarding?.currentStep == .tapMiniAppNode else { return }
-            onboarding?.completeCurrentStep()
         }
         .onChange(of: onboarding?.showPopover ?? false) { _, showPopover in
             guard showPopover == true,
@@ -297,36 +275,16 @@ struct InfiniteCanvasView: View {
             .canvasGestureArea: CGRect(origin: .zero, size: canvasSize)
         ]
 
-        if shouldAnchorTutorialNode,
-           let frame = screenFrame(for: RootCanvasProvider.tutorialNodeID, canvasSize: canvasSize) {
-            frames[.tutorialNode] = frame
-        }
-
-        if onboarding?.currentStep == .openPortal {
-            if let frame = screenFrame(for: RootCanvasProvider.pacManNodeID, canvasSize: canvasSize) {
-                frames[.demoGameNode] = frame
-            } else if let frame = screenFrame(for: RootCanvasProvider.xoNodeID, canvasSize: canvasSize) {
-                frames[.demoGameNode] = frame
-            }
-        }
-
-        if let step = onboarding?.currentStep,
-           step == .tapMiniAppNode || step == .dragCanvasNode,
-           let frame = screenFrame(for: TutorialCanvasProvider.miniAppNodeID, canvasSize: canvasSize) {
-            frames[.practiceCanvasNode] = frame
-        }
-
         return frames
     }
 
     private func handleNodeTap(_ node: SpatialNode) {
-        if let action = node.action {
+        switch node.tapDestination {
+        case .action(let action):
             onNodeAction?(action)
-        } else if node.type == .subCanvas, let fileName = node.linkedCanvasFileName {
+        case .subCanvas(let fileName):
             onNavigateToSubCanvas?(fileName)
-        } else if node.type == .miniApp {
-            presentedMiniApp = node
-        } else {
+        case .inspect:
             selectedNode = node
         }
     }
@@ -397,7 +355,6 @@ struct InfiniteCanvasView: View {
     /// Dismisses node detail chrome, then flies the workspace camera to the target node.
     private func handleFlyToFromDetail(_ nodeID: UUID) {
         selectedNode = nil
-        presentedMiniApp = nil
         onFlyToNode?(nodeID)
     }
 

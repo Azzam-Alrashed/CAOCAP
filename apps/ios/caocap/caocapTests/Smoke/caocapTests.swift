@@ -94,37 +94,7 @@ struct caocapTests {
         #expect(!createdNode)
     }
 
-    @MainActor
-    @Test func webBundleExportIncludesRunnableIndexAndSRSReadme() async throws {
-        let store = ProjectStore(
-            fileName: "onboarding-export-test-\(UUID().uuidString).json",
-            projectName: "Export Test",
-            initialNodes: [
-                SpatialNode(
-                    type: .miniApp,
-                    position: .zero,
-                    title: "Mini-App",
-                    miniApp: MiniAppState(
-                        srsText: SRSScaffold.defaultText,
-                        codeText: ProjectTemplateProvider.defaultCode
-                    )
-                )
-            ]
-        )
 
-        let exportURL = try await #require(ExportService.export(from: store, format: .webBundle(includeProjectContext: true)))
-        defer { try? FileManager.default.removeItem(at: exportURL) }
-
-        var isDirectory: ObjCBool = false
-        #expect(FileManager.default.fileExists(atPath: exportURL.path, isDirectory: &isDirectory))
-        #expect(!isDirectory.boolValue)
-        #expect(exportURL.pathExtension == "zip")
-        
-        let attributes = try FileManager.default.attributesOfItem(atPath: exportURL.path)
-        let fileSize = attributes[.size] as? UInt64 ?? 0
-        #expect(fileSize > 0)
-    }
-    
     @MainActor
     @Test func onboardingCoordinatorResetAndStart() async throws {
         let onboarding = OnboardingCoordinator()

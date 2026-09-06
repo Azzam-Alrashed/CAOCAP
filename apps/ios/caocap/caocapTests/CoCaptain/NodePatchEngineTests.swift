@@ -184,7 +184,14 @@ struct NodePatchEngineTests {
         let store = ProjectStore(
             fileName: "patch-preview-\(UUID().uuidString).json",
             projectName: "Tutorial",
-            initialNodes: [TutorialCanvasProvider.practiceMiniAppNode]
+            initialNodes: [
+                SpatialNode(
+                    type: .miniApp,
+                    position: .zero,
+                    title: "Mini-App",
+                    miniApp: MiniAppState(codeText: "hello world")
+                )
+            ]
         )
         let engine = NodePatchEngine()
 

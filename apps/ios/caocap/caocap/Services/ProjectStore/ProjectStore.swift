@@ -37,7 +37,6 @@ public class ProjectStore {
     private let persistence: ProjectPersistenceService
     private let saveController: ProjectSaveController
     private let checkpointManager: CheckpointManager
-    private let livePreviewOrchestrator = LivePreviewOrchestrator()
     private let mutationEngine = NodeMutationEngine()
     private let agentPipeline = AgentPipelineEngine()
     
@@ -437,7 +436,7 @@ public class ProjectStore {
     }
 
     private func compileLivePreviewsAndEvaluateChallenges(nodes: inout [SpatialNode]) {
-        _ = livePreviewOrchestrator.compile(nodes: &nodes)
+        // Phase 2: do not compile live HTML previews in the background.
         let htmlSamples = nodes.compactMap { node -> String? in
             guard node.type == .miniApp else { return nil }
             return node.miniApp?.compiledHTML

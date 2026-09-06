@@ -138,12 +138,7 @@ public class CommandPaletteViewModel {
     }
 
     public var filteredPreviewTools: [MiniAppPreviewTool] {
-        guard miniAppPreviewContext != nil else { return [] }
-        let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmedQuery.isEmpty { return MiniAppPreviewTool.allCases }
-        return MiniAppPreviewTool.allCases.filter {
-            $0.title.localizedCaseInsensitiveContains(trimmedQuery)
-        }
+        []
     }
 
     public var previewToolCount: Int { filteredPreviewTools.count }

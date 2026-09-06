@@ -47,13 +47,11 @@ public class AppRouter {
         }
     }
     
-    /// Initializes the router, runs any pending workspace migrations, and creates
-    /// the root canvas with its default node template and a zoomed-out initial scale.
+    /// Initializes the router and creates the root canvas from the empty home template.
     public init(activityRecorder: (any ActivityRecording)? = nil) {
         let resolvedActivityRecorder = activityRecorder ?? SessionActivityRecorder()
         self.activityRecorder = resolvedActivityRecorder
         CanvasWorkspaceMigration.runIfNeeded()
-        CuratedRootCanvasMigration.runIfNeeded()
         self.currentWorkspace = .root
         self.rootStore = ProjectStore(
             fileName: CanvasFileNaming.rootFileName,
@@ -110,36 +108,17 @@ public class AppRouter {
         navigate(to: .project(resolved), animated: true)
     }
 
-    /// Creates a brand-new project canvas with the default node template and immediately
-    /// navigates to it. Used as a recovery path when an imported or linked canvas cannot
-    /// be loaded.
-    public func createFreshMiniAppCanvas() {
+    /// Creates an empty project canvas and navigates to it. Used when an imported
+    /// or linked canvas cannot be loaded.
+    public func createFreshCanvas() {
         let fileName = CanvasFileNaming.newCanvasFileName()
         let store = ProjectStore(
             fileName: fileName,
-            projectName: "Mini-App Canvas",
-            initialNodes: ProjectTemplateProvider.defaultNodes,
+            projectName: "Canvas",
+            initialNodes: [],
             activityRecorder: activityRecorder
         )
         projects[fileName] = store
         navigate(to: .project(fileName), animated: true)
-    }
-
-    /// In-memory node arrays keyed by canvas file name, including root.
-    /// Prefer these over disk when counting Mini-Apps so unsaved edits count.
-    public func liveNodesByFileName() -> [String: [SpatialNode]] {
-        var map: [String: [SpatialNode]] = [
-            CanvasFileNaming.rootFileName: rootStore.nodes
-        ]
-        for (fileName, store) in projects {
-            map[fileName] = store.nodes
-        }
-        switch currentWorkspace {
-        case .root:
-            break
-        case .project(let fileName):
-            map[fileName] = activeStore.nodes
-        }
-        return map
     }
 }

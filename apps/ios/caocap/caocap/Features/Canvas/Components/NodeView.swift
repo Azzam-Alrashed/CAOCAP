@@ -278,9 +278,8 @@ struct NodeView: View, Equatable {
 }
 
 /// Renders supplementary content beneath the header row of a `NodeView`.
-/// For Mini-App nodes, shows a scaled-down live HTML thumbnail (375×667 ➝ 240px wide).
-/// For sub-canvas nodes, shows a "Tap to open" affordance. Action nodes and plain
-/// nodes render nothing (the header row is sufficient).
+/// For sub-canvas nodes, shows a "Tap to open" affordance. Other nodes render
+/// nothing extra (the header row is sufficient).
 private struct NodePreviewContent: View {
     let node: SpatialNode
     let agentState: AgentExecutionState
@@ -314,16 +313,6 @@ private struct NodePreviewContent: View {
                 EmptyView()
             } else {
                 switch node.type {
-                case .miniApp:
-                    if let html = node.miniApp?.compiledHTML {
-                        HTMLWebView(htmlContent: html)
-                            .frame(width: 375, height: 667)
-                            .scaleEffect(240.0 / 375.0)
-                            .frame(width: 240, height: 427)
-                            .background(Color.white.opacity(0.1))
-                            .cornerRadius(12)
-                    }
-
                 case .subCanvas:
                     VStack(alignment: .leading, spacing: 8) {
                         Label("SUB-CANVAS", systemImage: "folder.fill")

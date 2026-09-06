@@ -328,12 +328,6 @@ struct OnboardingManifestTests {
         #expect(!onboarding.isLessonCompleted(.moveAndOrganize))
     }
 
-    @Test func tutorialCanvasProviderSeedsPracticeMiniApp() {
-        #expect(TutorialCanvasProvider.snapshot.nodes.count == 1)
-        #expect(TutorialCanvasProvider.snapshot.nodes.first?.id == TutorialCanvasProvider.miniAppNodeID)
-        #expect(TutorialCanvasProvider.snapshot.nodes.first?.type == .miniApp)
-    }
-
     @Test func newLessonStepsBlockCoCaptainPromptSubmission() {
         #expect(OnboardingCoordinator.Step.tapMiniAppNode.blocksCoCaptainPrompt)
         #expect(OnboardingCoordinator.Step.dragCanvasNode.blocksCoCaptainPrompt)
@@ -343,8 +337,8 @@ struct OnboardingManifestTests {
 
     @MainActor
     @Test func onboardingReviewFixtureTargetsHelloWorldHeadline() {
-        let nodeID = TutorialCanvasProvider.miniAppNodeID
-        let baseText = TutorialCanvasProvider.practiceMiniAppNode.miniApp?.codeText ?? ""
+        let nodeID = UUID()
+        let baseText = "<h1>Hello World!</h1>"
         let draft = OnboardingCoCaptainReviewFixture.makeDraft(
             nodeID: nodeID,
             baseText: baseText
