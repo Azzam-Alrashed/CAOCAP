@@ -5,30 +5,6 @@ import Testing
 
 @MainActor
 struct CoCaptainReviewLifecycleTests {
-    @Test func stagingNodeEditsDoesNotCreateAReview() {
-        let store = makeStore()
-        let nodeID = store.nodes[0].id
-        let session = CoCaptainReviewLifecycle()
-            .session(scope: .project, store: store, dispatcher: nil)
-
-        let record = session.stage(
-            CoCaptainReviewLifecycle.Draft(
-                nodeEdits: [
-                    CoCaptainNodeEditProposal(
-                        nodeID: nodeID,
-                        summary: "Update heading",
-                        operations: [
-                            NodePatchOperation(type: .replaceAll, content: "<h1>Updated</h1>")
-                        ]
-                    )
-                ]
-            )
-        )
-
-        #expect(record == nil)
-        #expect(session.records.isEmpty)
-    }
-
     @Test func appActionRequiresApprovalAndUsesAgentApprovedSource() throws {
         let store = makeStore()
         let dispatcher = LifecycleActionDispatcher()

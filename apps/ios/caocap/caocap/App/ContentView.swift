@@ -44,7 +44,6 @@ struct ContentView: View {
                 // FAB tooltips render in the chrome overlay window so they sit above the FAB.
                 rendersAnchor: {
                     !$0.isCanvasLocal
-                        && !$0.isPreviewShellLocal
                         && !$0.isCoCaptainLocal
                         && $0 != .floatingCommandButton
                 }

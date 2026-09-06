@@ -43,16 +43,6 @@ public class OnboardingCoordinator {
         case openHelpCenter
         /// User must browse Help guides to discover additional lessons.
         case browseHelpGuides
-        /// User must tap the seeded Hello World Mini-App on the Tutorial canvas.
-        case tapMiniAppNode
-        /// User must interact with the live Mini-App preview.
-        case interactMiniAppPreview
-        /// User must open the Code tool from the preview omnibox.
-        case openMiniAppCodeTool
-        /// User must save a code edit from the code editor.
-        case saveMiniAppCodeEdit
-        /// User must return to the canvas from the Mini-App preview.
-        case returnFromMiniAppPreview
         /// User must drag the canvas background to pan around the workspace.
         case panCanvas
         /// User must pinch the canvas to zoom in or out.
@@ -88,8 +78,7 @@ public class OnboardingCoordinator {
         var blocksCoCaptainPrompt: Bool {
             switch self {
             case .returnToRoot, .typeGoBackInOmnibox, .tapGoBackAction, .panCanvas, .pinchZoom, .fitAllNodes,
-                 .searchFlyToNode, .openPortal, .tapMiniAppNode, .interactMiniAppPreview, .openMiniAppCodeTool,
-                 .saveMiniAppCodeEdit, .returnFromMiniAppPreview, .openHelpCenter, .browseHelpGuides,
+                 .searchFlyToNode, .openPortal, .openHelpCenter, .browseHelpGuides,
                  .dragCanvasNode, .runOrganizeNodes,
                  .undoCanvasEdit, .redoCanvasEdit, .reviewCoCaptainChange, .applyCoCaptainChange:
                 return true

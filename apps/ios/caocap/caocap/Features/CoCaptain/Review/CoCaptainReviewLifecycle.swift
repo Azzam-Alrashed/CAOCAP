@@ -10,14 +10,11 @@ import OSLog
 public final class CoCaptainReviewLifecycle {
     public struct Draft: Hashable {
         public let pendingActions: [CoCaptainAgentAction]
-        public let nodeEdits: [CoCaptainNodeEditProposal]
 
         public init(
-            pendingActions: [CoCaptainAgentAction] = [],
-            nodeEdits: [CoCaptainNodeEditProposal] = []
+            pendingActions: [CoCaptainAgentAction] = []
         ) {
             self.pendingActions = pendingActions
-            self.nodeEdits = nodeEdits
         }
 
         public var isEmpty: Bool {
@@ -72,22 +69,14 @@ public final class CoCaptainReviewLifecycle {
     public enum Decision: Hashable {
         case approve(itemID: UUID)
         case reject(itemID: UUID)
-        case chooseClarification(itemID: UUID, candidateID: UUID)
         case approveAll
         case rejectAll
     }
 
     /// Ordered domain effects emitted by a successful lifecycle transition.
     public enum Effect: Hashable {
-        case nodeEditApplied(
-            itemID: UUID,
-            nodeID: UUID,
-            role: NodeRole,
-            section: CoCaptainNodeEditProposal.MiniAppSection
-        )
         case appActionPerformed(itemID: UUID, result: AppActionResult)
         case rejected(itemID: UUID)
-        case clarificationResolved(itemID: UUID)
         case conflicted(itemID: UUID, description: String)
         case learningNote(itemID: UUID, note: CoCaptainLearningNote)
     }
@@ -108,7 +97,6 @@ public final class CoCaptainReviewLifecycle {
         case bundleNotFound(UUID)
         case itemNotFound(UUID)
         case decisionNotAllowed(itemID: UUID, status: ReviewItemStatus)
-        case clarificationCandidateNotFound(itemID: UUID, candidateID: UUID)
         case invalidSource(itemID: UUID)
 
         public var errorDescription: String? {
@@ -119,8 +107,6 @@ public final class CoCaptainReviewLifecycle {
                 return "The review item is no longer available."
             case .decisionNotAllowed:
                 return "That review decision is not available for the item's current status."
-            case .clarificationCandidateNotFound:
-                return "The selected clarification choice is no longer available."
             case .invalidSource:
                 return "That review item cannot perform the requested decision."
             }
@@ -211,12 +197,6 @@ public final class CoCaptainReviewLifecycle {
                 )
             case .reject(let itemID):
                 result = reject(itemID: itemID, in: &record)
-            case .chooseClarification(let itemID, let candidateID):
-                result = chooseClarification(
-                    itemID: itemID,
-                    candidateID: candidateID,
-                    in: &record
-                )
             case .approveAll:
                 result = approveAll(in: &record)
             case .rejectAll:
@@ -333,43 +313,7 @@ public final class CoCaptainReviewLifecycle {
             }
 
             record.bundle.items[itemIndex].status = .rejected
-            record.bundle.items[itemIndex].clarificationCandidates = nil
             return .success([.rejected(itemID: itemID)])
-        }
-
-        private func chooseClarification(
-            itemID: UUID,
-            candidateID: UUID,
-            in record: inout Record
-        ) -> Result<[Effect], Failure> {
-            guard let itemIndex = record.bundle.items.firstIndex(where: { $0.id == itemID }) else {
-                return .failure(.itemNotFound(itemID))
-            }
-            let item = record.bundle.items[itemIndex]
-            guard item.status == .needsClarification else {
-                return .failure(.decisionNotAllowed(itemID: itemID, status: item.status))
-            }
-            guard case .nodeEdit = item.source else {
-                return .failure(.invalidSource(itemID: itemID))
-            }
-            guard item.clarificationCandidates?.contains(where: { $0.id == candidateID }) == true else {
-                return .failure(
-                    .clarificationCandidateNotFound(
-                        itemID: itemID,
-                        candidateID: candidateID
-                    )
-                )
-            }
-
-            var updatedItem = item
-            let description = LocalizationManager.shared.localizedString(
-                "CoCaptain no longer applies HTML or SRS edits."
-            )
-            updatedItem.status = .conflicted
-            updatedItem.conflictDescription = description
-            updatedItem.clarificationCandidates = nil
-            record.bundle.items[itemIndex] = updatedItem
-            return .success([.conflicted(itemID: itemID, description: description)])
         }
 
         private func approveAll(in record: inout Record) -> Result<[Effect], Failure> {
@@ -396,7 +340,6 @@ public final class CoCaptainReviewLifecycle {
             where record.bundle.items[itemIndex].status.isUnresolved {
                 let itemID = record.bundle.items[itemIndex].id
                 record.bundle.items[itemIndex].status = .rejected
-                record.bundle.items[itemIndex].clarificationCandidates = nil
                 effects.append(.rejected(itemID: itemID))
             }
             return .success(effects)
@@ -428,14 +371,6 @@ public final class CoCaptainReviewLifecycle {
 
             case .unavailableAction(_, let reason):
                 return conflict(&item, description: reason)
-
-            case .nodeEdit:
-                return conflict(
-                    &item,
-                    description: LocalizationManager.shared.localizedString(
-                        "CoCaptain no longer applies HTML or SRS edits."
-                    )
-                )
             }
         }
 
@@ -445,7 +380,6 @@ public final class CoCaptainReviewLifecycle {
         ) -> [Effect] {
             item.status = .conflicted
             item.conflictDescription = description
-            item.clarificationCandidates = nil
             return [.conflicted(itemID: item.id, description: description)]
         }
 

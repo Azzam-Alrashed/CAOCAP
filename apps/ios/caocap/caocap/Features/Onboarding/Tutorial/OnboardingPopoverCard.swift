@@ -120,18 +120,8 @@ enum OnboardingTooltipAnchor: Hashable {
     case canvasGestureArea
     /// Anchored to the zoom percentage pill in the canvas HUD.
     case canvasHUDZoom
-    /// Anchored to the practice Mini-App node on the Tutorial canvas.
+    /// Anchored to the practice node on the Tutorial canvas.
     case practiceCanvasNode
-    /// Anchored to the live Mini-App HTML preview area.
-    case miniAppPreviewArea
-    /// Anchored to the floating command button inside the Mini-App preview shell.
-    case miniAppPreviewFAB
-    /// Anchored to the Code row in the preview omnibox tool list.
-    case omniboxMiniAppCodeRow
-    /// Anchored to the save/close control in the code editor.
-    case miniAppCodeEditorSave
-    /// Anchored to the Back to Canvas row in the preview omnibox.
-    case omniboxBackToCanvasRow
     /// Anchored to the Organize Nodes action row in the omnibox.
     case omniboxOrganizeRow
     /// Anchored to the Undo action row in the omnibox.
@@ -147,27 +137,6 @@ enum OnboardingTooltipAnchor: Hashable {
     var isCanvasLocal: Bool {
         switch self {
         case .tutorialNode, .demoGameNode, .practiceCanvasNode, .canvasGestureArea:
-            return true
-        default:
-            return false
-        }
-    }
-
-    /// Whether this anchor is owned by the Mini-App preview shell or its tool sheets.
-    var isPreviewShellLocal: Bool {
-        switch self {
-        case .miniAppPreviewArea, .miniAppPreviewFAB, .omniboxMiniAppCodeRow,
-             .omniboxBackToCanvasRow, .miniAppCodeEditorSave:
-            return true
-        default:
-            return false
-        }
-    }
-
-    /// Whether this anchor is rendered inside the preview omnibox list.
-    var isPreviewOmniboxLocal: Bool {
-        switch self {
-        case .omniboxMiniAppCodeRow, .omniboxBackToCanvasRow:
             return true
         default:
             return false
@@ -368,16 +337,8 @@ extension OnboardingCoordinator.Step {
             return .canvasGestureArea
         case .pinchZoom:
             return .canvasHUDZoom
-        case .tapMiniAppNode, .dragCanvasNode:
+        case .dragCanvasNode:
             return .practiceCanvasNode
-        case .interactMiniAppPreview:
-            return .miniAppPreviewArea
-        case .openMiniAppCodeTool:
-            return .omniboxMiniAppCodeRow
-        case .saveMiniAppCodeEdit:
-            return .miniAppCodeEditorSave
-        case .returnFromMiniAppPreview:
-            return .omniboxBackToCanvasRow
         case .runOrganizeNodes:
             return .omniboxOrganizeRow
         case .undoCanvasEdit, .redoCanvasEdit:
@@ -398,12 +359,6 @@ extension OnboardingCoordinator.Step {
         if self == .openHelpCenter, isCommandPalettePresented {
             return .commandPaletteHelp
         }
-        if self == .openMiniAppCodeTool, isCommandPalettePresented {
-            return .omniboxMiniAppCodeRow
-        }
-        if self == .returnFromMiniAppPreview, isCommandPalettePresented {
-            return .omniboxBackToCanvasRow
-        }
         if self == .runOrganizeNodes, isCommandPalettePresented {
             return .omniboxOrganizeRow
         }
@@ -422,8 +377,8 @@ extension OnboardingCoordinator.Step {
             return .top
         case .openTutorial, .tapFAB, .typeCoCaptainPrompt, .submitCoCaptainPrompt, .chatCoCaptain,
              .longPressFAB, .returnToRoot, .typeGoBackInOmnibox, .tapGoBackAction, .panCanvas, .fitAllNodes, .searchFlyToNode, .openPortal,
-             .tapMiniAppNode, .interactMiniAppPreview, .openMiniAppCodeTool, .openHelpCenter, .browseHelpGuides, .chatCoCaptainGameEdit,
-             .saveMiniAppCodeEdit, .returnFromMiniAppPreview, .dragCanvasNode,
+             .openHelpCenter, .browseHelpGuides, .chatCoCaptainGameEdit,
+             .dragCanvasNode,
              .runOrganizeNodes, .undoCanvasEdit, .redoCanvasEdit, .applyCoCaptainChange:
             return .bottom
         }

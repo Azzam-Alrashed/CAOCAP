@@ -181,30 +181,6 @@ struct CoCaptainAgentTests {
         #expect(!context.contains("SRS"))
     }
 
-    @Test func parserExtractsNodeIDTargetedNodeEdit() throws {
-        let nodeID = UUID()
-        let parser = CoCaptainAgentParser()
-        let response =
-            """
-            Updating this node.
-
-            <cocaptain_actions>
-              <assistant_message>Prepared a targeted edit.</assistant_message>
-              <node_edits>
-                <node_edit nodeId="\(nodeID.uuidString)" role="miniApp" section="code" summary="Target exact Mini-App code.">
-                  <operation type="replace_all">
-                    <content><![CDATA[<h1>Targeted</h1>]]></content>
-                  </operation>
-                </node_edit>
-              </node_edits>
-            </cocaptain_actions>
-            """
-
-        let parsed = parser.parse(response)
-
-        #expect(parsed.payload?.nodeEdits.isEmpty == true)
-    }
-
     @MainActor
     @Test func nodeAgentMessagesPersistOnNode() {
         let store = makeStore()
@@ -591,7 +567,6 @@ struct CoCaptainAgentTests {
         ) { _ in }
 
         #expect(result.reviewDraft?.pendingActions.count == 1)
-        #expect(result.reviewDraft?.nodeEdits.isEmpty == true)
     }
 
     @Test func parserExtractsTrailingStructuredBlock() throws {
@@ -658,7 +633,6 @@ struct CoCaptainAgentTests {
         let parsed = parser.parse(response)
 
         #expect(parsed.preamble == "I can document that preference.")
-        #expect(parsed.payload?.nodeEdits.isEmpty == true)
     }
 
     @Test func parserHidesIncompleteLooseTrailingActionXML() throws {
@@ -863,7 +837,6 @@ struct CoCaptainAgentTests {
         )
 
         #expect(directive.payload?.safeActions.first?.actionID == "go_root")
-        #expect(directive.payload?.nodeEdits.isEmpty == true)
         #expect(directive.source == .combined)
     }
 
@@ -1067,7 +1040,6 @@ struct CoCaptainAgentTests {
         #expect(dispatcher.executedActionIDs == [.goRoot])
         #expect(result.executionSummary?.summary.contains("Go to Root") == true)
         #expect(result.reviewDraft?.pendingActions.count == 1)
-        #expect(result.reviewDraft?.nodeEdits.isEmpty == true)
     }
 
     @MainActor
@@ -2269,7 +2241,7 @@ struct CoCaptainAgentTests {
         ) { _ in }
 
         #expect(llm.receivedMessages.count == 2)
-        #expect(llm.receivedMessages[1].contains("cocaptain_actions"))
+        #expect(llm.receivedMessages[1].contains("request_app_action"))
     }
 
     @MainActor
@@ -2455,7 +2427,6 @@ struct CoCaptainAgentTests {
 
         #expect(directive.payload?.clarifyingQuestion?.prompt == "Which look do you want?")
         #expect(directive.payload?.clarifyingQuestion?.options.count == 2)
-        #expect(directive.payload?.nodeEdits.isEmpty == true)
 
         let tooFewOptions = adapter.directive(from: [
             CoCaptainAgentFunctionCall(
@@ -2480,7 +2451,7 @@ struct CoCaptainAgentTests {
                     ]
                 ),
                 CoCaptainAgentFunctionCall(
-                    name: CoCaptainNodeEditTools.proposeNodeEditName,
+                    name: "propose_node_edit",
                     arguments: [
                         "summary": "Guessy restyle",
                         "operations": [["type": "replace_all", "content": "<h1>Guess</h1>"]]

@@ -180,7 +180,7 @@ public final class LLMService {
             scope: scope,
             purpose: purpose,
             chatMode: chatMode,
-            nodeEditToolsEnabled: NodeEditToolsFeature.isEnabled && supportsFunctionCalling,
+            nodeEditToolsEnabled: supportsFunctionCalling,
             modelSupportsFunctionCalling: supportsFunctionCalling
         )
 
@@ -383,7 +383,7 @@ public final class LLMService {
 
     /// The base system instruction loaded into the Gemini context window.
     /// Dictates the persona, rules of engagement, and the output contract
-    /// (native tools when `NodeEditToolsFeature` is enabled, XML otherwise).
+    /// (native `request_app_action` and clarifying-question tools).
     private static func systemInstructionText(nodeEditToolsEnabled: Bool) -> String {
         let contractSentence = nodeEditToolsEnabled
             ? "You can request app actions with the `request_app_action` function and ask one question with the `ask_clarifying_question` function. The app validates every requested action before execution."
@@ -419,9 +419,7 @@ public final class LLMService {
         var declarations: [FunctionDeclaration] = [
             Self.requestAppActionDeclaration
         ]
-        if NodeEditToolsFeature.isEnabled {
-            declarations.append(Self.askClarifyingQuestionDeclaration)
-        }
+        declarations.append(Self.askClarifyingQuestionDeclaration)
 
         return FirebaseAI.firebaseAI(backend: .googleAI()).generativeModel(
             modelName: modelName,
@@ -431,7 +429,7 @@ public final class LLMService {
             ),
             systemInstruction: ModelContent(
                 role: "system",
-                parts: Self.systemInstructionText(nodeEditToolsEnabled: NodeEditToolsFeature.isEnabled)
+                parts: Self.systemInstructionText(nodeEditToolsEnabled: true)
             )
         )
     }
@@ -470,8 +468,7 @@ public final class LLMService {
     /// Sections are joined in order: canvas context (when provided), the agent
     /// contract (when `expectsStructuredResponse` is `true`), and the user request.
     /// The agent contract includes scope-specific instructions, the output contract
-    /// (native node-edit tools or the XML schema for `cocaptain_actions` depending
-    /// on `NodeEditToolsFeature`), and the split list of autonomous vs.
+    /// (native tools or the XML schema for `cocaptain_actions`), and the split list of autonomous vs.
     /// review-required actions.
     ///
     /// Tool capability inputs are injectable for tests; `nil` reads the active
@@ -494,7 +491,7 @@ public final class LLMService {
         }
 
         if expectsStructuredResponse {
-            let nodeEditToolsEnabled = nodeEditToolsEnabled ?? NodeEditToolsFeature.isEnabled
+            let nodeEditToolsEnabled = nodeEditToolsEnabled ?? true
             _ = modelSupportsFunctionCalling
             let scopeInstructions: String = {
                 switch scope {

@@ -103,41 +103,6 @@ enum OnboardingManifest {
                 messageKey: "onboarding.browseHelpGuides.message",
                 icon: "book.fill"
             )
-        case .tapMiniAppNode:
-            return OnboardingStepContent(
-                step: step,
-                titleKey: "onboarding.tapMiniAppNode.title",
-                messageKey: "onboarding.tapMiniAppNode.message",
-                icon: "play.circle.fill"
-            )
-        case .interactMiniAppPreview:
-            return OnboardingStepContent(
-                step: step,
-                titleKey: "onboarding.interactMiniAppPreview.title",
-                messageKey: "onboarding.interactMiniAppPreview.message",
-                icon: "hand.tap"
-            )
-        case .openMiniAppCodeTool:
-            return OnboardingStepContent(
-                step: step,
-                titleKey: "onboarding.openMiniAppCodeTool.title",
-                messageKey: "onboarding.openMiniAppCodeTool.message",
-                icon: "chevron.left.forwardslash.chevron.right"
-            )
-        case .saveMiniAppCodeEdit:
-            return OnboardingStepContent(
-                step: step,
-                titleKey: "onboarding.saveMiniAppCodeEdit.title",
-                messageKey: "onboarding.saveMiniAppCodeEdit.message",
-                icon: "square.and.pencil"
-            )
-        case .returnFromMiniAppPreview:
-            return OnboardingStepContent(
-                step: step,
-                titleKey: "onboarding.returnFromMiniAppPreview.title",
-                messageKey: "onboarding.returnFromMiniAppPreview.message",
-                icon: "arrow.uturn.backward"
-            )
         case .typeCoCaptainPrompt:
             return OnboardingStepContent(
                 step: step,

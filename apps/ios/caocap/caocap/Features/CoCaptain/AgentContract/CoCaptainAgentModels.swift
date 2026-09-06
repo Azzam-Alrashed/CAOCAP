@@ -444,74 +444,6 @@ public struct CoCaptainLearningNote: Codable, Hashable {
     }
 }
 
-/// A model-proposed edit to one section of a canvas node.
-///
-/// The proposal is held in a `ReviewBundleItem` until the user approves it,
-/// at which point `NodePatchEngine` applies the operations against the live
-/// project store.
-public struct CoCaptainNodeEditProposal: Codable, Hashable {
-    /// Leftover HTML / SRS section names so old review JSON can still decode.
-    public enum MiniAppSection: String, Codable, Hashable {
-        /// The Software Requirements Specification / documentation section.
-        case srs
-        /// The executable source-code section.
-        case code
-    }
-
-    /// The specific node to edit, or `nil` when the model omits the ID and
-    /// the coordinator resolves it by role matching against the active store.
-    public let nodeID: UUID?
-    /// The role the leftover HTML-edit payload claimed to target.
-    public let role: NodeRole
-    /// Which of the node's text sections the operations should be applied to.
-    public let section: MiniAppSection
-    /// A short human-readable description surfaced in the review UI.
-    public let summary: String
-    /// The ordered sequence of patch operations to apply when accepted.
-    public let operations: [NodePatchOperation]
-    /// An optional model-authored lesson revealed after the edit is applied.
-    public let learningNote: CoCaptainLearningNote?
-
-    public init(
-        nodeID: UUID? = nil,
-        role: NodeRole = .custom,
-        section: MiniAppSection = .code,
-        summary: String,
-        operations: [NodePatchOperation],
-        learningNote: CoCaptainLearningNote? = nil
-    ) {
-        self.nodeID = nodeID
-        self.role = role
-        self.section = section
-        self.summary = summary
-        self.operations = operations
-        self.learningNote = learningNote
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case nodeID = "nodeId"
-        case role
-        case section
-        case summary
-        case operations
-        case learningNote
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.nodeID = try container.decodeIfPresent(UUID.self, forKey: .nodeID)
-        // Leftover payloads may omit role; treat them as ordinary cards.
-        self.role = try container.decodeIfPresent(NodeRole.self, forKey: .role) ?? .custom
-        self.section = try container.decodeIfPresent(MiniAppSection.self, forKey: .section) ?? .code
-        self.summary = try container.decodeIfPresent(String.self, forKey: .summary) ?? ""
-        self.operations = try container.decode([NodePatchOperation].self, forKey: .operations)
-        self.learningNote = try container.decodeIfPresent(
-            CoCaptainLearningNote.self,
-            forKey: .learningNote
-        )
-    }
-}
-
 /// One polite question the assistant asks when a request is too vague to act
 /// on. The options render as tappable chips; picking one becomes the user's
 /// next message, so no request is ever rejected outright.
@@ -534,7 +466,7 @@ public struct CoCaptainClarifyingQuestion: Hashable, Codable {
 ///
 /// The payload separates the model's prose from its executable intent.
 /// `safeActions` run immediately (non-mutating, autonomous); `pendingActions`
-/// and `nodeEdits` enter the review queue for explicit user approval.
+/// enter the review queue for explicit user approval.
 public struct CoCaptainAgentPayload: Codable, Hashable {
     /// The chat-visible text the model produced alongside its actions.
     public let assistantMessage: String
@@ -543,23 +475,19 @@ public struct CoCaptainAgentPayload: Codable, Hashable {
     public let safeActions: [CoCaptainAgentAction]
     /// Actions that require explicit user approval before being dispatched.
     public let pendingActions: [CoCaptainAgentAction]
-    /// Proposed edits to canvas nodes that must pass review before being applied.
-    public let nodeEdits: [CoCaptainNodeEditProposal]
     /// A structured question the model asks instead of guessing when the
-    /// request is ambiguous. Takes precedence over node edits in the same turn.
+    /// request is ambiguous.
     public let clarifyingQuestion: CoCaptainClarifyingQuestion?
 
     public init(
         assistantMessage: String,
         safeActions: [CoCaptainAgentAction] = [],
         pendingActions: [CoCaptainAgentAction] = [],
-        nodeEdits: [CoCaptainNodeEditProposal] = [],
         clarifyingQuestion: CoCaptainClarifyingQuestion? = nil
     ) {
         self.assistantMessage = assistantMessage
         self.safeActions = safeActions
         self.pendingActions = pendingActions
-        self.nodeEdits = nodeEdits
         self.clarifyingQuestion = clarifyingQuestion
     }
 }
@@ -568,8 +496,8 @@ public struct CoCaptainAgentPayload: Codable, Hashable {
 ///
 /// Mirrors the shape of `FirebaseAILogic.JSONValue` without importing the SDK
 /// into the agent contract, and — unlike the old `[String: String]` argument
-/// map — preserves nested objects and arrays so structured tools like
-/// `propose_node_edit` can carry operations.
+/// map — preserves nested objects and arrays so structured tools can
+/// carry nested arguments.
 public indirect enum AgentJSONValue: Codable, Hashable, Sendable {
     case null
     case bool(Bool)
@@ -660,18 +588,8 @@ extension AgentJSONValue: ExpressibleByStringLiteral, ExpressibleByBooleanLitera
     }
 }
 
-/// Constants for the read-only `read_node_section` tool, answered inline by
-/// the coordinator against the active `ProjectStore` during a streaming turn.
-public enum CoCaptainReadNodeSectionTool {
-    public static let name = "read_node_section"
-    /// Cap on the section text returned to the model per call (~30 KB).
-    public static let maximumResponseCharacters = 30_000
-}
-
-/// Constants for the feature-gated structured node-edit tools that replace
-/// the XML `node_edit` / `clarifying_question` contract elements.
+/// Constants for the native clarifying-question tool.
 public enum CoCaptainNodeEditTools {
-    public static let proposeNodeEditName = "propose_node_edit"
     public static let askClarifyingQuestionName = "ask_clarifying_question"
 }
 
@@ -756,8 +674,7 @@ public enum ReviewItemStatus: String, Hashable, Codable {
     case conflicted
     /// The user explicitly dismissed the item without applying it.
     case rejected
-    /// The edit target matched several places; the user must pick one of the
-    /// item's `clarificationCandidates` before the edit can become pending.
+    /// Leftover HTML-patch disambiguation. New reviews do not use this status.
     case needsClarification
 
     /// The canonical definition used by review persistence, bulk decisions,
@@ -835,13 +752,10 @@ public enum PendingReviewSource: Hashable, Codable {
     /// An action that could not be staged because its identifier is unknown or
     /// no matching action is available in the current app context.
     case unavailableAction(actionID: String, reason: String)
-    /// A proposed node text edit. `baseText` is captured at proposal time so
-    /// `NodePatchEngine` can detect intervening changes and flag conflicts.
-    case nodeEdit(role: NodeRole, section: CoCaptainNodeEditProposal.MiniAppSection, operations: [NodePatchOperation], baseText: String)
 }
 
-/// One actionable change within a `ReviewBundleItem`, representing either a
-/// pending app action or a proposed node edit that the user can approve or reject.
+/// One actionable change within a `ReviewBundleItem` that the user can
+/// approve or reject.
 public struct PendingReviewItem: Identifiable, Hashable, Codable {
     public let id: UUID
     /// The node the edit targets, if applicable. Used to scroll the canvas
@@ -862,9 +776,6 @@ public struct PendingReviewItem: Identifiable, Hashable, Codable {
     /// Human-readable explanation of why this item entered the conflicted state.
     /// Nil when the item has not yet conflicted.
     public var conflictDescription: String?
-    /// Pickable target locations when `status == .needsClarification`.
-    /// The user's choice re-stages the edit locally without another model call.
-    public var clarificationCandidates: [PatchMatchCandidate]?
     /// A model-authored lesson revealed in the timeline after the user applies
     /// this item. Optional so previously persisted items decode unchanged.
     public var learningNote: CoCaptainLearningNote?
@@ -879,7 +790,6 @@ public struct PendingReviewItem: Identifiable, Hashable, Codable {
         status: ReviewItemStatus = .pending,
         source: PendingReviewSource,
         conflictDescription: String? = nil,
-        clarificationCandidates: [PatchMatchCandidate]? = nil,
         learningNote: CoCaptainLearningNote? = nil
     ) {
         self.id = id
@@ -891,7 +801,6 @@ public struct PendingReviewItem: Identifiable, Hashable, Codable {
         self.status = status
         self.source = source
         self.conflictDescription = conflictDescription
-        self.clarificationCandidates = clarificationCandidates
         self.learningNote = learningNote
     }
 }

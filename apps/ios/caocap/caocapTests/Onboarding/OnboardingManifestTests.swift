@@ -50,11 +50,6 @@ struct OnboardingManifestTests {
         #expect(OnboardingCoordinator.Step.returnToRoot.tooltipAnchor == .floatingCommandButton)
         #expect(OnboardingCoordinator.Step.typeGoBackInOmnibox.tooltipAnchor == .floatingCommandButton)
         #expect(OnboardingCoordinator.Step.tapGoBackAction.tooltipAnchor == .commandPaletteGoBack)
-        #expect(OnboardingCoordinator.Step.tapMiniAppNode.tooltipAnchor == .practiceCanvasNode)
-        #expect(OnboardingCoordinator.Step.interactMiniAppPreview.tooltipAnchor == .miniAppPreviewArea)
-        #expect(OnboardingCoordinator.Step.openMiniAppCodeTool.tooltipAnchor == .omniboxMiniAppCodeRow)
-        #expect(OnboardingCoordinator.Step.saveMiniAppCodeEdit.tooltipAnchor == .miniAppCodeEditorSave)
-        #expect(OnboardingCoordinator.Step.returnFromMiniAppPreview.tooltipAnchor == .omniboxBackToCanvasRow)
         #expect(OnboardingCoordinator.Step.dragCanvasNode.tooltipAnchor == .practiceCanvasNode)
         #expect(OnboardingCoordinator.Step.runOrganizeNodes.tooltipAnchor == .omniboxOrganizeRow)
         #expect(OnboardingCoordinator.Step.undoCanvasEdit.tooltipAnchor == .floatingCommandButton)
@@ -82,10 +77,6 @@ struct OnboardingManifestTests {
         #expect(
             OnboardingCoordinator.Step.searchFlyToNode.resolvedTooltipAnchor(isCommandPalettePresented: true)
                 == .omniboxSearchField
-        )
-        #expect(
-            OnboardingCoordinator.Step.openMiniAppCodeTool.resolvedTooltipAnchor(isCommandPalettePresented: true)
-                == .omniboxMiniAppCodeRow
         )
         #expect(
             OnboardingCoordinator.Step.runOrganizeNodes.resolvedTooltipAnchor(isCommandPalettePresented: true)
@@ -122,7 +113,6 @@ struct OnboardingManifestTests {
     }
 
     @Test func newLessonStepsBlockCoCaptainPromptSubmission() {
-        #expect(OnboardingCoordinator.Step.tapMiniAppNode.blocksCoCaptainPrompt)
         #expect(OnboardingCoordinator.Step.dragCanvasNode.blocksCoCaptainPrompt)
         #expect(OnboardingCoordinator.Step.runOrganizeNodes.blocksCoCaptainPrompt)
         #expect(!OnboardingCoordinator.Step.chatCoCaptain.blocksCoCaptainPrompt)

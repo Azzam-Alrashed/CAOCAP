@@ -122,7 +122,6 @@ public final class CoCaptainAgentCoordinator {
     private let contextBuilder: ProjectContextBuilder?
     private let outputAdapter: any CoCaptainAgentOutputAdapting
     private let validator: CoCaptainAgentValidator
-    private let nodeEditToolsEnabled: () -> Bool
 
     /// Creates a coordinator with optional dependency overrides for testing.
     ///
@@ -133,8 +132,7 @@ public final class CoCaptainAgentCoordinator {
         contextBuilder: ProjectContextBuilder? = nil,
         parser: CoCaptainAgentParser = CoCaptainAgentParser(),
         outputAdapter: (any CoCaptainAgentOutputAdapting)? = nil,
-        validator: CoCaptainAgentValidator = CoCaptainAgentValidator(),
-        nodeEditToolsEnabled: (() -> Bool)? = nil
+        validator: CoCaptainAgentValidator = CoCaptainAgentValidator()
     ) {
         self.llmClient = llmClient ?? LLMService.shared
         self.contextBuilder = contextBuilder
@@ -144,7 +142,6 @@ public final class CoCaptainAgentCoordinator {
             xmlAdapter: CoCaptainXMLAgentAdapter(parser: parser)
         )
         self.validator = validator
-        self.nodeEditToolsEnabled = nodeEditToolsEnabled ?? { NodeEditToolsFeature.isEnabled }
     }
 
     private let logger = Logger(subsystem: "com.caocap.CoCaptainAgentCoordinator", category: "Coordinator")
@@ -543,29 +540,9 @@ public final class CoCaptainAgentCoordinator {
 
     /// Builds a corrective system message that feeds validation issues back to
     /// the model along with the original request, giving it a second chance to
-    /// produce a conforming structured payload. The wording references the
-    /// node-edit tools when they are enabled, the XML block otherwise.
+    /// produce a conforming structured payload.
     private func agenticRetryMessage(for userMessage: String, validationIssues: [String]) -> String {
         let issueList = validationIssues.map { "- \($0)" }.joined(separator: "\n")
-
-        if nodeEditToolsEnabled() {
-            return """
-            The previous response has not satisfied the machine-readable CoCaptain action contract.
-
-            Validation issues:
-            \(issueList)
-            
-            CRITICAL: 
-            1. Talk in chat. Do not propose HTML, SRS, or Mini-App source edits.
-            2. Call `ask_clarifying_question` when the request is too vague to act on.
-            3. For app navigation or canvas actions such as creating or moving a node, call `request_app_action`.
-            4. Put mutating or non-autonomous app actions in `request_app_action` with `executionMode=pending`.
-            5. Use `executionMode=safe` only for available, non-mutating, autonomous app actions.
-            
-            Original user request:
-            \(userMessage)
-            """
-        }
 
         return """
         The previous response has not satisfied the machine-readable CoCaptain action contract.
@@ -575,10 +552,10 @@ public final class CoCaptainAgentCoordinator {
         
         CRITICAL: 
         1. Talk in chat. Do not propose HTML, SRS, or Mini-App source edits.
-        2. You MUST include a `cocaptain_actions` XML block when requesting app actions.
+        2. Call `ask_clarifying_question` when the request is too vague to act on.
         3. For app navigation or canvas actions such as creating or moving a node, call `request_app_action`.
-        4. Put mutating or non-autonomous app actions in `pendingActions` or call `request_app_action` with `executionMode=pending`.
-        5. Use `safeActions` or `executionMode=safe` only for available, non-mutating, autonomous app actions.
+        4. Put mutating or non-autonomous app actions in `request_app_action` with `executionMode=pending`.
+        5. Use `executionMode=safe` only for available, non-mutating, autonomous app actions.
         
         Original user request:
         \(userMessage)

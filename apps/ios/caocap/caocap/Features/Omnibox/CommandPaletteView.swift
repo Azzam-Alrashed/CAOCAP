@@ -247,13 +247,12 @@ struct CommandPaletteView: View {
                         Spacer()
                         
                         // Floating Results Card (Only shown if query is not empty and results exist)
-                        let hasPreviewTools = viewModel.previewToolCount > 0
                         let hasResults = !viewModel.filteredActions.isEmpty
                             || !viewModel.nodeResults.isEmpty
                             || !viewModel.nodeCreationResults.isEmpty
                             || viewModel.canSubmitPrompt
                         let trimmedQuery = viewModel.query.trimmingCharacters(in: .whitespacesAndNewlines)
-                        let showCard = hasPreviewTools || (hasResults && !trimmedQuery.isEmpty)
+                        let showCard = hasResults && !trimmedQuery.isEmpty
                         
                         if showCard {
                             VStack(spacing: 0) {
@@ -470,11 +469,7 @@ struct CommandPaletteView: View {
         .onChange(of: onboarding?.currentStep) { _, step in
             viewModel.prefersPromptSubmission = step == .submitCoCaptainPrompt
             viewModel.prefersGoBackSelection = step == .tapGoBackAction
-            if step == .openMiniAppCodeTool {
-                viewModel.selectPreviewCodeToolIfAvailable()
-            } else if step == .returnFromMiniAppPreview {
-                viewModel.selectPreviewBackToCanvasToolIfAvailable()
-            } else if step == .typeGoBackInOmnibox {
+            if step == .typeGoBackInOmnibox {
                 viewModel.query = ""
             } else if step == .tapGoBackAction {
                 viewModel.selectGoBackActionIfAvailable()
@@ -485,10 +480,6 @@ struct CommandPaletteView: View {
         .onDisappear {
             dictation.stop()
         }
-        .onboardingTooltipOverlay(
-            isCommandPalettePresented: viewModel.isPresented,
-            rendersAnchor: { $0.isPreviewOmniboxLocal }
-        )
     }
 
     /// A button that clears the current query text in the Omnibox.
@@ -633,23 +624,6 @@ private struct OmniboxSearchResultsView: View {
     var body: some View {
         let actions = viewModel.filteredActions
         let prioritizedCount = viewModel.prioritizedNavigationActionCount
-        let previewTools = viewModel.filteredPreviewTools
-
-        if !previewTools.isEmpty {
-            sectionHeader("MINI-APP")
-
-            ForEach(Array(previewTools.enumerated()), id: \.element.id) { index, tool in
-                MiniAppPreviewToolRow(
-                    tool: tool,
-                    isSelected: viewModel.selectionIndex(forPreviewToolAt: index) == viewModel.selectedIndex
-                ) {
-                    viewModel.selectPreviewTool(tool)
-                }
-                .modifier(MiniAppPreviewToolOnboardingAnchor(tool: tool))
-                .id("preview-tool-\(tool.id)")
-            }
-        }
-
         ForEach(Array(actions.prefix(prioritizedCount).enumerated()), id: \.element.id) { index, action in
             actionRow(action, at: index)
         }
@@ -743,16 +717,13 @@ private struct OmniboxSearchResultsView: View {
         let nodeCreationResults = viewModel.nodeCreationResults
         let actions = viewModel.filteredActions
         let prioritizedCount = viewModel.prioritizedNavigationActionCount
-        let previewCount = viewModel.previewToolCount
-        let nodeStartIndex = previewCount + prioritizedCount
-        let remainingActionsStartIndex = previewCount + prioritizedCount + nodeResults.count
-        let nodeCreationStartIndex = previewCount + nodeResults.count + actions.count
+        let nodeStartIndex = prioritizedCount
+        let remainingActionsStartIndex = prioritizedCount + nodeResults.count
+        let nodeCreationStartIndex = nodeResults.count + actions.count
 
         withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
-            if newIndex >= 0 && newIndex < previewCount {
-                proxy.scrollTo("preview-tool-\(viewModel.filteredPreviewTools[newIndex].id)", anchor: .center)
-            } else if newIndex >= previewCount && newIndex < previewCount + prioritizedCount {
-                proxy.scrollTo(actions[newIndex - previewCount].id.rawValue, anchor: .center)
+            if newIndex >= 0 && newIndex < prioritizedCount {
+                proxy.scrollTo(actions[newIndex].id.rawValue, anchor: .center)
             } else if newIndex >= nodeStartIndex && newIndex < remainingActionsStartIndex {
                 proxy.scrollTo(nodeResults[newIndex - nodeStartIndex].id.uuidString, anchor: .center)
             } else if newIndex >= remainingActionsStartIndex && newIndex < nodeCreationStartIndex {
@@ -771,61 +742,6 @@ private struct OmniboxSearchResultsView: View {
 }
 
 // MARK: - Row Component Views
-
-private struct MiniAppPreviewToolRow: View {
-    let tool: MiniAppPreviewTool
-    let isSelected: Bool
-    let onSelect: () -> Void
-
-    var body: some View {
-        Button(action: onSelect) {
-            HStack(spacing: 12) {
-                Image(systemName: tool.icon)
-                    .font(.system(size: 16))
-                    .frame(width: 24)
-
-                Text(tool.title)
-                    .font(.system(size: 16))
-
-                Spacer()
-
-                if isSelected {
-                    Image(systemName: "return")
-                        .font(.system(size: 12))
-                        .opacity(0.8)
-                        .foregroundColor(.blue)
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .omniboxRowStyle(isSelected: isSelected)
-    }
-}
-
-private struct MiniAppPreviewToolOnboardingAnchor: ViewModifier {
-    @Environment(OnboardingCoordinator.self) private var onboarding: OnboardingCoordinator?
-    let tool: MiniAppPreviewTool
-
-    func body(content: Content) -> some View {
-        switch tool {
-        case .code:
-            content.onboardingExplicitAnchorFrame(
-                .omniboxMiniAppCodeRow,
-                isEnabled: onboarding?.currentStep == .openMiniAppCodeTool && onboarding?.showPopover == true
-            )
-        case .backToCanvas:
-            content.onboardingExplicitAnchorFrame(
-                .omniboxBackToCanvasRow,
-                isEnabled: onboarding?.currentStep == .returnFromMiniAppPreview && onboarding?.showPopover == true
-            )
-        default:
-            content
-        }
-    }
-}
 
 struct AppActionRow: View {
     let item: AppActionDefinition

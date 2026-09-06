@@ -4,7 +4,6 @@ import SwiftUI
 public enum OnboardingLessonID: String, CaseIterable, Hashable {
     case canvasBasics
     case omniboxNavigation
-    case miniAppPreview
     case coCaptainChat
     case moveAndOrganize
 }

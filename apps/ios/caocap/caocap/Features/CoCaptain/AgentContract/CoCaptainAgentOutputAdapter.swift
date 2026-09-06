@@ -7,8 +7,7 @@ public enum CoCaptainAgentOutputSource: String, Hashable {
     case xml = "xml"
     /// The model used Gemini function-calling to invoke `request_app_action`.
     case functionCall = "function_call"
-    /// The model delivered node edits or a clarifying question through the
-    /// `propose_node_edit` / `ask_clarifying_question` tools.
+    /// The model delivered a clarifying question through `ask_clarifying_question`.
     case nodeEditFunctionCall = "node_edit_function_call"
     /// Both mechanisms fired in the same turn and were merged.
     case combined = "combined"
@@ -158,11 +157,10 @@ public struct CoCaptainFunctionCallAgentAdapter {
         // the model produced no executable intent.
         let payload = safeActions.isEmpty && pendingActions.isEmpty
             ? nil
-            : CoCaptainAgentPayload(
+            :             CoCaptainAgentPayload(
                 assistantMessage: visibleText,
                 safeActions: safeActions,
-                pendingActions: pendingActions,
-                nodeEdits: []
+                pendingActions: pendingActions
             )
 
         return CoCaptainAgentDirective(
@@ -200,10 +198,14 @@ public struct CoCaptainFunctionCallAgentAdapter {
 public struct CoCaptainNodeEditFunctionAdapter {
     /// The tool names this adapter understands. The composite adapter uses
     /// this set to partition calls between adapters.
-    public static let handledFunctionNames: Set<String> = [
-        CoCaptainNodeEditTools.proposeNodeEditName,
-        CoCaptainNodeEditTools.askClarifyingQuestionName
+    public static let leftoverHTMLToolNames: Set<String> = [
+        "propose_node_edit",
+        "read_node_section"
     ]
+
+    public static let handledFunctionNames: Set<String> = leftoverHTMLToolNames.union([
+        CoCaptainNodeEditTools.askClarifyingQuestionName
+    ])
 
     public init() {}
 
@@ -218,8 +220,6 @@ public struct CoCaptainNodeEditFunctionAdapter {
 
         for functionCall in functionCalls {
             switch functionCall.name {
-            case CoCaptainNodeEditTools.proposeNodeEditName:
-                continue
             case CoCaptainNodeEditTools.askClarifyingQuestionName:
                 if let question = question(from: functionCall) {
                     // Keep the first well-formed question; the contract allows one.
@@ -230,7 +230,9 @@ public struct CoCaptainNodeEditFunctionAdapter {
                     )
                 }
             default:
-                diagnostics.append("Unknown function call `\(functionCall.name)`.")
+                // Leftover Mini-App HTML tools are ignored so they cannot
+                // fail a turn that already asked a clarifying question.
+                break
             }
         }
 
@@ -267,8 +269,8 @@ public struct CoCaptainNodeEditFunctionAdapter {
 ///
 /// When the model produces both an XML block and native function calls in the
 /// same turn, their actions are combined: function calls supply `safeActions`
-/// and `pendingActions`; the XML block supplies `nodeEdits` and
-/// `assistantMessage`. Diagnostics from both adapters are concatenated.
+/// and `pendingActions`; the XML block supplies `assistantMessage`.
+/// Diagnostics from both adapters are concatenated.
 public struct CoCaptainCompositeAgentAdapter: CoCaptainAgentOutputAdapting {
     private let xmlAdapter: CoCaptainXMLAgentAdapter
     private let functionCallAdapter: CoCaptainFunctionCallAgentAdapter
@@ -333,9 +335,8 @@ public struct CoCaptainCompositeAgentAdapter: CoCaptainAgentOutputAdapting {
     /// Merges the three optional payload sources.
     ///
     /// - Safe/pending actions come from the `request_app_action` side.
-    /// - Node edits and clarifying question prefer the function-call tools;
-    ///   when the model emitted both tools and XML in the same turn, the
-    ///   function-call edits win and the XML edits are dropped.
+    /// - Clarifying questions prefer the function-call tool; XML questions
+    ///   are used only when no function-call question is present.
     /// - `assistantMessage` comes from the XML payload (richer prose) if
     ///   present; falls back to the function-call visible text.
     private func combine(

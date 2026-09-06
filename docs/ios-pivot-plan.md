@@ -176,6 +176,22 @@ Phase 8 left Mini-App / SRS types in memory so old reviews could decode. There a
 
 ---
 
+## Phase 11 — Delete leftover Mini-App tutorial steps and HTML-patch types
+
+**Status:** Done
+**Depends on:** Phase 10
+
+The tutorial engine stays. Mini-App preview lessons and unused CoCaptain HTML-patch types go.
+
+- Remove empty Mini-App preview / code-editor tutorial steps and tooltip anchors.
+- Remove the unused omnibox Mini-App preview tools.
+- Delete `NodePatchEngine`, `NodeEditToolsFeature`, HTML-patch types, and the leftover patch-match picker. Clarifying questions and canvas-action review stay.
+- Leftover HTML-edit review items, if any, fail decode and are skipped. Extra JSON keys on remaining review items are ignored.
+
+**You should see:** Same leftover app. CoCaptain still talks and can request canvas actions. No Mini-App preview lesson. No HTML-patch types.
+
+---
+
 ## After this plan
 
 Only then do we add new product behavior, starting with Build: mindmap nodes and connections on the canvas we kept.
