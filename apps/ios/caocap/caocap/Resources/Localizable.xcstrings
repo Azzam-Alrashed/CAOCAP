@@ -2017,24 +2017,6 @@
     "Couldn’t Erase Everything" : {
 
     },
-    "Create as many Mini-Apps as you need — free is capped at 5" : {
-      "comment" : "Pro feature subtitle for unlimited Mini-Apps.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "أنشئ أي عدد تحتاجه من التطبيقات المصغّرة — الحد المجاني هو ٥"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Create as many Mini-Apps as you need — free is capped at 5"
-          }
-        }
-      }
-    },
     "Create Checkpoint" : {
 
     },
@@ -6750,42 +6732,6 @@
         }
       }
     },
-    "Publish mini-apps to the web with GitHub Pages." : {
-      "comment" : "Subscribed benefit bullet for publishing.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "انشر التطبيقات المصغّرة على الويب عبر GitHub Pages."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Publish mini-apps to the web with GitHub Pages."
-          }
-        }
-      }
-    },
-    "Publish to the web" : {
-      "comment" : "Pro feature title for web publishing.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "انشر على الويب"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Publish to the web"
-          }
-        }
-      }
-    },
     "Purchase Failed" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -7510,24 +7456,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "حاد"
-          }
-        }
-      }
-    },
-    "Ship mini-apps live with GitHub Pages hosting" : {
-      "comment" : "Pro feature subtitle for GitHub Pages publishing.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "انشر تطبيقاتك المصغّرة مباشرة عبر GitHub Pages"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ship mini-apps live with GitHub Pages hosting"
           }
         }
       }
@@ -8546,24 +8474,6 @@
         }
       }
     },
-    "Unlimited CoCaptain and web publishing for your infinite canvas." : {
-      "comment" : "Paywall subtitle describing Pro benefits.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "كابتن غير محدود ونشر للويب على لوحتك اللانهائية."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unlimited CoCaptain and web publishing for your infinite canvas."
-          }
-        }
-      }
-    },
     "Unlimited CoCaptain chat, voice, and screen-share." : {
       "comment" : "Subscribed benefit bullet for unlimited CoCaptain.",
       "extractionState" : "manual",
@@ -8578,6 +8488,24 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Unlimited CoCaptain chat, voice, and screen-share."
+          }
+        }
+      }
+    },
+    "Unlimited CoCaptain on your infinite canvas." : {
+      "comment" : "Paywall subtitle describing Pro benefits.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "كابتن غير محدود على لوحتك اللانهائية."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unlimited CoCaptain on your infinite canvas."
           }
         }
       }
@@ -8606,42 +8534,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "اقتراحات تصميم ذكية غير محدودة"
-          }
-        }
-      }
-    },
-    "Unlimited Mini-Apps" : {
-      "comment" : "Pro feature title for unlimited Mini-Apps.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "تطبيقات مصغّرة بلا حدود"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unlimited Mini-Apps"
-          }
-        }
-      }
-    },
-    "Unlimited Mini-Apps across your canvases." : {
-      "comment" : "Subscribed benefit bullet for unlimited Mini-Apps.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "تطبيقات مصغّرة غير محدودة عبر لوحاتك."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unlimited Mini-Apps across your canvases."
           }
         }
       }

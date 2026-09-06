@@ -23,6 +23,3 @@ struct ConfettiCelebrationView: View {
         return LottieAnimation.named("confetti")
     }
 }
-
-/// Backward-compatible alias for publish flows.
-typealias PublishConfettiView = ConfettiCelebrationView

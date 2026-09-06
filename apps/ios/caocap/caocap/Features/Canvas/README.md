@@ -48,9 +48,6 @@ When changing gestures or connection rendering, test pan, zoom, drag, and arrow 
 
 - Create/open a project and confirm nodes render at the expected zoom.
 - Drag a node, pan the canvas, pinch zoom, then reopen the project and verify persisted state.
-- Edit a Mini-App's Code tool and confirm the Mini-App preview updates.
-- Open a Mini-App node full-screen and confirm FAB tap and sparkles open the omnibox; verify MINI-APP rows route to SRS, Code, Firebase, Agent, Settings, Publish, and Back to Canvas.
-- Pro users: publish a Mini-App, confirm live GitHub Pages URL, and verify Safari Add to Home Screen steps appear.
 - Check connection arrows while dragging nodes and at multiple zoom levels.
 - Verify action nodes on the Home screen navigate to correct destinations.
 - Make a saved change on any canvas, return to Root, and confirm the Activity

@@ -91,14 +91,14 @@ Removed Daily UI and gamification services.
 
 ## Phase 5 — Keep Pro; detach it from mini-app publish
 
-**Status:** Not started  
+**Status:** Done
 **Depends on:** Phase 4
 
-The purchase screen stays. The Home crown node is already gone from Phase 1. Old Pro unlocked GitHub Pages publish and CoCaptain usage. Publish is already gone by this phase.
+The purchase screen stays. The Home crown node is already gone from Phase 1. Old Pro unlocked GitHub Pages publish and CoCaptain usage. Publish is already gone.
 
-- Keep `PurchaseView`, `SubscriptionManager`, and the Settings / Profile / CoCaptain upgrade paths.
-- Keep CoCaptain usage limits behind Pro.
-- Remove leftover “subscribe to publish a mini-app” copy or gates only. Do not add a new store or change prices. Do not put Pro back on the canvas.
+- Kept `PurchaseView`, `SubscriptionManager`, and the Settings / Profile / CoCaptain upgrade paths.
+- Kept CoCaptain usage limits behind Pro.
+- Removed leftover “publish a mini-app” and “unlimited Mini-Apps” paywall copy. Did not add a new store or change prices. Did not put Pro back on the canvas.
 
 **You should see:** Profile → CAOCAP Pro still opens the paywall. CoCaptain still respects the subscription. Home has no crown node. Nothing asks you to subscribe in order to publish a website.
 

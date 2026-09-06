@@ -21,18 +21,6 @@ struct PurchaseView: View {
             subtitle: "Chat, voice, and screen-share with no monthly usage caps",
             color: Color(hex: "A855F7")
         ),
-        FeatureItem(
-            icon: "square.stack.3d.up.fill",
-            title: "Unlimited Mini-Apps",
-            subtitle: "Create as many Mini-Apps as you need — free is capped at 5",
-            color: Color(hex: "3B82F6")
-        ),
-        FeatureItem(
-            icon: "globe",
-            title: "Publish to the web",
-            subtitle: "Ship mini-apps live with GitHub Pages hosting",
-            color: Color(hex: "10B981")
-        ),
     ]
 
     var body: some View {
@@ -241,7 +229,7 @@ struct PurchaseView: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.72)
                     
-                    Text("Unlimited CoCaptain and web publishing for your infinite canvas.")
+                    Text("Unlimited CoCaptain on your infinite canvas.")
                         .font(.system(size: 17))
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -449,8 +437,6 @@ struct PurchaseView: View {
                 
                 VStack(alignment: .leading, spacing: 16) {
                     BulletRow(icon: "sparkles", text: "Unlimited CoCaptain chat, voice, and screen-share.")
-                    BulletRow(icon: "square.stack.3d.up.fill", text: "Unlimited Mini-Apps across your canvases.")
-                    BulletRow(icon: "globe", text: "Publish mini-apps to the web with GitHub Pages.")
                 }
             }
             .padding(24)

@@ -331,7 +331,6 @@ public struct CommandIntentResolver {
                 "quota",
                 "limits",
                 "free tier",
-                "mini app limit",
                 "استخدام",
                 "الاستخدام",
                 "افتح الاستخدام",
