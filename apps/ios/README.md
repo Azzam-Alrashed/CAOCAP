@@ -2,14 +2,17 @@
 
 SwiftUI shell targeting iOS 26 or later. Requires full Xcode with a compatible iOS SDK.
 
-What is here today is a leftover **canvas + CoCaptain + sign-in** app, not a mini-app studio and not the planned Explore / Build / Collaborate product.
+The app now opens to an agent library with three native bottom tabs on both iPhone and iPad: **Explore, Home, Communities**. This is the first foundation of the [Home redesign plan](../../docs/ios-home-redesign-plan.md).
 
-- **Home** is an empty spatial canvas. You can pan, zoom, create ordinary cards, connect them, save, and undo.
-- **CoCaptain / CoStar** is a chat that talks about the canvas and can request canvas actions such as creating or moving a card. It does not edit HTML or SRS.
-- **Sign-in** uses Firebase Auth (anonymous first, then Apple / Google / GitHub).
-- **CAOCAP Pro** is a purchase screen in Settings / Profile (and from CoCaptain when free-tier usage hits the limit). It is not a Home card.
+- **Home** shows an avatar/name grid with CoCaptain and CoStar included by default. Card menus remove agents from Home, with Undo for the latest removal. Library membership persists locally; removing both defaults shows Create and Explore actions.
+- **Workspace** opens full-screen for the selected agent with a native glass back button floating over the canvas, without a top navigation bar or bottom tabs. Each default agent has a separate saved canvas and local chat history. The existing card canvas is the temporary surface; mind map and flowchart design and behavior remain TBD.
+- **Agent FAB** appears only in a Workspace. Tap or ⌘J opens large chat (or closes a listed sheet); long-press retains Chat / Voice / Video. Chat drafts stay with each agent during the app session. Returning Home stops streaming and ends an active call.
+- **Profile → Settings** is reachable through the avatar in Home's top-right corner.
+- **Create agent** opens a dismissible setup destination. Wizard steps and actual creation are not implemented.
+- **Explore and Communities** are placeholder destinations. Discovery, acquisition, membership, and shared building are not connected.
+- **Sign-in** uses Firebase Auth (anonymous first, then Apple / Google / GitHub). **CAOCAP Pro** remains available through Profile / Settings and usage limits.
 
-Explore, mindmaps, Collaborate, and agent-version publish are planned. They are not implemented in this app.
+Removal changes Home membership only; it does not delete canvas or conversation files. Cloud library sync and remote Mac execution are not implemented.
 
 ## Setup
 
@@ -23,7 +26,9 @@ Firebase configuration is required at launch. CoCaptain cloud chat also needs th
 
 ## What you should see
 
-On a fresh install, intro and persona pick come first. Then Home is blank except the HUD and FAB. You can still pan and zoom. Tap the FAB (or press ⌘J) to open CoCaptain chat. Long-press the FAB for Chat / Voice / Video. Settings, Profile, Help, and Pro may only be reachable from leftover canvas cards, CoCaptain actions, or existing sheets. If a simulator still shows old Home cards, delete the app and run again.
+On a fresh install, intro and persona pick come first, followed by Home with both default agents. Open either agent to use the existing canvas and its chat. Return to Home using the top-left back button. Changing agents switches the canvas, chat history, draft, avatar, and chat title.
+
+The Home journey UI test covers the tabs, wizard dismissal, Profile → Settings, separate agent drafts, removal, and empty-state persistence. Run it on a development simulator; it changes that simulator's local agent library.
 
 ## Related notes
 

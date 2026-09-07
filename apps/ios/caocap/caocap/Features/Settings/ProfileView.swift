@@ -9,6 +9,7 @@ struct ProfileView: View {
     @AppStorage("app_theme") private var selectedTheme = "System"
     
     var onSignIn: (() -> Void)? = nil
+    var onSettings: (() -> Void)? = nil
     var onPro: (() -> Void)? = nil
     
     @State private var showingDeleteAlert = false
@@ -96,6 +97,15 @@ struct ProfileView: View {
                         
                         // MARK: - Sections
                         VStack(spacing: 24) {
+                            SettingsSection("Preferences") {
+                                SettingsRow(icon: "gearshape.fill", title: "Settings", color: .gray) {
+                                    dismiss()
+                                    Task {
+                                        try? await Task.sleep(for: .seconds(0.3))
+                                        onSettings?()
+                                    }
+                                }
+                            }
                             // Account Section
                             SettingsSection("Account") {
                                 if authManager.isAnonymous {

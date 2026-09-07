@@ -2,7 +2,7 @@
 
 CoCaptain is the in-app assistant. It talks about the current canvas, keeps a sign-in-aware conversation, and can request canvas actions such as creating or moving a card. It does not propose or apply HTML, SRS, or Mini-App source edits.
 
-Personas (CoCaptain / CoStar) stay. Ask / Plan modes stay prose-only.
+CoCaptain and CoStar are separate default agents on Home. Each Workspace selects its own canvas-backed conversation archive, chat title, avatar, and session draft. The FAB is available inside that Workspace. Ask / Plan modes stay prose-only.
 
 ## Ownership
 

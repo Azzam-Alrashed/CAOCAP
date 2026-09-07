@@ -5,6 +5,10 @@ import SwiftUI
 @MainActor
 @Observable
 public final class CoCaptainViewModel {
+    var agentDisplayName = "CoCaptain"
+    var composerText = ""
+    var composerMentions: [CoCaptainNodeMention] = []
+    var composerAttachments: [CoCaptainAttachment] = []
     public var isPresented: Bool = false
     public var items: [CoCaptainTimelineItem]
     public private(set) var scope: CoCaptainAgentScope = .project
@@ -221,6 +225,26 @@ public final class CoCaptainViewModel {
             restoreActiveProjectConversationOrLoad()
         } else {
             loadProjectConversationsIfNeeded()
+        }
+    }
+
+    /// The shared model service must resume from this agent's transcript, never another agent's history.
+    func resumeAgentSession() {
+        agentCoordinator.resetChat(scope: scope)
+        shouldReplayConversationContext = items.contains { item in
+            guard case .message(let message) = item.content else { return false }
+            return message.isUser
+        }
+    }
+
+    /// Prevent an inactive agent's pending archive load or stream from changing the shared model session.
+    func suspendAgentSession() {
+        stopStreaming()
+        sessionEpoch = UUID()
+        conversationLoadTask?.cancel()
+        if isConversationArchiveLoading {
+            loadedConversationFileName = nil
+            isConversationArchiveLoading = false
         }
     }
 

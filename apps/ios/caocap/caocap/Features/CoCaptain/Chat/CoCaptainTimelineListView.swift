@@ -40,6 +40,7 @@ struct CoCaptainTimelineListView: View {
                             .accessibilityElement(children: .combine)
                         } else if showsWelcome {
                             CoCaptainWelcomeView(
+                                agentName: viewModel.agentDisplayName,
                                 projectName: viewModel.store?.projectName,
                                 onPrompt: { prompt in
                                     viewModel.sendMessage(prompt)
@@ -234,6 +235,7 @@ struct CoCaptainTimelineListView: View {
 }
 
 private struct CoCaptainWelcomeView: View {
+    let agentName: String
     let projectName: String?
     let onPrompt: (String) -> Void
 
@@ -273,7 +275,7 @@ private struct CoCaptainWelcomeView: View {
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 6) {
-                Text(LocalizationManager.shared.localizedString("Build with CoCaptain"))
+                Text("Build with \(agentName)")
                     .font(.title2.bold())
                 Text(welcomeMessage)
                     .font(.body)

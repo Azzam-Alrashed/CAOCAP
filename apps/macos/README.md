@@ -14,6 +14,8 @@ No Firebase or other service configuration is required for the current shell.
 
 **CAOCAP** is the agents hub for exploring, building, and collaborating on agents. The floating **Agent** is a separate desktop surface: tap it to open its own compact chat and enter prompts. **CoCaptain** is the platform-provided default agent. Computer-use execution is planned; this iteration implements the chat UI only.
 
+The [macOS Agent plan](../../docs/macos-agent-plan.md) defines the next three phases: finish chat UX, connect real AI conversation, and complete one computer-use task.
+
 ## What is implemented
 
 - A single **CAOCAP** window (placeholder Hello World content).

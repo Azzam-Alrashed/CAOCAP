@@ -4,9 +4,18 @@ import UIKit
 struct CoCaptainView: View {
     @Bindable var viewModel: CoCaptainViewModel
     var onRequestExpandedPresentation: (() -> Void)?
-    @State private var text: String = ""
-    @State private var mentions: [CoCaptainNodeMention] = []
-    @State private var attachments: [CoCaptainAttachment] = []
+    private var text: String {
+        get { viewModel.composerText }
+        nonmutating set { viewModel.composerText = newValue }
+    }
+    private var mentions: [CoCaptainNodeMention] {
+        get { viewModel.composerMentions }
+        nonmutating set { viewModel.composerMentions = newValue }
+    }
+    private var attachments: [CoCaptainAttachment] {
+        get { viewModel.composerAttachments }
+        nonmutating set { viewModel.composerAttachments = newValue }
+    }
     @State private var isConversationListPresented = false
     @FocusState private var isFocused: Bool
     @AppStorage(CoCaptainChatMode.storageKey) private var chatModeRawValue = CoCaptainChatMode.agent.rawValue
@@ -36,10 +45,10 @@ struct CoCaptainView: View {
                 )
 
                 CoCaptainInputComposer(
-                    text: $text,
+                    text: $viewModel.composerText,
                     chatMode: chatModeBinding,
-                    mentions: $mentions,
-                    attachments: $attachments,
+                    mentions: $viewModel.composerMentions,
+                    attachments: $viewModel.composerAttachments,
                     isFocused: $isFocused,
                     store: viewModel.store,
                     allowsContextPinning: true,
@@ -97,7 +106,7 @@ struct CoCaptainView: View {
                                     .font(.headline)
                                     .foregroundStyle(.primary)
                                     .lineLimit(1)
-                                Text("CoCaptain")
+                                Text(viewModel.agentDisplayName)
                                     .font(.caption2.weight(.medium))
                                     .foregroundStyle(.secondary)
                             }

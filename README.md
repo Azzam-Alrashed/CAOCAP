@@ -14,7 +14,7 @@ CAOCAP is transitioning to a collaborative AI agent platform. Agent discovery, b
 
 | Area | Status |
 | --- | --- |
-| iOS | SwiftUI canvas + CoCaptain + sign-in shell; Pro purchase screen; Explore, Build, and Collaborate are planned; service configuration required |
+| iOS | Agent-library Home, separate default-agent Workspaces and chat, Profile / Settings; Explore, Communities, and creation wizard placeholders; service configuration required |
 | macOS | SwiftUI shell with app icon, menu-bar status item, and a floating Agent with its own chat UI; AI responses, computer use, Explore, Build, and Collaborate are not implemented |
 | Android | Directory scaffold only |
 | Windows | Directory scaffold only |
@@ -82,8 +82,10 @@ Technology choices for the other clients and shared services have not been made.
 - [Software Requirements Specification](docs/SRS.md) defines the envisioned system requirements and records unresolved decisions.
 - [Brand assets](assets/brand/) contains artwork, mascot references, and icon variants.
 - [Research index](docs/research/README.md) links to the imported UX reports and audits.
+- [iOS Home redesign plan](docs/ios-home-redesign-plan.md) records agreed navigation, implementation steps, and open decisions.
 - [iOS setup](apps/ios/README.md) describes Firebase and package configuration for the iOS app.
 - [macOS setup](apps/macos/README.md) describes the current Mac shell and how to run it.
+- [macOS Agent plan](docs/macos-agent-plan.md) covers chat UX, real AI conversation, and the first computer-use task.
 - [Agent guidance](AGENTS.md) describes repository conventions and validation commands.
 
 ## Roadmap

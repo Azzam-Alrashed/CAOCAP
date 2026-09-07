@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Root view that composes the active workspace canvas, global overlays, and session sheets.
+/// Root view that composes the agent hub, selected Workspace, overlays, and session sheets.
 ///
 /// Session orchestration lives in `AppSessionCoordinator`; this view wires UI only.
 /// FAB + call chrome live in a passthrough `UIWindow` above system sheets.
@@ -11,28 +11,38 @@ struct ContentView: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                workspaceCanvas
-
-                if session.showingHUD {
-                    CanvasHUDView(
-                        store: session.router.activeStore,
-                        viewportScale: session.currentScale,
-                        onSignInTapped: { session.showingSignIn = true },
-                        onCheckpointsTapped: { session.showingSnapshotBrowser = true }
-                    )
-                }
-
-                KeyboardShortcutBridge(
-                    onToggleChatOrDismissSheets: {
-                        session.handleFABTapOrCommandJ()
-                    },
-                    onUndo: {
-                        _ = session.actionDispatcher.perform(.undo, source: .user)
-                    },
-                    onRedo: {
-                        _ = session.actionDispatcher.perform(.redo, source: .user)
+                if let agent = session.selectedAgent {
+                    workspaceCanvas
+                        .id(agent.id)
+                        .overlay(alignment: .topLeading) {
+                            Button { session.returnToHome() } label: {
+                                Label("Back to Home", systemImage: "chevron.backward")
+                            }
+                            .labelStyle(.iconOnly)
+                            .buttonStyle(.glass)
+                            .buttonBorderShape(.circle)
+                            .controlSize(.large)
+                            .accessibilityIdentifier("workspace.back")
+                            .padding(.horizontal, 16)
+                            .padding(.top, 8)
+                        }
+                    if session.showingHUD {
+                        CanvasHUDView(
+                            store: session.router.activeStore,
+                            viewportScale: session.currentScale,
+                            onSignInTapped: { session.showingSignIn = true },
+                            onCheckpointsTapped: { session.showingSnapshotBrowser = true }
+                        )
+                        .padding(.top, 56)
                     }
-                )
+                    KeyboardShortcutBridge(
+                        onToggleChatOrDismissSheets: { session.handleFABTapOrCommandJ() },
+                        onUndo: { _ = session.actionDispatcher.perform(.undo, source: .user) },
+                        onRedo: { _ = session.actionDispatcher.perform(.redo, source: .user) }
+                    )
+                } else {
+                    AgentHubView(session: session)
+                }
             }
             .onboardingTooltipOverlay(
                 // FAB tooltips render in the chrome overlay window so they sit above the FAB.

@@ -126,6 +126,11 @@ struct FloatingCommandButton: View {
                 }
                 .frame(width: buttonSize, height: buttonSize)
                 .scaleEffect(buttonScale)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Chat with \(copilot.displayName)")
+                .accessibilityIdentifier("workspace.chat")
+                .accessibilityAddTraits(.isButton)
+                .accessibilityAction { onTap() }
                 .onboardingTooltipAnchor(tooltipAnchor)
                 .simultaneousGesture(
                     LongPressGesture(minimumDuration: 0.25)

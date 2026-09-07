@@ -4,7 +4,7 @@ import SwiftUI
 
 /// Identifies the currently active workspace in the navigation hierarchy.
 ///
-/// - `root`: The home canvas containing the user's project nodes.
+/// - `root`: The legacy root canvas, retained for canvas utilities.
 /// - `project(String)`: A named project canvas identified by its filename.
 public enum WorkspaceState: Equatable {
     case root
@@ -12,7 +12,7 @@ public enum WorkspaceState: Equatable {
 }
 
 /// Coordinates top-level workspace navigation and owns the active stores for
-/// home and user-created projects.
+/// agent canvases and nested projects.
 @MainActor
 @Observable
 public class AppRouter {
@@ -47,7 +47,7 @@ public class AppRouter {
         }
     }
     
-    /// Initializes the router and creates the root canvas from the empty home template.
+    /// Initializes the router and creates the root canvas from the empty canvas template.
     public init(activityRecorder: (any ActivityRecording)? = nil) {
         let resolvedActivityRecorder = activityRecorder ?? SessionActivityRecorder()
         self.activityRecorder = resolvedActivityRecorder
@@ -62,6 +62,20 @@ public class AppRouter {
         )
     }
     
+    /// Starts a selected agent's navigation stack without linking it to another agent.
+    func openAgentWorkspace(fileName: String, name: String) {
+        navigationStack.removeAll()
+        if projects[fileName] == nil {
+            projects[fileName] = ProjectStore(
+                fileName: fileName,
+                projectName: name,
+                initialNodes: [],
+                activityRecorder: activityRecorder
+            )
+        }
+        navigate(to: .project(fileName), addToStack: false, animated: false)
+    }
+
     /// Moves between workspaces and records onboarding completion when the user
     /// reaches Home, which makes Home the default workspace on the next launch.
     public func navigate(to workspace: WorkspaceState, addToStack: Bool = true, animated: Bool = true) {

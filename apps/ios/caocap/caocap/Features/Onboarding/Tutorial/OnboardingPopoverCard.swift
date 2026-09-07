@@ -212,23 +212,17 @@ extension View {
         rendersAnchor: @escaping (OnboardingTooltipAnchor) -> Bool = { _ in true },
         onCardFrameChange: ((CGRect) -> Void)? = nil
     ) -> some View {
-        overlayPreferenceValue(OnboardingTooltipAnchorPreferenceKey.self) { anchors in
-            overlayPreferenceValue(OnboardingExplicitAnchorFramePreferenceKey.self) { explicitFrames in
-                OnboardingTooltipOverlay(
-                    anchors: anchors,
-                    explicitFrames: explicitFrames,
-                    rendersAnchor: rendersAnchor,
-                    onCardFrameChange: onCardFrameChange
-                )
-            }
-        }
+        modifier(OnboardingTooltipOverlayModifier(
+            rendersAnchor: rendersAnchor,
+            onCardFrameChange: onCardFrameChange
+        ))
     }
 
     /// Sheet-safe onboarding overlay for CoCaptain. Reads anchor preferences with
     /// `onPreferenceChange` instead of nested `overlayPreferenceValue`, which duplicates
     /// scroll content inside the CoCaptain sheet.
     func coCaptainOnboardingTooltipOverlay() -> some View {
-        modifier(CoCaptainSheetTooltipOverlayModifier())
+        modifier(OnboardingTooltipOverlayModifier(rendersAnchor: { $0.isCoCaptainLocal }))
     }
 
     /// Chrome-window FAB tooltips. Avoids `overlayPreferenceValue`, which duplicated the FAB.
@@ -245,7 +239,9 @@ extension View {
 
 /// Collects onboarding anchor preferences without `overlayPreferenceValue` so the
 /// CoCaptain timeline is not laid out twice.
-private struct CoCaptainSheetTooltipOverlayModifier: ViewModifier {
+private struct OnboardingTooltipOverlayModifier: ViewModifier {
+    var rendersAnchor: (OnboardingTooltipAnchor) -> Bool
+    var onCardFrameChange: ((CGRect) -> Void)? = nil
     @State private var layoutAnchors: [OnboardingTooltipAnchor: Anchor<CGRect>] = [:]
     @State private var explicitFrames: [OnboardingTooltipAnchor: CGRect] = [:]
 
@@ -257,7 +253,8 @@ private struct CoCaptainSheetTooltipOverlayModifier: ViewModifier {
                 OnboardingTooltipOverlay(
                     anchors: layoutAnchors,
                     explicitFrames: explicitFrames,
-                    rendersAnchor: { $0.isCoCaptainLocal }
+                    rendersAnchor: rendersAnchor,
+                    onCardFrameChange: onCardFrameChange
                 )
             }
     }

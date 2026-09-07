@@ -93,6 +93,8 @@ struct AppSheetsModifier: ViewModifier {
             .sheet(isPresented: $session.showingProfile) {
                 ProfileView(onSignIn: {
                     session.showingSignIn = true
+                }, onSettings: {
+                    session.showingSettings = true
                 }, onPro: {
                     session.showingPurchaseSheet = true
                 })

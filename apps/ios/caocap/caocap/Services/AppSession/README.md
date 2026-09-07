@@ -1,11 +1,12 @@
 # App Session
 
-Owns root-level session orchestration for the leftover canvas + CoCaptain + sign-in shell: workspace routing hooks, global sheet flags, and `AppActionDispatcher` registration. Home is an empty canvas. Explore, Build, and Collaborate are planned and are not wired here.
+Owns the agent hub tab selection, local library, selected agent, Workspace routing, global sheet flags, and `AppActionDispatcher` registration. Home is an agent grid. Explore, Communities, and the creation wizard currently have placeholder destinations.
 
 ## Ownership
 
 - `AppSessionCoordinator` is the single session owner created by `ContentView`.
-- `AppRouter` (in `Navigation/`) still owns workspace navigation and `ProjectStore` instances.
+- `AgentLibrary` (in `Features/home/`) persists local Home membership. The coordinator caches a chat view model per agent so drafts remain separate.
+- `AppRouter` (in `Navigation/`) owns Workspace navigation and `ProjectStore` instances. Opening an agent resets its navigation stack and selects its stable canvas filename.
 - `AppActionDispatcher` (in `Services/AppActions/`) still owns action definitions; the coordinator registers handlers that mutate session/UI state.
 - `App/Shell/` contains SwiftUI modifiers and helpers that bind to the coordinator without adding business rules.
 - The Activity node sets `showingActivity`; `AppSheetsModifier` presents the

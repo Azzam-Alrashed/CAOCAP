@@ -218,6 +218,9 @@ struct GlobalFloatingChromeView: View {
         .onChange(of: session.onboarding.showPopover) { _, _ in
             publishInteractiveFrames(session: session)
         }
+        .onChange(of: session.selectedAgent?.id) { _, _ in
+            refreshChromeVisibility(session: session)
+        }
         .onChange(of: session.isLaunching) { _, _ in
             refreshChromeVisibility(session: session)
         }
@@ -235,7 +238,8 @@ struct GlobalFloatingChromeView: View {
     }
 
     private func shouldShowChrome(_ session: AppSessionCoordinator) -> Bool {
-        !session.isLaunching
+        session.selectedAgent != nil
+            && !session.isLaunching
             && !session.intro.shouldPresent
             && !session.personalization.shouldPresent
     }

@@ -1,8 +1,8 @@
 # Canvas Feature
 
-The Canvas feature is CAOCAP's leftover spatial workspace. It renders an infinite Home canvas of ordinary cards, sub-canvases, links, pan, zoom, save, and undo.
+The existing Canvas feature is the temporary surface inside each agent's Workspace. It renders ordinary cards, sub-canvases, links, pan, zoom, save, and undo.
 
-Home starts empty. There are no launch cards. Explore, Build (mindmaps), and Collaborate are planned and are not implemented here.
+Home is an agent library. Opening an agent selects its own saved canvas, initially empty. The mind map and flowchart design and behavior remain TBD.
 
 ## Ownership
 
@@ -42,7 +42,7 @@ When changing gestures or connection rendering, test pan, zoom, drag, and arrow 
 
 ## Verification Checklist
 
-- Fresh install: Home is empty except the HUD and FAB. You can still pan and zoom.
+- Fresh install: Home shows CoCaptain and CoStar. Open either to reach its empty Workspace, with pan, zoom, and the agent FAB.
 - Create a card, drag it, pan, pinch zoom, quit, and reopen. Position and title remain.
 - Check connection arrows while dragging nodes and at multiple zoom levels.
 - FAB tap or ⌘J opens CoCaptain chat (or closes listed sheets if one is already open). Long-press the FAB for Chat / Voice / Video.

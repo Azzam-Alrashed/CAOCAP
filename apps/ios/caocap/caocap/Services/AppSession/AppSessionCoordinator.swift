@@ -9,6 +9,12 @@ import UniformTypeIdentifiers
 @MainActor
 @Observable
 final class AppSessionCoordinator {
+    var agentLibrary: AgentLibrary
+    var selectedTab: HubTab = .home
+    private(set) var selectedAgent: LibraryAgent?
+    var showingAgentWizard = false
+    @ObservationIgnored private var agentChats: [String: CoCaptainViewModel] = [:]
+
     var router = AppRouter()
     var coCaptain = CoCaptainViewModel()
     private(set) var actionDispatcher = AppActionDispatcher()
@@ -59,15 +65,46 @@ final class AppSessionCoordinator {
 
     private var actionsConfigured = false
     @ObservationIgnored private var activeUndoManager: UndoManager?
+    @ObservationIgnored private var workspaceUndoManagers: [String: UndoManager] = [:]
     
 
-    init() {
+    init(agentLibrary: AgentLibrary? = nil) {
+        self.agentLibrary = agentLibrary ?? AgentLibrary()
         onboarding.onLessonWillStart = { [weak self] lessonID in
             self?.prepareWorkspace(for: lessonID)
         }
         onboarding.onTutorialCompleted = { [weak self] in
             self?.celebrateTutorialGraduation()
         }
+    }
+
+    // MARK: - Agent hub
+
+    func openAgent(_ agent: LibraryAgent) {
+        guard agentLibrary.agents.contains(where: { $0.id == agent.id }) else { return }
+        closeListedSheets()
+        coCaptain.suspendAgentSession()
+        dismissCopilotCall()
+        selectedTab = .home
+        selectedAgent = agent
+        updateSelectedCopilot(agent.persona)
+        let chat = agentChats[agent.id] ?? CoCaptainViewModel()
+        agentChats[agent.id] = chat
+        coCaptain = chat
+        coCaptain.agentDisplayName = agent.name
+        router.openAgentWorkspace(fileName: agent.workspaceFileName, name: agent.name)
+        handleWorkspaceChange(undoManager: activeUndoManager)
+        coCaptain.resumeAgentSession()
+    }
+
+    func returnToHome() {
+        closeListedSheets()
+        coCaptain.suspendAgentSession()
+        dismissCopilotCall()
+        selectedAgent = nil
+        selectedTab = .home
+        canvasFocusNodeID = nil
+        canvasFocusClearTask?.cancel()
     }
 
     private enum StorageKey {
@@ -167,9 +204,13 @@ final class AppSessionCoordinator {
     }
 
     func handleWorkspaceChange(undoManager: UndoManager?) {
-        activeUndoManager = undoManager
+        guard selectedAgent != nil else { return }
+        let fileName = router.activeStore.fileName
+        let workspaceUndo = workspaceUndoManagers[fileName] ?? UndoManager()
+        workspaceUndoManagers[fileName] = workspaceUndo
+        activeUndoManager = workspaceUndo
         bindCoCaptainSession()
-        attachUndoManager(undoManager)
+        attachUndoManager(workspaceUndo)
         coCaptain.configureProjectSession(store: router.activeStore, dispatcher: actionDispatcher)
         syncViewportWithActiveStore()
     }
@@ -191,8 +232,9 @@ final class AppSessionCoordinator {
     }
 
     func updateSelectedCopilot(_ persona: CopilotPersona) {
-        UserProfileStore().saveSelectedCopilot(persona)
-        selectedCopilot = persona
+        let resolvedPersona = selectedAgent?.persona ?? persona
+        UserProfileStore().saveSelectedCopilot(resolvedPersona)
+        selectedCopilot = resolvedPersona
         actionDispatcher.refreshCopilotActionTitle()
     }
 
@@ -208,12 +250,14 @@ final class AppSessionCoordinator {
     }
 
     func restartPersonalization() {
+        returnToHome()
         personalization.reset()
         router.navigate(to: .root, addToStack: false, animated: false)
         syncViewportWithActiveStore()
     }
 
     func restartOnboarding() {
+        returnToHome()
         intro.reset()
         personalization.reset()
         onboarding.reset()
@@ -262,7 +306,7 @@ final class AppSessionCoordinator {
             throw AppDataResetError.localModelDownloadInProgress
         }
 
-        coCaptain.stopStreaming()
+        returnToHome()
         onboarding.reset()
 
         let stores = [router.rootStore] + Array(router.projects.values)
@@ -274,7 +318,9 @@ final class AppSessionCoordinator {
         LocalGemmaModelManager.shared.clearLocalModelCache()
         try await AppDataResetService.eraseLocalData()
         ActivityStore.shared.reset()
-
+        agentLibrary = AgentLibrary()
+        agentChats.removeAll()
+        workspaceUndoManagers.removeAll()
         router = AppRouter()
         coCaptain = CoCaptainViewModel()
         actionDispatcher = AppActionDispatcher()
@@ -310,12 +356,14 @@ final class AppSessionCoordinator {
     // MARK: - Undo
 
     func performUndo(undoManager: UndoManager?) {
-        undoManager?.undo()
+        guard selectedAgent != nil else { return }
+        activeUndoManager?.undo()
         router.activeStore.undoStackChanged += 1
     }
 
     func performRedo(undoManager: UndoManager?) {
-        undoManager?.redo()
+        guard selectedAgent != nil else { return }
+        activeUndoManager?.redo()
         router.activeStore.undoStackChanged += 1
     }
 
@@ -340,6 +388,7 @@ final class AppSessionCoordinator {
     /// HUD, voice/video call, launch, intro, and confetti are overlays and stay.
     var hasListedSheetPresented: Bool {
         coCaptain.isPresented
+            || showingAgentWizard
             || showingSignIn
             || showingPurchaseSheet
             || showingSettings
@@ -354,6 +403,7 @@ final class AppSessionCoordinator {
     }
 
     func closeListedSheets() {
+        showingAgentWizard = false
         if coCaptain.isPresented {
             coCaptain.setPresented(false)
         }
@@ -534,7 +584,11 @@ final class AppSessionCoordinator {
     private func configureActions() {
         actionDispatcher.register(.goRoot) { [weak self] in
             guard let self else { return }
-            self.router.goRoot()
+            if let agent = self.selectedAgent {
+                self.router.openAgentWorkspace(fileName: agent.workspaceFileName, name: agent.name)
+            } else {
+                self.router.goRoot()
+            }
             self.currentScale = 1.0
         }
         actionDispatcher.register(.goBack) { [weak self] in
@@ -745,12 +799,15 @@ final class AppSessionCoordinator {
     /// Radial-menu Chat: open at medium, replacing any listed sheet. Tutorial steps that need chat stay large.
     func presentCoCaptainReplacingListedSheets(preferredDetent: PresentationDetent) {
         let detent: PresentationDetent = tutorialNeedsChatSheet ? .large : preferredDetent
+        let agentID = selectedAgent?.id
         presentListedSheetAfterClosingOthers { [weak self] in
-            self?.presentCoCaptain(preferredDetent: detent)
+            guard let self, self.selectedAgent?.id == agentID else { return }
+            self.presentCoCaptain(preferredDetent: detent)
         }
     }
 
     private func presentCoCaptain(preferredDetent: PresentationDetent) {
+        guard selectedAgent != nil else { return }
         let detent: PresentationDetent = tutorialNeedsChatSheet ? .large : preferredDetent
         let startsLarge = detent == .large
         coCaptainStartsLarge = startsLarge
@@ -761,6 +818,7 @@ final class AppSessionCoordinator {
     }
 
     func presentCopilotCall(mode: CopilotInteractionMode) {
+        guard selectedAgent != nil else { return }
         closeListedSheets()
 
         let persona = selectedCopilot

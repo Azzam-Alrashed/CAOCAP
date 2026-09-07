@@ -6,8 +6,78 @@ import Testing
 @MainActor
 struct AppSessionCoordinatorTests {
 
+    private func makeSession() -> AppSessionCoordinator {
+        let defaults = UserDefaults(suiteName: "AppSessionTests.\(UUID().uuidString)")!
+        return AppSessionCoordinator(agentLibrary: AgentLibrary(defaults: defaults))
+    }
+
+    @Test func homeDoesNotOpenAgentChat() {
+        let session = makeSession()
+        session.handleFABTapOrCommandJ()
+        #expect(session.selectedTab == .home)
+        #expect(session.selectedAgent == nil)
+        #expect(!session.coCaptain.isPresented)
+    }
+
+    @Test func agentsKeepSeparateCanvasesAndDrafts() async {
+        let suite = "AgentSessionTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let library = AgentLibrary(defaults: defaults)
+        let first = LibraryAgent(id: UUID().uuidString, name: "First", persona: .cocaptain)
+        let second = LibraryAgent(id: UUID().uuidString, name: "Second", persona: .costar)
+        library.restore(first)
+        library.restore(second)
+        let session = AppSessionCoordinator(agentLibrary: library)
+        session.ensureActionsConfigured()
+        session.openAgent(first)
+        let firstStore = session.router.activeStore
+        let firstNode = SpatialNode(type: .standard, position: .zero, title: "Only first agent")
+        firstStore.nodes = [firstNode]
+        firstStore.save()
+        await firstStore.prepareForDataReset() // Wait for the explicit save; no files are erased.
+        let restored = ProjectStore(fileName: first.workspaceFileName)
+        #expect(restored.nodes.map(\.id) == [firstNode.id])
+        session.coCaptain.composerText = "Draft for first agent"
+        session.handleFABTapOrCommandJ()
+        #expect(session.coCaptain.isPresented)
+        session.showingCopilotCall = true
+        session.returnToHome()
+        #expect(session.selectedAgent == nil)
+        #expect(!session.coCaptain.isPresented)
+        #expect(!session.showingCopilotCall)
+        session.openAgent(second)
+        #expect(session.router.activeStore !== firstStore)
+        #expect(session.router.activeStore.nodes.isEmpty)
+        #expect(session.router.activeStore.undoManager !== firstStore.undoManager)
+        #expect(session.router.activeStore.fileName == second.workspaceFileName)
+        #expect(session.coCaptain.store === session.router.activeStore)
+        #expect(session.coCaptain.composerText.isEmpty)
+        #expect(session.selectedCopilot == .costar)
+        #expect(session.coCaptain.agentDisplayName == "Second")
+        session.returnToHome()
+        session.openAgent(first)
+        #expect(session.router.activeStore === firstStore)
+        #expect(session.router.activeStore.nodes.map(\.id) == [firstNode.id])
+        #expect(session.coCaptain.composerText == "Draft for first agent")
+        #expect(session.selectedCopilot == .cocaptain)
+    }
+
+    @Test func deferredChatDoesNotFollowUserIntoAnotherAgent() async {
+        let session = makeSession()
+        session.ensureActionsConfigured()
+        session.openAgent(LibraryAgent.defaults[0])
+        session.showingProfile = true
+        session.presentCoCaptainReplacingListedSheets(preferredDetent: .medium)
+        session.returnToHome()
+        session.openAgent(LibraryAgent.defaults[1])
+        try? await Task.sleep(for: .milliseconds(400))
+        #expect(!session.coCaptain.isPresented)
+        #expect(session.selectedAgent == LibraryAgent.defaults[1])
+    }
+
     @Test func toggleGridActionPersistsOpacity() {
-        let session = AppSessionCoordinator()
+        let session = makeSession()
         session.ensureActionsConfigured()
         session.gridOpacity = 0.5
 
@@ -21,7 +91,7 @@ struct AppSessionCoordinatorTests {
     }
 
     @Test func goRootActionResetsScale() {
-        let session = AppSessionCoordinator()
+        let session = makeSession()
         session.ensureActionsConfigured()
         session.currentScale = 2.0
 
@@ -32,7 +102,7 @@ struct AppSessionCoordinatorTests {
     }
 
     @Test func moveNodeActionUpdatesPosition() {
-        let session = AppSessionCoordinator()
+        let session = makeSession()
         session.ensureActionsConfigured()
         let nodeID = UUID()
         session.router.activeStore.nodes = [
@@ -54,8 +124,9 @@ struct AppSessionCoordinatorTests {
     }
 
     @Test func fabTapOpensChatWhenNoListedSheetIsPresented() {
-        let session = AppSessionCoordinator()
+        let session = makeSession()
         session.ensureActionsConfigured()
+        session.openAgent(LibraryAgent.defaults[0])
 
         session.handleFABTapOrCommandJ()
 
@@ -65,7 +136,7 @@ struct AppSessionCoordinatorTests {
     }
 
     @Test func fabTapClosesListedSheetsWithoutOpeningChat() {
-        let session = AppSessionCoordinator()
+        let session = makeSession()
         session.ensureActionsConfigured()
         session.showingSettings = true
 
@@ -77,7 +148,7 @@ struct AppSessionCoordinatorTests {
     }
 
     @Test func closeListedSheetsLeavesOverlaysAlone() {
-        let session = AppSessionCoordinator()
+        let session = makeSession()
         session.showingSettings = true
         session.showingHelp = true
         session.showingCopilotCall = true
@@ -94,8 +165,9 @@ struct AppSessionCoordinatorTests {
     }
 
     @Test func summonCoCaptainReplacesListedSheetWithChat() async {
-        let session = AppSessionCoordinator()
+        let session = makeSession()
         session.ensureActionsConfigured()
+        session.openAgent(LibraryAgent.defaults[0])
         session.showingProfile = true
 
         _ = session.actionDispatcher.perform(.summonCoCaptain, source: .user)
@@ -108,7 +180,7 @@ struct AppSessionCoordinatorTests {
     }
 
     @Test func activityNodeActionPresentsActivitySheet() {
-        let session = AppSessionCoordinator()
+        let session = makeSession()
         session.ensureActionsConfigured()
 
         session.handleNodeAction(.openActivity)
@@ -117,7 +189,7 @@ struct AppSessionCoordinatorTests {
     }
 
     @Test func navigateRootNodeActionRoutesThroughDispatcher() {
-        let session = AppSessionCoordinator()
+        let session = makeSession()
         session.ensureActionsConfigured()
         session.router.navigate(to: .project("test.json"), animated: false)
         session.currentScale = 2.0
@@ -129,7 +201,7 @@ struct AppSessionCoordinatorTests {
     }
 
     @Test func whatsAppNodeActionIsConfiguredInDispatcher() {
-        let session = AppSessionCoordinator()
+        let session = makeSession()
         session.ensureActionsConfigured()
 
         let result = session.actionDispatcher.perform(.openWhatsApp, source: .user)
@@ -139,7 +211,7 @@ struct AppSessionCoordinatorTests {
     }
 
     @Test func helpNodeActionPresentsHelpSheet() {
-        let session = AppSessionCoordinator()
+        let session = makeSession()
         session.ensureActionsConfigured()
 
         session.handleNodeAction(.openHelp)
@@ -148,7 +220,7 @@ struct AppSessionCoordinatorTests {
     }
 
     @Test func appIconNodeActionPresentsAppIconPickerSheet() {
-        let session = AppSessionCoordinator()
+        let session = makeSession()
         session.ensureActionsConfigured()
 
         session.handleNodeAction(.openAppIcon)
@@ -157,7 +229,7 @@ struct AppSessionCoordinatorTests {
     }
 
     @Test func helpAppActionPresentsHelpSheet() {
-        let session = AppSessionCoordinator()
+        let session = makeSession()
         session.ensureActionsConfigured()
 
         _ = session.actionDispatcher.perform(.help, source: .user)
@@ -166,7 +238,7 @@ struct AppSessionCoordinatorTests {
     }
 
     @Test func flyToTargetScaleUsesMeasuredSizeWhenAvailable() {
-        let session = AppSessionCoordinator()
+        let session = makeSession()
         let nodeID = UUID()
         let node = SpatialNode(id: nodeID, type: .standard, position: CGPoint(x: 10, y: 20), title: "Mini")
         session.containerSize = CGSize(width: 400, height: 800)
@@ -178,7 +250,7 @@ struct AppSessionCoordinatorTests {
     }
 
     @Test func flyToTargetScaleFallsBackToDefaultCardSize() {
-        let session = AppSessionCoordinator()
+        let session = makeSession()
         let nodeID = UUID()
         let node = SpatialNode(id: nodeID, type: .standard, position: .zero, title: "Card")
         session.containerSize = CGSize(width: 375, height: 667)
@@ -189,7 +261,7 @@ struct AppSessionCoordinatorTests {
     }
 
     @Test func bootstrapDismissesLaunchAfterReadyMinimumNotFixedTwoPointFiveSeconds() async {
-        let session = AppSessionCoordinator()
+        let session = makeSession()
         session.launchMinimumVisibleDuration = .milliseconds(20)
         session.launchMaximumVisibleDuration = .milliseconds(200)
         #expect(session.isLaunching)
@@ -201,7 +273,7 @@ struct AppSessionCoordinatorTests {
     }
 
     @Test func bootstrapHonorsLaunchMaximumVisibleDuration() async {
-        let session = AppSessionCoordinator()
+        let session = makeSession()
         session.launchMinimumVisibleDuration = .seconds(10)
         session.launchMaximumVisibleDuration = .milliseconds(30)
         #expect(session.isLaunching)
