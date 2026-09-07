@@ -60,7 +60,7 @@ The runnable applications currently require macOS and an Xcode version compatibl
 ### macOS
 
 1. Open [the macOS project](apps/macos/caocap/caocap.xcodeproj) in Xcode.
-2. Follow the [macOS setup notes](apps/macos/README.md).
+2. Follow the [macOS setup notes](apps/macos/README.md), including a local copy of the iOS `GoogleService-Info.plist`.
 3. Select the `caocap` scheme and the **My Mac** destination.
 4. Run the project with **Product → Run** or `Command-R`.
 

@@ -13,6 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let companion = CompanionController()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        FirebaseConfiguration.configure()
         companion.install()
     }
 

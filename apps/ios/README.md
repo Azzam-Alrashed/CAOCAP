@@ -17,7 +17,7 @@ Removal changes Home membership only; it does not delete canvas or conversation 
 ## Setup
 
 1. Open [caocap.xcodeproj](caocap/caocap.xcodeproj) and let Xcode resolve its Swift packages.
-2. Register an iOS app in your Firebase project using the app target's bundle identifier (currently `com.Ficruty.caocap`). Add its `GoogleService-Info.plist` to the `caocap` target so it is included in the app bundle.
+2. Register one Apple app in your Firebase project using the shared bundle identifier `com.Ficruty.caocap`. Add its `GoogleService-Info.plist` to the iOS `caocap` target at [caocap/Resources/Config/GoogleService-Info.plist](caocap/caocap/Resources/Config/GoogleService-Info.plist). Copy the same plist into the [macOS app](../macos/README.md). Do not register a second Firebase Apple app for Mac.
 3. For Google sign-in, enable the Google provider in Firebase Authentication and replace the Google URL scheme in [Info.plist](caocap/caocap/Resources/Config/Info.plist) with your configuration's `REVERSED_CLIENT_ID`.
 4. Select the `caocap` scheme and an iOS 26 or later simulator. For a physical device, configure your development team under **Signing & Capabilities**.
 5. Run with **Product → Run** or `Command-R`.
