@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		4C89E7B13034180000976521 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 4C89E7B53034180000976525 /* FirebaseCore */; };
+		4C89E7B63034180000976526 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 4C89E7B73034180000976527 /* FirebaseAuth */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -28,6 +29,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4C89E7B13034180000976521 /* FirebaseCore in Frameworks */,
+				4C89E7B63034180000976526 /* FirebaseAuth in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -71,6 +73,7 @@
 			name = caocap;
 			packageProductDependencies = (
 				4C89E7B53034180000976525 /* FirebaseCore */,
+				4C89E7B73034180000976527 /* FirebaseAuth */,
 			);
 			productName = caocap;
 			productReference = 4C89E7993034171D00976521 /* caocap.app */;
@@ -363,6 +366,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 4C89E7B43034180000976524 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseCore;
+		};
+		4C89E7B73034180000976527 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4C89E7B43034180000976524 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

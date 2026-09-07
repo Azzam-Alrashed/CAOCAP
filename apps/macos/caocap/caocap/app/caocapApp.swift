@@ -11,9 +11,11 @@ import SwiftUI
 /// Keeps the process alive after the last window closes so the status item stays in the menu bar.
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let companion = CompanionController()
+    let authenticationManager = AuthenticationManager()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         FirebaseConfiguration.configure()
+        authenticationManager.start()
         companion.install()
     }
 
@@ -49,7 +51,10 @@ struct caocapApp: App {
 
         // Status item on the right side of the menu bar. Separate from the Dock app icon.
         MenuBarExtra {
-            StatusItemMenu(companion: appDelegate.companion)
+            StatusItemMenu(
+                companion: appDelegate.companion,
+                authenticationManager: appDelegate.authenticationManager
+            )
         } label: {
             StatusItemLabel()
         }
@@ -74,6 +79,7 @@ private struct StatusItemLabel: View {
 /// Menu shown when the status item is clicked.
 private struct StatusItemMenu: View {
     @Bindable var companion: CompanionController
+    @Bindable var authenticationManager: AuthenticationManager
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
@@ -82,8 +88,34 @@ private struct StatusItemMenu: View {
             MainWindowFocus.reveal(openIfNeeded: openWindow)
         }
         Divider()
+        accountMenuItems
+        Divider()
         Button("Quit CAOCAP") {
             NSApp.terminate(nil)
+        }
+    }
+
+    @ViewBuilder
+    private var accountMenuItems: some View {
+        switch authenticationManager.authState {
+        case .signedOut:
+            Button("Sign in with Apple") {
+                Task { await authenticationManager.signInWithApple() }
+            }
+            .disabled(authenticationManager.isSigningIn)
+        case .signedIn(let uid):
+            Button("UID: \(uid)") {}
+                .disabled(true)
+            Button("Sign Out") {
+                authenticationManager.signOut()
+            }
+        case .failed(let message):
+            Button(message) {}
+                .disabled(true)
+            Button("Sign in with Apple") {
+                Task { await authenticationManager.signInWithApple() }
+            }
+            .disabled(authenticationManager.isSigningIn)
         }
     }
 }
